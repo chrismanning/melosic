@@ -17,6 +17,38 @@
 
 module melosic.managers.input.inputmanager;
 
+import melosic.managers.input.pluginterface.d
+;
+import std.string
+,std.stdio
+;
+import core.memory
+;
+
+extern(C++) interface IAudioFile {
+}
+
 extern(C++) interface IInputManager {
-    bool writeCallback(size_t chunkSize, ushort channels, const(int)*[] buffer);
+    void addDecoder(IInputDecoder dec);
+    void openFile(string filename);
+}
+
+class InputManager : IInputManager {
+  public:
+    extern(C++) void openFile(string filename) {
+        foreach(dec; decoders) {
+            if(dec.canOpen(filename)) {
+                debug writeln(filename, " can be opened");
+                dec.openFile(filename);
+                return;
+            }
+        }
+    }
+
+    extern(C++) void addDecoder(IInputDecoder dec) {
+        GC.addRoot(cast(const(void*))dec);
+        decoders ~= new InputDecoder(dec);
+    }
+
+    InputDecoder[] decoders;
 }

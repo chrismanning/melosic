@@ -15,21 +15,14 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.main;
+#ifndef COMMON_H
+#define COMMON_H
 
-import std.stdio
-;
-import melosic.managers.common
-;
+#include "input/inputmanager.h"
 
-void main() {
-    writeln("Hello World!");
-    auto kernel = new Kernel;
-    try {
-        kernel.loadPlugin("plugins/flac/flac.so");
-        kernel.getDecoderManager().openFile("blah.flac");
-    }
-    catch(PluginException e) {
-        stderr.writeln(e.msg);
-    }
-}
+class IKernel {
+public:
+    virtual IInputManager * getDecoderManager();
+};
+
+#endif // COMMON_H

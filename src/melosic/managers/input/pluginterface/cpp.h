@@ -15,21 +15,20 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.main;
+#ifndef INPUT_PLUGINTERFACE_H
+#define INPUT_PLUGINTERFACE_H
 
-import std.stdio
-;
-import melosic.managers.common
-;
+#include <melosic/managers/common.h>
 
-void main() {
-    writeln("Hello World!");
-    auto kernel = new Kernel;
-    try {
-        kernel.loadPlugin("plugins/flac/flac.so");
-        kernel.getDecoderManager().openFile("blah.flac");
-    }
-    catch(PluginException e) {
-        stderr.writeln(e.msg);
-    }
-}
+class IInputDecoder {
+public:
+    virtual bool writeCallback(unsigned chunkSize, unsigned short channels, const int * buffer[]) = 0;
+    virtual bool canOpen(const char * extension) = 0;
+    virtual void openFile(const char * filename) = 0;
+};
+
+class IKernel;
+
+extern "C" void registerPlugin(IKernel * k);
+
+#endif // INPUT_PLUGINTERFACE_H

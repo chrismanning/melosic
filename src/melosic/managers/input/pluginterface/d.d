@@ -15,10 +15,34 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.managers.kernel;
+module melosic.managers.input.pluginterface.d;
 
-import melosic.managers.input.inputmanager;
-import melosic.managers.output.outputmanager;
+import
+std.string
+,std.path
+;
 
-extern(C++) interface IKernel {
+import
+melosic.managers.common
+;
+
+extern(C++) interface IInputDecoder {
+    bool writeCallback(uint chunkSize, ushort channels, const(int)*[] buffer);
+    bool canOpen(const(char *) extension);
+    void openFile(const(char *) filename);
 }
+
+class InputDecoder {
+    this(IInputDecoder iid) {
+        this.iid = iid;
+    }
+    bool canOpen(string filename) {
+        return iid.canOpen(filename.extension().toStringz());
+    }
+    void openFile(string filename) {
+        iid.openFile(toStringz(filename));
+    }
+    IInputDecoder iid;
+}
+
+extern(C) void registerPlugin(IKernel kernel);

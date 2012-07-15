@@ -15,21 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.main;
+#ifndef INPUT_MANAGER_H
+#define INPUT_MANAGER_H
 
-import std.stdio
-;
-import melosic.managers.common
-;
+#include <melosic/managers/input/pluginterface/cpp.h>
 
-void main() {
-    writeln("Hello World!");
-    auto kernel = new Kernel;
-    try {
-        kernel.loadPlugin("plugins/flac/flac.so");
-        kernel.getDecoderManager().openFile("blah.flac");
-    }
-    catch(PluginException e) {
-        stderr.writeln(e.msg);
-    }
-}
+class IInputManager {
+public:
+    virtual void addDecoder(IInputDecoder * dec);
+    virtual void openFile(const char * filename);
+};
+
+#endif // INPUT_MANAGER_H
