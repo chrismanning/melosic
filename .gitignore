@@ -13,3 +13,6 @@
 
 # Build dir
 build/
+
+# Various
+*.user
