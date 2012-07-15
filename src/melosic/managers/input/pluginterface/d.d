@@ -40,7 +40,7 @@ class InputDecoder {
         return iid.canOpen(filename.extension().toStringz());
     }
     void openFile(string filename) {
-        iid.openFile(toStringz(filename));
+        iid.openFile(filename.toStringz());
     }
     IInputDecoder iid;
 }

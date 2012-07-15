@@ -61,7 +61,7 @@ private:
 class Plugin {
 public:
     this(string filename) {
-        handle = .dlopen(toStringz(filename), RTLD_NOW);
+        handle = .dlopen(filename.toStringz(), RTLD_NOW);
         if(handle is null) {
             throw new PluginException(filename, "cannot open plugin");
         }
