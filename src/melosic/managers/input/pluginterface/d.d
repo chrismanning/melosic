@@ -20,6 +20,8 @@ module melosic.managers.input.pluginterface.d;
 import
 std.string
 ,std.path
+,std.range
+,std.stdio
 ;
 
 import
@@ -27,22 +29,42 @@ melosic.managers.common
 ;
 
 extern(C++) interface IInputDecoder {
-    bool writeCallback(uint chunkSize, ushort channels, const(int)*[] buffer);
     bool canOpen(const(char *) extension);
     void openFile(const(char *) filename);
+    void initOutput(IOutputRange output);
+    IOutputRange getOutputRange();
+    DecodeRange opSlice();
+    AudioSpecs getAudioSpecs();
 }
 
 class InputDecoder {
     this(IInputDecoder iid) {
         this.iid = iid;
     }
+
     bool canOpen(string filename) {
         return iid.canOpen(filename.extension().toStringz());
     }
+
     void openFile(string filename) {
         iid.openFile(filename.toStringz());
     }
+
+    void initOutput(IOutputRange output) {
+        iid.initOutput(output);
+    }
+
+    DecodeRange opSlice() {
+        return iid[];
+    }
+
     IInputDecoder iid;
 }
 
 extern(C) void registerPlugin(IKernel kernel);
+
+extern(C++) interface DecodeRange {
+    uint * front();
+    void popFront();
+    bool empty();
+}

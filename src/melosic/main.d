@@ -27,9 +27,16 @@ void main() {
     auto kernel = new Kernel;
     try {
         kernel.loadPlugin("plugins/flac/flac.so");
-        kernel.getDecoderManager().openFile("blah.flac");
+        auto dec = kernel.getInputManager().openFile("test.flac");
+        auto o = new RawPCMFileOutputRange("out.pcm");
+        dec.initOutput(o);
+        auto r = dec[];
+
+        while(!r.empty()) {
+            r.popFront();
+        }
     }
-    catch(PluginException e) {
+    catch(Exception e) {
         stderr.writeln(e.msg);
     }
 }

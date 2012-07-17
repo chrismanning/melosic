@@ -20,10 +20,13 @@ module melosic.managers.common;
 public import melosic.managers.input.inputmanager;
 public import melosic.managers.output.outputmanager;
 
-import std.string
+import
+std.string
 ,std.stdio
+,std.conv
 ;
-import core.sys.posix.dlfcn
+import
+core.sys.posix.dlfcn
 ;
 
 class PluginException : Exception {
@@ -64,7 +67,7 @@ public:
     this(string filename) {
         handle = .dlopen(filename.toStringz(), RTLD_NOW);
         if(handle is null) {
-            throw new PluginException(filename, "cannot open plugin");
+            throw new Exception(to!string(dlerror()));
         }
         registerPlugin_ = getSymbol!registerPlugin_T("registerPlugin");
         if(registerPlugin_ is null) {
@@ -73,16 +76,110 @@ public:
         }
     }
 
+    ~this() {
+        if(handle !is null) {
+            .dlclose(handle);
+        }
+    }
+
     void registerPlugin(IKernel k) {
         registerPlugin_(k);
     }
 
     T getSymbol(T)(string sym) {
-        return cast(T) dlsym(handle, toStringz(sym));
+        return cast(T) .dlsym(handle, toStringz(sym));
     }
 
 private:
     alias extern(C) void function(IKernel) registerPlugin_T;
     registerPlugin_T registerPlugin_;
     void * handle;
+}
+
+extern(C++) interface IOutputRange {
+    bool put(int a, ubyte bps);
+}
+
+import std.bitmanip;
+
+class RawPCMFileOutputRange : IOutputRange {
+    this(string filename) {
+        file = File(filename, "w+");
+    }
+
+    extern(C++) bool put(int a, ubyte bps) {
+        ubyte[] output;
+        switch(bps) {
+            case 8:
+                output = nativeToLittleEndian(cast(byte)a)[];
+                break;
+            case 16:
+                output = nativeToLittleEndian(cast(short)a)[];
+                break;
+            case 24:
+                output = nativeToLittleEndian!byte(cast(byte)a)[];
+                break;
+            case 32:
+                output = nativeToLittleEndian!int(a)[];
+                break;
+            default:
+                return false;
+        }
+        try {
+            file.rawWrite(output);
+            return true;
+        }
+        catch(Exception e) {
+            return false;
+        }
+    }
+
+    File file;
+}
+
+extern(C) struct AudioSpecs {
+    this(ubyte channels, ubyte bps, ulong total_samples, uint sample_rate) {
+        this.channels = channels;
+        this.bps = bps;
+        this.total_samples = total_samples;
+        this.sample_rate = sample_rate;
+    }
+    ubyte channels;
+    ubyte bps;
+    ulong total_samples;
+    uint sample_rate;
+}
+
+class WaveFileOutputRange : IOutputRange {
+    this(string filename) {
+        file = File(filename, "w+");
+    }
+
+    extern(C++) bool put(int a, ubyte bps) {
+        if(sample_number == 0) {
+            try {
+                file.rawWrite("RIFF");
+                //TODO: wave file output
+//                !write_little_endian_uint32(f, total_size + 36) ||
+//                fwrite("WAVEfmt ", 1, 8, f) < 8 ||
+//                !write_little_endian_uint32(f, 16) ||
+//                !write_little_endian_uint16(f, 1) ||
+//                !write_little_endian_uint16(f, cast(ushort) channels) ||
+//                !write_little_endian_uint32(f, sample_rate) ||
+//                !write_little_endian_uint32(f, sample_rate * channels * (bps/8)) ||
+//                !write_little_endian_uint16(f, cast(ushort)(channels * (bps/8))) || /* block align */
+//                !write_little_endian_uint16(f, cast(ushort)bps) ||
+//                fwrite("data", 1, 4, f) < 4 ||
+//                !write_little_endian_uint32(f, total_size);
+            }
+            catch(Exception e) {
+                return false;
+            }
+            sample_number++;
+        }
+        return true;
+    }
+
+    File file;
+    ubyte sample_number;
 }

@@ -18,13 +18,27 @@
 #ifndef INPUT_PLUGINTERFACE_H
 #define INPUT_PLUGINTERFACE_H
 
+#include <cstddef>
 #include <melosic/managers/common.h>
+
+struct IOutputRange;
+struct AudioSpecs;
+
+class DecodeRange {
+public:
+    virtual unsigned * front() = 0;
+    virtual void popFront() = 0;
+    virtual bool empty() = 0;
+};
 
 class IInputDecoder {
 public:
-    virtual bool writeCallback(unsigned chunkSize, unsigned short channels, const int * buffer[]) = 0;
     virtual bool canOpen(const char * extension) = 0;
     virtual void openFile(const char * filename) = 0;
+    virtual void initOutput(IOutputRange * output) = 0;
+    virtual IOutputRange * getOutputRange() = 0;
+    virtual DecodeRange * opSlice() = 0;
+    virtual AudioSpecs getAudioSpecs() = 0;
 };
 
 class IKernel;

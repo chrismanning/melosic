@@ -30,19 +30,21 @@ extern(C++) interface IAudioFile {
 
 extern(C++) interface IInputManager {
     void addDecoder(IInputDecoder dec);
-    void openFile(string filename);
+    InputDecoder openFile(string filename);
 }
 
 class InputManager : IInputManager {
   public:
-    extern(C++) void openFile(string filename) {
+    //FIXME: there must be a better scheme than returning an InputDecoder here
+    extern(C++) InputDecoder openFile(string filename) {
         foreach(dec; decoders) {
             if(dec.canOpen(filename)) {
                 debug writeln(filename, " can be opened");
                 dec.openFile(filename);
-                return;
+                return dec;
             }
         }
+        assert(0);
     }
 
     extern(C++) void addDecoder(IInputDecoder dec) {

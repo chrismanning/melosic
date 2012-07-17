@@ -32,5 +32,18 @@ public:
     virtual IInputManager * getInputManager() = 0;
 };
 
+class IOutputRange {
+public:
+    virtual bool put(int a, ubyte bps);
+};
+
+extern "C" struct AudioSpecs {
+    AudioSpecs(ubyte channels, ubyte bps, ulong total_samples, uint sample_rate)
+        : channels(channels), bps(bps), total_samples(total_samples), sample_rate(sample_rate) {}
+    ubyte channels;
+    ubyte bps;
+    ulong total_samples;
+    uint sample_rate;
+};
 
 #endif // COMMON_H
