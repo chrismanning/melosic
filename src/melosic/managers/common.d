@@ -33,7 +33,7 @@ class PluginException : Exception {
 }
 
 extern(C++) interface IKernel {
-    IInputManager getDecoderManager();
+    IInputManager getInputManager();
 }
 
 class Kernel : IKernel {
@@ -50,9 +50,10 @@ class Kernel : IKernel {
         loadedPlugins[filename] = p;
     }
 
-    extern(C++) IInputManager getDecoderManager() {
+    extern(C++) IInputManager getInputManager() {
         return inman;
     }
+
 private:
     Plugin[string] loadedPlugins;
     InputManager inman;

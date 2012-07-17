@@ -47,5 +47,5 @@ public:
 };
 
 extern "C" void registerPlugin(IKernel * k) {
-    k->getDecoderManager()->addDecoder(new FlacDecoder);
+    k->getInputManager()->addDecoder(new FlacDecoder);
 }

@@ -22,7 +22,8 @@
 
 class IKernel {
 public:
-    virtual IInputManager * getDecoderManager();
+    virtual IInputManager * getInputManager() = 0;
 };
+
 
 #endif // COMMON_H
