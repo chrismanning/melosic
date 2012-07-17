@@ -22,7 +22,7 @@
 
 class IInputManager {
 public:
-    virtual void addDecoder(IInput * dec);
+    virtual void addInputSource(IInputSource * dec);
     virtual void openFile(const char * filename);
 };
 

@@ -22,7 +22,7 @@
 
 class FlacDecoderImpl : public FLAC::Decoder::File {
 public:
-    FlacDecoderImpl(IInput& dec_) : dec(dec_) {}
+    FlacDecoderImpl(IInputSource& dec_) : dec(dec_) {}
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame, const FLAC__int32 * const buffer[])
     {
         for(unsigned i=0; i<frame->header.blocksize; i++) {
@@ -44,10 +44,10 @@ public:
     }
 
 private:
-    IInput& dec;
+    IInputSource& dec;
 };
 
-class FlacDecoder : public IInput {
+class FlacDecoder : public IInputSource {
 public:
     FlacDecoder() : fd(new FlacDecoderImpl(*this)) {
     }
@@ -133,5 +133,5 @@ DecodeRange * FlacDecoder::opSlice() {
 }
 
 extern "C" void registerPlugin(IKernel * k) {
-    k->getInputManager()->addDecoder(new FlacDecoder);
+    k->getInputManager()->addInputSource(new FlacDecoder);
 }

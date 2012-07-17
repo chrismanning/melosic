@@ -31,7 +31,7 @@ public:
     virtual bool empty() = 0;
 };
 
-class IInput {
+class IInputSource {
 public:
     virtual bool canOpen(const char * extension) = 0;
     virtual void openFile(const char * filename) = 0;

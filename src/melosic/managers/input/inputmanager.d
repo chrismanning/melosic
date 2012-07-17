@@ -29,28 +29,29 @@ extern(C++) interface IAudioFile {
 }
 
 extern(C++) interface IInputManager {
-    void addDecoder(IInput dec);
-    Input openFile(string filename);
+    void addInputSource(IInputSource dec);
+    InputSource openFile(string filename);
 }
 
 class InputManager : IInputManager {
-  public:
-    //FIXME: there must be a better scheme than returning an Input here
-    extern(C++) Input openFile(string filename) {
-        foreach(dec; decoders) {
-            if(dec.canOpen(filename)) {
+public:
+    //FIXME: there must be a better scheme than returning an InputSource here
+    extern(C++) InputSource openFile(string filename) {
+        foreach(src; srcs) {
+            if(src.canOpen(filename)) {
                 debug writeln(filename, " can be opened");
-                dec.openFile(filename);
-                return dec;
+                src.openFile(filename);
+                return src;
             }
         }
         assert(0);
     }
 
-    extern(C++) void addDecoder(IInput dec) {
-        GC.addRoot(cast(const(void*))dec);
-        decoders ~= new Input(dec);
+    extern(C++) void addInputSource(IInputSource src) {
+        GC.addRoot(cast(const(void*))src);
+        srcs ~= new InputSource(src);
     }
 
-    Input[] decoders;
+private:
+    InputSource[] srcs;
 }
