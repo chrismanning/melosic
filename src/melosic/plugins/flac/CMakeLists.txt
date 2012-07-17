@@ -1,4 +1,5 @@
 set(FLAC flac)
 add_library(${FLAC} SHARED flac.cpp)
+target_link_libraries(${FLAC} -lFLAC++)
 set_target_properties(${FLAC} PROPERTIES PREFIX "")
 include_directories(../../..)
