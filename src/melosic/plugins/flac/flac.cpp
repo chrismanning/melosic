@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/managers/common.h>
+#include <melosic/managers/common.hpp>
 #include <FLAC++/decoder.h>
 #include <string.h>
 #include <iostream>

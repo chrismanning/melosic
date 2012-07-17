@@ -17,7 +17,7 @@
 
 module melosic.managers.input.inputmanager;
 
-import melosic.managers.input.pluginterface.d
+import melosic.managers.input.pluginterface
 ;
 import std.string
 ,std.stdio

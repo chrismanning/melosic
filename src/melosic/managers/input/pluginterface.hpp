@@ -15,15 +15,34 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef INPUT_MANAGER_H
-#define INPUT_MANAGER_H
+#ifndef INPUT_PLUGINTERFACE_H
+#define INPUT_PLUGINTERFACE_H
 
-#include <melosic/managers/input/pluginterface/cpp.h>
+#include <cstddef>
+#include <melosic/managers/common.hpp>
 
-class IInputManager {
+struct IOutputRange;
+struct AudioSpecs;
+
+class DecodeRange {
 public:
-    virtual void addDecoder(IInput * dec);
-    virtual void openFile(const char * filename);
+    virtual unsigned * front() = 0;
+    virtual void popFront() = 0;
+    virtual bool empty() = 0;
 };
 
-#endif // INPUT_MANAGER_H
+class IInput {
+public:
+    virtual bool canOpen(const char * extension) = 0;
+    virtual void openFile(const char * filename) = 0;
+    virtual void initOutput(IOutputRange * output) = 0;
+    virtual IOutputRange * getOutputRange() = 0;
+    virtual DecodeRange * opSlice() = 0;
+    virtual AudioSpecs getAudioSpecs() = 0;
+};
+
+class IKernel;
+
+extern "C" void registerPlugin(IKernel * k);
+
+#endif // INPUT_PLUGINTERFACE_H

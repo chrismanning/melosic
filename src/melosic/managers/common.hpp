@@ -18,7 +18,7 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include "input/inputmanager.h"
+#include <melosic/managers/input/inputmanager.hpp>
 #include <cstddef>
 
 typedef unsigned char ubyte;
