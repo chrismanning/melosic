@@ -18,4 +18,10 @@
 #ifndef OUTPUT_PLUGINTERFACE_HPP
 #define OUTPUT_PLUGINTERFACE_HPP
 
+#include <melosic/managers/common.hpp>
+
+class IOutput {
+    virtual prepareDevice(AudioSpecs as) = 0;
+};
+
 #endif // OUTPUT_PLUGINTERFACE_HPP

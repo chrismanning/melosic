@@ -18,4 +18,10 @@
 #ifndef OUTPUTMANAGER_HPP
 #define OUTPUTMANAGER_HPP
 
+class IOutputManager {
+public:
+    virtual void addOutput(IOutput * dec);
+    virtual void openFile(const char * filename);
+};
+
 #endif // OUTPUTMANAGER_HPP

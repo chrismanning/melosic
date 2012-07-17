@@ -15,4 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+module melosic.managers.output.pluginterface;
 
+public import
+melosic.managers.common
+;
+
+extern(C++) interface IOutput {
+    void prepareDevice(AudioSpecs as);
+};

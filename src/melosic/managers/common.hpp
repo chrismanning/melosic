@@ -48,4 +48,6 @@ extern "C" struct AudioSpecs {
     uint sample_rate;
 };
 
+//TODO: error reporting across plugins
+
 #endif // COMMON_H

@@ -42,6 +42,7 @@ extern(C++) interface IKernel {
 class Kernel : IKernel {
     this() {
         inman = new InputManager;
+        outman = new OutputManager;
     }
 
     void loadPlugin(string filename) {
@@ -60,6 +61,7 @@ class Kernel : IKernel {
 private:
     Plugin[string] loadedPlugins;
     InputManager inman;
+    OutputManager outman;
 }
 
 extern(C) void registerPlugin(IKernel kernel);
@@ -150,6 +152,10 @@ extern(C) struct AudioSpecs {
     ubyte bps;
     ulong total_samples;
     uint sample_rate;
+}
+
+//TODO: define error handling
+extern(C++) interface ErrorHandler {
 }
 
 class WaveFileOutputRange : IOutputRange {

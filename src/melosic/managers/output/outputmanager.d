@@ -14,3 +14,19 @@
 **  You should have received a copy of the GNU General Public License
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
+
+module melosic.managers.output.outputmanager;
+
+import melosic.managers.output.pluginterface;
+
+extern(C++) interface IOutputManager {
+    void addOutput(IOutput dec);
+    void openFile(string filename);
+}
+
+class OutputManager : IOutputManager {
+    extern(C++) void addOutput(IOutput dec) {
+    }
+    extern(C++) void openFile(string filename) {
+    }
+}
