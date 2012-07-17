@@ -24,7 +24,7 @@ std.string
 ,std.stdio
 ;
 
-import
+public import
 melosic.managers.common
 ;
 
@@ -60,8 +60,6 @@ class Input {
 
     IInput iid;
 }
-
-extern(C) void registerPlugin(IKernel kernel);
 
 extern(C++) interface DecodeRange {
     uint * front();

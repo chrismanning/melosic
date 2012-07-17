@@ -62,6 +62,8 @@ private:
     InputManager inman;
 }
 
+extern(C) void registerPlugin(IKernel kernel);
+
 class Plugin {
 public:
     this(string filename) {

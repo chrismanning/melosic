@@ -32,6 +32,8 @@ public:
     virtual IInputManager * getInputManager() = 0;
 };
 
+extern "C" void registerPlugin(IKernel * k);
+
 class IOutputRange {
 public:
     virtual bool put(int a, ubyte bps);

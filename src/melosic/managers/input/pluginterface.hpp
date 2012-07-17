@@ -43,6 +43,4 @@ public:
 
 class IKernel;
 
-extern "C" void registerPlugin(IKernel * k);
-
 #endif // INPUT_PLUGINTERFACE_H
