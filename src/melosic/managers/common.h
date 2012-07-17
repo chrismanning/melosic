@@ -19,6 +19,13 @@
 #define COMMON_H
 
 #include "input/inputmanager.h"
+#include <cstddef>
+
+typedef unsigned char ubyte;
+typedef signed char byte;
+typedef unsigned uint;
+typedef unsigned short ushort;
+typedef unsigned long ulong;
 
 class IKernel {
 public:
