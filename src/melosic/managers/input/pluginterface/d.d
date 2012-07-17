@@ -28,7 +28,7 @@ import
 melosic.managers.common
 ;
 
-extern(C++) interface IInputDecoder {
+extern(C++) interface IInput {
     bool canOpen(const(char *) extension);
     void openFile(const(char *) filename);
     void initOutput(IOutputRange output);
@@ -37,8 +37,8 @@ extern(C++) interface IInputDecoder {
     AudioSpecs getAudioSpecs();
 }
 
-class InputDecoder {
-    this(IInputDecoder iid) {
+class Input {
+    this(IInput iid) {
         this.iid = iid;
     }
 
@@ -58,7 +58,7 @@ class InputDecoder {
         return iid[];
     }
 
-    IInputDecoder iid;
+    IInput iid;
 }
 
 extern(C) void registerPlugin(IKernel kernel);

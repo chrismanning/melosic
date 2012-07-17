@@ -29,14 +29,14 @@ extern(C++) interface IAudioFile {
 }
 
 extern(C++) interface IInputManager {
-    void addDecoder(IInputDecoder dec);
-    InputDecoder openFile(string filename);
+    void addDecoder(IInput dec);
+    Input openFile(string filename);
 }
 
 class InputManager : IInputManager {
   public:
-    //FIXME: there must be a better scheme than returning an InputDecoder here
-    extern(C++) InputDecoder openFile(string filename) {
+    //FIXME: there must be a better scheme than returning an Input here
+    extern(C++) Input openFile(string filename) {
         foreach(dec; decoders) {
             if(dec.canOpen(filename)) {
                 debug writeln(filename, " can be opened");
@@ -47,10 +47,10 @@ class InputManager : IInputManager {
         assert(0);
     }
 
-    extern(C++) void addDecoder(IInputDecoder dec) {
+    extern(C++) void addDecoder(IInput dec) {
         GC.addRoot(cast(const(void*))dec);
-        decoders ~= new InputDecoder(dec);
+        decoders ~= new Input(dec);
     }
 
-    InputDecoder[] decoders;
+    Input[] decoders;
 }

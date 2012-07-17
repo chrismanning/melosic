@@ -22,7 +22,7 @@
 
 class FlacDecoderImpl : public FLAC::Decoder::File {
 public:
-    FlacDecoderImpl(IInputDecoder& dec_) : dec(dec_) {}
+    FlacDecoderImpl(IInput& dec_) : dec(dec_) {}
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame, const FLAC__int32 * const buffer[])
     {
         for(unsigned i=0; i<frame->header.blocksize; i++) {
@@ -44,10 +44,10 @@ public:
     }
 
 private:
-    IInputDecoder& dec;
+    IInput& dec;
 };
 
-class FlacDecoder : public IInputDecoder {
+class FlacDecoder : public IInput {
 public:
     FlacDecoder() : fd(new FlacDecoderImpl(*this)) {
     }
