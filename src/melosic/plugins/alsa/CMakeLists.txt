@@ -1,0 +1,5 @@
+set(ALSA alsa)
+add_library(${ALSA} SHARED alsa.cpp)
+target_link_libraries(${ALSA} -lasound)
+set_target_properties(${ALSA} PROPERTIES PREFIX "")
+include_directories(../../..)
