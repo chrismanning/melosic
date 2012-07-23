@@ -17,24 +17,28 @@
 
 module melosic.main;
 
-import std.stdio
+import
+std.stdio
 ;
-import melosic.managers.common
+import
+core.memory
+;
+import
+melosic.managers.common
+,melosic.core.wav
 ;
 
-void main() {
+void main(string args[]) {
     writeln("Hello World!");
     auto kernel = new Kernel;
     try {
         kernel.loadPlugin("plugins/flac/flac.so");
-//        auto dec = kernel.getInputManager().openFile("test.flac");
-//        auto o = new RawPCMFileOutputRange("out.pcm");
-//        dec.initOutput(o);
-//        auto r = dec[];
-
-//        while(!r.empty()) {
-//            r.popFront();
-//        }
+        kernel.loadPlugin("plugins/alsa/alsa.so");
+        auto decoder = kernel.getInputManager().openFile("test.flac");
+        auto output = kernel.getOutputManager().getDefaultOutput();
+//        auto output = new WaveFile("test1.wav");
+        output.prepareDevice(decoder.getAudioSpecs());
+        output.render(decoder[]);
     }
     catch(Exception e) {
         stderr.writeln(e.msg);
