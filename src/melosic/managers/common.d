@@ -37,6 +37,7 @@ class PluginException : Exception {
 
 extern(C++) interface IKernel {
     IInputManager getInputManager();
+    IOutputManager getOutputManager();
 }
 
 class Kernel : IKernel {
@@ -50,12 +51,16 @@ class Kernel : IKernel {
             throw new PluginException(filename, "already loaded");
         }
         auto p = new Plugin(filename);
-        p.registerPlugin(this);
+        p.registerPluginObjects(this);
         loadedPlugins[filename] = p;
     }
 
     extern(C++) IInputManager getInputManager() {
         return inman;
+    }
+
+    extern(C++) IOutputManager getOutputManager() {
+        return outman;
     }
 
 private:
@@ -64,7 +69,8 @@ private:
     OutputManager outman;
 }
 
-extern(C) void registerPlugin(IKernel kernel);
+extern(C) void registerPluginObjects(IKernel kernel);
+extern(C) void destroyPluginObjects();
 
 class Plugin {
 public:
@@ -73,20 +79,28 @@ public:
         if(handle is null) {
             throw new Exception(to!string(dlerror()));
         }
-        registerPlugin_ = getSymbol!registerPlugin_T("registerPlugin");
+        registerPlugin_ = getSymbol!registerPlugin_T("registerPluginObjects");
         if(registerPlugin_ is null) {
             .dlclose(handle);
-            throw new PluginException(filename, "cannot find symbol: registerPlugin");
+            throw new PluginException(filename, "cannot find symbol: registerPluginObjects");
+        }
+        destroyPlugin_ = getSymbol!destroyPlugin_T("destroyPluginObjects");
+        if(destroyPlugin_ is null) {
+            .dlclose(handle);
+            throw new PluginException(filename, "cannot find symbol: destroyPluginObjects");
         }
     }
 
     ~this() {
+        if(destroyPlugin_ !is null) {
+            destroyPlugin_();
+        }
         if(handle !is null) {
             .dlclose(handle);
         }
     }
 
-    void registerPlugin(IKernel k) {
+    void registerPluginObjects(IKernel k) {
         registerPlugin_(k);
     }
 
@@ -97,97 +111,29 @@ public:
 private:
     alias extern(C) void function(IKernel) registerPlugin_T;
     registerPlugin_T registerPlugin_;
+    alias extern(C) void function() destroyPlugin_T;
+    destroyPlugin_T destroyPlugin_;
     void * handle;
 }
 
-extern(C++) interface IOutputRange {
-    bool put(int a, ubyte bps);
-}
-
-import std.bitmanip;
-
-class RawPCMFileOutputRange : IOutputRange {
-    this(string filename) {
-        file = File(filename, "w+");
-    }
-
-    extern(C++) bool put(int a, ubyte bps) {
-        ubyte[] output;
-        switch(bps) {
-            case 8:
-                output = nativeToLittleEndian(cast(byte)a)[];
-                break;
-            case 16:
-                output = nativeToLittleEndian(cast(short)a)[];
-                break;
-            case 24:
-                output = nativeToLittleEndian!byte(cast(byte)a)[];
-                break;
-            case 32:
-                output = nativeToLittleEndian!int(a)[];
-                break;
-            default:
-                return false;
-        }
-        try {
-            file.rawWrite(output);
-            return true;
-        }
-        catch(Exception e) {
-            return false;
-        }
-    }
-
-    File file;
+extern(C++) interface IBuffer {
+    void * ptr();
+    size_t length();
 }
 
 extern(C) struct AudioSpecs {
-    this(ubyte channels, ubyte bps, ulong total_samples, uint sample_rate) {
+    this(ubyte channels, ubyte bps, uint sample_rate, ulong total_samples) {
         this.channels = channels;
         this.bps = bps;
-        this.total_samples = total_samples;
         this.sample_rate = sample_rate;
+        this.total_samples = total_samples;
     }
     ubyte channels;
     ubyte bps;
-    ulong total_samples;
     uint sample_rate;
+    ulong total_samples;
 }
 
 //TODO: define error handling
 extern(C++) interface ErrorHandler {
-}
-
-class WaveFileOutputRange : IOutputRange {
-    this(string filename) {
-        file = File(filename, "w+");
-    }
-
-    extern(C++) bool put(int a, ubyte bps) {
-        if(sample_number == 0) {
-            try {
-                file.rawWrite("RIFF");
-                //TODO: wave file output
-//                !write_little_endian_uint32(f, total_size + 36) ||
-//                fwrite("WAVEfmt ", 1, 8, f) < 8 ||
-//                !write_little_endian_uint32(f, 16) ||
-//                !write_little_endian_uint16(f, 1) ||
-//                !write_little_endian_uint16(f, cast(ushort) channels) ||
-//                !write_little_endian_uint32(f, sample_rate) ||
-//                !write_little_endian_uint32(f, sample_rate * channels * (bps/8)) ||
-//                !write_little_endian_uint16(f, cast(ushort)(channels * (bps/8))) || /* block align */
-//                !write_little_endian_uint16(f, cast(ushort)bps) ||
-//                fwrite("data", 1, 4, f) < 4 ||
-//                !write_little_endian_uint32(f, total_size);
-            }
-            catch(Exception e) {
-                return false;
-            }
-            sample_number++;
-        }
-        return true;
-    }
-
-    File file;
-    ubyte sample_number;
 }

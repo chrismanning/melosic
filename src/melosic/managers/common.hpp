@@ -19,6 +19,7 @@
 #define COMMON_H
 
 #include <melosic/managers/input/inputmanager.hpp>
+#include <melosic/managers/output/outputmanager.hpp>
 #include <cstddef>
 
 typedef unsigned char ubyte;
@@ -30,22 +31,51 @@ typedef unsigned long ulong;
 class IKernel {
 public:
     virtual IInputManager * getInputManager() = 0;
+    virtual IOutputManager * getOutputManager() = 0;
 };
 
-extern "C" void registerPlugin(IKernel * k);
+extern "C" void registerPluginObjects(IKernel * k);
+extern "C" void destroyPluginObjects();
 
-class IOutputRange {
+struct IBuffer {
+    virtual void * ptr() = 0;
+    virtual size_t length() = 0;
+    virtual void ptr(void * p) = 0;
+    virtual void length(size_t p) = 0;
+};
+
+class Buffer : public IBuffer {
 public:
-    virtual bool put(int a, ubyte bps);
+    Buffer() : ptr_(0), length_(0) {}
+
+    virtual void * ptr() {
+        return ptr_;
+    }
+
+    virtual size_t length() {
+        return length_;
+    }
+
+    virtual void ptr(void * p) {
+        ptr_ = p;
+    }
+
+    virtual void length(size_t p) {
+        length_ = p;
+    }
+
+private:
+    void * ptr_;
+    size_t length_;
 };
 
 extern "C" struct AudioSpecs {
-    AudioSpecs(ubyte channels, ubyte bps, ulong total_samples, uint sample_rate)
-        : channels(channels), bps(bps), total_samples(total_samples), sample_rate(sample_rate) {}
+    AudioSpecs(ubyte channels, ubyte bps, uint sample_rate, ulong total_samples)
+        : channels(channels), bps(bps), sample_rate(sample_rate), total_samples(total_samples) {}
     ubyte channels;
     ubyte bps;
-    ulong total_samples;
     uint sample_rate;
+    ulong total_samples;
 };
 
 //TODO: error reporting across plugins
