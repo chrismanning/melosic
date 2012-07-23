@@ -17,10 +17,50 @@
 
 module melosic.managers.output.pluginterface;
 
+import
+std.conv
+,std.stdio
+;
+
 public import
 melosic.managers.common
 ;
 
 extern(C++) interface IOutput {
     void prepareDevice(AudioSpecs as);
-};
+    const(char *) getDeviceDescription();
+    const(char *) getDeviceName();
+    DeviceCapabilities * getDeviceCapabilities();
+    void render(DecodeRange src);
+}
+
+class OutputDevice {
+    this(IOutput iod) {
+        this.iod = iod;
+    }
+
+    void prepareDevice(AudioSpecs as) {
+        iod.prepareDevice(as);
+    }
+
+    string getDeviceDescription() {
+        return to!string(iod.getDeviceDescription());
+    }
+
+    DeviceCapabilities * getDeviceCapabilities() {
+        return iod.getDeviceCapabilities();
+    }
+
+    void render(DecodeRange src) {
+        iod.render(src);
+    }
+
+    string getDeviceName() {
+        return to!string(iod.getDeviceName());
+    }
+
+    IOutput iod;
+}
+
+extern(C) struct DeviceCapabilities {
+}

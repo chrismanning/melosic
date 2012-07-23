@@ -20,8 +20,16 @@
 
 #include <melosic/managers/common.hpp>
 
+extern "C" struct DeviceCapabilities {
+};
+
 class IOutput {
-    virtual prepareDevice(AudioSpecs as) = 0;
+public:
+    virtual void prepareDevice(AudioSpecs as) = 0;
+    virtual const char * getDeviceDescription() = 0;
+    virtual const char * getDeviceName() = 0;
+    virtual const DeviceCapabilities * getDeviceCapabilities() = 0;
+    virtual void render(DecodeRange * src) = 0;
 };
 
 #endif // OUTPUT_PLUGINTERFACE_HPP

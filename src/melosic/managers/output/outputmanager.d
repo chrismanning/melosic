@@ -17,16 +17,31 @@
 
 module melosic.managers.output.outputmanager;
 
-import melosic.managers.output.pluginterface;
+import
+std.algorithm
+,std.stdio
+,std.array
+,std.exception
+;
+
+public import melosic.managers.output.pluginterface;
 
 extern(C++) interface IOutputManager {
-    void addOutput(IOutput dec);
-    void openFile(string filename);
+    void addOutput(IOutput dev);
+    OutputDevice getDefaultOutput();
 }
 
 class OutputManager : IOutputManager {
-    extern(C++) void addOutput(IOutput dec) {
+    extern(C++) void addOutput(IOutput dev) {
+        devs ~= new OutputDevice(dev);
     }
-    extern(C++) void openFile(string filename) {
+
+    extern(C++) OutputDevice getDefaultOutput() {
+        auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
+        enforceEx!Exception(r.count() > 0, "Cannot find default device");
+        return r.front();
     }
+
+private:
+    OutputDevice[] devs;
 }

@@ -18,10 +18,11 @@
 #ifndef OUTPUTMANAGER_HPP
 #define OUTPUTMANAGER_HPP
 
+#include <melosic/managers/output/pluginterface.hpp>
+
 class IOutputManager {
 public:
     virtual void addOutput(IOutput * dec);
-    virtual void openFile(const char * filename);
 };
 
 #endif // OUTPUTMANAGER_HPP
