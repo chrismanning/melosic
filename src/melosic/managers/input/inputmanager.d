@@ -17,7 +17,7 @@
 
 module melosic.managers.input.inputmanager;
 
-import melosic.managers.input.pluginterface
+public import melosic.managers.input.pluginterface
 ;
 import std.string
 ,std.stdio
@@ -44,11 +44,10 @@ public:
                 return src;
             }
         }
-        assert(0);
+        throw new Exception("cannot open file " ~ filename);
     }
 
     extern(C++) void addInputSource(IInputSource src) {
-        GC.addRoot(cast(const(void*))src);
         srcs ~= new InputSource(src);
     }
 

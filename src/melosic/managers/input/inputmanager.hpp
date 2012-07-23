@@ -23,7 +23,6 @@
 class IInputManager {
 public:
     virtual void addInputSource(IInputSource * dec);
-    virtual void openFile(const char * filename);
 };
 
 #endif // INPUT_MANAGER_H

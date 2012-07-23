@@ -21,26 +21,24 @@
 #include <cstddef>
 #include <melosic/managers/common.hpp>
 
-struct IOutputRange;
 struct AudioSpecs;
+struct IBuffer;
 
 class DecodeRange {
 public:
-    virtual unsigned * front() = 0;
+    virtual IBuffer * front() = 0;
     virtual void popFront() = 0;
     virtual bool empty() = 0;
+    virtual size_t length() = 0;
 };
 
 class IInputSource {
 public:
     virtual bool canOpen(const char * extension) = 0;
     virtual void openFile(const char * filename) = 0;
-    virtual void initOutput(IOutputRange * output) = 0;
-    virtual IOutputRange * getOutputRange() = 0;
-    virtual DecodeRange * opSlice() = 0;
+    virtual DecodeRange * getDecodeRange() = 0;
     virtual AudioSpecs getAudioSpecs() = 0;
+    virtual void writeBuf(void * ptr, size_t length) = 0;
 };
-
-class IKernel;
 
 #endif // INPUT_PLUGINTERFACE_H

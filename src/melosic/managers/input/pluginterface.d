@@ -23,18 +23,21 @@ std.string
 ,std.range
 ,std.stdio
 ;
+import
+core.memory
+;
 
 public import
 melosic.managers.common
 ;
 
 extern(C++) interface IInputSource {
+public:
     bool canOpen(const(char *) extension);
     void openFile(const(char *) filename);
-    void initOutput(IOutputRange output);
-    IOutputRange getOutputRange();
-    DecodeRange opSlice();
+    DecodeRange getDecodeRange();
     AudioSpecs getAudioSpecs();
+    void writeBuf(void * ptr, size_t length);
 }
 
 class InputSource {
@@ -50,19 +53,22 @@ class InputSource {
         iid.openFile(filename.toStringz());
     }
 
-    void initOutput(IOutputRange output) {
-        iid.initOutput(output);
+    AudioSpecs getAudioSpecs() {
+        return iid.getAudioSpecs();
     }
 
     DecodeRange opSlice() {
-        return iid[];
+        auto x = iid.getDecodeRange();
+        GC.addRoot(cast(const(void*))x);
+        return x;
     }
 
     IInputSource iid;
 }
 
 extern(C++) interface DecodeRange {
-    uint * front();
+    IBuffer front();
     void popFront();
     bool empty();
+    size_t length();
 }
