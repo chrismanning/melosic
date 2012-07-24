@@ -38,9 +38,9 @@ extern "C" void registerPluginObjects(IKernel * k);
 extern "C" void destroyPluginObjects();
 
 struct IBuffer {
-    virtual void * ptr() = 0;
+    virtual const void * ptr() = 0;
     virtual size_t length() = 0;
-    virtual void ptr(void * p) = 0;
+    virtual void ptr(const void * p) = 0;
     virtual void length(size_t p) = 0;
 };
 
@@ -48,7 +48,7 @@ class Buffer : public IBuffer {
 public:
     Buffer() : ptr_(0), length_(0) {}
 
-    virtual void * ptr() {
+    virtual const void * ptr() {
         return ptr_;
     }
 
@@ -56,7 +56,7 @@ public:
         return length_;
     }
 
-    virtual void ptr(void * p) {
+    virtual void ptr(const void * p) {
         ptr_ = p;
     }
 
@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    void * ptr_;
+    const void * ptr_;
     size_t length_;
 };
 

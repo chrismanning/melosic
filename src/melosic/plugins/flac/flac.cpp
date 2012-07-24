@@ -96,7 +96,7 @@ public:
         fd->process_until_end_of_metadata();
     }
 
-    void writeBuf(void * ptr, size_t length) {
+    void writeBuf(const void * ptr, size_t length) {
         if(buf->ptr()) {
             free(const_cast<void*>(buf->ptr()));
             buf->ptr(0);

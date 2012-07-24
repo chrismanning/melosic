@@ -117,7 +117,7 @@ private:
 }
 
 extern(C++) interface IBuffer {
-    void * ptr();
+    const(void *) ptr();
     size_t length();
 }
 

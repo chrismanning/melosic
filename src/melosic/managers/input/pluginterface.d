@@ -37,7 +37,7 @@ public:
     void openFile(const(char *) filename);
     DecodeRange getDecodeRange();
     AudioSpecs getAudioSpecs();
-    void writeBuf(void * ptr, size_t length);
+    void writeBuf(const(void *) ptr, size_t length);
 }
 
 class InputSource {
