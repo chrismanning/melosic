@@ -72,42 +72,5 @@ class WaveFile : IOutput {
     }
 
     File file;
-    ubyte sample_number;
     AudioSpecs as;
-    ubyte[] header;
 }
-
-//class RawPCMFileOutputRange : IOutputRange {
-//    this(string filename) {
-//        file = File(filename, "w+");
-//    }
-
-//    extern(C++) bool put(int a, ubyte bps) {
-//        ubyte[] output;
-//        switch(bps) {
-//            case 8:
-//                output = nativeToLittleEndian(cast(byte)a)[];
-//                break;
-//            case 16:
-//                output = nativeToLittleEndian(cast(short)a)[];
-//                break;
-//            case 24:
-//                output = nativeToLittleEndian!byte(cast(byte)a)[];
-//                break;
-//            case 32:
-//                output = nativeToLittleEndian!int(a)[];
-//                break;
-//            default:
-//                return false;
-//        }
-//        try {
-//            file.rawWrite(output);
-//            return true;
-//        }
-//        catch(Exception e) {
-//            return false;
-//        }
-//    }
-
-//    File file;
-//}
