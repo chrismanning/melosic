@@ -19,7 +19,6 @@ module melosic.managers.output.pluginterface;
 
 import
 std.conv
-,std.stdio
 ;
 
 public import

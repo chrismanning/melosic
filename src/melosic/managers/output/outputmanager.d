@@ -19,8 +19,6 @@ module melosic.managers.output.outputmanager;
 
 import
 std.algorithm
-,std.stdio
-,std.array
 ,std.exception
 ;
 

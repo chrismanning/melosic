@@ -20,8 +20,6 @@ module melosic.managers.input.pluginterface;
 import
 std.string
 ,std.path
-,std.range
-,std.stdio
 ;
 import
 core.memory

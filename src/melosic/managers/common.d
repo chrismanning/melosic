@@ -24,10 +24,14 @@ import
 std.string
 ,std.stdio
 ,std.conv
+,std.bitmanip
 ;
 import
 core.sys.posix.dlfcn
 ;
+
+alias nativeToLittleEndian ntl;
+alias nativeToBigEndian ntb;
 
 class PluginException : Exception {
     this(string plugin, string msg, string file = __FILE__, size_t line = __LINE__) {

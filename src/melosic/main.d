@@ -21,9 +21,6 @@ import
 std.stdio
 ;
 import
-core.memory
-;
-import
 melosic.managers.common
 ,melosic.core.wav
 ;
@@ -35,8 +32,8 @@ void main(string args[]) {
         kernel.loadPlugin("plugins/flac/flac.so");
         kernel.loadPlugin("plugins/alsa/alsa.so");
         auto decoder = kernel.getInputManager().openFile("test.flac");
-        auto output = kernel.getOutputManager().getDefaultOutput();
-//        auto output = new WaveFile("test1.wav");
+//        auto output = kernel.getOutputManager().getDefaultOutput();
+        auto output = new WaveFile("test1.wav");
         output.prepareDevice(decoder.getAudioSpecs());
         output.render(decoder[]);
     }

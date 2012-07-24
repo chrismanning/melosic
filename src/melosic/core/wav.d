@@ -17,11 +17,7 @@
 
 import
 std.stdio
-,std.bitmanip
 ,std.string
-;
-import
-core.memory
 ;
 import
 melosic.managers.common
@@ -51,18 +47,18 @@ class WaveFile : IOutput {
     extern(C++) void render(DecodeRange src) {
         uint total_size = cast(uint)as.total_samples * as.channels * (as.bps/8);
         file.rawWrite("RIFF");
-        file.rawWrite(nativeToLittleEndian!uint(total_size + 36));
+        file.rawWrite(ntl!uint(total_size + 36));
         file.rawWrite("WAVEfmt ");
-        file.rawWrite(nativeToLittleEndian!uint(16));
-        file.rawWrite(nativeToLittleEndian!ushort(1));
-        file.rawWrite(nativeToLittleEndian!ushort(as.channels));
-        file.rawWrite(nativeToLittleEndian!uint(as.sample_rate));
+        file.rawWrite(ntl!uint(16));
+        file.rawWrite(ntl!ushort(1));
+        file.rawWrite(ntl!ushort(as.channels));
+        file.rawWrite(ntl!uint(as.sample_rate));
         ushort q = as.channels * (as.bps/8);
-        file.rawWrite(nativeToLittleEndian!uint(as.sample_rate * q));
-        file.rawWrite(nativeToLittleEndian!ushort(q));
-        file.rawWrite(nativeToLittleEndian!ushort(as.bps));
+        file.rawWrite(ntl!uint(as.sample_rate * q));
+        file.rawWrite(ntl!ushort(q));
+        file.rawWrite(ntl!ushort(as.bps));
         file.rawWrite("data");
-        file.rawWrite(nativeToLittleEndian!uint(total_size));
+        file.rawWrite(ntl!uint(total_size));
         file.flush();
         stderr.writeln("Written header");
 
