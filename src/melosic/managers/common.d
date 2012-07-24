@@ -119,6 +119,9 @@ private:
 extern(C++) interface IBuffer {
     const(void *) ptr();
     size_t length();
+    final const(ubyte[]) opSlice() {
+        return cast(const(ubyte[]))ptr()[0..length()];
+    }
 }
 
 extern(C) struct AudioSpecs {

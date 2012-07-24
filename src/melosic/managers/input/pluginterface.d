@@ -67,8 +67,8 @@ class InputSource {
 }
 
 extern(C++) interface DecodeRange {
-    IBuffer front();
+    @property IBuffer front();
     void popFront();
-    bool empty();
+    @property bool empty();
     size_t length();
 }

@@ -66,13 +66,8 @@ class WaveFile : IOutput {
         file.flush();
         stderr.writeln("Written header");
 
-        FILE * fp = file.getFP();
-
-        src.popFront();
-        while(!src.empty()) {
-            auto f = src.front();
-            fwrite(src.front().ptr(), 1, src.front().length(), fp);
-            src.popFront();
+        foreach(buf; src) {
+            file.rawWrite(buf[]);
         }
     }
 
