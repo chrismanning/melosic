@@ -31,37 +31,31 @@ melosic.managers.common
 
 extern(C++) interface IInputSource {
 public:
-    bool canOpen(const(char *) extension);
     void openFile(const(char *) filename);
     DecodeRange getDecodeRange();
     AudioSpecs getAudioSpecs();
     void writeBuf(const(void *) ptr, size_t length);
 }
 
-class InputSource {
-    this(IInputSource iid) {
-        this.iid = iid;
+extern(C++) interface IInputFactory {
+    bool canOpen(const char * extension);
+    IInputSource create();
+}
+
+class InputFactory {
+    this(IInputFactory iif) {
+        this.iif = iif;
     }
 
-    bool canOpen(string filename) {
-        return iid.canOpen(filename.extension().toStringz());
+    bool canOpen(string extension) {
+        return iif.canOpen(toStringz(extension));
     }
 
-    void openFile(string filename) {
-        iid.openFile(filename.toStringz());
+    IInputSource create() {
+        return iif.create();
     }
 
-    AudioSpecs getAudioSpecs() {
-        return iid.getAudioSpecs();
-    }
-
-    DecodeRange opSlice() {
-        auto x = iid.getDecodeRange();
-        GC.addRoot(cast(const(void*))x);
-        return x;
-    }
-
-    IInputSource iid;
+    IInputFactory iif;
 }
 
 extern(C++) interface DecodeRange {

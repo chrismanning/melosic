@@ -21,6 +21,8 @@ public import melosic.managers.input.pluginterface
 ;
 import std.string
 ,std.stdio
+,std.conv
+,std.path
 ;
 import core.memory
 ;
@@ -29,28 +31,34 @@ extern(C++) interface IAudioFile {
 }
 
 extern(C++) interface IInputManager {
-    void addInputSource(IInputSource dec);
-    InputSource openFile(string filename);
+    void addInputFactory(IInputFactory factory);
+    IInputSource openFile(const(char *) filename);
 }
 
 class InputManager : IInputManager {
 public:
+    extern(C++) IInputSource openFile(const(char *) filename) {
+        return openFile(to!string(filename));
+    }
     //FIXME: there must be a better scheme than returning an InputSource here
-    extern(C++) InputSource openFile(string filename) {
-        foreach(src; srcs) {
-            if(src.canOpen(filename)) {
+    IInputSource openFile(string filename) {
+        foreach(factory; factories) {
+            if(factory.canOpen(filename.extension())) {
                 debug writeln(filename, " can be opened");
-                src.openFile(filename);
-                return src;
+                auto tmp = factory.create();
+                tmp.openFile(filename.toStringz());
+                return tmp;
             }
         }
-        throw new Exception("cannot open file " ~ filename);
+        stderr.writefln("Cannot open file: %s", filename);
+        return null;
+        //throw new Exception("cannot open file " ~ filename);
     }
 
-    extern(C++) void addInputSource(IInputSource src) {
-        srcs ~= new InputSource(src);
+    extern(C++) void addInputFactory(IInputFactory factory) {
+        factories ~= new InputFactory(factory);
     }
 
 private:
-    InputSource[] srcs;
+    InputFactory[] factories;
 }

@@ -34,11 +34,16 @@ public:
 
 class IInputSource {
 public:
-    virtual bool canOpen(const char * extension) = 0;
     virtual void openFile(const char * filename) = 0;
     virtual DecodeRange * getDecodeRange() = 0;
     virtual AudioSpecs getAudioSpecs() = 0;
     virtual void writeBuf(const void * ptr, size_t length) = 0;
+};
+
+class IInputFactory {
+public:
+    virtual bool canOpen(const char * extension) = 0;
+    virtual IInputSource * create() = 0;
 };
 
 #endif // INPUT_PLUGINTERFACE_H
