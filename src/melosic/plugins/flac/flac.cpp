@@ -87,10 +87,6 @@ public:
         }
     }
 
-    virtual bool canOpen(const char * extension) {
-        return strcmp(extension, ".flac") == 0;
-    }
-
     virtual void openFile(const char * filename) {
         fd->init(filename);
         fd->process_until_end_of_metadata();
@@ -163,8 +159,17 @@ DecodeRange * FlacDecoder::getDecodeRange() {
     return new FlacRange(this);
 }
 
+class FlacFactory : public IInputFactory {
+    virtual bool canOpen(const char * extension) {
+        return strcmp(extension, ".flac") == 0;
+    }
+    virtual IInputSource * create() {
+        return new FlacDecoder;
+    }
+};
+
 extern "C" void registerPluginObjects(IKernel * k) {
-    k->getInputManager()->addInputSource(new FlacDecoder);
+    k->getInputManager()->addInputFactory(new FlacFactory);
 }
 
 extern "C" void destroyPluginObjects() {
