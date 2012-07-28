@@ -55,8 +55,9 @@ class Kernel : IKernel {
 
     void loadPlugin(string filename) {
         if(filename in loadedPlugins) {
+            stderr.writefln("Plugin already loaded: %s", filename);
             //FIXME: use future error handling capabilities
-            throw new PluginException(filename, "already loaded");
+//            throw new PluginException(filename, "already loaded");
         }
         auto p = new Plugin(filename);
         p.registerPluginObjects(this);
@@ -96,19 +97,25 @@ public:
         handle = .dlopen(filename.toStringz(), RTLD_NOW);
         if(handle is null) {
             //FIXME: use future error handling capabilities
-            throw new Exception(to!string(dlerror()));
+            auto str = to!string(dlerror());
+            stderr.writeln(str);
+//            throw new Exception(str);
         }
         registerPlugin_ = getSymbol!registerPlugin_T("registerPluginObjects");
         if(registerPlugin_ is null) {
-            .dlclose(handle);
             //FIXME: use future error handling capabilities
-            throw new PluginException(filename, "cannot find symbol: registerPluginObjects");
+            auto str = to!string(dlerror());
+            stderr.writeln(str);
+            .dlclose(handle);
+//            throw new Exception(str);
         }
         destroyPlugin_ = getSymbol!destroyPlugin_T("destroyPluginObjects");
         if(destroyPlugin_ is null) {
-            .dlclose(handle);
             //FIXME: use future error handling capabilities
-            throw new PluginException(filename, "cannot find symbol: destroyPluginObjects");
+            auto str = to!string(dlerror());
+            stderr.writeln(str);
+            .dlclose(handle);
+//            throw new Exception(str);
         }
     }
 
