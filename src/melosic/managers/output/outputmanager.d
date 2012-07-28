@@ -26,7 +26,7 @@ public import melosic.managers.output.pluginterface;
 
 extern(C++) interface IOutputManager {
     void addOutput(IOutput dev);
-    OutputDevice getDefaultOutput();
+    IOutput getDefaultOutput();
 }
 
 class OutputManager : IOutputManager {
@@ -34,10 +34,10 @@ class OutputManager : IOutputManager {
         devs ~= new OutputDevice(dev);
     }
 
-    extern(C++) OutputDevice getDefaultOutput() {
+    extern(C++) IOutput getDefaultOutput() {
         auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
         enforceEx!Exception(r.count() > 0, "Cannot find default device");
-        return r.front();
+        return r.front().iod;
     }
 
 private:

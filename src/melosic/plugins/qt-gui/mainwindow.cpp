@@ -35,4 +35,19 @@ void MainWindow::on_actionOpen_triggered()
 {
     auto file = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
     qDebug() << file;
+    filename = file;
+}
+
+void MainWindow::on_actionPlay_triggered()
+{
+    if(filename.length() > 0) {
+        //TODO: hook in to Qt event loop
+        auto input = kernel->getInputManager()->openFile(filename.toStdString().c_str());
+        auto output = kernel->getOutputManager()->getDefaultOutput();
+        output->prepareDevice(input->getAudioSpecs());
+        output->render(input->getDecodeRange());
+    }
+    else {
+        qDebug("Nothing to play");
+    }
 }

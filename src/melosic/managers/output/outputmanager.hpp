@@ -23,6 +23,7 @@
 class IOutputManager {
 public:
     virtual void addOutput(IOutput * dec);
+    virtual IOutput * getDefaultOutput();
 };
 
 #endif // OUTPUTMANAGER_HPP
