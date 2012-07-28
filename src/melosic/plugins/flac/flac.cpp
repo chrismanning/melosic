@@ -18,10 +18,10 @@
 #include <melosic/managers/common.hpp>
 #include <FLAC++/decoder.h>
 #include <string.h>
-#include <boost-1_49/boost/shared_ptr.hpp>
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
+#include <list>
 
 class FlacDecoderImpl : public FLAC::Decoder::File {
 public:
@@ -159,12 +159,17 @@ DecodeRange * FlacDecoder::getDecodeRange() {
     return new FlacRange(this);
 }
 
+static std::list<FlacDecoder*> flacObjects;
+
 class FlacFactory : public IInputFactory {
     virtual bool canOpen(const char * extension) {
         return strcmp(extension, ".flac") == 0;
     }
     virtual IInputSource * create() {
-        return new FlacDecoder;
+        auto tmp = new FlacDecoder;
+        flacObjects.push_back(tmp);
+
+        return tmp;
     }
 };
 
@@ -174,4 +179,7 @@ extern "C" void registerPluginObjects(IKernel * k) {
 
 extern "C" void destroyPluginObjects() {
     fprintf(stderr, "Destroying flac plugin objects\n");
+    for(auto obj : flacObjects) {
+        delete obj;
+    }
 }
