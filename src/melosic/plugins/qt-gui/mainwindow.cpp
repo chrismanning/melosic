@@ -17,6 +17,7 @@
 
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
+#include <QFileDialog>
 
 MainWindow::MainWindow(IKernel * k, QWidget * parent) :
     QMainWindow(parent), ui(new Ui::MainWindow), kernel(k)
@@ -28,4 +29,10 @@ MainWindow::~MainWindow()
 {
     qDebug("Destroying main window");
     delete ui;
+}
+
+void MainWindow::on_actionOpen_triggered()
+{
+    auto file = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
+    qDebug() << file;
 }
