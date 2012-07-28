@@ -129,6 +129,7 @@ private:
 static std::list<AlsaOutput*> alsaPluginObjects;
 
 extern "C" void registerPluginObjects(IKernel * k) {
+    //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
     const char * filter = "Output";
@@ -155,7 +156,6 @@ extern "C" void registerPluginObjects(IKernel * k) {
             free(io);
         n++;
     }
-    fprintf(stderr,"%s\n", alsaPluginObjects.back()->getDeviceDescription());
     snd_device_name_free_hint(hints);
 }
 
