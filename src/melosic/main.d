@@ -19,25 +19,37 @@ module melosic.main;
 
 import
 std.stdio
+,std.conv
+,std.string
 ;
 import
 melosic.managers.common
 ,melosic.core.wav
 ;
 
-void main(string args[]) {
-    writeln("Hello World!");
-    auto kernel = new Kernel;
-    try {
-        kernel.loadPlugin("plugins/flac/flac.so");
-        kernel.loadPlugin("plugins/alsa/alsa.so");
-        auto decoder = kernel.getInputManager().openFile("test.flac");
-//        auto output = kernel.getOutputManager().getDefaultOutput();
-        auto output = new WaveFile("test1.wav");
-        output.prepareDevice(decoder.getAudioSpecs());
-        output.render(decoder[]);
+alias extern(C) int function(int argc, char ** argv, IKernel k) startEventLoop_T;
+
+int main(string args[]) {
+    auto kernel = new shared(Kernel);
+
+    auto handle = .dlopen(toStringz("plugins/qt-gui/qt-gui.so"), RTLD_NOW);
+    if(handle is null) {
+        stderr.writeln(to!string(dlerror()));
+        return -1;
     }
-    catch(Exception e) {
-        stderr.writeln(e.msg);
+    stderr.writeln("Loaded Qt GUI plugin");
+
+    auto startEventLoop = cast(startEventLoop_T).dlsym(handle, toStringz("startEventLoop"));
+    if(startEventLoop is null) {
+        stderr.writeln(to!string(dlerror()));
+        .dlclose(handle);
+        return -1;
     }
+
+    char*[] tmp;
+    foreach(arg; args) {
+        tmp ~= cast(char*)toStringz(arg);
+    }
+
+    return startEventLoop(cast(int)args.length, tmp.ptr, kernel);
 }

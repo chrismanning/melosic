@@ -25,8 +25,10 @@ std.string
 ,std.stdio
 ,std.conv
 ,std.bitmanip
+,std.file
+,std.algorithm
 ;
-import
+public import
 core.sys.posix.dlfcn
 ;
 
@@ -42,6 +44,7 @@ class PluginException : Exception {
 extern(C++) interface IKernel {
     IInputManager getInputManager();
     IOutputManager getOutputManager();
+    void loadAllPlugins();
 }
 
 class Kernel : IKernel {
@@ -52,11 +55,21 @@ class Kernel : IKernel {
 
     void loadPlugin(string filename) {
         if(filename in loadedPlugins) {
+            //FIXME: use future error handling capabilities
             throw new PluginException(filename, "already loaded");
         }
         auto p = new Plugin(filename);
         p.registerPluginObjects(this);
         loadedPlugins[filename] = p;
+    }
+
+    extern(C++) void loadAllPlugins() {
+        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
+            if(pe.name.canFind("qt")) {
+                continue;
+            }
+            loadPlugin(pe.name);
+        }
     }
 
     extern(C++) IInputManager getInputManager() {
@@ -73,24 +86,28 @@ private:
     OutputManager outman;
 }
 
-extern(C) void registerPluginObjects(IKernel kernel);
+extern(C) void registerPluginObjects(IKernel k);
 extern(C) void destroyPluginObjects();
+extern(C) int startEventLoop(int argc, char ** argv, IKernel k);
 
 class Plugin {
 public:
     this(string filename) {
         handle = .dlopen(filename.toStringz(), RTLD_NOW);
         if(handle is null) {
+            //FIXME: use future error handling capabilities
             throw new Exception(to!string(dlerror()));
         }
         registerPlugin_ = getSymbol!registerPlugin_T("registerPluginObjects");
         if(registerPlugin_ is null) {
             .dlclose(handle);
+            //FIXME: use future error handling capabilities
             throw new PluginException(filename, "cannot find symbol: registerPluginObjects");
         }
         destroyPlugin_ = getSymbol!destroyPlugin_T("destroyPluginObjects");
         if(destroyPlugin_ is null) {
             .dlclose(handle);
+            //FIXME: use future error handling capabilities
             throw new PluginException(filename, "cannot find symbol: destroyPluginObjects");
         }
     }

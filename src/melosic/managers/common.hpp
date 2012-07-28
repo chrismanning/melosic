@@ -32,10 +32,12 @@ class IKernel {
 public:
     virtual IInputManager * getInputManager() = 0;
     virtual IOutputManager * getOutputManager() = 0;
+    virtual void loadAllPlugins() = 0;
 };
 
 extern "C" void registerPluginObjects(IKernel * k);
 extern "C" void destroyPluginObjects();
+extern "C" int startEventLoop(int argc, char ** argv, IKernel * k);
 
 struct IBuffer {
     virtual const void * ptr() = 0;
