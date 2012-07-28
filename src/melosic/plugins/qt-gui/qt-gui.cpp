@@ -15,17 +15,13 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "mainwindow.hpp"
-#include "ui_mainwindow.h"
+#include <mainwindow.hpp>
+#include <melosic/managers/common.hpp>
 
-MainWindow::MainWindow(IKernel * k, QWidget * parent) :
-    QMainWindow(parent), ui(new Ui::MainWindow), kernel(k)
-{
-    ui->setupUi(this);
-}
-
-MainWindow::~MainWindow()
-{
-    qDebug("Destroying main window");
-    delete ui;
+extern "C" int startEventLoop(int argc, char ** argv, IKernel * k) {
+    QApplication app(argc, argv);
+    k->loadAllPlugins();
+    MainWindow win(k);
+    win.show();
+    return app.exec();
 }

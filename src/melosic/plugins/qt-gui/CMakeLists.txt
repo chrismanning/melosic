@@ -3,11 +3,11 @@ INCLUDE(${QT_USE_FILE})
 ADD_DEFINITIONS(${QT_DEFINITIONS})
 ADD_DEFINITIONS(-DQT_SHARED)
 
-SET(qt-gui_SOURCES mainwindow.cpp)
+SET(qt-gui_SOURCES mainwindow.cpp qt-gui.cpp)
 SET(qt-gui_HEADERS mainwindow.hpp)
 SET(qt-gui_FORMS mainwindow.ui)
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ../../..)
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ../../.. .)
 
 QT4_WRAP_CPP(qt-gui_HEADERS_MOC ${qt-gui_HEADERS})
 QT4_WRAP_UI(qt-gui_FORMS_HEADERS ${qt-gui_FORMS})
