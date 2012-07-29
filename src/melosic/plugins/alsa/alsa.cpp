@@ -112,10 +112,11 @@ public:
                     break;
                 }
                 case PlaybackState::Paused: {
+                    snd_pcm_drop(pdh);
                     break;
                 }
                 case PlaybackState::Stopped: {
-                    //TODO: release device here maybe
+                    snd_pcm_close(pdh);
                     break;
                 }
             }
