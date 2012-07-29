@@ -28,6 +28,11 @@ typedef unsigned uint;
 typedef unsigned short ushort;
 typedef unsigned long ulong;
 
+class ErrorHandler {
+public:
+    virtual void report(const char * msg, const char * file = __FILE__, uint line = __LINE__) = 0;
+};
+
 class IKernel {
 public:
     virtual IInputManager * getInputManager() = 0;
@@ -80,6 +85,23 @@ extern "C" struct AudioSpecs {
     ulong total_samples;
 };
 
-//TODO: error reporting across plugins
+class FileHandler {
+
+};
+
+enum PlaybackState {
+    Playing,
+    Paused,
+    Stopped,
+};
+
+class PlaybackHandler : public ErrorHandler {
+public:
+    virtual void play() = 0;
+    virtual void pause() = 0;
+    virtual void stop() = 0;
+    virtual PlaybackState state() = 0;
+    virtual IBuffer * requestData(uint bytes) = 0;
+};
 
 #endif // COMMON_H

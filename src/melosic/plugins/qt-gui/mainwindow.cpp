@@ -45,7 +45,7 @@ void MainWindow::on_actionPlay_triggered()
         auto input = kernel->getInputManager()->openFile(filename.toStdString().c_str());
         auto output = kernel->getOutputManager()->getDefaultOutput();
         output->prepareDevice(input->getAudioSpecs());
-        output->render(input->getDecodeRange());
+        //output->render(input->getDecodeRange());
     }
     else {
         qDebug("Nothing to play");

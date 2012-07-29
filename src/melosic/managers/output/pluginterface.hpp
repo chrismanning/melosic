@@ -23,13 +23,15 @@
 extern "C" struct DeviceCapabilities {
 };
 
+class PlaybackHandler;
+
 class IOutput {
 public:
     virtual void prepareDevice(AudioSpecs as) = 0;
     virtual const char * getDeviceDescription() = 0;
     virtual const char * getDeviceName() = 0;
     virtual const DeviceCapabilities * getDeviceCapabilities() = 0;
-    virtual void render(DecodeRange * src) = 0;
+    virtual void render(PlaybackHandler * playHandle) = 0;
 };
 
 #endif // OUTPUT_PLUGINTERFACE_HPP
