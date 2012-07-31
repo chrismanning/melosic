@@ -15,13 +15,14 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/managers/common.hpp>
 #include <FLAC++/decoder.h>
-#include <string.h>
-#include <cstdlib>
-#include <cstdio>
-#include <iostream>
-#include <list>
+
+#include <boost/functional/factory.hpp>
+using boost::factory;
+#include <boost/format.hpp>
+using boost::format;
+
+#include <melosic/managers/common.hpp>
 
 class FlacDecoderImpl : public FLAC::Decoder::File {
 public:
@@ -66,7 +67,7 @@ public:
 
     virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
         //FIXME: use future error handling capabilities
-        std::cerr << "Got error callback:" << FLAC__StreamDecoderErrorStatusString[status] << std::endl;
+        cerr << "Got error callback:" << FLAC__StreamDecoderErrorStatusString[status] << endl;
     }
 
 private:
@@ -79,7 +80,7 @@ public:
     }
 
     ~FlacDecoder() {
-        fprintf(stderr, "Flac decoder being destroyed\n");
+        cerr << "Flac decoder being destroyed\n" << endl;
         fd->finish();
         delete fd;
         if(as) {
@@ -87,7 +88,7 @@ public:
         }
     }
 
-    virtual void openFile(const char * filename) {
+    virtual void openFile(const std::string& filename) {
         fd->init(filename);
         fd->process_until_end_of_metadata();
     }
@@ -101,13 +102,9 @@ public:
         buf->length(length);
     }
 
-    virtual void destroyRange(DecodeRange * range);
-
     virtual AudioSpecs getAudioSpecs() {
         return *as;
     }
-
-    virtual DecodeRange * getDecodeRange();
 
     AudioSpecs * as;
     FlacDecoderImpl * fd;
@@ -122,10 +119,10 @@ void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)
         auto tmp = new AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
         reinterpret_cast<FlacDecoder&>(dec).as = tmp;
 
-        printf("sample rate    : %u Hz\n", tmp->sample_rate);
-        printf("channels       : %u\n", tmp->channels);
-        printf("bits per sample: %u\n", tmp->bps);
-        printf("total samples  : %lu\n", tmp->total_samples);
+        cout << format("sample rate    : %u Hz") % tmp->sample_rate << endl;
+        cout << format("channels       : %u") % tmp->channels << endl;
+        cout << format("bits per sample: %u") % tmp->bps << endl;
+        cout << format("total samples  : %lu") % tmp->total_samples << endl;
     }
 }
 
@@ -157,47 +154,25 @@ private:
     FlacDecoder * dec;
 };
 
-DecodeRange * FlacDecoder::getDecodeRange() {
-    return new FlacRange(this);
-}
-
-void FlacDecoder::destroyRange(DecodeRange * range) {
-    delete static_cast<FlacRange *>(range);
-}
-
-static std::list<FlacDecoder *> flacObjects;
-
 class FlacFactory : public IInputFactory {
 public:
     virtual ~FlacFactory() {
-        fprintf(stderr, "Destroying FlacFactory\n");
+        std::cerr << "Destroying FlacFactory" << std::endl;
     }
 
-    virtual bool canOpen(const char * extension) {
-        return strcmp(extension, ".flac") == 0;
+    virtual bool canOpen(const std::string& extension) {
+        return extension == ".flac";
     }
 
-    virtual IInputSource * create() {
-        return new FlacDecoder;
-    }
-
-    virtual void destroy(IInputSource * ptr) {
-        delete static_cast<FlacDecoder *>(ptr);
+    virtual std::shared_ptr<IInputSource> create() {
+        return decltype(create())(new FlacDecoder);
     }
 };
 
-static __thread FlacFactory * flac_factory = 0;
-
-static IInputFactory * flacFactory() {
-    flac_factory = new FlacFactory;
-    return flac_factory;
-}
-
 extern "C" void registerPluginObjects(IKernel * k) {
-    k->getInputManager()->addFactory(flacFactory);
+    k->getInputManager()->addFactory(factory<std::shared_ptr<IInputSource>>(), {".flac"});
 }
 
 extern "C" void destroyPluginObjects() {
-    fprintf(stderr, "Destroying flac objects\n");
-    delete flac_factory;
+    std::cerr << "Destroying flac objects" << std::endl;
 }

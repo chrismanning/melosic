@@ -18,12 +18,19 @@
 #ifndef INPUT_MANAGER_H
 #define INPUT_MANAGER_H
 
+#include <initializer_list>
+#include <string>
+#include <boost/functional/factory.hpp>
+
 #include <melosic/managers/input/pluginterface.hpp>
+
+class IInputSource;
 
 class IInputManager {
 public:
-    virtual void addFactory(IInputFactory * (*factoryFunc)());
-    virtual IInputSource * openFile(const char * filename);
+    virtual void addFactory(boost::factory<std::shared_ptr<IInputSource> > fact,
+                            std::initializer_list<const std::string> extensions);
+    virtual std::shared_ptr<IInputSource> openFile(const std::string& filename);
 };
 
 #endif // INPUT_MANAGER_H

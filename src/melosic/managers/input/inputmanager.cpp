@@ -15,50 +15,33 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.managers.input.inputmanager;
+#include <list>
+#include <boost/filesystem.hpp>
 
-public import melosic.managers.input.pluginterface
-;
-import std.string
-,std.stdio
-,std.conv
-,std.path
-;
-import core.memory
-;
+#include <melosic/managers/input/pluginterface.hpp>
 
-extern(C++) interface IAudioFile {
-}
-
-extern(C++) interface IInputManager {
-    void addInputFactory(IInputFactory factory);
-    IInputSource openFile(const(char *) filename);
-}
+using boost::filesystem::path;
 
 class InputManager : IInputManager {
 public:
-    extern(C++) IInputSource openFile(const(char *) filename) {
-        return openFile(to!string(filename));
-    }
-    //FIXME: there must be a better scheme than returning an InputSource here
-    IInputSource openFile(string filename) {
-        foreach(factory; factories) {
-            if(factory.canOpen(filename.extension())) {
-                debug writeln(filename, " can be opened");
-                auto tmp = factory.create();
-                tmp.openFile(filename.toStringz());
+    virtual std::shared_ptr<IInputSource> openFile(std::string const& filename) {
+        for(auto factory : factories) {
+            if(factory->canOpen(path(filename).extension().string())) {
+                cerr << filename << " can be opened" << endl;
+                auto tmp = factory->create();
+                tmp->openFile(filename);
                 return tmp;
             }
         }
-        stderr.writefln("Cannot open file: %s", filename);
-        return null;
+        cerr << "Cannot open file: " << filename << endl;
+        return 0;
         //throw new Exception("cannot open file " ~ filename);
     }
 
-    extern(C++) void addInputFactory(IInputFactory factory) {
-        factories ~= new InputFactory(factory);
+    virtual void addInputFactory(IInputFactory * factory) {
+        factories.push_back(factory);
     }
 
 private:
-    InputFactory[] factories;
-}
+    std::list<IInputFactory*> factories;
+};

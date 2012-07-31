@@ -18,7 +18,7 @@
 #ifndef INPUT_PLUGINTERFACE_H
 #define INPUT_PLUGINTERFACE_H
 
-#include <cstddef>
+#include <memory>
 #include <melosic/managers/common.hpp>
 
 struct AudioSpecs;
@@ -34,19 +34,17 @@ public:
 
 class IInputSource {
 public:
-    virtual void openFile(const char * filename) = 0;
-    virtual DecodeRange * getDecodeRange() = 0;
+    virtual ~IInputSource() {}
+    virtual void openFile(const std::string& filename) = 0;
     virtual AudioSpecs getAudioSpecs() = 0;
     virtual void writeBuf(const void * ptr, size_t length) = 0;
-    virtual void destroyRange(DecodeRange * range) = 0;
 };
 
 class IInputFactory {
 public:
     virtual ~IInputFactory() {}
-    virtual bool canOpen(const char * extension) = 0;
-    virtual IInputSource * create() = 0;
-    virtual void destroy(IInputSource * ptr) = 0;
+    virtual bool canOpen(const std::string& extension) = 0;
+    virtual std::shared_ptr<IInputSource> create() = 0;
 };
 
 #endif // INPUT_PLUGINTERFACE_H

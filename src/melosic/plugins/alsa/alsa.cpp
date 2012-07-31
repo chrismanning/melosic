@@ -33,7 +33,7 @@ public:
         : pdh(0), params(0), name(name), desc(desc)
     {}
 
-    ~AlsaOutput() {
+    virtual ~AlsaOutput() {
         fprintf(stderr, "Alsa instance being destroyed\n");
         if(pdh) {
             snd_pcm_drain(pdh);

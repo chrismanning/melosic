@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <iostream>
-
 #include <melosic/managers/common.hpp>
 #include <melosic/core/wav.hpp>
 

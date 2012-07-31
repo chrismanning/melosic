@@ -18,9 +18,11 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <iostream>
+using std::cout; using std::cerr; using std::endl;
+
 #include <melosic/managers/input/inputmanager.hpp>
 #include <melosic/managers/output/outputmanager.hpp>
-#include <cstddef>
 
 typedef unsigned char ubyte;
 typedef signed char byte;

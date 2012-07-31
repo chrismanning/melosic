@@ -30,6 +30,7 @@ struct AudioSpecs;
 
 class IOutput {
 public:
+    virtual ~IOutput() {}
     virtual void prepareDevice(AudioSpecs as) = 0;
     virtual const std::string& getDeviceDescription() = 0;
     virtual const std::string& getDeviceName() = 0;
