@@ -154,21 +154,6 @@ private:
     FlacDecoder * dec;
 };
 
-class FlacFactory : public IInputFactory {
-public:
-    virtual ~FlacFactory() {
-        std::cerr << "Destroying FlacFactory" << std::endl;
-    }
-
-    virtual bool canOpen(const std::string& extension) {
-        return extension == ".flac";
-    }
-
-    virtual std::shared_ptr<IInputSource> create() {
-        return decltype(create())(new FlacDecoder);
-    }
-};
-
 extern "C" void registerPluginObjects(IKernel * k) {
     k->getInputManager()->addFactory(factory<std::shared_ptr<IInputSource>>(), {".flac"});
 }
