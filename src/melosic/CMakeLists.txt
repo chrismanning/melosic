@@ -1,7 +1,5 @@
-SET(SRC_LIST main.d)
-SET(SRC_LIST ${SRC_LIST} core/core.d core/wav.d)
-SET(SRC_LIST ${SRC_LIST} ../util/util.d)
-SET(SRC_LIST ${SRC_LIST} plugins/plugins.d)
+SET(SRC_LIST main.cpp)
+SET(SRC_LIST ${SRC_LIST} core/wav.hpp)
 
 #abbrev
 SET(PN ${PROJECT_NAME})
