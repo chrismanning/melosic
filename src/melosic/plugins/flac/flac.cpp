@@ -101,6 +101,8 @@ public:
         buf->length(length);
     }
 
+    virtual void destroyRange(DecodeRange * range);
+
     virtual AudioSpecs getAudioSpecs() {
         return *as;
     }
@@ -159,27 +161,43 @@ DecodeRange * FlacDecoder::getDecodeRange() {
     return new FlacRange(this);
 }
 
-static std::list<FlacDecoder*> flacObjects;
+void FlacDecoder::destroyRange(DecodeRange * range) {
+    delete static_cast<FlacRange *>(range);
+}
+
+static std::list<FlacDecoder *> flacObjects;
 
 class FlacFactory : public IInputFactory {
+public:
+    virtual ~FlacFactory() {
+        fprintf(stderr, "Destroying FlacFactory\n");
+    }
+
     virtual bool canOpen(const char * extension) {
         return strcmp(extension, ".flac") == 0;
     }
-    virtual IInputSource * create() {
-        auto tmp = new FlacDecoder;
-        flacObjects.push_back(tmp);
 
-        return tmp;
+    virtual IInputSource * create() {
+        return new FlacDecoder;
+    }
+
+    virtual void destroy(IInputSource * ptr) {
+        delete static_cast<FlacDecoder *>(ptr);
     }
 };
 
+static __thread FlacFactory * flac_factory = 0;
+
+static IInputFactory * flacFactory() {
+    flac_factory = new FlacFactory;
+    return flac_factory;
+}
+
 extern "C" void registerPluginObjects(IKernel * k) {
-    k->getInputManager()->addInputFactory(new FlacFactory);
+    k->getInputManager()->addFactory(flacFactory);
 }
 
 extern "C" void destroyPluginObjects() {
-    fprintf(stderr, "Destroying flac plugin objects\n");
-    for(auto obj : flacObjects) {
-        delete obj;
-    }
+    fprintf(stderr, "Destroying flac objects\n");
+    delete flac_factory;
 }

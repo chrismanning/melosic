@@ -20,7 +20,6 @@
 
 extern "C" int startEventLoop(int argc, char ** argv, IKernel * k) {
     QApplication app(argc, argv);
-    k->loadAllPlugins();
     MainWindow win(k);
     win.show();
     return app.exec();

@@ -22,7 +22,7 @@
 
 class IInputManager {
 public:
-    virtual void addInputFactory(IInputFactory * dec);
+    virtual void addFactory(IInputFactory * (*factoryFunc)());
     virtual IInputSource * openFile(const char * filename);
 };
 
