@@ -21,6 +21,7 @@
 using boost::factory;
 #include <boost/format.hpp>
 using boost::format;
+#include <vector>
 
 #include <melosic/managers/common.hpp>
 
@@ -29,8 +30,8 @@ public:
     FlacDecoderImpl(IInputSource& dec_) : dec(dec_) {}
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame, const FLAC__int32 * const buffer[])
     {
-        ubyte * tmp = (ubyte *)malloc(frame->header.blocksize * sizeof(uint) * frame->header.channels / (frame->header.bits_per_sample/8));
-        ubyte * buf = tmp;
+        auto buf = std::vector<ubyte>(frame->header.blocksize * sizeof(uint) * frame->header.channels / (frame->header.bits_per_sample/8));
+        auto tmp = &buf[0];
 
         if(tmp == NULL) {
             return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
@@ -76,39 +77,30 @@ private:
 
 class FlacDecoder : public IInputSource {
 public:
-    FlacDecoder() : as(0), fd(new FlacDecoderImpl(*this)), buf(new Buffer) {
+    FlacDecoder() : fd(*this) {
     }
 
     ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n" << endl;
-        fd->finish();
-        delete fd;
-        if(as) {
-            delete as;
-        }
+        fd.finish();
     }
 
     virtual void openFile(const std::string& filename) {
-        fd->init(filename);
-        fd->process_until_end_of_metadata();
+        fd.init(filename);
+        fd.process_until_end_of_metadata();
     }
 
-    void writeBuf(const void * ptr, size_t length) {
-        if(buf->ptr()) {
-            free(const_cast<void*>(buf->ptr()));
-            buf->ptr(0);
-        }
-        buf->ptr(ptr);
-        buf->length(length);
+    void writeBuf(const std::vector<ubyte>& buf, size_t length) {
+        this->buf = buf;
     }
 
-    virtual AudioSpecs getAudioSpecs() {
-        return *as;
+    virtual const AudioSpecs& getAudioSpecs() {
+        return as;
     }
 
-    AudioSpecs * as;
-    FlacDecoderImpl * fd;
-    IBuffer * buf;
+    AudioSpecs as;
+    FlacDecoderImpl fd;
+    std::vector<ubyte> buf;
 };
 
 void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)
@@ -116,43 +108,15 @@ void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)
     if(metadata->type == FLAC__METADATA_TYPE_STREAMINFO) {
         //the get*() functions don't seem to work at this point
         FLAC__StreamMetadata_StreamInfo m = metadata->data.stream_info;
-        auto tmp = new AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
-        reinterpret_cast<FlacDecoder&>(dec).as = tmp;
+        AudioSpecs tmp(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
+        static_cast<FlacDecoder&>(dec).as = tmp;
 
-        cout << format("sample rate    : %u Hz") % tmp->sample_rate << endl;
-        cout << format("channels       : %u") % tmp->channels << endl;
-        cout << format("bits per sample: %u") % tmp->bps << endl;
-        cout << format("total samples  : %lu") % tmp->total_samples << endl;
+        cout << format("sample rate    : %u Hz") % tmp.sample_rate << endl;
+        cout << format("channels       : %u") % tmp.channels << endl;
+        cout << format("bits per sample: %u") % tmp.bps << endl;
+        cout << format("total samples  : %lu") % tmp.total_samples << endl;
     }
 }
-
-class FlacRange : public DecodeRange {
-public:
-    FlacRange(FlacDecoder * dec) : dec(dec) {
-    }
-
-    virtual IBuffer * front() {
-        return dec->buf;
-    }
-
-    virtual void popFront() {
-        if(!dec->fd->process_single()) {
-            std::cerr << "Decode aborted" << std::endl;
-        }
-    }
-
-    virtual bool empty() {
-        auto state = dec->fd->get_state();
-        return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
-    }
-
-    virtual size_t length() {
-        return dec->fd->get_total_samples();
-    }
-
-private:
-    FlacDecoder * dec;
-};
 
 extern "C" void registerPluginObjects(IKernel * k) {
     k->getInputManager()->addFactory(factory<std::shared_ptr<IInputSource>>(), {".flac"});
