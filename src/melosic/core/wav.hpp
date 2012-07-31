@@ -15,58 +15,53 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-import
-std.stdio
-,std.string
-;
-import
-melosic.managers.common
-;
+#include <string>
 
-class WaveFile : IOutput {
-    this(string filename) {
-        file = File(filename, "w");
+#include <melosic/managers/common.hpp>
+
+class WaveFile : public IOutput {
+    WaveFile(std::string filename) {
     }
 
-    extern(C++) void prepareDevice(AudioSpecs as) {
-        this.as = as;
+    void prepareDevice(AudioSpecs as) {
+        this->as = as;
     }
 
-    extern(C++) const(char *) getDeviceDescription() {
-        return toStringz("Wav file");
+    const std::string& getDeviceDescription() {
+        return "Wav file";
     }
 
-    extern(C++) const(char *) getDeviceName() {
-        return toStringz(file.name);
+    const std::string& getDeviceName() {
+        return "file.name";
     }
 
-    extern(C++) DeviceCapabilities * getDeviceCapabilities() {
+    DeviceCapabilities * getDeviceCapabilities() {
         return new DeviceCapabilities;
     }
 
-    extern(C++) void render(DecodeRange src) {
-        uint total_size = cast(uint)as.total_samples * as.channels * (as.bps/8);
-        file.rawWrite("RIFF");
-        file.rawWrite(ntl!uint(total_size + 36));
-        file.rawWrite("WAVEfmt ");
-        file.rawWrite(ntl!uint(16));
-        file.rawWrite(ntl!ushort(1));
-        file.rawWrite(ntl!ushort(as.channels));
-        file.rawWrite(ntl!uint(as.sample_rate));
-        ushort q = as.channels * (as.bps/8);
-        file.rawWrite(ntl!uint(as.sample_rate * q));
-        file.rawWrite(ntl!ushort(q));
-        file.rawWrite(ntl!ushort(as.bps));
-        file.rawWrite("data");
-        file.rawWrite(ntl!uint(total_size));
-        file.flush();
-        stderr.writeln("Written header");
+//    void render(DecodeRange src) {
+//        uint total_size = cast(uint)as.total_samples * as.channels * (as.bps/8);
+//        file.rawWrite("RIFF");
+//        file.rawWrite(ntl!uint(total_size + 36));
+//        file.rawWrite("WAVEfmt ");
+//        file.rawWrite(ntl!uint(16));
+//        file.rawWrite(ntl!ushort(1));
+//        file.rawWrite(ntl!ushort(as.channels));
+//        file.rawWrite(ntl!uint(as.sample_rate));
+//        ushort q = as.channels * (as.bps/8);
+//        file.rawWrite(ntl!uint(as.sample_rate * q));
+//        file.rawWrite(ntl!ushort(q));
+//        file.rawWrite(ntl!ushort(as.bps));
+//        file.rawWrite("data");
+//        file.rawWrite(ntl!uint(total_size));
+//        file.flush();
+//        stderr.writeln("Written header");
 
-        foreach(buf; src) {
-            file.rawWrite(buf[]);
-        }
-    }
+//        foreach(buf; src) {
+//            file.rawWrite(buf[]);
+//        }
+//    }
 
-    File file;
+//    File file;
     AudioSpecs as;
-}
+};

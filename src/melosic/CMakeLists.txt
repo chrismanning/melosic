@@ -8,7 +8,8 @@ add_executable(${PN} ${SRC_LIST})
 
 add_subdirectory(managers)
 add_subdirectory(plugins)
+add_subdirectory(gui)
 
 include_directories(..)
-target_link_libraries(${PN} melosicmanagers)
+target_link_libraries(${PN} melosiccore)
 

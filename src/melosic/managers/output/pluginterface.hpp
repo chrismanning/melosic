@@ -18,18 +18,21 @@
 #ifndef OUTPUT_PLUGINTERFACE_HPP
 #define OUTPUT_PLUGINTERFACE_HPP
 
+#include <string>
+
 #include <melosic/managers/common.hpp>
 
 extern "C" struct DeviceCapabilities {
 };
 
 class PlaybackHandler;
+struct AudioSpecs;
 
 class IOutput {
 public:
     virtual void prepareDevice(AudioSpecs as) = 0;
-    virtual const char * getDeviceDescription() = 0;
-    virtual const char * getDeviceName() = 0;
+    virtual const std::string& getDeviceDescription() = 0;
+    virtual const std::string& getDeviceName() = 0;
     virtual const DeviceCapabilities * getDeviceCapabilities() = 0;
     virtual void render(PlaybackHandler * playHandle) = 0;
 };

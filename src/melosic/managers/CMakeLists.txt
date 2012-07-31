@@ -1,6 +1,6 @@
-SET(SRC_LIST common.cpp)
-SET(SRC_LIST ${SRC_LIST} input/pluginterface.cpp)
-SET(SRC_LIST ${SRC_LIST} output/pluginterface.cpp)
+SET(SRC_LIST common.cpp common.hpp)
+SET(SRC_LIST ${SRC_LIST} input/pluginterface.hpp)
+SET(SRC_LIST ${SRC_LIST} output/pluginterface.hpp)
 
 include_directories(../..)
 

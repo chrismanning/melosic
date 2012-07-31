@@ -15,156 +15,104 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.managers.common;
+#include <iostream>
+#include <string>
+#include <map>
+#include <functional>
 
-public import melosic.managers.input.inputmanager;
-public import melosic.managers.output.outputmanager;
+#include <dlfcn.h>
 
-import
-std.string
-,std.stdio
-,std.conv
-,std.bitmanip
-,std.file
-,std.algorithm
-;
-public import
-core.sys.posix.dlfcn
-;
+#include <melosic/managers/input/inputmanager.hpp>
+#include <melosic/managers/output/outputmanager.hpp>
 
-alias nativeToLittleEndian ntl;
-alias nativeToBigEndian ntb;
+extern "C" void registerPluginObjects(IKernel * k);
+extern "C" void destroyPluginObjects();
+typedef void (*registerPlugin_T)(IKernel*);
+typedef void (*destroyPlugin_T)();
 
-class PluginException : Exception {
-    this(string plugin, string msg, string file = __FILE__, size_t line = __LINE__) {
-        super(plugin ~ ": " ~ msg, file, line);
-    }
-}
-
-extern(C++) interface IKernel {
-    IInputManager getInputManager();
-    IOutputManager getOutputManager();
-    void loadAllPlugins();
-}
-
-class Kernel : IKernel {
-    this() {
-        inman = new InputManager;
-        outman = new OutputManager;
-    }
-
-    void loadPlugin(string filename) {
-        if(filename in loadedPlugins) {
-            stderr.writefln("Plugin already loaded: %s", filename);
+class Plugin {
+public:
+    Plugin(std::string filename) {
+        handle = dlopen(filename.c_str(), RTLD_NOW);
+        if(!handle) {
             //FIXME: use future error handling capabilities
-//            throw new PluginException(filename, "already loaded");
+            std::cerr << dlerror() << std::endl;
         }
+        registerPlugin_ = getSymbol<registerPlugin_T>("registerPluginObjects");
+        if(!registerPlugin_) {
+            //FIXME: use future error handling capabilities
+            std::cerr << dlerror() << std::endl;
+            dlclose(handle);
+//            throw new Exception(str);
+        }
+        destroyPlugin_ = getSymbol<destroyPlugin_T>("destroyPluginObjects");
+        if(!destroyPlugin_) {
+            //FIXME: use future error handling capabilities
+            std::cerr << dlerror() << std::endl;
+            dlclose(handle);
+//            throw new Exception(str);
+        }
+    }
+
+    ~Plugin() {
+        if(destroyPlugin_) {
+            destroyPlugin_();
+        }
+        if(handle) {
+            dlclose(handle);
+        }
+    }
+
+    void registerPluginObjects(IKernel * k) {
+        registerPlugin_(k);
+    }
+
+    template <typename T>
+    T getSymbol(std::string sym) {
+        return reinterpret_cast<T>(dlsym(handle, sym.c_str()));
+    }
+
+private:
+    registerPlugin_T registerPlugin_;
+    destroyPlugin_T destroyPlugin_;
+    void * handle;
+};
+
+class Kernel : public IKernel {
+    Kernel() {
+//        inman = new InputManager;
+//        outman = new OutputManager;
+    }
+
+    void loadPlugin(std::string filename) {
+//        if(filename in loadedPlugins) {
+//            stderr.writefln("Plugin already loaded: %s", filename);
+//        }
         auto p = new Plugin(filename);
-        p.registerPluginObjects(this);
-        loadedPlugins[filename] = p;
+        p->registerPluginObjects(this);
+        std::pair<std::string, Plugin*> tmp(filename, p);
+        loadedPlugins.insert(tmp);
     }
 
-    extern(C++) void loadAllPlugins() {
-        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
-            if(pe.name.canFind("qt")) {
-                continue;
-            }
-            loadPlugin(pe.name);
-        }
+   void loadAllPlugins() {
+//        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
+//            if(pe.name.canFind("qt")) {
+//                continue;
+//            }
+//            loadPlugin(pe.name);
+//        }
     }
 
-    extern(C++) IInputManager getInputManager() {
+    IInputManager * getInputManager() {
         return inman;
     }
 
-    extern(C++) IOutputManager getOutputManager() {
+    IOutputManager * getOutputManager() {
         return outman;
     }
 
 private:
-    Plugin[string] loadedPlugins;
-    InputManager inman;
-    OutputManager outman;
-}
-
-extern(C) void registerPluginObjects(IKernel k);
-extern(C) void destroyPluginObjects();
-extern(C) int startEventLoop(int argc, char ** argv, IKernel k);
-
-class Plugin {
-public:
-    this(string filename) {
-        handle = .dlopen(filename.toStringz(), RTLD_NOW);
-        if(handle is null) {
-            //FIXME: use future error handling capabilities
-            auto str = to!string(dlerror());
-            stderr.writeln(str);
-//            throw new Exception(str);
-        }
-        registerPlugin_ = getSymbol!registerPlugin_T("registerPluginObjects");
-        if(registerPlugin_ is null) {
-            //FIXME: use future error handling capabilities
-            auto str = to!string(dlerror());
-            stderr.writeln(str);
-            .dlclose(handle);
-//            throw new Exception(str);
-        }
-        destroyPlugin_ = getSymbol!destroyPlugin_T("destroyPluginObjects");
-        if(destroyPlugin_ is null) {
-            //FIXME: use future error handling capabilities
-            auto str = to!string(dlerror());
-            stderr.writeln(str);
-            .dlclose(handle);
-//            throw new Exception(str);
-        }
-    }
-
-    ~this() {
-        if(destroyPlugin_ !is null) {
-            destroyPlugin_();
-        }
-        if(handle !is null) {
-            .dlclose(handle);
-        }
-    }
-
-    void registerPluginObjects(IKernel k) {
-        registerPlugin_(k);
-    }
-
-    T getSymbol(T)(string sym) {
-        return cast(T) .dlsym(handle, toStringz(sym));
-    }
-
-private:
-    alias extern(C) void function(IKernel) registerPlugin_T;
-    registerPlugin_T registerPlugin_;
-    alias extern(C) void function() destroyPlugin_T;
-    destroyPlugin_T destroyPlugin_;
-    void * handle;
-}
-
-extern(C++) interface IBuffer {
-    const(void *) ptr();
-    size_t length();
-    final const(ubyte[]) opSlice() {
-        return cast(const(ubyte[]))ptr()[0..length()];
-    }
-}
-
-extern(C) struct AudioSpecs {
-    this(ubyte channels, ubyte bps, uint sample_rate, ulong total_samples) {
-        this.channels = channels;
-        this.bps = bps;
-        this.sample_rate = sample_rate;
-        this.total_samples = total_samples;
-    }
-    ubyte channels;
-    ubyte bps;
-    uint sample_rate;
-    ulong total_samples;
-}
-
-//TODO: define error handling
-extern(C++) interface ErrorHandler {
-}
+    std::map<std::string, Plugin*> loadedPlugins;
+    IInputManager * inman;
+    IOutputManager * outman;
+};

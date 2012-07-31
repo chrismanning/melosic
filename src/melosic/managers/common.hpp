@@ -33,6 +33,8 @@ public:
     virtual void report(const char * msg, const char * file = __FILE__, uint line = __LINE__) = 0;
 };
 
+class IInputManager;
+
 class IKernel {
 public:
     virtual IInputManager * getInputManager() = 0;
@@ -76,7 +78,8 @@ private:
     size_t length_;
 };
 
-extern "C" struct AudioSpecs {
+struct AudioSpecs {
+    AudioSpecs() : channels(0), bps(0) , sample_rate(0), total_samples(0) {}
     AudioSpecs(ubyte channels, ubyte bps, uint sample_rate, ulong total_samples)
         : channels(channels), bps(bps), sample_rate(sample_rate), total_samples(total_samples) {}
     ubyte channels;

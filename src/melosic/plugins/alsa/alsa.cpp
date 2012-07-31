@@ -123,12 +123,12 @@ public:
         }
     }
 
-    virtual const char * getDeviceDescription() {
-        return desc.c_str();
+    virtual const std::string& getDeviceDescription() {
+        return desc;
     }
 
-    virtual const char * getDeviceName() {
-        return name.c_str();
+    virtual const std::string& getDeviceName() {
+        return name;
     }
 
     virtual const DeviceCapabilities * getDeviceCapabilities() {

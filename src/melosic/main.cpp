@@ -15,41 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.main;
+#include <iostream>
 
-import
-std.stdio
-,std.conv
-,std.string
-;
-import
-melosic.managers.common
-,melosic.core.wav
-;
+#include <melosic/managers/common.hpp>
+#include <melosic/core/wav.hpp>
 
-alias extern(C) int function(int argc, char ** argv, IKernel k) startEventLoop_T;
+int main(int argc, char* argv[]) {
 
-int main(string args[]) {
-    auto kernel = new shared(Kernel);
-
-    auto handle = .dlopen(toStringz("plugins/qt-gui/qt-gui.so"), RTLD_NOW);
-    if(handle is null) {
-        stderr.writeln(to!string(dlerror()));
-        return -1;
-    }
-    stderr.writeln("Loaded Qt GUI plugin");
-
-    auto startEventLoop = cast(startEventLoop_T).dlsym(handle, toStringz("startEventLoop"));
-    if(startEventLoop is null) {
-        stderr.writeln(to!string(dlerror()));
-        .dlclose(handle);
-        return -1;
-    }
-
-    char*[] tmp;
-    foreach(arg; args) {
-        tmp ~= cast(char*)toStringz(arg);
-    }
-
-    return startEventLoop(cast(int)args.length, tmp.ptr, kernel);
+    return 0;
 }
