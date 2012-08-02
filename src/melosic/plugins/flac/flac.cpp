@@ -119,7 +119,7 @@ void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)
 }
 
 extern "C" void registerPluginObjects(IKernel * k) {
-    k->getInputManager()->addFactory(factory<std::shared_ptr<IInputSource>>(), {".flac"});
+    k->getInputManager()->addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
 }
 
 extern "C" void destroyPluginObjects() {

@@ -28,7 +28,7 @@ class IInputSource;
 
 class IInputManager {
 public:
-    virtual void addFactory(boost::factory<std::shared_ptr<IInputSource> > fact,
+    virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
                             std::initializer_list<const std::string> extensions);
     virtual std::shared_ptr<IInputSource> openFile(const std::string& filename);
 };
