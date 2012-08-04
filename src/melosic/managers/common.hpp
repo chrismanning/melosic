@@ -20,19 +20,14 @@
 
 #include <iostream>
 using std::cout; using std::cerr; using std::endl;
+#include <boost/cstdint.hpp>
 
 #include <melosic/managers/input/inputmanager.hpp>
 #include <melosic/managers/output/outputmanager.hpp>
 
-typedef unsigned char ubyte;
-typedef signed char byte;
-typedef unsigned uint;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
-
 class ErrorHandler {
 public:
-    virtual void report(const char * msg, const char * file = __FILE__, uint line = __LINE__) = 0;
+    virtual void report(const char * msg, const char * file = __FILE__, uint32_t line = __LINE__) = 0;
 };
 
 class IInputManager;
@@ -82,12 +77,12 @@ private:
 
 struct AudioSpecs {
     AudioSpecs() : channels(0), bps(0) , sample_rate(0), total_samples(0) {}
-    AudioSpecs(ubyte channels, ubyte bps, uint sample_rate, ulong total_samples)
+    AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples)
         : channels(channels), bps(bps), sample_rate(sample_rate), total_samples(total_samples) {}
-    ubyte channels;
-    ubyte bps;
-    uint sample_rate;
-    ulong total_samples;
+    uint8_t channels;
+    uint8_t bps;
+    uint32_t sample_rate;
+    uint64_t total_samples;
 };
 
 class FileHandler {
@@ -106,7 +101,7 @@ public:
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual PlaybackState state() = 0;
-    virtual IBuffer * requestData(uint bytes) = 0;
+    virtual IBuffer * requestData(uint32_t bytes) = 0;
 };
 
 #endif // COMMON_H

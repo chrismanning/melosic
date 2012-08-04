@@ -23,12 +23,6 @@
 
 #include <melosic/managers/common.hpp>
 
-typedef unsigned char ubyte;
-typedef signed char byte;
-typedef unsigned uint;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
-
 struct AudioSpecs;
 struct IBuffer;
 
@@ -45,7 +39,7 @@ public:
     virtual ~IInputSource() {}
     virtual void openFile(const std::string& filename) = 0;
     virtual const AudioSpecs& getAudioSpecs() = 0;
-    virtual void writeBuf(const std::vector<ubyte>& buf, size_t length) = 0;
+    virtual void writeBuf(const std::vector<uint8_t>& buf, size_t length) = 0;
 };
 
 class IInputFactory {

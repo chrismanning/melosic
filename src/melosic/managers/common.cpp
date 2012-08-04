@@ -18,7 +18,22 @@
 #include <map>
 #include <functional>
 
+#include <unistd.h>
+#ifdef _POSIX_VERSION
 #include <dlfcn.h>
+#define DLHandle void*
+#define DLOpen(a) dlopen(a, RTLD_NOW)
+#define DLClose dlclose
+#define DLGetSym dlsym
+#endif
+
+#ifdef _WIN32
+#include <windows.h>
+#define DLHandle HMODULE
+#define DLOpen(a) LoadLibrary(a)
+#define DLClose FreeLibrary
+#define DLGetSym GetProcAddress
+#endif
 
 #include <melosic/managers/input/inputmanager.hpp>
 #include <melosic/managers/output/outputmanager.hpp>
@@ -31,23 +46,23 @@ typedef void (*destroyPlugin_T)();
 class Plugin {
 public:
     Plugin(std::string filename) {
-        handle = dlopen(filename.c_str(), RTLD_NOW);
+        handle = DLOpen(filename.c_str());
         if(!handle) {
             //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
+//            std::cerr << dlerror() << std::endl;
         }
         registerPlugin_ = getSymbol<registerPlugin_T>("registerPluginObjects");
         if(!registerPlugin_) {
             //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
-            dlclose(handle);
+//            std::cerr << dlerror() << std::endl;
+            DLClose(handle);
 //            throw new Exception(str);
         }
         destroyPlugin_ = getSymbol<destroyPlugin_T>("destroyPluginObjects");
         if(!destroyPlugin_) {
             //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
-            dlclose(handle);
+//            std::cerr << dlerror() << std::endl;
+            DLClose(handle);
 //            throw new Exception(str);
         }
     }
@@ -57,7 +72,7 @@ public:
             destroyPlugin_();
         }
         if(handle) {
-            dlclose(handle);
+            DLClose(handle);
         }
     }
 
@@ -67,13 +82,13 @@ public:
 
     template <typename T>
     T getSymbol(std::string sym) {
-        return reinterpret_cast<T>(dlsym(handle, sym.c_str()));
+        return reinterpret_cast<T>(DLGetSym(handle, sym.c_str()));
     }
 
 private:
     registerPlugin_T registerPlugin_;
     destroyPlugin_T destroyPlugin_;
-    void * handle;
+    DLHandle handle;
 };
 
 class Kernel : public IKernel {

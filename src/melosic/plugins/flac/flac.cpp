@@ -30,7 +30,7 @@ public:
     FlacDecoderImpl(IInputSource& dec_) : dec(dec_) {}
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame, const FLAC__int32 * const buffer[])
     {
-        auto buf = std::vector<ubyte>(frame->header.blocksize * sizeof(uint) * frame->header.channels / (frame->header.bits_per_sample/8));
+        auto buf = std::vector<uint8_t>(frame->header.blocksize * sizeof(uint32_t) * frame->header.channels / (frame->header.bits_per_sample/8));
         auto tmp = &buf[0];
 
         if(tmp == NULL) {
@@ -41,20 +41,20 @@ public:
             for(unsigned j=0; j<frame->header.channels; j++,u++) {
                 switch(frame->header.bits_per_sample/8) {
                 case 1:
-                    *tmp = (ubyte)(buffer[j][i]);
+                    *tmp = (uint8_t)(buffer[j][i]);
                     tmp++;
                     break;
                 case 2:
-                    *(ushort*)tmp = (ushort)(buffer[j][i]);
-                    tmp+=sizeof(ushort);
+                    *(uint16_t*)tmp = (uint16_t)(buffer[j][i]);
+                    tmp+=sizeof(uint16_t);
                     break;
                 case 3:
-                    *(uint*)tmp = (uint)(buffer[j][i] & 0xFFFFFF);
+                    *(uint32_t*)tmp = (uint32_t)(buffer[j][i] & 0xFFFFFF);
                     tmp+=3;
                     break;
                 case 4:
-                    *(uint*)tmp = (uint)(buffer[j][i]);
-                    tmp+=sizeof(uint);
+                    *(uint32_t*)tmp = (uint32_t)(buffer[j][i]);
+                    tmp+=sizeof(uint32_t);
                     break;
                 }
             }
@@ -90,7 +90,7 @@ public:
         fd.process_until_end_of_metadata();
     }
 
-    void writeBuf(const std::vector<ubyte>& buf, size_t length) {
+    void writeBuf(const std::vector<uint8_t>& buf, size_t length) {
         this->buf = buf;
     }
 
@@ -100,7 +100,7 @@ public:
 
     AudioSpecs as;
     FlacDecoderImpl fd;
-    std::vector<ubyte> buf;
+    std::vector<uint8_t> buf;
 };
 
 void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)

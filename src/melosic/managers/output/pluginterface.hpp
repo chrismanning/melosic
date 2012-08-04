@@ -22,11 +22,11 @@
 
 #include <melosic/managers/common.hpp>
 
-extern "C" struct DeviceCapabilities {
-};
-
 class PlaybackHandler;
 struct AudioSpecs;
+
+struct DeviceCapabilities {
+};
 
 class IOutput {
 public:
@@ -34,7 +34,6 @@ public:
     virtual void prepareDevice(AudioSpecs as) = 0;
     virtual const std::string& getDeviceDescription() = 0;
     virtual const std::string& getDeviceName() = 0;
-    virtual const DeviceCapabilities * getDeviceCapabilities() = 0;
     virtual void render(PlaybackHandler * playHandle) = 0;
 };
 

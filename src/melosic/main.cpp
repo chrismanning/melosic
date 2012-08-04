@@ -17,6 +17,7 @@
 
 #include <melosic/managers/common.hpp>
 #include <melosic/core/wav.hpp>
+#include <boost/filesystem.hpp>
 
 int main(int argc, char* argv[]) {
 
