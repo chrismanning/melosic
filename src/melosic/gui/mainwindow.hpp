@@ -35,7 +35,7 @@ public:
     explicit MainWindow(IKernel * k, QWidget * parent = 0);
     ~MainWindow();
 
-private slots:
+private Q_SLOTS:
     void on_actionOpen_triggered();
     void on_actionPlay_triggered();
 
