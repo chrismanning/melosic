@@ -15,33 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef MELOSIC_COMMON_HPP
+#define MELOSIC_COMMON_HPP
 
 #include <iostream>
 using std::cout; using std::cerr; using std::endl;
 #include <boost/cstdint.hpp>
+using boost::int64_t;
+using boost::uint64_t;
 
-#include <melosic/managers/input/inputmanager.hpp>
-#include <melosic/managers/output/outputmanager.hpp>
+#include <melosic/managers/input/iinputmanager.hpp>
+#include <melosic/managers/output/ioutputmanager.hpp>
+#include <melosic/common/ikernel.hpp>
+#include <melosic/common/plugin.hpp>
+
+namespace Melosic {
 
 class ErrorHandler {
 public:
     virtual void report(const char * msg, const char * file = __FILE__, uint32_t line = __LINE__) = 0;
 };
-
-class IInputManager;
-
-class IKernel {
-public:
-    virtual IInputManager * getInputManager() = 0;
-    virtual IOutputManager * getOutputManager() = 0;
-    virtual void loadAllPlugins() = 0;
-};
-
-extern "C" void registerPluginObjects(IKernel * k);
-extern "C" void destroyPluginObjects();
-extern "C" int startEventLoop(int argc, char ** argv, IKernel * k);
 
 struct IBuffer {
     virtual const void * ptr() = 0;
@@ -85,10 +78,6 @@ struct AudioSpecs {
     uint64_t total_samples;
 };
 
-class FileHandler {
-
-};
-
 enum PlaybackState {
     Playing,
     Paused,
@@ -104,4 +93,6 @@ public:
     virtual IBuffer * requestData(uint32_t bytes) = 0;
 };
 
-#endif // COMMON_H
+} // end namespace Melosic
+
+#endif // MELOSIC_COMMON_HPP

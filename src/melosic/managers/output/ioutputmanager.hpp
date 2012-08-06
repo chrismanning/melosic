@@ -15,22 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef INPUT_MANAGER_H
-#define INPUT_MANAGER_H
+#ifndef IOUTPUTMANAGER_HPP
+#define IOUTPUTMANAGER_HPP
 
-#include <initializer_list>
-#include <string>
-#include <boost/functional/factory.hpp>
+#include <melosic/managers/output/pluginterface.hpp>
 
-#include <melosic/managers/input/pluginterface.hpp>
-
-class IInputSource;
-
-class IInputManager {
+class IOutputManager {
 public:
-    virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
-                            std::initializer_list<const std::string> extensions);
-    virtual std::shared_ptr<IInputSource> openFile(const std::string& filename);
+    virtual void addOutput(Melosic::Output::IOutput * dec) = 0;
+    virtual Melosic::Output::IOutput * getDefaultOutput() = 0;
 };
 
-#endif // INPUT_MANAGER_H
+#endif // IOUTPUTMANAGER_HPP

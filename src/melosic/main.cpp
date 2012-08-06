@@ -15,11 +15,14 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/managers/common.hpp>
+#include <melosic/core/kernel.hpp>
 #include <melosic/core/wav.hpp>
 #include <boost/filesystem.hpp>
+#include <iostream>
 
 int main(int argc, char* argv[]) {
-
+    Melosic::Kernel kernel;
+    kernel.loadPlugin("flac.so");
+    std::cerr << boost::filesystem::current_path().string() << std::endl;
     return 0;
 }

@@ -15,12 +15,33 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <mainwindow.hpp>
-#include <melosic/common/common.hpp>
+#ifndef MELOSIC_EXPORTS_HPP
+#define MELOSIC_EXPORTS_HPP
 
-extern "C" int startEventLoop(int argc, char ** argv, IKernel& k) {
-    QApplication app(argc, argv);
-    MainWindow win(k);
-    win.show();
-    return app.exec();
+#ifdef WIN32
+#ifdef MELOSIC_PLUGIN_EXPORTS
+#define MELOSIC_EXPORT __declspec(dllexport)
+#else
+#define MELOSIC_EXPORT __declspec(dllimport)
+#endif
+#else
+#define MELOSIC_EXPORT
+#endif
+
+namespace Melosic {
+class IKernel;
 }
+
+#include <functional>
+
+extern "C" void registerPluginObjects(Melosic::IKernel& k);
+typedef std::function<void(Melosic::IKernel&)> registerPlugin_T;
+typedef registerPlugin_T::result_type res_T;
+typedef registerPlugin_T::argument_type arg_T;
+//typedef decltype(&registerPluginObjects) registerPlugin_T;
+extern "C" void destroyPluginObjects();
+typedef std::function<void()> destroyPlugin_T;
+//typedef decltype(&destroyPluginObjects) destroyPlugin_T;
+extern "C" int startEventLoop(int argc, char ** argv, Melosic::IKernel& k);
+
+#endif // MELOSIC_EXPORTS_HPP

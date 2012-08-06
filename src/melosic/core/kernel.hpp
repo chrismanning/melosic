@@ -1,0 +1,71 @@
+/**************************************************************************
+**  Copyright (C) 2012 Christian Manning
+**
+**  This program is free software: you can redistribute it and/or modify
+**  it under the terms of the GNU General Public License as published by
+**  the Free Software Foundation, either version 3 of the License, or
+**  (at your option) any later version.
+**
+**  This program is distributed in the hope that it will be useful,
+**  but WITHOUT ANY WARRANTY; without even the implied warranty of
+**  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+**  GNU General Public License for more details.
+**
+**  You should have received a copy of the GNU General Public License
+**  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+**************************************************************************/
+
+#ifndef MELOSIC_CORE_KERNEL_HPP
+#define MELOSIC_CORE_KERNEL_HPP
+
+#include <memory>
+
+#include <melosic/common/ikernel.hpp>
+#include <melosic/core/inputmanager.hpp>
+#include <melosic/core/outputmanager.hpp>
+
+namespace Melosic {
+class Kernel : public IKernel {
+public:
+    void loadPlugin(const std::string& filename) {
+        try {
+            if(loadedPlugins.find(filename) != loadedPlugins.end()) {
+                std::cerr << "Plugin already loaded: " << filename << std::endl;
+                return;
+            }
+            std::shared_ptr<Plugin> p(new Plugin(filename));
+            p->registerPluginObjects(*this);
+            decltype(loadedPlugins)::value_type tmp(filename, p);
+            loadedPlugins.insert(tmp);
+        }
+        catch(std::exception e) {
+            return;
+        }
+    }
+
+   void loadAllPlugins() {
+//        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
+//            if(pe.name.canFind("qt")) {
+//                continue;
+//            }
+//            loadPlugin(pe.name);
+//        }
+    }
+
+    IInputManager& getInputManager() {
+        return inman;
+    }
+
+    IOutputManager& getOutputManager() {
+        return outman;
+    }
+
+private:
+    std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
+    Input::InputManager inman;
+    Output::OutputManager outman;
+};
+
+}
+
+#endif // MELOSIC_CORE_KERNEL_HPP

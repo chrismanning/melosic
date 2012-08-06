@@ -15,31 +15,33 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-module melosic.managers.output.outputmanager;
+#ifndef OUTPUTMANAGER_HPP
+#define OUTPUTMANAGER_HPP
 
-import
-std.algorithm
-,std.exception
-;
+#include <melosic/managers/output/ioutputmanager.hpp>
+#include <melosic/managers/output/pluginterface.hpp>
 
-public import melosic.managers.output.pluginterface;
+namespace Melosic {
+namespace Output {
 
-extern(C++) interface IOutputManager {
-    void addOutput(IOutput dev);
-    IOutput getDefaultOutput();
-}
-
-class OutputManager : IOutputManager {
-    extern(C++) void addOutput(IOutput dev) {
-        devs ~= new OutputDevice(dev);
+class OutputManager : public IOutputManager {
+public:
+    void addOutput(IOutput* dev) {
+        //devs ~= new OutputDevice(dev);
     }
 
-    extern(C++) IOutput getDefaultOutput() {
-        auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
-        enforceEx!Exception(r.count() > 0, "Cannot find default device");
-        return r.front().iod;
+    IOutput* getDefaultOutput() {
+//        auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
+//        enforceEx!Exception(r.count() > 0, "Cannot find default device");
+//        return r.front().iod;
+        return 0;
     }
 
 private:
-    OutputDevice[] devs;
+//    OutputDevice[] devs;
+};
+
 }
+}
+
+#endif // OUTPUTMANAGER_HPP

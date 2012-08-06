@@ -15,33 +15,24 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <list>
-#include <boost/filesystem.hpp>
+#ifndef MELOSIC_COMMON_KERNEL_HPP
+#define MELOSIC_COMMON_KERNEL_HPP
 
-#include <melosic/managers/input/pluginterface.hpp>
+#include <map>
 
-using boost::filesystem::path;
+#include <melosic/common/plugin.hpp>
+#include <melosic/managers/input/iinputmanager.hpp>
+#include <melosic/managers/output/ioutputmanager.hpp>
 
-class InputManager : IInputManager {
+namespace Melosic {
+
+class IKernel {
 public:
-    virtual std::shared_ptr<IInputSource> openFile(std::string const& filename) {
-        for(auto factory : factories) {
-            if(factory->canOpen(path(filename).extension().string())) {
-                cerr << filename << " can be opened" << endl;
-                auto tmp = factory->create();
-                tmp->openFile(filename);
-                return tmp;
-            }
-        }
-        cerr << "Cannot open file: " << filename << endl;
-        return 0;
-        //throw new Exception("cannot open file " ~ filename);
-    }
-
-    virtual void addInputFactory(IInputFactory * factory) {
-        factories.push_back(factory);
-    }
-
-private:
-    std::list<IInputFactory*> factories;
+    virtual void loadPlugin(const std::string& filename) = 0;
+    virtual IInputManager& getInputManager() = 0;
+    virtual IOutputManager& getOutputManager() = 0;
 };
+
+} // end namespace Melosic
+
+#endif // MELOSIC_COMMON_KERNEL_HPP

@@ -20,10 +20,12 @@
 
 #include <string>
 
-#include <melosic/managers/common.hpp>
+namespace Melosic {
 
 class PlaybackHandler;
 struct AudioSpecs;
+
+namespace Output {
 
 struct DeviceCapabilities {
 };
@@ -31,10 +33,13 @@ struct DeviceCapabilities {
 class IOutput {
 public:
     virtual ~IOutput() {}
-    virtual void prepareDevice(AudioSpecs as) = 0;
+    virtual void prepareDevice(Melosic::AudioSpecs as) = 0;
     virtual const std::string& getDeviceDescription() = 0;
     virtual const std::string& getDeviceName() = 0;
-    virtual void render(PlaybackHandler * playHandle) = 0;
+    virtual void render(Melosic::PlaybackHandler * playHandle) = 0;
 };
+
+}
+}
 
 #endif // OUTPUT_PLUGINTERFACE_HPP

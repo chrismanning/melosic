@@ -19,7 +19,7 @@
 #include "ui_mainwindow.h"
 #include <QFileDialog>
 
-MainWindow::MainWindow(IKernel * k, QWidget * parent) :
+MainWindow::MainWindow(IKernel& k, QWidget * parent) :
     QMainWindow(parent), ui(new Ui::MainWindow), kernel(k)
 {
     ui->setupUi(this);
@@ -42,8 +42,8 @@ void MainWindow::on_actionPlay_triggered()
 {
     if(filename.length() > 0) {
         //TODO: hook in to Qt event loop
-        auto input = kernel->getInputManager()->openFile(filename.toStdString().c_str());
-        auto output = kernel->getOutputManager()->getDefaultOutput();
+        auto input = kernel.getInputManager().openFile(filename.toStdString().c_str());
+        auto output = kernel.getOutputManager().getDefaultOutput();
         output->prepareDevice(input->getAudioSpecs());
         //output->render(input->getDecodeRange());
     }

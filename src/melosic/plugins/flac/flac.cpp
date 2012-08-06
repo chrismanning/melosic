@@ -23,7 +23,8 @@ using boost::factory;
 using boost::format;
 #include <vector>
 
-#include <melosic/managers/common.hpp>
+#include <melosic/common/common.hpp>
+using namespace Melosic;
 
 class FlacDecoderImpl : public FLAC::Decoder::File {
 public:
@@ -118,8 +119,8 @@ void FlacDecoderImpl::metadata_callback(const ::FLAC__StreamMetadata *metadata)
     }
 }
 
-extern "C" void registerPluginObjects(IKernel * k) {
-    k->getInputManager()->addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
+extern "C" void registerPluginObjects(IKernel& k) {
+    k.getInputManager().addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
 }
 
 extern "C" void destroyPluginObjects() {

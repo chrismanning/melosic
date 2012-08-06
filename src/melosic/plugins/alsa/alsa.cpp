@@ -20,14 +20,16 @@
  */
 #define ALSA_PCM_NEW_HW_PARAMS_API
 
-#include <melosic/managers/common.hpp>
 #include <alsa/asoundlib.h>
 #include <cstdio>
 #include <string>
 #include <sstream>
 #include <list>
 
-class AlsaOutput : public IOutput {
+#include <melosic/common/common.hpp>
+using namespace Melosic;
+
+class AlsaOutput : public Melosic::Output::IOutput {
 public:
     AlsaOutput(const std::string name, const std::string desc)
         : pdh(0), params(0), name(name), desc(desc)
@@ -131,10 +133,6 @@ public:
         return name;
     }
 
-    virtual const DeviceCapabilities * getDeviceCapabilities() {
-        return new DeviceCapabilities;
-    }
-
 private:
     snd_pcm_t * pdh;
     snd_pcm_hw_params_t * params;
@@ -144,7 +142,7 @@ private:
 
 static std::list<AlsaOutput*> alsaPluginObjects;
 
-extern "C" void registerPluginObjects(IKernel * k) {
+extern "C" void registerPluginObjects(IKernel& k) {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -161,7 +159,7 @@ extern "C" void registerPluginObjects(IKernel * k) {
             if(name && desc) {
                 tmp = new AlsaOutput(name, desc);
                 alsaPluginObjects.push_back(tmp);
-                k->getOutputManager()->addOutput(tmp);
+                k.getOutputManager().addOutput(tmp);
             }
         }
         if(name != NULL)

@@ -21,24 +21,18 @@
 #include <memory>
 #include <vector>
 
-#include <melosic/managers/common.hpp>
+namespace Melosic {
 
 struct AudioSpecs;
 struct IBuffer;
 
-class DecodeRange {
-public:
-    virtual IBuffer * front() = 0;
-    virtual void popFront() = 0;
-    virtual bool empty() = 0;
-    virtual size_t length() = 0;
-};
+}
 
 class IInputSource {
 public:
     virtual ~IInputSource() {}
     virtual void openFile(const std::string& filename) = 0;
-    virtual const AudioSpecs& getAudioSpecs() = 0;
+    virtual const Melosic::AudioSpecs& getAudioSpecs() = 0;
     virtual void writeBuf(const std::vector<uint8_t>& buf, size_t length) = 0;
 };
 

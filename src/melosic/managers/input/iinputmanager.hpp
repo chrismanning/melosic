@@ -15,15 +15,20 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef OUTPUTMANAGER_HPP
-#define OUTPUTMANAGER_HPP
+#ifndef IINPUT_MANAGER_H
+#define IINPUT_MANAGER_H
 
-#include <melosic/managers/output/pluginterface.hpp>
+#include <initializer_list>
+#include <string>
+#include <memory>
 
-class IOutputManager {
+#include <melosic/managers/input/pluginterface.hpp>
+
+class IInputManager {
 public:
-    virtual void addOutput(IOutput * dec);
-    virtual IOutput * getDefaultOutput();
+    virtual std::shared_ptr<IInputSource> openFile(const std::string& filename) = 0;
+    virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
+                            std::initializer_list<std::string> extensions) = 0;
 };
 
-#endif // OUTPUTMANAGER_HPP
+#endif // IINPUT_MANAGER_H

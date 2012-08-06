@@ -15,11 +15,16 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#ifndef MELOSIC_WAV_HPP
+#define MELOSIC_WAV_HPP
+
 #include <string>
 
-#include <melosic/managers/common.hpp>
+#include <melosic/common/common.hpp>
 
-class WaveFile : public IOutput {
+namespace Melosic {
+
+class WaveFile : public Melosic::Output::IOutput {
     WaveFile(std::string filename) {
     }
 
@@ -33,10 +38,6 @@ class WaveFile : public IOutput {
 
     const std::string& getDeviceName() {
         return "file.name";
-    }
-
-    DeviceCapabilities * getDeviceCapabilities() {
-        return new DeviceCapabilities;
     }
 
 //    void render(DecodeRange src) {
@@ -65,3 +66,7 @@ class WaveFile : public IOutput {
 //    File file;
     AudioSpecs as;
 };
+
+}
+
+#endif // MELOSIC_WAV_HPP

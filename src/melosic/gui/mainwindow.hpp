@@ -21,7 +21,8 @@
 #include <QDebug>
 #include <QMainWindow>
 #include <QApplication>
-#include <melosic/managers/common.hpp>
+#include <melosic/common/common.hpp>
+using namespace Melosic;
 
 namespace Ui {
 class MainWindow;
@@ -32,7 +33,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     
 public:
-    explicit MainWindow(IKernel * k, QWidget * parent = 0);
+    explicit MainWindow(IKernel& k, QWidget * parent = 0);
     ~MainWindow();
 
 private Q_SLOTS:
@@ -41,7 +42,7 @@ private Q_SLOTS:
 
 private:
     Ui::MainWindow * ui;
-    IKernel * kernel;
+    IKernel& kernel;
     QString filename;
 };
 

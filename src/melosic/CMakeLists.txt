@@ -1,15 +1,27 @@
 SET(SRC_LIST main.cpp)
-SET(SRC_LIST ${SRC_LIST} core/wav.hpp)
+SET(SRC_LIST ${SRC_LIST} core/wav.hpp core/kernel.hpp core/inputmanager.hpp core/outputmanager.hpp)
 
 #abbrev
 SET(PN ${PROJECT_NAME})
 
+find_package(Boost COMPONENTS filesystem system REQUIRED)
+
 add_executable(${PN} ${SRC_LIST})
 
+add_subdirectory(common)
 add_subdirectory(managers)
 add_subdirectory(plugins)
 add_subdirectory(gui)
 
-include_directories(..)
-target_link_libraries(${PN} melosiccore)
+include_directories(.. ${Boost_INCLUDE_DIRS})
+link_directories(${Boost_LIBRARY_DIRS})
+SET(LINK_LIBS boost_filesystem)
+
+IF(${WIN32})
+    SET(LINK_LIBS ${LINK_LIBS} boost_system)
+ELSEIF(${UNIX})
+    SET(LINK_LIBS ${LINK_LIBS} dl)
+ENDIF(${WIN32})
+
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS})
 

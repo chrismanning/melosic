@@ -1,17 +1,7 @@
-SET(SRC_LIST common.cpp common.hpp)
-SET(SRC_LIST ${SRC_LIST} input/inputmanager.cpp input/inputmanager.hpp input/pluginterface.hpp)
-SET(SRC_LIST ${SRC_LIST} output/pluginterface.hpp)
+SET(SRC_LIST input/iinputmanager.hpp input/pluginterface.hpp)
+SET(SRC_LIST ${SRC_LIST} output/ioutputmanager.hpp output/pluginterface.hpp)
 
 include_directories(../..)
 
-add_library(melosiccore SHARED ${SRC_LIST})
-
-SET(LINK_LIBS boost_filesystem)
-
-IF(${WIN32})
-    SET(LINK_LIBS ${LINK_LIBS} boost_system)
-ELSEIF(${UNIX})
-    SET(LINK_LIBS ${LINK_LIBS} dl)
-ENDIF(${WIN32})
-
-target_link_libraries(melosiccore ${LINK_LIBS})
+add_library(manager_heads STATIC ${SRC_LIST})
+set_target_properties(manager_heads PROPERTIES LINKER_LANGUAGE CXX)
