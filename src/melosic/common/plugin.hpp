@@ -68,10 +68,10 @@ public:
     }
 
     ~Plugin() {
-        if(destroyPlugin_) {
-            destroyPlugin_();
-        }
         if(handle) {
+            if(destroyPlugin_) {
+                destroyPlugin_();
+            }
             DLClose(handle);
         }
     }
