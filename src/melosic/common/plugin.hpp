@@ -37,11 +37,22 @@
 
 #include <string>
 #include <iostream>
-#include <exception>
 #include <boost/filesystem.hpp>
 using boost::filesystem::current_path;
 
 #include <melosic/common/exports.hpp>
+#include <melosic/common/error.hpp>
+
+struct PluginException : public MelosicException {
+    PluginException() : MelosicException(dlerror()) {
+    }
+};
+
+struct PluginSymbolException : public PluginException {
+    PluginSymbolException(DLHandle handle) {
+        DLClose(handle);
+    }
+};
 
 namespace Melosic {
 
@@ -49,24 +60,11 @@ class Plugin {
 public:
     Plugin(const std::string& filename) {
         handle = DLOpen((current_path().string() + "/" + filename).c_str());
-        if(!handle) {
-            //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
-            throw std::exception();
-        }
+
+        enforceEx<PluginException>(handle != 0);
+
         registerPlugin_ = getFunction<registerPlugin_F>("registerPluginObjects");
-        if(!registerPlugin_) {
-            //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
-            DLClose(handle);
-            throw std::exception();
-        }
-        destroyPlugin_ = getFunction<destroyPlugin_P>("destroyPluginObjects");
-        if(!destroyPlugin_) {
-            //FIXME: use future error handling capabilities
-            std::cerr << dlerror() << std::endl;
-            throw std::exception();
-        }
+        destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPluginObjects");
     }
 
     ~Plugin() {
@@ -84,8 +82,10 @@ public:
 
 private:
     template <typename T>
-    std::function<T> getFunction(std::string sym) {
-        return reinterpret_cast<T*>(DLGetSym(handle, sym.c_str()));
+    std::function<T> getFunction(std::string symbolName) {
+        auto sym = DLGetSym(handle, symbolName.c_str());
+        enforceEx<PluginSymbolException>(sym != 0, handle);
+        return reinterpret_cast<T*>(sym);
     }
 
     registerPlugin_T registerPlugin_;

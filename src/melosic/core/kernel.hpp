@@ -35,11 +35,11 @@ public:
             }
             std::shared_ptr<Plugin> p(new Plugin(filename));
             p->registerPluginObjects(*this);
-            decltype(loadedPlugins)::value_type tmp(filename, p);
-            loadedPlugins.insert(tmp);
+            loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, p));
         }
-        catch(std::exception e) {
-            return;
+        catch(PluginException& e) {
+            std::cerr << e.msg << std::endl;
+//            throw;
         }
     }
 
