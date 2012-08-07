@@ -54,14 +54,14 @@ public:
             std::cerr << dlerror() << std::endl;
             throw std::exception();
         }
-        registerPlugin_ = getFunction<void(IKernel&)>("registerPluginObjects");
+        registerPlugin_ = getFunction<registerPlugin_F>("registerPluginObjects");
         if(!registerPlugin_) {
             //FIXME: use future error handling capabilities
             std::cerr << dlerror() << std::endl;
             DLClose(handle);
             throw std::exception();
         }
-        destroyPlugin_ = getFunction<void()>("destroyPluginObjects");
+        destroyPlugin_ = getFunction<destroyPlugin_P>("destroyPluginObjects");
         if(!destroyPlugin_) {
             //FIXME: use future error handling capabilities
             std::cerr << dlerror() << std::endl;

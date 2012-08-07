@@ -35,13 +35,11 @@ class IKernel;
 #include <functional>
 
 extern "C" void registerPluginObjects(Melosic::IKernel& k);
-typedef std::function<void(Melosic::IKernel&)> registerPlugin_T;
-typedef registerPlugin_T::result_type res_T;
-typedef registerPlugin_T::argument_type arg_T;
-//typedef decltype(&registerPluginObjects) registerPlugin_T;
+typedef decltype(registerPluginObjects) registerPlugin_F;
+typedef std::function<registerPlugin_F> registerPlugin_T;
 extern "C" void destroyPluginObjects();
-typedef std::function<void()> destroyPlugin_T;
-//typedef decltype(&destroyPluginObjects) destroyPlugin_T;
+typedef decltype(destroyPluginObjects) destroyPlugin_P;
+typedef std::function<destroyPlugin_P> destroyPlugin_T;
 extern "C" int startEventLoop(int argc, char ** argv, Melosic::IKernel& k);
 
 #endif // MELOSIC_EXPORTS_HPP
