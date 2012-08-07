@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef IOUTPUTMANAGER_HPP
-#define IOUTPUTMANAGER_HPP
+#ifndef MELOSIC_IOUTPUTMANAGER_HPP
+#define MELOSIC_IOUTPUTMANAGER_HPP
 
 #include <melosic/managers/output/pluginterface.hpp>
 
@@ -26,4 +26,4 @@ public:
     virtual Melosic::Output::IOutput * getDefaultOutput() = 0;
 };
 
-#endif // IOUTPUTMANAGER_HPP
+#endif // MELOSIC_IOUTPUTMANAGER_HPP

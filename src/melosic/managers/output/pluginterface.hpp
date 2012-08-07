@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef OUTPUT_PLUGINTERFACE_HPP
-#define OUTPUT_PLUGINTERFACE_HPP
+#ifndef MELOSIC_OUTPUT_PLUGINTERFACE_HPP
+#define MELOSIC_OUTPUT_PLUGINTERFACE_HPP
 
 #include <string>
 
@@ -42,4 +42,4 @@ public:
 }
 }
 
-#endif // OUTPUT_PLUGINTERFACE_HPP
+#endif // MELOSIC_OUTPUT_PLUGINTERFACE_HPP

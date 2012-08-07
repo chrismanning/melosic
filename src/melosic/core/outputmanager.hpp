@@ -15,8 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef OUTPUTMANAGER_HPP
-#define OUTPUTMANAGER_HPP
+#ifndef MELOSIC_OUTPUTMANAGER_HPP
+#define MELOSIC_OUTPUTMANAGER_HPP
+
+#include <list>
 
 #include <melosic/managers/output/ioutputmanager.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
@@ -27,7 +29,7 @@ namespace Output {
 class OutputManager : public IOutputManager {
 public:
     void addOutput(IOutput* dev) {
-        //devs ~= new OutputDevice(dev);
+        devs.push_back(dev);
     }
 
     IOutput* getDefaultOutput() {
@@ -38,10 +40,10 @@ public:
     }
 
 private:
-//    OutputDevice[] devs;
+    std::list<IOutput*> devs;
 };
 
 }
 }
 
-#endif // OUTPUTMANAGER_HPP
+#endif // MELOSIC_OUTPUTMANAGER_HPP

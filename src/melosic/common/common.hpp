@@ -21,8 +21,7 @@
 #include <iostream>
 using std::cout; using std::cerr; using std::endl;
 #include <boost/cstdint.hpp>
-using boost::int64_t;
-using boost::uint64_t;
+using boost::int64_t; using boost::uint64_t;
 
 #include <melosic/managers/input/iinputmanager.hpp>
 #include <melosic/managers/output/ioutputmanager.hpp>

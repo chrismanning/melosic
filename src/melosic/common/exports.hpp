@@ -38,8 +38,8 @@ extern "C" void registerPluginObjects(Melosic::IKernel& k);
 typedef decltype(registerPluginObjects) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
 extern "C" void destroyPluginObjects();
-typedef decltype(destroyPluginObjects) destroyPlugin_P;
-typedef std::function<destroyPlugin_P> destroyPlugin_T;
+typedef decltype(destroyPluginObjects) destroyPlugin_F;
+typedef std::function<destroyPlugin_F> destroyPlugin_T;
 extern "C" int startEventLoop(int argc, char ** argv, Melosic::IKernel& k);
 
 #endif // MELOSIC_EXPORTS_HPP

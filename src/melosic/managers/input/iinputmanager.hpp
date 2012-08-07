@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef IINPUT_MANAGER_H
-#define IINPUT_MANAGER_H
+#ifndef MELOSIC_IINPUT_MANAGER_H
+#define MELOSIC_IINPUT_MANAGER_H
 
 #include <initializer_list>
 #include <string>
@@ -31,4 +31,4 @@ public:
                             std::initializer_list<std::string> extensions) = 0;
 };
 
-#endif // IINPUT_MANAGER_H
+#endif // MELOSIC_IINPUT_MANAGER_H

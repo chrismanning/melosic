@@ -23,6 +23,6 @@
 int main(int argc, char* argv[]) {
     Melosic::Kernel kernel;
     kernel.loadPlugin("flac.so");
-    std::cerr << boost::filesystem::current_path().string() << std::endl;
+    kernel.loadPlugin("alsa.so");
     return 0;
 }

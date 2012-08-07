@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_COMMON_KERNEL_HPP
-#define MELOSIC_COMMON_KERNEL_HPP
+#ifndef MELOSIC_COMMON_IKERNEL_HPP
+#define MELOSIC_COMMON_IKERNEL_HPP
 
 #include <map>
 
@@ -35,4 +35,4 @@ public:
 
 } // end namespace Melosic
 
-#endif // MELOSIC_COMMON_KERNEL_HPP
+#endif // MELOSIC_COMMON_IKERNEL_HPP

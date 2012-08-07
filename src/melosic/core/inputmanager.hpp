@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef INPUT_MANAGER_H
-#define INPUT_MANAGER_H
+#ifndef MELOSIC_INPUT_MANAGER_H
+#define MELOSIC_INPUT_MANAGER_H
 
 #include <iostream>
 using std::cerr; using std::endl;
@@ -28,23 +28,24 @@ using std::cerr; using std::endl;
 
 using boost::filesystem::path;
 
-namespace Melosic{
+namespace Melosic {
 namespace Input {
 
 class InputManager : public IInputManager {
 public:
     virtual std::shared_ptr<IInputSource> openFile(const std::string& filename) {
-//        for(auto factory : factories) {
-//            if(factory.first == path(filename).extension().string()) {
-//                cerr << filename << " can be opened" << endl;
-//                auto tmp = factory.second();
-//                tmp->openFile(filename);
-//                return tmp;
-//            }
-//        }
-        cerr << "Cannot open file: " << filename << endl;
-        return 0;
-        //throw new Exception("cannot open file " ~ filename);
+        auto ext = path(filename).extension().string();
+
+        auto fact = factories.find(ext);
+
+        if(fact != factories.end()) {
+            return fact->second();
+        }
+        else {
+            cerr << "Cannot open file: " << filename << endl;
+            return 0;
+            //throw new Exception("cannot open file " ~ filename);
+        }
     }
 
     virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
@@ -68,4 +69,4 @@ private:
 }
 }
 
-#endif // INPUT_MANAGER_H
+#endif // MELOSIC_INPUT_MANAGER_H

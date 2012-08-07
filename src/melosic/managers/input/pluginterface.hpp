@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef INPUT_PLUGINTERFACE_H
-#define INPUT_PLUGINTERFACE_H
+#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
+#define MELOSIC_INPUT_PLUGINTERFACE_H
 
 #include <memory>
 #include <vector>
@@ -43,4 +43,4 @@ public:
     virtual std::shared_ptr<IInputSource> create() = 0;
 };
 
-#endif // INPUT_PLUGINTERFACE_H
+#endif // MELOSIC_INPUT_PLUGINTERFACE_H
