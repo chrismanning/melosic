@@ -21,8 +21,14 @@
 #include <iostream>
 
 int main(int argc, char* argv[]) {
-    Melosic::Kernel kernel;
-    kernel.loadPlugin("flac.so");
-    kernel.loadPlugin("alsa.so");
-    return 0;
+    try {
+        Melosic::Kernel kernel;
+        kernel.loadPlugin("flac.melin");
+        kernel.loadPlugin("alsa.melin");
+        return 0;
+    }
+    catch(MelosicException& e) {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
 }

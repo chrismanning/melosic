@@ -38,7 +38,7 @@
 #include <string>
 #include <iostream>
 #include <boost/filesystem.hpp>
-using boost::filesystem::current_path;
+using boost::filesystem::absolute;
 
 #include <melosic/common/exports.hpp>
 #include <melosic/common/error.hpp>
@@ -58,8 +58,8 @@ namespace Melosic {
 
 class Plugin {
 public:
-    Plugin(const std::string& filename) {
-        handle = DLOpen((current_path().string() + "/" + filename).c_str());
+    Plugin(const boost::filesystem::path& filename) {
+        handle = DLOpen(absolute(filename).c_str());
 
         enforceEx<PluginException>(handle != 0);
 

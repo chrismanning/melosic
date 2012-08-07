@@ -25,20 +25,36 @@
 #include <melosic/core/outputmanager.hpp>
 
 namespace Melosic {
+
 class Kernel : public IKernel {
 public:
-    void loadPlugin(const std::string& filename) {
+    void loadPlugin(const std::string& filepath) {
+        path p(filepath);
+
+        enforceEx<MelosicException>(exists(p),
+                                    [&filepath]() {
+                                        return (filepath + ": file does not exist").c_str();
+                                    });
+
+        enforceEx<MelosicException>(p.extension() == ".melin" && is_regular_file(p),
+                                    [&filepath]() {
+                                        return (filepath + ": not a melosic plugin").c_str();
+                                    });
+
         try {
+            auto& filename = p.filename().string();
+
             if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-                std::cerr << "Plugin already loaded: " << filename << std::endl;
+                std::cerr << "Plugin already loaded: " << filepath << std::endl;
                 return;
             }
-            std::shared_ptr<Plugin> p(new Plugin(filename));
-            p->registerPluginObjects(*this);
-            loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, p));
+
+            std::shared_ptr<Plugin> pl(new Plugin(p));
+            pl->registerPluginObjects(*this);
+            loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, pl));
         }
         catch(PluginException& e) {
-            std::cerr << e.msg << std::endl;
+            std::cerr << e.what() << std::endl;
 //            throw;
         }
     }
