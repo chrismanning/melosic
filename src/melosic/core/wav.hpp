@@ -18,26 +18,24 @@
 #ifndef MELOSIC_WAV_HPP
 #define MELOSIC_WAV_HPP
 
-#include <string>
+#include <boost/filesystem.hpp>
+using boost::filesystem::absolute;
+#include <fstream>
 
 #include <melosic/common/common.hpp>
 
 namespace Melosic {
 
-class WaveFile : public Melosic::Output::IOutput {
-    WaveFile(std::string filename) {
-    }
-
-    void prepareDevice(AudioSpecs as) {
-        this->as = as;
-    }
-
-    const std::string& getDeviceDescription() {
-        return "Wav file";
-    }
+class WaveFile {
+public:
+    WaveFile(const boost::filesystem::path& filename, AudioSpecs as)
+        : filepath(absolute(filename))
+        , file(filepath.string(), std::ios_base::out | std::ios_base::binary)
+        , as(as)
+    {}
 
     const std::string& getDeviceName() {
-        return "file.name";
+        return filepath.string();
     }
 
 //    void render(DecodeRange src) {
@@ -63,7 +61,8 @@ class WaveFile : public Melosic::Output::IOutput {
 //        }
 //    }
 
-//    File file;
+    const boost::filesystem::path& filepath;
+    std::ofstream file;
     AudioSpecs as;
 };
 
