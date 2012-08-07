@@ -19,18 +19,24 @@
 #define MELOSIC_ERROR_HPP
 
 #include <exception>
-#include <string>
+#include <utility>
 
 template <class Exception, typename ... Args>
-void enforceEx(bool expression, Args ... arguments) {
+void enforceEx(bool expression, Args&& ... arguments) {
     if(!expression) {
-        throw Exception(arguments...);
+        throw Exception(std::forward<Args>(arguments)...);
     }
 }
 
 struct MelosicException : public std::exception {
-    MelosicException(std::string msg) : msg(msg) {}
-    std::string msg;
+    MelosicException(const char * msg) : msg(msg) {}
+    MelosicException(const std::function<const char *()>& lazyStr) : msg(lazyStr()) {}
+
+    virtual const char * what() const throw() {
+        return msg;
+    }
+
+    const char * msg;
 };
 
 #endif // MELOSIC_ERROR_HPP
