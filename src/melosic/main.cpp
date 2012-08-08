@@ -34,12 +34,11 @@ int main(int argc, char* argv[]) {
 
         std::vector<char> buf(4096);
         std::streamsize total = 0;
-        bool done = false;
 
-        while (!done) {
+        while((bool)input) {
             std::streamsize amt;
-            done = (amt = io::read(input, buf.data(), 4096)) == -1;
-            if (amt != -1) {
+            amt = io::read(input, buf.data(), 4096);
+            if(amt > 0) {
                 io::write(output, buf.data(), amt);
                 total += amt;
             }

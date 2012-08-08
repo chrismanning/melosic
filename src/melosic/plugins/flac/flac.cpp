@@ -123,9 +123,9 @@ private:
             as = AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
 
             cout << format("sample rate    : %u Hz") % as.sample_rate << endl;
-            cout << format("channels       : %u") % as.channels << endl;
-            cout << format("bits per sample: %u") % as.bps << endl;
-            cout << format("total samples  : %lu") % as.total_samples << endl;
+            cout << format("channels       : %u") % (uint16_t)as.channels << endl;
+            cout << format("bits per sample: %u") % (uint16_t)as.bps << endl;
+            cout << format("total samples  : %u") % as.total_samples << endl;
         }
     }
 

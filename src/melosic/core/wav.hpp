@@ -42,9 +42,9 @@ public:
         auto header = new char[44];
         auto tmp = header;
 
-        tmp = "RIFF"; header+=4;
+        strcpy(tmp, "RIFF"); tmp+=4;
         *(uint32_t*)tmp = total_size + 36; tmp+=4;
-        tmp = "WAVEfmt "; tmp+=8;
+        strcpy(tmp, "WAVEfmt "); tmp+=8;
         *(uint32_t*)tmp = 16; tmp+=4;
         *(uint16_t*)tmp = 1; tmp+=2;
         *(uint16_t*)tmp = as.channels; tmp+=2;
@@ -53,10 +53,10 @@ public:
         *(uint32_t*)tmp = as.sample_rate * q; tmp+=4;
         *(uint16_t*)tmp = q; tmp+=2;
         *(uint16_t*)tmp = as.bps; tmp+=2;
-        tmp = "data"; tmp+=4;
+        strcpy(tmp, "data"); tmp+=4;
         *(uint32_t*)tmp = total_size; tmp+=4;
 
-        io::write(file,header, 44);
+        io::write(file, header, 44);
     }
 
     virtual const std::string& getSinkName() {
@@ -64,7 +64,7 @@ public:
     }
 
     virtual std::streamsize write(const char * s, std::streamsize n) {
-        return io::write(file,s, n);
+        return io::write(file, s, n);
     }
 
 private:

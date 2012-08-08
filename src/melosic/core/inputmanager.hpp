@@ -39,7 +39,9 @@ public:
         auto fact = factories.find(ext);
 
         if(fact != factories.end()) {
-            return fact->second();
+            auto tmp = fact->second();
+            tmp->openFile(filename);
+            return tmp;
         }
         else {
             cerr << "Cannot open file: " << filename << endl;

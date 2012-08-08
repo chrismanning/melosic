@@ -18,8 +18,6 @@
 #ifndef MELOSIC_INPUT_PLUGINTERFACE_H
 #define MELOSIC_INPUT_PLUGINTERFACE_H
 
-#include <memory>
-#include <vector>
 #include <ios>
 #include <boost/iostreams/concepts.hpp>
 
