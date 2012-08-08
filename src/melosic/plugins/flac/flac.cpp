@@ -134,7 +134,7 @@ private:
 };
 
 extern "C" void registerPluginObjects(IKernel& k) {
-    k.getInputManager().addFactory([]() -> FlacDecoder&& {return std::move(FlacDecoder());}, {".flac"});
+    k.getInputManager().addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
 }
 
 extern "C" void destroyPluginObjects() {
