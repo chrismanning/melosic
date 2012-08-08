@@ -4,7 +4,7 @@ SET(SRC_LIST ${SRC_LIST} core/wav.hpp core/kernel.hpp core/inputmanager.hpp core
 #abbrev
 SET(PN ${PROJECT_NAME})
 
-find_package(Boost COMPONENTS filesystem system REQUIRED)
+find_package(Boost COMPONENTS filesystem system iostreams REQUIRED)
 
 add_executable(${PN} ${SRC_LIST})
 

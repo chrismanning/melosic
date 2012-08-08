@@ -18,6 +18,8 @@
 #include <melosic/core/kernel.hpp>
 #include <melosic/core/wav.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/iostreams/copy.hpp>
+using boost::iostreams::copy;
 #include <iostream>
 
 int main(int argc, char* argv[]) {
@@ -25,6 +27,24 @@ int main(int argc, char* argv[]) {
         Melosic::Kernel kernel;
         kernel.loadPlugin("flac.melin");
         kernel.loadPlugin("alsa.melin");
+        auto input_ptr = kernel.getInputManager().openFile("test.flac");
+        auto& input = *input_ptr;
+        auto output = Melosic::Output::WaveFile("test1.wav", input.getAudioSpecs());
+//        copy(input, output);
+
+        std::vector<char> buf(4096);
+        std::streamsize total = 0;
+        bool done = false;
+
+        while (!done) {
+            std::streamsize amt;
+            done = (amt = io::read(input, buf.data(), 4096)) == -1;
+            if (amt != -1) {
+                io::write(output, buf.data(), amt);
+                total += amt;
+            }
+        }
+
         return 0;
     }
     catch(MelosicException& e) {

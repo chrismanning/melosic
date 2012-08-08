@@ -19,6 +19,7 @@
 #define MELOSIC_OUTPUT_PLUGINTERFACE_HPP
 
 #include <string>
+#include <boost/iostreams/concepts.hpp>
 
 namespace Melosic {
 
@@ -46,8 +47,10 @@ public:
 
 class IFileSink : public ISink {
 public:
+    typedef char char_type;
+    typedef boost::iostreams::sink_tag category;
     virtual ~IFileSink() {}
-    virtual void render() = 0;
+    virtual std::streamsize write(const char* s, std::streamsize n) = 0;
 };
 
 }

@@ -37,7 +37,7 @@ public:
         finish();
     }
 
-    virtual std::streamsize read(uint8_t * s, std::streamsize n) {
+    virtual std::streamsize read(char * s, std::streamsize n) {
         while((std::streamsize)circ_buf.size() < n && !end()) {
             process_single();
         }
@@ -56,6 +56,10 @@ public:
 
     virtual const AudioSpecs& getAudioSpecs() {
         return as;
+    }
+
+    virtual explicit operator bool() {
+        return !end();
     }
 
 private:
@@ -103,8 +107,6 @@ private:
             }
         }
 
-        buf = std::move(buf_);
-
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
     }
 
@@ -128,8 +130,7 @@ private:
     }
 
     AudioSpecs as;
-    std::vector<uint8_t> buf;
-    circular_buffer<uint8_t> circ_buf;
+    circular_buffer<char> circ_buf;
 };
 
 extern "C" void registerPluginObjects(IKernel& k) {

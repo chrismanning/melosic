@@ -33,12 +33,15 @@ namespace Input {
 class ISource {
 public:
     virtual ~ISource() {}
-    virtual std::streamsize read(uint8_t * s, std::streamsize n) = 0;
+    virtual std::streamsize read(char * s, std::streamsize n) = 0;
     virtual const Melosic::AudioSpecs& getAudioSpecs() = 0;
+    virtual explicit operator bool() = 0;
 };
 
 class IFileSource : public ISource, boost::iostreams::source {
 public:
+    typedef char char_type;
+    typedef boost::iostreams::source_tag category;
     virtual ~IFileSource() {}
     virtual void openFile(const std::string& filename) = 0;
 };

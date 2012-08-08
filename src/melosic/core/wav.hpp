@@ -20,6 +20,9 @@
 
 #include <boost/filesystem.hpp>
 using boost::filesystem::absolute;
+#include <boost/iostreams/write.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
+namespace io = boost::iostreams;
 #include <fstream>
 
 #include <melosic/common/common.hpp>
@@ -34,38 +37,39 @@ public:
         : filepath(absolute(filename))
         , file(filepath.string(), std::ios_base::out | std::ios_base::binary)
         , as(as)
-    {}
+    {
+        auto total_size = (uint32_t)as.total_samples * as.channels * (as.bps/8);
+        auto header = new char[44];
+        auto tmp = header;
 
-    const std::string& getSinkName() {
+        tmp = "RIFF"; header+=4;
+        *(uint32_t*)tmp = total_size + 36; tmp+=4;
+        tmp = "WAVEfmt "; tmp+=8;
+        *(uint32_t*)tmp = 16; tmp+=4;
+        *(uint16_t*)tmp = 1; tmp+=2;
+        *(uint16_t*)tmp = as.channels; tmp+=2;
+        *(uint32_t*)tmp = as.sample_rate; tmp+=4;
+        uint16_t q = as.channels * (as.bps/8);
+        *(uint32_t*)tmp = as.sample_rate * q; tmp+=4;
+        *(uint16_t*)tmp = q; tmp+=2;
+        *(uint16_t*)tmp = as.bps; tmp+=2;
+        tmp = "data"; tmp+=4;
+        *(uint32_t*)tmp = total_size; tmp+=4;
+
+        io::write(file,header, 44);
+    }
+
+    virtual const std::string& getSinkName() {
         return filepath.string();
     }
 
-//    void render(DecodeRange src) {
-//        uint total_size = cast(uint)as.total_samples * as.channels * (as.bps/8);
-//        file.rawWrite("RIFF");
-//        file.rawWrite(ntl!uint(total_size + 36));
-//        file.rawWrite("WAVEfmt ");
-//        file.rawWrite(ntl!uint(16));
-//        file.rawWrite(ntl!ushort(1));
-//        file.rawWrite(ntl!ushort(as.channels));
-//        file.rawWrite(ntl!uint(as.sample_rate));
-//        ushort q = as.channels * (as.bps/8);
-//        file.rawWrite(ntl!uint(as.sample_rate * q));
-//        file.rawWrite(ntl!ushort(q));
-//        file.rawWrite(ntl!ushort(as.bps));
-//        file.rawWrite("data");
-//        file.rawWrite(ntl!uint(total_size));
-//        file.flush();
-//        stderr.writeln("Written header");
-
-//        foreach(buf; src) {
-//            file.rawWrite(buf[]);
-//        }
-//    }
+    virtual std::streamsize write(const char * s, std::streamsize n) {
+        return io::write(file,s, n);
+    }
 
 private:
     const boost::filesystem::path& filepath;
-    std::ofstream file;
+    io::file_descriptor_sink file;
     AudioSpecs as;
 };
 

@@ -29,8 +29,8 @@ namespace Input {
 
 class IInputManager {
 public:
-    virtual ISource&& openFile(const std::string& filename) = 0;
-    virtual void addFactory(std::function<ISource&&()>&& fact,
+    virtual IFileSource&& openFile(const std::string& filename) = 0;
+    virtual void addFactory(std::function<IFileSource&&()>&& fact,
                             std::initializer_list<std::string> extensions) = 0;
 };
 

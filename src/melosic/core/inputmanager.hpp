@@ -34,7 +34,7 @@ namespace Input {
 
 class InputManager : public IInputManager {
 public:
-    virtual ISource&& openFile(const std::string& filename) {
+    virtual IFileSource&& openFile(const std::string& filename) {
         auto ext = path(filename).extension().string();
 
         auto fact = factories.find(ext);
@@ -47,7 +47,7 @@ public:
         return fact->second();
     }
 
-    virtual void addFactory(std::function<ISource&&()>&& fact,
+    virtual void addFactory(std::function<IFileSource&&()>&& fact,
                                  std::initializer_list<std::string> extensions) {
         BOOST_ASSERT(extensions.size() > 0);
         for(auto ext : extensions) {
@@ -62,7 +62,7 @@ public:
     }
 
 private:
-    std::map<std::string,std::function<ISource&&()> > factories;
+    std::map<std::string,std::function<IFileSource&&()> > factories;
 };
 
 }
