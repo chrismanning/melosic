@@ -57,7 +57,7 @@ public:
                 factories.insert(decltype(factories)::value_type(ext, fact));
             }
             else {
-                //error
+                cerr << ext << ": can already be opened" << endl;
             }
         }
     }
