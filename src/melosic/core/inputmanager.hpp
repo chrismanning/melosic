@@ -25,6 +25,7 @@ using std::cerr; using std::endl;
 
 #include <melosic/managers/input/iinputmanager.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
+#include <melosic/common/error.hpp>
 
 using boost::filesystem::path;
 
@@ -38,16 +39,13 @@ public:
 
         auto fact = factories.find(ext);
 
-        if(fact != factories.end()) {
-            auto tmp = fact->second();
-            tmp->openFile(filename);
-            return tmp;
-        }
-        else {
-            cerr << "Cannot open file: " << filename << endl;
-            return 0;
-            //throw new Exception("cannot open file " ~ filename);
-        }
+        enforceEx<MelosicException>(fact != factories.end(),
+                                    [&filename]() {
+                                        return (filename + ": cannot open file").c_str();
+                                    });
+        auto tmp = fact->second();
+        tmp->openFile(filename);
+        return tmp;
     }
 
     virtual void addFactory(std::function<std::shared_ptr<IFileSource>()> fact,
