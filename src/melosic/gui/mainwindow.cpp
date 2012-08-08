@@ -42,9 +42,9 @@ void MainWindow::on_actionPlay_triggered()
 {
     if(filename.length() > 0) {
         //TODO: hook in to Qt event loop
-        auto input = kernel.getInputManager().openFile(filename.toStdString().c_str());
+        auto&& input = kernel.getInputManager().openFile(filename.toStdString().c_str());
         auto output = kernel.getOutputManager().getDefaultOutput();
-        output->prepareDevice(input->getAudioSpecs());
+        output->prepareDevice(input.getAudioSpecs());
         //output->render(input->getDecodeRange());
     }
     else {
