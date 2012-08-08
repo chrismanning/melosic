@@ -29,7 +29,7 @@
 #include <melosic/common/common.hpp>
 using namespace Melosic;
 
-class AlsaOutput : public Melosic::Output::IOutput {
+class AlsaOutput : public Melosic::Output::IDeviceSink {
 public:
     AlsaOutput(const std::string name, const std::string desc)
         : pdh(0), params(0), name(name), desc(desc)
@@ -129,7 +129,7 @@ public:
         return desc;
     }
 
-    virtual const std::string& getDeviceName() {
+    virtual const std::string& getSinkName() {
         return name;
     }
 

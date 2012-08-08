@@ -68,11 +68,11 @@ public:
 //        }
     }
 
-    IInputManager& getInputManager() {
+    Input::IInputManager& getInputManager() {
         return inman;
     }
 
-    IOutputManager& getOutputManager() {
+    Output::IOutputManager& getOutputManager() {
         return outman;
     }
 

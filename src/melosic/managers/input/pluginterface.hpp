@@ -20,27 +20,30 @@
 
 #include <memory>
 #include <vector>
+#include <ios>
+#include <boost/iostreams/concepts.hpp>
 
 namespace Melosic {
 
 struct AudioSpecs;
 struct IBuffer;
 
-}
+namespace Input {
 
-class IInputSource {
+class ISource {
 public:
-    virtual ~IInputSource() {}
-    virtual void openFile(const std::string& filename) = 0;
+    virtual ~ISource() {}
+    virtual std::streamsize read(uint8_t * s, std::streamsize n) = 0;
     virtual const Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual void writeBuf(const std::vector<uint8_t>& buf, size_t length) = 0;
 };
 
-class IInputFactory {
+class IFileSource : public ISource, boost::iostreams::source {
 public:
-    virtual ~IInputFactory() {}
-    virtual bool canOpen(const std::string& extension) = 0;
-    virtual std::shared_ptr<IInputSource> create() = 0;
+    virtual ~IFileSource() {}
+    virtual void openFile(const std::string& filename) = 0;
 };
+
+}
+}
 
 #endif // MELOSIC_INPUT_PLUGINTERFACE_H

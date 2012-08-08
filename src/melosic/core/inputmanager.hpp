@@ -33,7 +33,7 @@ namespace Input {
 
 class InputManager : public IInputManager {
 public:
-    virtual std::shared_ptr<IInputSource> openFile(const std::string& filename) {
+    virtual std::shared_ptr<ISource> openFile(const std::string& filename) {
         auto ext = path(filename).extension().string();
 
         auto fact = factories.find(ext);
@@ -48,7 +48,7 @@ public:
         }
     }
 
-    virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
+    virtual void addFactory(std::function<std::shared_ptr<ISource>()> fact,
                                  std::initializer_list<std::string> extensions) {
         BOOST_ASSERT(extensions.size() > 0);
         for(auto ext : extensions) {
@@ -63,7 +63,7 @@ public:
     }
 
 private:
-    std::map<std::string,std::function<std::shared_ptr<IInputSource>()> > factories;
+    std::map<std::string,std::function<std::shared_ptr<ISource>()> > factories;
 };
 
 }

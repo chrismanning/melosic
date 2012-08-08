@@ -24,11 +24,17 @@
 
 #include <melosic/managers/input/pluginterface.hpp>
 
+namespace Melosic {
+namespace Input {
+
 class IInputManager {
 public:
-    virtual std::shared_ptr<IInputSource> openFile(const std::string& filename) = 0;
-    virtual void addFactory(std::function<std::shared_ptr<IInputSource>()> fact,
+    virtual std::shared_ptr<ISource> openFile(const std::string& filename) = 0;
+    virtual void addFactory(std::function<std::shared_ptr<ISource>()> fact,
                             std::initializer_list<std::string> extensions) = 0;
 };
+
+}
+}
 
 #endif // MELOSIC_IINPUT_MANAGER_H

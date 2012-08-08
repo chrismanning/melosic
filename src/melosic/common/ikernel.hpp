@@ -29,8 +29,8 @@ namespace Melosic {
 class IKernel {
 public:
     virtual void loadPlugin(const std::string& filename) = 0;
-    virtual IInputManager& getInputManager() = 0;
-    virtual IOutputManager& getOutputManager() = 0;
+    virtual Input::IInputManager& getInputManager() = 0;
+    virtual Output::IOutputManager& getOutputManager() = 0;
 };
 
 } // end namespace Melosic

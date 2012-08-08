@@ -20,10 +20,16 @@
 
 #include <melosic/managers/output/pluginterface.hpp>
 
+namespace Melosic {
+namespace Output {
+
 class IOutputManager {
 public:
-    virtual void addOutput(Melosic::Output::IOutput * dec) = 0;
-    virtual Melosic::Output::IOutput * getDefaultOutput() = 0;
+    virtual void addOutput(Melosic::Output::IDeviceSink * dec) = 0;
+    virtual Melosic::Output::IDeviceSink * getDefaultOutput() = 0;
 };
+
+}
+}
 
 #endif // MELOSIC_IOUTPUTMANAGER_HPP

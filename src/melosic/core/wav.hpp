@@ -23,10 +23,12 @@ using boost::filesystem::absolute;
 #include <fstream>
 
 #include <melosic/common/common.hpp>
+#include <melosic/managers/output/pluginterface.hpp>
 
 namespace Melosic {
+namespace Output {
 
-class WaveFile {
+class WaveFile : public IFileSink {
 public:
     WaveFile(const boost::filesystem::path& filename, AudioSpecs as)
         : filepath(absolute(filename))
@@ -34,7 +36,7 @@ public:
         , as(as)
     {}
 
-    const std::string& getDeviceName() {
+    const std::string& getSinkName() {
         return filepath.string();
     }
 
@@ -61,11 +63,13 @@ public:
 //        }
 //    }
 
+private:
     const boost::filesystem::path& filepath;
     std::ofstream file;
     AudioSpecs as;
 };
 
+}
 }
 
 #endif // MELOSIC_WAV_HPP

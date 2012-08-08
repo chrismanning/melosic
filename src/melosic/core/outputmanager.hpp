@@ -28,11 +28,11 @@ namespace Output {
 
 class OutputManager : public IOutputManager {
 public:
-    void addOutput(IOutput* dev) {
+    void addOutput(IDeviceSink* dev) {
         devs.push_back(dev);
     }
 
-    IOutput* getDefaultOutput() {
+    IDeviceSink* getDefaultOutput() {
 //        auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
 //        enforceEx!Exception(r.count() > 0, "Cannot find default device");
 //        return r.front().iod;
@@ -40,7 +40,7 @@ public:
     }
 
 private:
-    std::list<IOutput*> devs;
+    std::list<IDeviceSink*> devs;
 };
 
 }

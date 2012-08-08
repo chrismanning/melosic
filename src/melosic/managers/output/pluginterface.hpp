@@ -30,13 +30,24 @@ namespace Output {
 struct DeviceCapabilities {
 };
 
-class IOutput {
+class ISink {
 public:
-    virtual ~IOutput() {}
+    virtual ~ISink() {}
+    virtual const std::string& getSinkName() = 0;
+};
+
+class IDeviceSink : public ISink {
+public:
+    virtual ~IDeviceSink() {}
     virtual void prepareDevice(Melosic::AudioSpecs as) = 0;
     virtual const std::string& getDeviceDescription() = 0;
-    virtual const std::string& getDeviceName() = 0;
     virtual void render(Melosic::PlaybackHandler * playHandle) = 0;
+};
+
+class IFileSink : public ISink {
+public:
+    virtual ~IFileSink() {}
+    virtual void render() = 0;
 };
 
 }
