@@ -23,30 +23,30 @@ using boost::factory;
 using boost::format;
 #include <boost/circular_buffer.hpp>
 using boost::circular_buffer;
-#include <vector>
+#include <deque>
+#include <algorithm>
 
 #include <melosic/common/common.hpp>
 using namespace Melosic;
 
 class FlacDecoder : public Input::IFileSource, private FLAC::Decoder::File {
 public:
-    FlacDecoder() : circ_buf(65536) {}
-
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n" << endl;
         finish();
     }
 
     virtual std::streamsize read(char * s, std::streamsize n) {
-        while((std::streamsize)circ_buf.size() < n && !end()) {
+        while((std::streamsize)buf.size() < n && !end()) {
             process_single();
         }
-        std::streamsize i;
-        for(i = 0; i<n && !circ_buf.empty(); i++) {
-            s[i] = circ_buf.front();
-            circ_buf.pop_front();
+
+        auto m = std::move(buf.begin(), buf.begin() + std::min(n, (std::streamsize)buf.size()), s);
+        for(int i=0; i<m-s; i++) {
+            buf.pop_front();
         }
-        return i;
+
+        return m - s;
     }
 
     virtual void openFile(const std::string& filename) {
@@ -70,38 +70,26 @@ private:
 
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
                                                             const FLAC__int32 * const buffer[]) {
-        auto bytes = frame->header.blocksize
-                     * sizeof(int32_t)
-                     * frame->header.channels
-                     / (frame->header.bits_per_sample/8);
-
-        std::vector<uint8_t> buf_(bytes);
-        auto tmp = &buf_[0];
-
-        if(tmp == NULL) {
-            return FLAC__STREAM_DECODER_WRITE_STATUS_ABORT;
-        }
-
         for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*2); i++) {
             for(unsigned j=0; j<frame->header.channels; j++,u++) {
                 switch(frame->header.bits_per_sample/8) {
                     case 1:
-                        circ_buf.push_back((uint8_t)(buffer[j][i]));
+                        buf.push_back((char)(buffer[j][i]));
                         break;
                     case 2:
-                        circ_buf.push_back((uint8_t)(buffer[j][i]));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 8));
+                        buf.push_back((char)(buffer[j][i]));
+                        buf.push_back((char)(buffer[j][i] >> 8));
                         break;
                     case 3:
-                        circ_buf.push_back((uint8_t)(buffer[j][i]));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 8));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 16));
+                        buf.push_back((char)(buffer[j][i]));
+                        buf.push_back((char)(buffer[j][i] >> 8));
+                        buf.push_back((char)(buffer[j][i] >> 16));
                         break;
                     case 4:
-                        circ_buf.push_back((uint8_t)(buffer[j][i]));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 8));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 16));
-                        circ_buf.push_back((uint8_t)(buffer[j][i] >> 24));
+                        buf.push_back((char)(buffer[j][i]));
+                        buf.push_back((char)(buffer[j][i] >> 8));
+                        buf.push_back((char)(buffer[j][i] >> 16));
+                        buf.push_back((char)(buffer[j][i] >> 24));
                         break;
                 }
             }
@@ -130,7 +118,7 @@ private:
     }
 
     AudioSpecs as;
-    circular_buffer<char> circ_buf;
+    std::deque<char> buf;
 };
 
 extern "C" void registerPluginObjects(IKernel& k) {

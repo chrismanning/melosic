@@ -30,7 +30,6 @@ int main(int argc, char* argv[]) {
         auto input_ptr = kernel.getInputManager().openFile("test.flac");
         auto& input = *input_ptr;
         auto output = Melosic::Output::WaveFile("test1.wav", input.getAudioSpecs());
-//        copy(input, output);
 
         std::vector<char> buf(4096);
         std::streamsize total = 0;
