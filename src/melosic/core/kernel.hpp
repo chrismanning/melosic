@@ -31,18 +31,18 @@ public:
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
 
-        enforceEx<MelosicException>(exists(p),
+        enforceEx<Exception>(exists(p),
                                     [&filepath]() {
                                         return (filepath + ": file does not exist").c_str();
                                     });
 
-        enforceEx<MelosicException>(p.extension() == ".melin" && is_regular_file(p),
+        enforceEx<Exception>(p.extension() == ".melin" && is_regular_file(p),
                                     [&filepath]() {
                                         return (filepath + ": not a melosic plugin").c_str();
                                     });
 
         try {
-            auto& filename = p.filename().string();
+            auto const& filename = p.filename().string();
 
             if(loadedPlugins.find(filename) != loadedPlugins.end()) {
                 std::cerr << "Plugin already loaded: " << filepath << std::endl;
@@ -55,7 +55,7 @@ public:
         }
         catch(PluginException& e) {
             std::cerr << e.what() << std::endl;
-//            throw;
+            throw;
         }
     }
 

@@ -21,6 +21,8 @@
 #include <exception>
 #include <utility>
 
+namespace Melosic {
+
 template <class Exception, typename ... Args>
 void enforceEx(bool expression, Args&& ... arguments) {
     if(!expression) {
@@ -28,9 +30,9 @@ void enforceEx(bool expression, Args&& ... arguments) {
     }
 }
 
-struct MelosicException : public std::exception {
-    MelosicException(const char * msg) : msg(msg) {}
-    MelosicException(const std::function<const char *()>& lazyStr) : msg(lazyStr()) {}
+struct Exception : public std::exception {
+    Exception(const char * msg) : msg(msg) {}
+    Exception(const std::function<const char *()>& lazyStr) : msg(lazyStr()) {}
 
     virtual const char * what() const throw() {
         return msg;
@@ -38,5 +40,7 @@ struct MelosicException : public std::exception {
 
     const char * msg;
 };
+
+}
 
 #endif // MELOSIC_ERROR_HPP

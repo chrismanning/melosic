@@ -26,6 +26,7 @@ using std::cerr; using std::endl;
 #include <melosic/managers/input/iinputmanager.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/common/error.hpp>
+#include <melosic/common/file.hpp>
 
 using boost::filesystem::path;
 
@@ -34,23 +35,22 @@ namespace Input {
 
 class InputManager : public IInputManager {
 public:
-    virtual std::shared_ptr<IFileSource> openFile(const std::string& filename) {
-        auto ext = path(filename).extension().string();
+    virtual std::shared_ptr<IFileSource> openFile(IO::File& file) {
+        auto ext = path(file.filename()).extension().string();
 
         auto fact = factories.find(ext);
 
-        enforceEx<MelosicException>(fact != factories.end(),
-                                    [&filename]() {
-                                        return (filename + ": cannot open file").c_str();
+        enforceEx<Exception>(fact != factories.end(),
+                                    [&file]() {
+                                        return (file.filename() + ": cannot decode file").c_str();
                                     });
-        auto tmp = fact->second();
-        tmp->openFile(filename);
-        return tmp;
+        return fact->second(file);
     }
 
-    virtual void addFactory(std::function<std::shared_ptr<IFileSource>()> fact,
+    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::File&)> fact,
                                  std::initializer_list<std::string> extensions) {
         BOOST_ASSERT(extensions.size() > 0);
+
         for(auto ext : extensions) {
             auto pos = factories.find(ext);
             if(pos == factories.end()) {
@@ -63,7 +63,7 @@ public:
     }
 
 private:
-    std::map<std::string,std::function<std::shared_ptr<IFileSource>()> > factories;
+    std::map<std::string,std::function<std::shared_ptr<IFileSource>(IO::File&)> > factories;
 };
 
 }

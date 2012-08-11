@@ -43,8 +43,10 @@ using boost::filesystem::absolute;
 #include <melosic/common/exports.hpp>
 #include <melosic/common/error.hpp>
 
-struct PluginException : public MelosicException {
-    PluginException() : MelosicException(dlerror()) {
+namespace Melosic {
+
+struct PluginException : public Exception {
+    PluginException() : Exception(dlerror()) {
     }
 };
 
@@ -53,8 +55,6 @@ struct PluginSymbolException : public PluginException {
         DLClose(handle);
     }
 };
-
-namespace Melosic {
 
 class Plugin {
 public:

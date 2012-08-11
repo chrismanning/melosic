@@ -15,31 +15,51 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_IINPUT_MANAGER_H
-#define MELOSIC_IINPUT_MANAGER_H
+#ifndef MELOSIC_FILE_HPP
+#define MELOSIC_FILE_HPP
 
-#include <initializer_list>
+#include <algorithm>
 #include <string>
-#include <memory>
+#include <vector>
+#include <fstream>
+#include <iterator>
+#include <type_traits>
+#include <boost/iostreams/stream_buffer.hpp>
+#include <boost/iostreams/device/file.hpp>
+namespace io = boost::iostreams;
 
-#include <melosic/managers/input/pluginterface.hpp>
+#include <melosic/common/error.hpp>
 
 namespace Melosic {
 
 namespace IO {
-class File;
-}
 
-namespace Input {
-
-class IInputManager {
+class File : public io::file {
 public:
-    virtual std::shared_ptr<IFileSource> openFile(IO::File& filename) = 0;
-    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::File&)> fact,
-                            std::initializer_list<std::string> extensions) = 0;
+    File(std::string filename) : io::file(filename, mode), filename_(filename) {}
+
+    void reopen() {
+        if(!is_open()) {
+            open(filename_, mode);
+        }
+    }
+
+    const std::string& filename() {
+        return filename_;
+    }
+
+private:
+    auto static const mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
+    std::string filename_;
 };
 
-}
-}
+struct IOException : Exception {
+    IOException(const File& fs, const char * msg) : Exception(msg), fs(fs) {}
+private:
+    const File& fs;
+};
 
-#endif // MELOSIC_IINPUT_MANAGER_H
+} // IO
+} // Melosic
+
+#endif // MELOSIC_FILE_HPP

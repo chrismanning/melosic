@@ -15,38 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/core/kernel.hpp>
-#include <melosic/core/wav.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/iostreams/copy.hpp>
-using boost::iostreams::copy;
-#include <iostream>
+#include <melosic/gui/application.hpp>
+#include <melosic/gui/mainwindow.hpp>
 
 int main(int argc, char* argv[]) {
-    try {
-        Melosic::Kernel kernel;
-        kernel.loadPlugin("flac.melin");
-        kernel.loadPlugin("alsa.melin");
-        auto input_ptr = kernel.getInputManager().openFile("test.flac");
-        auto& input = *input_ptr;
-        auto output = Melosic::Output::WaveFile("test1.wav", input.getAudioSpecs());
+    Application app(argc, argv);
 
-        std::vector<char> buf(4096);
-        std::streamsize total = 0;
+    MainWindow win;
+    win.show();
+    win.loadPlugins();
 
-        while((bool)input) {
-            std::streamsize amt;
-            amt = io::read(input, buf.data(), 4096);
-            if(amt > 0) {
-                io::write(output, buf.data(), amt);
-                total += amt;
-            }
-        }
-
-        return 0;
-    }
-    catch(MelosicException& e) {
-        std::cerr << e.what() << std::endl;
-        return -1;
-    }
+    return app.exec();
 }

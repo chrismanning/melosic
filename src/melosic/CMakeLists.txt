@@ -1,3 +1,8 @@
+FIND_PACKAGE(Qt4 REQUIRED)
+INCLUDE(${QT_USE_FILE})
+ADD_DEFINITIONS(${QT_DEFINITIONS})
+ADD_DEFINITIONS(-DQT_SHARED)
+
 SET(SRC_LIST main.cpp)
 SET(SRC_LIST ${SRC_LIST} core/wav.hpp core/kernel.hpp core/inputmanager.hpp core/outputmanager.hpp)
 
@@ -23,5 +28,5 @@ ELSEIF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl)
 ENDIF(${WIN32})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS})
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} qt-gui)
 

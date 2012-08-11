@@ -27,10 +27,17 @@ using boost::circular_buffer;
 #include <algorithm>
 
 #include <melosic/common/common.hpp>
+#include <melosic/common/file.hpp>
 using namespace Melosic;
 
-class FlacDecoder : public Input::IFileSource, private FLAC::Decoder::File {
+class FlacDecoder : public Input::IFileSource, private FLAC::Decoder::Stream {
 public:
+    FlacDecoder(IO::File file) : file(file) {
+        file.reopen(); //make sure it's open
+        enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
+        enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
+    }
+
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n" << endl;
         finish();
@@ -38,7 +45,7 @@ public:
 
     virtual std::streamsize read(char * s, std::streamsize n) {
         while((std::streamsize)buf.size() < n && !end()) {
-            process_single();
+            enforceEx<Exception>(process_single() && !buf.empty(), "FLAC: Fatal processing error");
         }
 
         auto m = std::move(buf.begin(), buf.begin() + std::min(n, (std::streamsize)buf.size()), s);
@@ -46,12 +53,13 @@ public:
             buf.pop_front();
         }
 
-        return m - s;
+        auto r = m - s;
+
+        return r == 0 && end() ? -1 : r;
     }
 
     virtual void openFile(const std::string& filename) {
-        init(filename);
-        process_until_end_of_metadata();
+        init();
     }
 
     virtual const AudioSpecs& getAudioSpecs() {
@@ -66,6 +74,21 @@ private:
     bool end() {
         auto state = (::FLAC__StreamDecoderState)get_state();
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
+    }
+
+    virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
+        try {
+            auto amt = file.read((char*)buffer, (std::streamsize&)*bytes);
+
+            if(amt == -1) {
+                return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
+            }
+            return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+        }
+        catch(std::ios_base::failure& e) {
+            cerr << e.what() << endl;
+            return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
+        }
     }
 
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
@@ -99,8 +122,8 @@ private:
     }
 
     virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
-        //FIXME: use future error handling capabilities
-        cerr << "Got error callback:" << FLAC__StreamDecoderErrorStatusString[status] << endl;
+        cerr << "Got error callback: " << FLAC__StreamDecoderErrorStatusString[status] << endl;
+        throw Exception(FLAC__StreamDecoderErrorStatusString[status]);
     }
 
     virtual void metadata_callback(const ::FLAC__StreamMetadata *metadata) {
@@ -119,6 +142,7 @@ private:
 
     AudioSpecs as;
     std::deque<char> buf;
+    IO::File file;
 };
 
 extern "C" void registerPluginObjects(IKernel& k) {

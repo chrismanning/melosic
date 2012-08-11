@@ -15,13 +15,17 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef MELOSIC_MAINWINDOW_H
+#define MELOSIC_MAINWINDOW_H
 
 #include <QDebug>
 #include <QMainWindow>
 #include <QApplication>
+#include <QList>
+
 #include <melosic/common/common.hpp>
+#include <melosic/common/file.hpp>
+#include <melosic/core/kernel.hpp>
 using namespace Melosic;
 
 namespace Ui {
@@ -33,17 +37,19 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     
 public:
-    explicit MainWindow(IKernel& k, QWidget * parent = 0);
+    explicit MainWindow(QWidget * parent = 0);
     ~MainWindow();
+    void loadPlugins();
 
 private Q_SLOTS:
     void on_actionOpen_triggered();
     void on_actionPlay_triggered();
 
 private:
+    Kernel kernel;
     Ui::MainWindow * ui;
-    IKernel& kernel;
     QString filename;
+    QList<IO::File> files;
 };
 
-#endif // MAINWINDOW_H
+#endif // MELOSIC_MAINWINDOW_H
