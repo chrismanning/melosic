@@ -41,7 +41,6 @@ public:
     typedef char char_type;
     typedef boost::iostreams::source_tag category;
     virtual ~IFileSource() {}
-    virtual void openFile(const std::string& filename) = 0;
 };
 
 }

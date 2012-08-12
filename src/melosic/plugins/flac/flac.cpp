@@ -30,47 +30,19 @@ using boost::circular_buffer;
 #include <melosic/common/file.hpp>
 using namespace Melosic;
 
-class FlacDecoder : public Input::IFileSource, private FLAC::Decoder::Stream {
+class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
-    FlacDecoder(IO::File file) : file(file) {
+    FlacDecoderImpl(IO::File file, std::deque<char>& buf, AudioSpecs& as) : file(file), buf(buf), as(as) {
         file.reopen(); //make sure it's open
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
     }
 
-    virtual ~FlacDecoder() {
-        cerr << "Flac decoder being destroyed\n" << endl;
+    virtual ~FlacDecoderImpl() {
+        cerr << "Flac decoder impl being destroyed\n" << endl;
         finish();
     }
 
-    virtual std::streamsize read(char * s, std::streamsize n) {
-        while((std::streamsize)buf.size() < n && !end()) {
-            enforceEx<Exception>(process_single() && !buf.empty(), "FLAC: Fatal processing error");
-        }
-
-        auto m = std::move(buf.begin(), buf.begin() + std::min(n, (std::streamsize)buf.size()), s);
-        for(int i=0; i<m-s; i++) {
-            buf.pop_front();
-        }
-
-        auto r = m - s;
-
-        return r == 0 && end() ? -1 : r;
-    }
-
-    virtual void openFile(const std::string& filename) {
-        init();
-    }
-
-    virtual const AudioSpecs& getAudioSpecs() {
-        return as;
-    }
-
-    virtual explicit operator bool() {
-        return !end();
-    }
-
-private:
     bool end() {
         auto state = (::FLAC__StreamDecoderState)get_state();
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
@@ -78,7 +50,7 @@ private:
 
     virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
         try {
-            auto amt = file.read((char*)buffer, (std::streamsize&)*bytes);
+            auto amt = boost::iostreams::read(file, (char*)buffer, *bytes);
 
             if(amt == -1) {
                 return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
@@ -139,10 +111,47 @@ private:
             cout << format("total samples  : %u") % as.total_samples << endl;
         }
     }
+private:
+    IO::File file;
+    std::deque<char>& buf;
+    AudioSpecs& as;
+};
 
+class FlacDecoder : public Input::IFileSource {
+public:
+    FlacDecoder(IO::File file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
+
+    virtual ~FlacDecoder() {
+        cerr << "Flac decoder being destroyed\n" << endl;
+    }
+
+    virtual std::streamsize read(char * s, std::streamsize n) {
+        while((std::streamsize)buf.size() < n && *this) {
+            enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
+        }
+
+        auto m = std::move(buf.begin(), buf.begin() + std::min(n, (std::streamsize)buf.size()), s);
+        for(int i=0; i<m-s; i++) {
+            buf.pop_front();
+        }
+
+        auto r = m - s;
+
+        return r == 0 && !(*this) ? -1 : r;
+    }
+
+    virtual const AudioSpecs& getAudioSpecs() {
+        return as;
+    }
+
+    virtual explicit operator bool() {
+        return !pimpl->end();
+    }
+
+private:
     AudioSpecs as;
     std::deque<char> buf;
-    IO::File file;
+    std::shared_ptr<FlacDecoderImpl> pimpl;
 };
 
 extern "C" void registerPluginObjects(IKernel& k) {
