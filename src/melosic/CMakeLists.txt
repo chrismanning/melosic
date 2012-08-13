@@ -19,8 +19,6 @@ add_subdirectory(plugins)
 add_subdirectory(gui)
 
 include_directories(.. ${Boost_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
-SET(LINK_LIBS boost_filesystem)
 
 IF(${WIN32})
     SET(LINK_LIBS ${LINK_LIBS} boost_system)
@@ -28,5 +26,5 @@ ELSEIF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl)
 ENDIF(${WIN32})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} qt-gui)
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS})
 

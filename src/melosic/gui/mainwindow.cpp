@@ -54,19 +54,19 @@ void MainWindow::on_actionPlay_triggered()
         auto& input = *input_ptr;
         auto output = Output::WaveFile("test1.wav", input.getAudioSpecs());
 
-        io::copy(boost::ref(input), output);
+//        io::copy(boost::ref(input), output);
 
-//        std::vector<char> buf(4096);
-//        std::streamsize total = 0;
+        std::vector<char> buf(4096);
+        std::streamsize total = 0;
 
-//        while((bool)input) {
-//            std::streamsize amt;
-//            amt = io::read(input, buf.data(), 4096);
-//            if(amt > 0) {
-//                io::write(output, buf.data(), amt);
-//                total += amt;
-//            }
-//        }
+        while((bool)input) {
+            std::streamsize amt;
+            amt = io::read(input, buf.data(), 4096);
+            if(amt > 0) {
+                io::write(output, buf.data(), amt);
+                total += amt;
+            }
+        }
     }
     else {
         qDebug("Nothing to play");

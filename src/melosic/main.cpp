@@ -15,15 +15,30 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/gui/application.hpp>
-#include <melosic/gui/mainwindow.hpp>
+//#include <melosic/gui/application.hpp>
+//#include <melosic/gui/mainwindow.hpp>
+#include <melosic/core/kernel.hpp>
+#include <melosic/core/wav.hpp>
+using namespace Melosic;
+#include <boost/iostreams/copy.hpp>
+namespace io = boost::iostreams;
 
 int main(int argc, char* argv[]) {
-    Application app(argc, argv);
+//    Application app(argc, argv);
 
-    MainWindow win;
-    win.show();
-    win.loadPlugins();
+//    MainWindow win;
+//    win.show();
+//    win.loadPlugins();
 
-    return app.exec();
+//    return app.exec();
+    Kernel kernel;
+    kernel.loadPlugin("flac.melin");
+//    IO::File file("test.flac");
+//    auto input_ptr = kernel.getInputManager().openFile(file);
+//    auto& input = *input_ptr;
+//    auto output = Output::WaveFile("test1.wav", input.getAudioSpecs());
+
+//    io::copy(boost::ref(input), output);
+
+    return 0;
 }
