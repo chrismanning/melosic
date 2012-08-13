@@ -34,6 +34,7 @@ class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
     FlacDecoderImpl(IO::File file, std::deque<char>& buf, AudioSpecs& as) : file(file), buf(buf), as(as) {
         file.reopen(); //make sure it's open
+        file.seek(0, std::ios_base::beg);
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
     }
@@ -50,9 +51,10 @@ public:
 
     virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
         try {
-            auto amt = boost::iostreams::read(file, (char*)buffer, *bytes);
+            *bytes = boost::iostreams::read(file, (char*)buffer, *bytes);
 
-            if(amt == -1) {
+            if(*(std::streamsize*)bytes == -1) {
+                *bytes = 0;
                 return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
             }
             return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
@@ -65,7 +67,7 @@ public:
 
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
                                                             const FLAC__int32 * const buffer[]) {
-        for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*2); i++) {
+        for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
             for(unsigned j=0; j<frame->header.channels; j++,u++) {
                 switch(frame->header.bits_per_sample/8) {
                     case 1:
