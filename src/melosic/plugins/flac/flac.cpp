@@ -27,13 +27,14 @@ namespace io = boost::iostreams;
 #include <algorithm>
 
 #include <melosic/common/common.hpp>
-#include <melosic/common/file.hpp>
+#include <melosic/common/stream.hpp>
 using namespace Melosic;
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
-    FlacDecoderImpl(IO::File& file, std::deque<char>& buf, AudioSpecs& as) : file(file), buf(buf), as(as) {
-        file.reopen(); //make sure it's open
+    FlacDecoderImpl(IO::BiDirectionalSeekable& file, std::deque<char>& buf, AudioSpecs& as)
+        : file(file), buf(buf), as(as)
+    {
         io::seek(file, 0, std::ios_base::beg, std::ios_base::in);
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
@@ -114,14 +115,14 @@ public:
         }
     }
 private:
-    IO::File& file;
+    IO::BiDirectionalSeekable& file;
     std::deque<char>& buf;
     AudioSpecs& as;
 };
 
 class FlacDecoder : public Input::IFileSource {
 public:
-    FlacDecoder(IO::File& file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
+    FlacDecoder(IO::BiDirectionalSeekable& file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
 
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n" << endl;

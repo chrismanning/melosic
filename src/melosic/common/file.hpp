@@ -29,22 +29,17 @@
 namespace io = boost::iostreams;
 
 #include <melosic/common/error.hpp>
+#include <melosic/common/stream.hpp>
 
 namespace Melosic {
 
 namespace IO {
 
-typedef io::stream_buffer<io::file> FileStream;
-
-class File : public FileStream {
+class File : public BiDirectionalSeekable {
 public:
-    File(const std::string& filename) : FileStream(io::file(filename, mode)), filename_(filename) {}
+    File(const std::string& filename) : impl(io::file(filename, mode)), filename_(filename) {}
 
-    void reopen() {
-        if(!is_open()) {
-            open(filename_, mode);
-        }
-    }
+    virtual ~File() {}
 
     const std::string& filename() {
         return filename_;
@@ -52,7 +47,20 @@ public:
 
 private:
     auto static const mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
+    io::stream_buffer<io::file> impl;
     std::string filename_;
+
+    virtual std::streamsize do_read(char * s, std::streamsize n) {
+        return io::read(impl, s, n);
+    }
+
+    virtual std::streamsize do_write(const char * s, std::streamsize n) {
+        return io::write(impl, s, n);
+    }
+
+    virtual std::streampos do_seek(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which) {
+        return io::seek(impl, off, way, which);
+    }
 };
 
 struct IOException : Exception {

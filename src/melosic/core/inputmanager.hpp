@@ -47,7 +47,7 @@ public:
         return fact->second(file);
     }
 
-    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::File&)> fact,
+    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
                                  std::initializer_list<std::string> extensions) {
         BOOST_ASSERT(extensions.size() > 0);
 

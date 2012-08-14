@@ -27,6 +27,7 @@
 namespace Melosic {
 
 namespace IO {
+class BiDirectionalSeekable;
 class File;
 }
 
@@ -35,7 +36,7 @@ namespace Input {
 class IInputManager {
 public:
     virtual std::shared_ptr<IFileSource> openFile(IO::File& filename) = 0;
-    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::File&)> fact,
+    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
                             std::initializer_list<std::string> extensions) = 0;
 };
 
