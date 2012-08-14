@@ -37,7 +37,8 @@ namespace IO {
 
 class File : public BiDirectionalSeekable {
 public:
-    File(const std::string& filename) : impl(io::file(filename, mode)), filename_(filename) {}
+    File(const std::string& filename, const std::ios_base::openmode mode = mode_)
+        : impl(io::file(filename, mode)), filename_(filename) {}
 
     virtual ~File() {}
 
@@ -45,8 +46,12 @@ public:
         return filename_;
     }
 
+    explicit operator bool() {
+        return impl->is_open();
+    }
+
 private:
-    auto static const mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
+    auto static const mode_ = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
     io::stream_buffer<io::file> impl;
     std::string filename_;
 

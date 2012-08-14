@@ -22,6 +22,7 @@
 using namespace Melosic;
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
+using std::ios_base;
 
 int main(int argc, char* argv[]) {
 //    Application app(argc, argv);
@@ -33,13 +34,14 @@ int main(int argc, char* argv[]) {
 //    return app.exec();
     Kernel kernel;
     kernel.loadPlugin("flac.melin");
-    IO::File file_i("multitest.flac");
-    IO::File file_o("test1.wav");
+    IO::File file_i("test.flac");
+    std::cerr << (bool)file_i << std::endl;
+    IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
+    std::cerr << (bool)file_o << std::endl;
     auto input_ptr = kernel.getInputManager().openFile(file_i);
-    auto& input = *input_ptr;
-    Output::WaveFile output(file_o, input.getAudioSpecs());
+    Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 
-    io::copy(boost::ref(input), boost::ref(output));
+    io::copy(boost::ref(*input_ptr), boost::ref(output));
 
     return 0;
 }
