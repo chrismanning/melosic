@@ -35,9 +35,7 @@ int main(int argc, char* argv[]) {
     Kernel kernel;
     kernel.loadPlugin("flac.melin");
     IO::File file_i("test.flac");
-    std::cerr << (bool)file_i << std::endl;
     IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
-    std::cerr << (bool)file_o << std::endl;
     auto input_ptr = kernel.getInputManager().openFile(file_i);
     Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 
