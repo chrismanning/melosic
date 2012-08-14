@@ -34,9 +34,11 @@ namespace Melosic {
 
 namespace IO {
 
-class File : public io::file {
+typedef io::stream_buffer<io::file> FileStream;
+
+class File : public FileStream {
 public:
-    File(std::string filename) : io::file(filename, mode), filename_(filename) {}
+    File(const std::string& filename) : FileStream(io::file(filename, mode)), filename_(filename) {}
 
     void reopen() {
         if(!is_open()) {

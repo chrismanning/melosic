@@ -33,12 +33,13 @@ int main(int argc, char* argv[]) {
 //    return app.exec();
     Kernel kernel;
     kernel.loadPlugin("flac.melin");
-//    IO::File file("test.flac");
-//    auto input_ptr = kernel.getInputManager().openFile(file);
-//    auto& input = *input_ptr;
-//    auto output = Output::WaveFile("test1.wav", input.getAudioSpecs());
+    IO::File file_i("multitest.flac");
+    IO::File file_o("test1.wav");
+    auto input_ptr = kernel.getInputManager().openFile(file_i);
+    auto& input = *input_ptr;
+    Output::WaveFile output(file_o, input.getAudioSpecs());
 
-//    io::copy(boost::ref(input), output);
+    io::copy(boost::ref(input), boost::ref(output));
 
     return 0;
 }

@@ -21,8 +21,8 @@
 using boost::factory;
 #include <boost/format.hpp>
 using boost::format;
-#include <boost/circular_buffer.hpp>
-using boost::circular_buffer;
+#include <boost/iostreams/stream_buffer.hpp>
+namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
 
@@ -32,9 +32,9 @@ using namespace Melosic;
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
-    FlacDecoderImpl(IO::File file, std::deque<char>& buf, AudioSpecs& as) : file(file), buf(buf), as(as) {
+    FlacDecoderImpl(IO::File& file, std::deque<char>& buf, AudioSpecs& as) : file(file), buf(buf), as(as) {
         file.reopen(); //make sure it's open
-        file.seek(0, std::ios_base::beg);
+        io::seek(file, 0, std::ios_base::beg, std::ios_base::in);
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
     }
@@ -51,7 +51,7 @@ public:
 
     virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
         try {
-            *bytes = boost::iostreams::read(file, (char*)buffer, *bytes);
+            *bytes = io::read(file, (char*)buffer, *bytes);
 
             if(*(std::streamsize*)bytes == -1) {
                 *bytes = 0;
@@ -114,14 +114,14 @@ public:
         }
     }
 private:
-    IO::File file;
+    IO::File& file;
     std::deque<char>& buf;
     AudioSpecs& as;
 };
 
 class FlacDecoder : public Input::IFileSource {
 public:
-    FlacDecoder(IO::File file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
+    FlacDecoder(IO::File& file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
 
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n" << endl;
