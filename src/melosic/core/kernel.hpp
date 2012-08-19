@@ -20,66 +20,28 @@
 
 #include <memory>
 
-#include <melosic/common/ikernel.hpp>
-#include <melosic/core/inputmanager.hpp>
-#include <melosic/core/outputmanager.hpp>
-
 namespace Melosic {
 
-class Kernel : public IKernel {
+namespace Input {
+class InputManager;
+}
+
+namespace Output {
+class OutputManager;
+}
+
+class Kernel {
 public:
-    void loadPlugin(const std::string& filepath) {
-        path p(filepath);
-
-        enforceEx<Exception>(exists(p),
-                                    [&filepath]() {
-                                        return (filepath + ": file does not exist").c_str();
-                                    });
-
-        enforceEx<Exception>(p.extension() == ".melin" && is_regular_file(p),
-                                    [&filepath]() {
-                                        return (filepath + ": not a melosic plugin").c_str();
-                                    });
-
-        try {
-            auto const& filename = p.filename().string();
-
-            if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-                std::cerr << "Plugin already loaded: " << filepath << std::endl;
-                return;
-            }
-
-            std::shared_ptr<Plugin> pl(new Plugin(p));
-            pl->registerPluginObjects(*this);
-            loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, pl));
-        }
-        catch(PluginException& e) {
-            std::cerr << e.what() << std::endl;
-            throw;
-        }
-    }
-
-   void loadAllPlugins() {
-//        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
-//            if(pe.name.canFind("qt")) {
-//                continue;
-//            }
-//            loadPlugin(pe.name);
-//        }
-    }
-
-    Input::IInputManager& getInputManager() {
-        return inman;
-    }
-
-    Output::IOutputManager& getOutputManager() {
-        return outman;
-    }
+    Kernel();
+    ~Kernel();
+    void loadPlugin(const std::string& filepath);
+    void loadAllPlugins();
+    Input::InputManager& getInputManager();
+    Output::OutputManager& getOutputManager();
 
 private:
-    std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
-    Input::InputManager inman;
-    Output::OutputManager outman;
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }

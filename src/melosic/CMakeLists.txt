@@ -4,7 +4,10 @@ ADD_DEFINITIONS(${QT_DEFINITIONS})
 ADD_DEFINITIONS(-DQT_SHARED)
 
 SET(SRC_LIST main.cpp)
-SET(SRC_LIST ${SRC_LIST} core/wav.hpp core/kernel.hpp core/inputmanager.hpp core/outputmanager.hpp)
+SET(SRC_LIST ${SRC_LIST} core/kernel.hpp core/kernel.cpp)
+SET(SRC_LIST ${SRC_LIST} core/inputmanager.hpp core/inputmanager.cpp)
+SET(SRC_LIST ${SRC_LIST} core/wav.hpp core/outputmanager.hpp)
+SET(SRC_LIST ${SRC_LIST} core/player.hpp core/player.cpp)
 
 #abbrev
 SET(PN ${PROJECT_NAME})

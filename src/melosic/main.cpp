@@ -18,6 +18,8 @@
 //#include <melosic/gui/application.hpp>
 //#include <melosic/gui/mainwindow.hpp>
 #include <melosic/core/kernel.hpp>
+#include <melosic/common/file.hpp>
+#include <melosic/common/common.hpp>
 #include <melosic/core/wav.hpp>
 using namespace Melosic;
 #include <boost/iostreams/copy.hpp>

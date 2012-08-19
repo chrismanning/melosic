@@ -20,13 +20,12 @@
 
 #include <list>
 
-#include <melosic/managers/output/ioutputmanager.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 
 namespace Melosic {
 namespace Output {
 
-class OutputManager : public IOutputManager {
+class OutputManager {
 public:
     void addOutput(IDeviceSink* dev) {
         devs.push_back(dev);

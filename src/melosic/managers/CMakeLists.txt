@@ -1,5 +1,5 @@
-SET(SRC_LIST input/iinputmanager.hpp input/pluginterface.hpp)
-SET(SRC_LIST ${SRC_LIST} output/ioutputmanager.hpp output/pluginterface.hpp)
+SET(SRC_LIST input/pluginterface.hpp)
+SET(SRC_LIST ${SRC_LIST} output/pluginterface.hpp)
 
 include_directories(../..)
 

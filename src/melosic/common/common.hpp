@@ -23,9 +23,11 @@ using std::cout; using std::cerr; using std::endl;
 #include <boost/cstdint.hpp>
 using boost::int64_t; using boost::uint64_t;
 
-#include <melosic/managers/input/iinputmanager.hpp>
-#include <melosic/managers/output/ioutputmanager.hpp>
-#include <melosic/common/ikernel.hpp>
+#include <melosic/core/inputmanager.hpp>
+#include <melosic/managers/input/pluginterface.hpp>
+#include <melosic/core/outputmanager.hpp>
+#include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/core/kernel.hpp>
 #include <melosic/common/plugin.hpp>
 
 namespace Melosic {

@@ -142,7 +142,7 @@ private:
 
 static std::list<AlsaOutput*> alsaPluginObjects;
 
-extern "C" void registerPluginObjects(IKernel& k) {
+extern "C" void registerPluginObjects(Kernel& k) {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;

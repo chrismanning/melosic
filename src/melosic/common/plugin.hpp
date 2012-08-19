@@ -76,7 +76,7 @@ public:
         }
     }
 
-    void registerPluginObjects(IKernel& k) {
+    void registerPluginObjects(Kernel& k) {
         registerPlugin_(k);
     }
 

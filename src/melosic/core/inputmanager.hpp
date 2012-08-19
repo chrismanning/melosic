@@ -18,52 +18,29 @@
 #ifndef MELOSIC_INPUT_MANAGER_H
 #define MELOSIC_INPUT_MANAGER_H
 
-#include <iostream>
-using std::cerr; using std::endl;
-#include <map>
-#include <boost/filesystem.hpp>
-
-#include <melosic/managers/input/iinputmanager.hpp>
-#include <melosic/managers/input/pluginterface.hpp>
-#include <melosic/common/error.hpp>
-#include <melosic/common/file.hpp>
-
-using boost::filesystem::path;
+#include <memory>
 
 namespace Melosic {
+
+namespace IO {
+class File;
+class BiDirectionalSeekable;
+}
+
 namespace Input {
 
-class InputManager : public IInputManager {
+class IFileSource;
+
+class InputManager {
 public:
-    virtual std::shared_ptr<IFileSource> openFile(IO::File& file) {
-        auto ext = path(file.filename()).extension().string();
-
-        auto fact = factories.find(ext);
-
-        enforceEx<Exception>(fact != factories.end(),
-                                    [&file]() {
-                                        return (file.filename() + ": cannot decode file").c_str();
-                                    });
-        return fact->second(file);
-    }
-
-    virtual void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
-                                 std::initializer_list<std::string> extensions) {
-        BOOST_ASSERT(extensions.size() > 0);
-
-        for(auto ext : extensions) {
-            auto pos = factories.find(ext);
-            if(pos == factories.end()) {
-                factories.insert(decltype(factories)::value_type(ext, fact));
-            }
-            else {
-                cerr << ext << ": can already be opened" << endl;
-            }
-        }
-    }
-
+    InputManager();
+    ~InputManager();
+    std::shared_ptr<IFileSource> openFile(IO::File& file);
+    void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
+                                 std::initializer_list<std::string> extensions);
 private:
-    std::map<std::string,std::function<std::shared_ptr<IFileSource>(IO::File&)> > factories;
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }

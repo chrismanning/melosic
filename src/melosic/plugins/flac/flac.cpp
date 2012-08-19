@@ -157,7 +157,7 @@ private:
     std::shared_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" void registerPluginObjects(IKernel& k) {
+extern "C" void registerPluginObjects(Kernel& k) {
     k.getInputManager().addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
 }
 

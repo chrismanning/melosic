@@ -29,17 +29,16 @@
 #endif
 
 namespace Melosic {
-class IKernel;
+class Kernel;
 }
 
 #include <functional>
 
-extern "C" void registerPluginObjects(Melosic::IKernel& k);
+extern "C" void registerPluginObjects(Melosic::Kernel& k);
 typedef decltype(registerPluginObjects) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
 extern "C" void destroyPluginObjects();
 typedef decltype(destroyPluginObjects) destroyPlugin_F;
 typedef std::function<destroyPlugin_F> destroyPlugin_T;
-extern "C" int startEventLoop(int argc, char ** argv, Melosic::IKernel& k);
 
 #endif // MELOSIC_EXPORTS_HPP
