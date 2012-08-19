@@ -44,8 +44,7 @@ public:
         return fact->second(file);
     }
 
-    void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
-                                 std::initializer_list<std::string> extensions) {
+    void addFactory(Factory fact, std::initializer_list<std::string> extensions) {
         BOOST_ASSERT(extensions.size() > 0);
 
         for(auto ext : extensions) {
@@ -71,8 +70,7 @@ std::shared_ptr<IFileSource> InputManager::openFile(IO::File& file) {
     return pimpl->openFile(file);
 }
 
-void InputManager::addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
-                             std::initializer_list<std::string> extensions)
+void InputManager::addFactory(Factory fact, std::initializer_list<std::string> extensions)
 {
     pimpl->addFactory(fact, extensions);
 }

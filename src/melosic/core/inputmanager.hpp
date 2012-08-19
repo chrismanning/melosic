@@ -31,13 +31,14 @@ namespace Input {
 
 class IFileSource;
 
+typedef std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> Factory;
+
 class InputManager {
 public:
     InputManager();
     ~InputManager();
     std::shared_ptr<IFileSource> openFile(IO::File& file);
-    void addFactory(std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> fact,
-                                 std::initializer_list<std::string> extensions);
+    void addFactory(Factory fact, std::initializer_list<std::string> extensions);
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
