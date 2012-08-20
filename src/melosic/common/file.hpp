@@ -38,7 +38,13 @@ namespace IO {
 class File : public BiDirectionalSeekable {
 public:
     File(const std::string& filename, const std::ios_base::openmode mode = mode_)
-        : impl(io::file(filename, mode)), filename_(filename) {}
+        : impl(io::file(filename, mode)), filename_(filename)
+    {
+        enforceEx<Exception>((bool)(*this),
+                             [=]() {
+                                 return (filename_ + ": could not open").c_str();
+                             });
+    }
 
     virtual ~File() {}
 
