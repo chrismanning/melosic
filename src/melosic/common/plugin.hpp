@@ -25,6 +25,7 @@
 #define DLOpen(a) dlopen(a, RTLD_NOW)
 #define DLClose dlclose
 #define DLGetSym dlsym
+#define DLError dlerror
 #endif
 
 #ifdef _WIN32
@@ -33,6 +34,20 @@
 #define DLOpen(a) LoadLibrary(a)
 #define DLClose FreeLibrary
 #define DLGetSym GetProcAddress
+inline const char * DLError() {
+    char * str;
+    auto err = GetLastError();
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
+                  FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                  FORMAT_MESSAGE_IGNORE_INSERTS,
+                  NULL,
+                  err,
+                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                  (LPSTR)&str,
+                  0,
+                  NULL);
+    return str;
+}
 #endif
 
 #include <string>
@@ -46,7 +61,7 @@ using boost::filesystem::absolute;
 namespace Melosic {
 
 struct PluginException : public Exception {
-    PluginException() : Exception(dlerror()) {
+    PluginException() : Exception(DLError()) {
     }
 };
 
@@ -59,7 +74,7 @@ struct PluginSymbolException : public PluginException {
 class Plugin {
 public:
     Plugin(const boost::filesystem::path& filename) {
-        handle = DLOpen(absolute(filename).c_str());
+        handle = DLOpen(absolute(filename).string().c_str());
 
         enforceEx<PluginException>(handle != 0);
 

@@ -14,4 +14,4 @@ QT4_WRAP_UI(qt-gui_FORMS_HEADERS ${qt-gui_FORMS})
 
 ADD_LIBRARY(qt-gui SHARED ${qt-gui_SOURCES} ${qt-gui_HEADERS_MOC} ${qt-gui_FORMS_HEADERS})
 set_target_properties(qt-gui PROPERTIES PREFIX "")
-TARGET_LINK_LIBRARIES(qt-gui ${QT_LIBRARIES})
+TARGET_LINK_LIBRARIES(qt-gui ${QT_LIBRARIES} melosiccore)

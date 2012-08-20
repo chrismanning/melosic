@@ -27,6 +27,9 @@ namespace io = boost::iostreams;
 using std::ios_base;
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    SetErrorMode(0x8000);
+#endif
 //    Application app(argc, argv);
 
 //    MainWindow win;
@@ -34,14 +37,20 @@ int main(int argc, char* argv[]) {
 //    win.loadPlugins();
 
 //    return app.exec();
-    Kernel kernel;
-    kernel.loadPlugin("flac.melin");
-    IO::File file_i("test.flac");
-    IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
-    auto input_ptr = kernel.getInputManager().openFile(file_i);
-    Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
+    try {
+        Kernel kernel;
+        kernel.loadPlugin("flac.melin");
+        IO::File file_i("test.flac");
+        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
+        auto input_ptr = kernel.getInputManager().openFile(file_i);
+        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 
-    io::copy(boost::ref(*input_ptr), boost::ref(output));
+        io::copy(boost::ref(*input_ptr), boost::ref(output));
 
-    return 0;
+        return 0;
+    }
+    catch(std::exception& e) {
+        std::cerr << e.what() << "\n";
+        return -1;
+    }
 }
