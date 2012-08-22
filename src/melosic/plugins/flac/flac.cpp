@@ -41,7 +41,7 @@ public:
     }
 
     virtual ~FlacDecoderImpl() {
-        cerr << "Flac decoder impl being destroyed\n" << endl;
+        cerr << "Flac decoder impl being destroyed\n";
         finish();
     }
 
@@ -125,7 +125,7 @@ public:
     FlacDecoder(IO::BiDirectionalSeekable& file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
 
     virtual ~FlacDecoder() {
-        cerr << "Flac decoder being destroyed\n" << endl;
+        cerr << "Flac decoder being destroyed\n";
     }
 
     virtual std::streamsize read(char * s, std::streamsize n) {
@@ -162,5 +162,5 @@ extern "C" void registerPluginObjects(Kernel& k) {
 }
 
 extern "C" void destroyPluginObjects() {
-    std::cerr << "Destroying flac objects" << std::endl;
+    cerr << "Destroying flac objects\n";
 }

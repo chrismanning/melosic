@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    std::map<std::string,std::function<std::shared_ptr<IFileSource>(IO::File&)> > factories;
+    std::map<std::string, Factory> factories;
 };
 
 InputManager::InputManager() : pimpl(new impl) {}
