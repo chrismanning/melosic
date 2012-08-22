@@ -40,17 +40,25 @@ int main(int argc, char* argv[]) {
     try {
         Kernel kernel;
         kernel.loadPlugin("flac.melin");
+        kernel.loadPlugin("alsa.melin");
         IO::File file_i("test.flac");
-        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
+//        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
         auto input_ptr = kernel.getInputManager().openFile(file_i);
-        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
+//        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 
-        io::copy(boost::ref(*input_ptr), boost::ref(output));
+//        io::copy(boost::ref(*input_ptr), boost::ref(output));
+
+        auto device = kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0");
+
+        device->prepareDevice(input_ptr->getAudioSpecs());
+
+        std::clog << device->getSinkName() << std::endl;
+        std::clog << device->getDeviceDescription() << std::endl;
 
         return 0;
     }
     catch(std::exception& e) {
-        std::cerr << e.what() << "\n";
+        std::clog << e.what() << std::endl;
         return -1;
     }
 }

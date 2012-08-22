@@ -20,8 +20,11 @@
  */
 #define ALSA_PCM_NEW_HW_PARAMS_API
 
+#include <boost/functional/factory.hpp>
+using boost::factory;
+#include <boost/format.hpp>
+using boost::format;
 #include <alsa/asoundlib.h>
-#include <cstdio>
 #include <string>
 #include <sstream>
 #include <list>
@@ -29,14 +32,24 @@
 #include <melosic/common/common.hpp>
 using namespace Melosic;
 
-class AlsaOutput : public Melosic::Output::IDeviceSink {
+class AlsaException : public Exception {
 public:
-    AlsaOutput(const std::string name, const std::string desc)
-        : pdh(0), params(0), name(name), desc(desc)
-    {}
+    AlsaException(int err) : Exception((str(format("ALSA: %s") % strdup(snd_strerror(err)))).c_str()) {}
+};
+
+class AlsaOutput : public Output::IDeviceSink {
+public:
+    AlsaOutput(Output::OutputDeviceName name)
+        : pdh(0), params(0), name(name.getName()), desc(name.getDesc())
+    {
+        auto ret = snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0);
+        enforceEx<Exception, AlsaException>(ret == 0, ret);
+        snd_pcm_hw_params_malloc(&params);
+        snd_pcm_hw_params_any(pdh, params);
+    }
 
     virtual ~AlsaOutput() {
-        fprintf(stderr, "Alsa instance being destroyed\n");
+        std::cerr << "Alsa instance being destroyed\n";
         if(pdh) {
             snd_pcm_drain(pdh);
             snd_pcm_close(pdh);
@@ -46,13 +59,7 @@ public:
     }
 
     virtual void prepareDevice(AudioSpecs as) {
-        if(snd_pcm_open(&pdh, name.c_str(), SND_PCM_STREAM_PLAYBACK, 0) < 0) {
-            //FIXME: use future error handling capabilities
-            fprintf(stderr, "Cannot open output device\n");
-            return;
-        }
-        snd_pcm_hw_params_malloc(&params);
-        snd_pcm_hw_params_any(pdh, params);
+        int ret;
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
         snd_pcm_hw_params_set_format(pdh, params, SND_PCM_FORMAT_S16_LE);
         snd_pcm_hw_params_set_channels(pdh, params, as.channels);
@@ -60,20 +67,15 @@ public:
         snd_pcm_hw_params_set_rate_near(pdh, params, &as.sample_rate, &dir);
         int frames = 32;
         snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
-        auto ret = snd_pcm_hw_params(pdh, params);
-        if(ret < 0) {
-            //FIXME: use future error handling capabilities
-        }
-//        snd_pcm_hw_params_get_period_size(params, (snd_pcm_uframes_t*)&frames, &dir);
-//        buffer_size = frames * as.channels * as.bps;
-//        buffer = new byte[buffer_size];
+        ret = snd_pcm_hw_params(pdh, params);
+        enforceEx<Exception, AlsaException>(ret == 0, ret);
     }
 
     virtual void render(PlaybackHandler * playHandle) {
         if(playHandle) {
             switch(playHandle->state()) {
                 case PlaybackState::Playing: {
-                    fprintf(stderr, "Playing through output %s\n", desc.c_str());
+                    std::clog << "Playing through output: " << getDeviceDescription() << std::endl;
                     int err, frames_to_deliver;
                     std::stringstream str;
 
@@ -136,8 +138,8 @@ public:
 private:
     snd_pcm_t * pdh;
     snd_pcm_hw_params_t * params;
-    const std::string name;
-    const std::string desc;
+    std::string name;
+    std::string desc;
 };
 
 static std::list<AlsaOutput*> alsaPluginObjects;
@@ -146,20 +148,23 @@ extern "C" void registerPluginObjects(Kernel& k) {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
-    const char * filter = "Output";
-    AlsaOutput * tmp;
-    if(snd_device_name_hint(-1, "pcm", &hints) < 0)
-        return;
+    std::string filter = "Output";
+
+    auto ret = snd_device_name_hint(-1, "pcm", &hints);
+    enforceEx<Exception, AlsaException>(ret == 0, ret);
+
+    auto& outman = k.getOutputManager();
+
+    std::list<Output::OutputDeviceName> names;
+
     n = hints;
     while(*n != NULL) {
         name = snd_device_name_get_hint(*n, "NAME");
         desc = snd_device_name_get_hint(*n, "DESC");
         io = snd_device_name_get_hint(*n, "IOID");
-        if(io == NULL || !strcmp(io, filter)) {
+        if(io == NULL || filter == io) {
             if(name && desc) {
-                tmp = new AlsaOutput(name, desc);
-                alsaPluginObjects.push_back(tmp);
-                k.getOutputManager().addOutput(tmp);
+                names.emplace_back(name, desc);
             }
         }
         if(name != NULL)
@@ -171,10 +176,12 @@ extern "C" void registerPluginObjects(Kernel& k) {
         n++;
     }
     snd_device_name_free_hint(hints);
+
+    outman.addFactory(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
 extern "C" void destroyPluginObjects() {
-    fprintf(stderr, "Destroying alsa plugin objects\n");
+    std::cerr << "Destroying alsa plugin objects\n";
     for(auto output : alsaPluginObjects) {
         delete output;
     }

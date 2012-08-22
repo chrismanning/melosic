@@ -1,6 +1,6 @@
 set(ALSA alsa)
 add_library(${ALSA} SHARED alsa.cpp)
-target_link_libraries(${ALSA} -lasound)
+target_link_libraries(${ALSA} -lasound melosiccore)
 set_target_properties(${ALSA} PROPERTIES PREFIX "")
 set_target_properties(${ALSA} PROPERTIES SUFFIX ".melin")
 include_directories(../../..)
