@@ -18,28 +18,56 @@
 #ifndef MELOSIC_OUTPUTMANAGER_HPP
 #define MELOSIC_OUTPUTMANAGER_HPP
 
+#include <memory>
 #include <list>
+#include <map>
 
 #include <melosic/managers/output/pluginterface.hpp>
 
 namespace Melosic {
 namespace Output {
 
-class OutputManager {
+class OutputDeviceName {
 public:
-    void addOutput(IDeviceSink* dev) {
-        devs.push_back(dev);
+    OutputDeviceName(std::string name) : name(name) {}
+    OutputDeviceName(std::string name, std::string desc) : name(name), desc(desc) {}
+
+    const std::string& getName() const {
+        return name;
     }
 
-    IDeviceSink* getDefaultOutput() {
-//        auto r = filter!(a => a.getDeviceName().canFind("default"))(devs);
-//        enforceEx!Exception(r.count() > 0, "Cannot find default device");
-//        return r.front().iod;
-        return 0;
+    const std::string& getDesc() const {
+        return desc;
     }
+
+    bool operator<(const OutputDeviceName& b) const {
+        return name < b.name;
+    }
+
+    friend std::ostream& operator<<(std::ostream&, const OutputDeviceName&);
 
 private:
-    std::list<IDeviceSink*> devs;
+    const std::string name;
+    const std::string desc;
+};
+
+typedef std::function<std::unique_ptr<IDeviceSink>(const OutputDeviceName&)> Factory;
+
+inline std::ostream& operator<<(std::ostream& out, const OutputDeviceName& b) {
+    return out << b.name + ": " + b.desc;
+}
+
+class OutputManager {
+public:
+    OutputManager();
+    ~OutputManager();
+    void addFactory(Factory fact, std::initializer_list<std::string> avail);
+    void addFactory(Factory fact, std::list<OutputDeviceName> avail);
+    std::unique_ptr<IDeviceSink> getOutputDevice(const std::string& name);
+    const std::map<OutputDeviceName, Factory>& getFactories();
+private:
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }
