@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+typedef std::ios_base::openmode openmode;
 #include <iterator>
 #include <type_traits>
 #include <boost/iostreams/stream_buffer.hpp>
@@ -37,13 +38,10 @@ namespace IO {
 
 class File : public BiDirectionalSeekable {
 public:
-    File(const std::string& filename, const std::ios_base::openmode mode = mode_)
+    File(const std::string& filename, const openmode mode = mode_)
         : impl(io::file(filename, mode)), filename_(filename)
     {
-        enforceEx<Exception>((bool)(*this),
-                             [=]() {
-                                 return (filename_ + ": could not open").c_str();
-                             });
+        enforceEx<Exception>((bool)(*this), (filename_ + ": could not open").c_str());
     }
 
     virtual ~File() {}
@@ -54,6 +52,15 @@ public:
 
     explicit operator bool() {
         return impl->is_open();
+    }
+
+    void open(const openmode mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out)
+    {
+        impl->open(filename_, mode);
+    }
+
+    void close() {
+        impl->close();
     }
 
 private:
