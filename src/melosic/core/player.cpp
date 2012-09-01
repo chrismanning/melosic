@@ -71,10 +71,8 @@ public:
     }
 
     void seek(std::chrono::milliseconds dur) {
-        pause();
         std::cerr << "Seek...\n";
         stream.seek(dur);
-        pause();
     }
 
     void finish() {
