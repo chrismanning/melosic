@@ -39,7 +39,7 @@ public:
         stream(stream),
         device(std::move(device)),
         end_(false),
-        playerThread(&impl::start, this), go_to(-1)
+        playerThread(&impl::start, this)
     {}
 
     ~impl() {
@@ -71,9 +71,10 @@ public:
     }
 
     void seek(std::chrono::milliseconds dur) {
+        pause();
         std::cerr << "Seek...\n";
-        std::lock_guard<std::mutex> l(m);
-        go_to = dur.count();
+        stream.seek(dur);
+        pause();
     }
 
     void finish() {
@@ -126,11 +127,6 @@ private:
                 }
                 std::chrono::milliseconds dur(10);
                 std::this_thread::sleep_for(dur);
-                std::lock_guard<std::mutex> l(m);
-                if(go_to != -1) {
-                    stream.seek(std::chrono::milliseconds(go_to));
-                    go_to = -1;
-                }
             }
         }
         catch(std::exception& e) {
@@ -146,7 +142,6 @@ private:
     bool end_;
     std::thread playerThread;
     std::mutex m;
-    int64_t go_to;
 };
 
 Player::Player(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device)
