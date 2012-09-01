@@ -224,62 +224,6 @@ public:
         }
     }
 
-    virtual void render(PlaybackHandler * playHandle) {
-        if(playHandle) {
-            switch(playHandle->state()) {
-                case PlaybackState::Playing: {
-                    std::clog << "Playing through output: " << getDeviceDescription() << std::endl;
-                    int err, frames_to_deliver;
-                    std::stringstream str;
-
-                    // wait till the interface is ready for data, or 1 second has elapsed.
-                    if((err = snd_pcm_wait(pdh, 1000)) < 0) {
-                        str << "poll failed: " << strerror(errno);
-                        playHandle->report(str.str().c_str());
-                        return;
-                    }
-
-                    // find out how much space is available for playback data
-                    if((frames_to_deliver = snd_pcm_avail_update(pdh)) < 0) {
-                        if(frames_to_deliver == -EPIPE) {
-                            playHandle->report("an xrun occured");
-                            return;
-                        }
-                        else {
-                            str << "unknown ALSA avail update return value: " << frames_to_deliver;
-                            playHandle->report(str.str().c_str());
-                            return;
-                        }
-                    }
-
-                    // use some sort of streaming buffer system to only deliver whats needed
-                    frames_to_deliver = frames_to_deliver > 4096 ? 4096 : frames_to_deliver;
-
-                    unsigned framesize;
-                    snd_pcm_hw_params_get_channels(params, &framesize);
-
-                    framesize *= 2/*change this for !16 bps*/;
-
-                    auto tmp = playHandle->requestData(frames_to_deliver * framesize);
-
-                    if((err = snd_pcm_writei(pdh, tmp->ptr(), tmp->length() / framesize)) < 0) {
-                        str << "write failed: " << snd_strerror(err);
-                        playHandle->report(str.str().c_str());
-                    }
-                    break;
-                }
-                case PlaybackState::Paused: {
-                    snd_pcm_drop(pdh);
-                    break;
-                }
-                case PlaybackState::Stopped: {
-                    snd_pcm_close(pdh);
-                    break;
-                }
-            }
-        }
-    }
-
     virtual const std::string& getDeviceDescription() {
         return desc;
     }
