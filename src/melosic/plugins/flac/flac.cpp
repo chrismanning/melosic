@@ -32,10 +32,11 @@ using namespace Melosic;
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
-    FlacDecoderImpl(IO::BiDirectionalSeekable& file, std::deque<char>& buf, AudioSpecs& as)
-        : file(file), buf(buf), as(as)
+    FlacDecoderImpl(IO::BiDirectionalSeekable& input, std::deque<char>& buf, AudioSpecs& as)
+        : input(input), buf(buf), as(as)
     {
-        io::seek(file, 0, std::ios_base::beg, std::ios_base::in);
+        io::seek(input, 0, std::ios_base::beg, std::ios_base::in);
+//        start = io::seek(input, 0, std::ios_base::cur);
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
     }
@@ -52,7 +53,7 @@ public:
 
     virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
         try {
-            *bytes = io::read(file, (char*)buffer, *bytes);
+            *bytes = io::read(input, (char*)buffer, *bytes);
 
             if(*(std::streamsize*)bytes == -1) {
                 *bytes = 0;
@@ -70,24 +71,29 @@ public:
                                                             const FLAC__int32 * const buffer[]) {
         for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
             for(unsigned j=0; j<frame->header.channels; j++,u++) {
-                switch(frame->header.bits_per_sample/8) {
-                    case 1:
+                switch(frame->header.bits_per_sample) {
+                    case 8:
                         buf.push_back((char)(buffer[j][i]));
                         break;
-                    case 2:
+                    case 16:
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         break;
-                    case 3:
+                    case 24:
+                        if(as.bps == 32)
+                            buf.push_back(0);
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
                         break;
-                    case 4:
+                    case 32:
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
                         buf.push_back((char)(buffer[j][i] >> 24));
+                        break;
+                    default:
+                        std::clog << "Unsupported bps: " << frame->header.bits_per_sample << std::endl;
                         break;
                 }
             }
@@ -114,10 +120,61 @@ public:
             cout << format("total samples  : %u") % as.total_samples << endl;
         }
     }
+
+    virtual ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) {
+        auto off = io::position_to_offset(io::seek(input, absolute_byte_offset, std::ios_base::beg));
+        if(off == (int64_t)absolute_byte_offset) {
+//            std::clog << "In seek callback: " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+            return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
+        }
+        else {
+            return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
+        }
+    }
+
+    virtual ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) {
+        *absolute_byte_offset = (FLAC__uint64)io::position_to_offset(io::seek(input, 0, std::ios_base::cur));
+        return FLAC__STREAM_DECODER_TELL_STATUS_OK;
+    }
+
+    virtual ::FLAC__StreamDecoderLengthStatus length_callback(FLAC__uint64 *stream_length) {
+        auto cur = io::position_to_offset(io::seek(input, 0, std::ios_base::cur));
+        *stream_length = io::position_to_offset(io::seek(input, 0, std::ios_base::end));
+        io::seek(input, cur, std::ios_base::beg);
+        return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+    }
+
+    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
+//        this->flush();
+        buf.clear();
+        decltype(off) pos = 0;
+        auto bps = this->get_bits_per_sample() / 8;
+//        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+
+        if(way == std::ios_base::cur) {
+            if(off == 0) {
+                return input.seek(0, std::ios_base::cur, std::ios_base::in);
+            }
+            pos = io::position_to_offset(input.seek(0, std::ios_base::cur, std::ios_base::in));
+        }
+        else if(way == std::ios_base::end) {
+            pos = this->get_total_samples() * bps;
+            off = -off;
+        }
+        pos += off;
+//        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+        if(seek_absolute(pos)) {
+//            std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+            return io::offset_to_position(pos);
+        }
+        return input.seek(0, std::ios_base::cur, std::ios_base::in);
+    }
+
 private:
-    IO::BiDirectionalSeekable& file;
+    IO::BiDirectionalSeekable& input;
     std::deque<char>& buf;
     AudioSpecs& as;
+    std::streampos start;
 };
 
 class FlacDecoder : public Input::IFileSource {
@@ -143,7 +200,18 @@ public:
         return r == 0 && !(*this) ? -1 : r;
     }
 
-    virtual const AudioSpecs& getAudioSpecs() {
+    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
+        return pimpl->seek(off, way);
+    }
+
+    virtual void seek(std::chrono::milliseconds dur) {
+        auto bps = pimpl->get_bits_per_sample()/8;
+        auto rate = pimpl->get_sample_rate() / 1000.0;
+
+        this->seek(bps * rate * dur.count(), std::ios_base::beg);
+    }
+
+    virtual AudioSpecs& getAudioSpecs() {
         return as;
     }
 

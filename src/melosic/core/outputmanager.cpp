@@ -30,7 +30,7 @@ public:
         for(auto device : avail) {
             auto it = devices.find(device);
             if(it == devices.end()) {
-                devices.insert(decltype(devices)::value_type(device, fact));
+                devices.insert(typename decltype(devices)::value_type(device, fact));
             }
         }
     }

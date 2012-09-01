@@ -37,12 +37,28 @@ public:
     virtual const std::string& getSinkName() = 0;
 };
 
+enum DeviceState {
+    Error,
+    Ready,
+    Playing,
+    Paused,
+    Stopped,
+};
+
 class IDeviceSink : public ISink {
 public:
+    typedef char char_type;
+    typedef boost::iostreams::sink_tag category;
     virtual ~IDeviceSink() {}
-    virtual void prepareDevice(Melosic::AudioSpecs as) = 0;
+    virtual void prepareDevice(Melosic::AudioSpecs& as) = 0;
     virtual const std::string& getDeviceDescription() = 0;
     virtual void render(Melosic::PlaybackHandler * playHandle) = 0;
+    virtual void play() = 0;
+    virtual void pause() = 0;
+    virtual void stop() = 0;
+    virtual DeviceState state() = 0;
+    virtual std::streamsize write(const char* s, std::streamsize n) = 0;
+    virtual void changeState(DeviceState s) = 0;
 };
 
 class IFileSink : public ISink {

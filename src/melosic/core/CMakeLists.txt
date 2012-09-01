@@ -2,6 +2,7 @@ SET(SRC_LIST inputmanager.hpp inputmanager.cpp)
 SET(SRC_LIST ${SRC_LIST} outputmanager.hpp outputmanager.cpp)
 SET(SRC_LIST ${SRC_LIST} kernel.hpp kernel.cpp)
 SET(SRC_LIST ${SRC_LIST} wav.hpp)
+SET(SRC_LIST ${SRC_LIST} player.hpp player.cpp)
 
 find_package(Boost COMPONENTS filesystem system iostreams REQUIRED)
 

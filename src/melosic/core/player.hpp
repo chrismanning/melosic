@@ -15,37 +15,39 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef MELOSIC_PLAYER_HPP
+#define MELOSIC_PLAYER_HPP
 
+#include <memory>
 #include <chrono>
-#include <boost/iostreams/concepts.hpp>
 
 namespace Melosic {
 
-struct AudioSpecs;
-struct IBuffer;
-
 namespace Input {
+class ISource;
+}
 
-class ISource{
-public:
-    typedef char char_type;
-    typedef boost::iostreams::seekable_device_tag category;
-    virtual ~ISource() {}
-    virtual std::streamsize read(char * s, std::streamsize n) = 0;
-    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) = 0;
-    virtual void seek(std::chrono::milliseconds dur) = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-};
+namespace Output {
+class IDeviceSink;
+}
 
-class IFileSource : public ISource {
+class Player
+{
 public:
-    virtual ~IFileSource() {}
+    Player(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device);
+    ~Player();
+
+    void play();
+    void pause();
+    void stop();
+    void seek(std::chrono::milliseconds dur);
+    void finish();
+    void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
+private:
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }
-}
 
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // MELOSIC_PLAYER_HPP

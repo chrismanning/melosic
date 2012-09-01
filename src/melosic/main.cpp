@@ -21,7 +21,10 @@
 #include <melosic/common/file.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/core/wav.hpp>
+#include <melosic/core/player.hpp>
 using namespace Melosic;
+
+#include <thread>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 using std::ios_base;
@@ -48,12 +51,26 @@ int main(int argc, char* argv[]) {
 
 //        io::copy(boost::ref(*input_ptr), boost::ref(output));
 
-        auto device = kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0");
+//        auto device = ;
 
-        device->prepareDevice(input_ptr->getAudioSpecs());
+//        device->prepareDevice(input_ptr->getAudioSpecs());
 
-        std::clog << device->getSinkName() << std::endl;
-        std::clog << device->getDeviceDescription() << std::endl;
+//        std::clog << device->getSinkName() << std::endl;
+//        std::clog << device->getDeviceDescription() << std::endl;
+
+        Player p(*input_ptr, kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0"));
+
+        p.play();
+
+        std::chrono::milliseconds dur(5500);
+        std::this_thread::sleep_for(dur);
+
+        p.pause();
+        std::this_thread::sleep_for(dur/2);
+        p.play();
+        std::this_thread::sleep_for(dur);
+
+//        p.finish();
 
         return 0;
     }

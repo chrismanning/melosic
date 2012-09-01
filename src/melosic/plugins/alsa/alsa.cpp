@@ -27,48 +27,201 @@ using boost::format;
 #include <alsa/asoundlib.h>
 #include <string>
 #include <sstream>
-#include <list>
+#include <array>
+#include <mutex>
 
 #include <melosic/common/common.hpp>
+
 using namespace Melosic;
 
-class AlsaException : public Exception {
-public:
-    AlsaException(int err) : Exception((str(format("ALSA: %s") % strdup(snd_strerror(err)))).c_str()) {}
+void enforceAlsaEx(int ret) {
+    if(ret != 0) {
+        throw Exception((str(format("ALSA: %s") % strdup(snd_strerror(ret)))).c_str());
+    }
+}
+
+static const snd_pcm_format_t formats[] = {
+    SND_PCM_FORMAT_S8,
+    SND_PCM_FORMAT_S16_LE,
+    SND_PCM_FORMAT_S24_3LE,
+    SND_PCM_FORMAT_S24_LE,
+    SND_PCM_FORMAT_S32_LE
 };
+static const uint8_t bpss[] = {8, 16, 24, 24, 32};
 
 class AlsaOutput : public Output::IDeviceSink {
 public:
     AlsaOutput(Output::OutputDeviceName name)
-        : pdh(0), params(0), name(name.getName()), desc(name.getDesc())
-    {
-        auto ret = snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0);
-        enforceEx<Exception, AlsaException>(ret == 0, ret);
-        snd_pcm_hw_params_malloc(&params);
-        snd_pcm_hw_params_any(pdh, params);
-    }
+        : pdh(0), params(0), name(name.getName()), desc(name.getDesc()), state_(Output::DeviceState::Stopped)
+    {}
 
     virtual ~AlsaOutput() {
         std::cerr << "Alsa instance being destroyed\n";
         if(pdh) {
-            snd_pcm_drain(pdh);
-            snd_pcm_close(pdh);
+            stop();
         }
         if(params)
             snd_pcm_hw_params_free(params);
     }
 
-    virtual void prepareDevice(AudioSpecs as) {
-        int ret;
+    virtual void prepareDevice(AudioSpecs& as) {
+        std::lock_guard<Mutex> l(mu);
+        current = as;
+        state_ = Output::DeviceState::Error;
+        if(!pdh) {
+            enforceAlsaEx(snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
+        }
+
+        if(!params) {
+            snd_pcm_hw_params_malloc(&params);
+            snd_pcm_hw_params_any(pdh, params);
+        }
+
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
-        snd_pcm_hw_params_set_format(pdh, params, SND_PCM_FORMAT_S16_LE);
-        snd_pcm_hw_params_set_channels(pdh, params, as.channels);
+
+        enforceAlsaEx(snd_pcm_hw_params_set_channels(pdh, params, as.channels));
         int dir;
-        snd_pcm_hw_params_set_rate_near(pdh, params, &as.sample_rate, &dir);
-        int frames = 32;
+        unsigned rate = as.sample_rate;
+        enforceAlsaEx(snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
+        int frames = 1024;
         snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
-        ret = snd_pcm_hw_params(pdh, params);
-        enforceEx<Exception, AlsaException>(ret == 0, ret);
+        int buf = frames * 8;
+        snd_pcm_hw_params_set_buffer_size_near(pdh, params, (snd_pcm_uframes_t*)&buf);
+        enforceAlsaEx(snd_pcm_hw_params_set_rate_resample(pdh, params, false));
+
+        snd_pcm_format_t fmt;
+
+        switch(as.bps) {
+            case 8:
+                fmt = SND_PCM_FORMAT_S8;
+                break;
+            case 16:
+                fmt = SND_PCM_FORMAT_S16_LE;
+                break;
+            case 24:
+                fmt = SND_PCM_FORMAT_S24_3LE;
+                break;
+            case 32:
+                fmt = SND_PCM_FORMAT_S32_LE;
+                break;
+        }
+
+        if(snd_pcm_hw_params_test_format(pdh, params, fmt) < 0) {
+            std::cerr << "unsupported format\n";
+            auto p = std::find(formats, formats + sizeof(formats), fmt);
+            if(p != formats + sizeof(formats)) {
+                while(++p != formats + sizeof(formats)) {
+                    if(!snd_pcm_hw_params_test_format(pdh, params, *p)) {
+                        fmt = *p;
+                        as.bps = bpss[p-formats];
+                        break;
+                    }
+                    std::cerr << "unsupported format\n";
+                }
+                if(p == formats + sizeof(formats)) {
+                    std::cerr << "couldnt set format\n";
+                    return;
+                }
+            }
+        }
+        if(snd_pcm_hw_params_set_format(pdh, params, fmt) < 0) {
+            std::cerr << "couldnt set format\n";
+            return;
+        }
+
+        enforceAlsaEx(snd_pcm_hw_params(pdh, params));
+//        enforceAlsaEx(snd_pcm_prepare(pdh));
+        state_ = Output::DeviceState::Ready;
+    }
+
+    virtual void play() {
+        std::lock_guard<Mutex> l(mu);
+        if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
+            prepareDevice(current);
+            auto s = snd_pcm_state(pdh);
+            std::clog << snd_pcm_state_name(s) << std::endl;
+        }
+        if(state_ == Output::DeviceState::Ready) {
+            enforceAlsaEx(snd_pcm_prepare(pdh));
+            state_ = Output::DeviceState::Playing;
+        }
+        else if(state_ == Output::DeviceState::Paused) {
+            pause();
+        }
+    }
+
+    virtual void pause() {
+        std::lock_guard<Mutex> l(mu);
+        if(state_ == Output::DeviceState::Playing) {
+            if(snd_pcm_hw_params_can_pause(params)) {
+                enforceAlsaEx(snd_pcm_pause(pdh, true));
+            }
+            else {
+                enforceAlsaEx(snd_pcm_drop(pdh));
+            }
+            state_ = Output::DeviceState::Paused;
+        }
+        else if(state_ == Output::DeviceState::Paused) {
+            if(snd_pcm_hw_params_can_pause(params)) {
+                enforceAlsaEx(snd_pcm_pause(pdh, false));
+            }
+            else {
+                snd_pcm_prepare(pdh);
+                snd_pcm_start(pdh);
+            }
+            state_ = Output::DeviceState::Playing;
+        }
+    }
+
+    virtual void stop() {
+        std::lock_guard<Mutex> l(mu);
+        if(state_ != Output::DeviceState::Stopped && pdh) {
+            enforceAlsaEx(snd_pcm_drop(pdh));
+            enforceAlsaEx(snd_pcm_close(pdh));
+        }
+        state_ = Output::DeviceState::Stopped;
+        pdh = 0;
+    }
+
+    virtual Output::DeviceState state() {
+        std::lock_guard<Mutex> l(mu);
+        return state_;
+    }
+
+    virtual void changeState(Output::DeviceState s) {
+        std::lock_guard<Mutex> l(mu);
+        state_ = s;
+    }
+
+    virtual std::streamsize write(const char* s, std::streamsize n) {
+        if(pdh) {
+            auto frames = snd_pcm_bytes_to_frames(pdh, n);
+            auto r = snd_pcm_writei(pdh, s, frames);
+
+            std::lock_guard<Mutex> l(mu);
+            if(r == -EPIPE) {
+                if(pdh) {
+                    snd_pcm_recover(pdh, r, false);
+                }
+                return n;
+            }
+            else if(r < 0) {
+                std::cerr << "ALSA: write error\n";
+                return -1;
+            }
+            else if(r != frames) {
+                std::cerr << "ALSA: not all frames written\n";
+            }
+
+            if(pdh) {
+                r = snd_pcm_frames_to_bytes(pdh, r);
+            }
+
+            return r;
+        }
+        else {
+            return -1;
+        }
     }
 
     virtual void render(PlaybackHandler * playHandle) {
@@ -138,8 +291,12 @@ public:
 private:
     snd_pcm_t * pdh;
     snd_pcm_hw_params_t * params;
+    AudioSpecs current;
     std::string name;
     std::string desc;
+    std::recursive_mutex mu;
+    typedef decltype(mu) Mutex;
+    Output::DeviceState state_;
 };
 
 static std::list<AlsaOutput*> alsaPluginObjects;
@@ -151,7 +308,7 @@ extern "C" void registerPluginObjects(Kernel& k) {
     std::string filter = "Output";
 
     auto ret = snd_device_name_hint(-1, "pcm", &hints);
-    enforceEx<Exception, AlsaException>(ret == 0, ret);
+    enforceAlsaEx(ret);
 
     auto& outman = k.getOutputManager();
 
