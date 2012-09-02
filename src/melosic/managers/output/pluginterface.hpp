@@ -37,7 +37,7 @@ public:
     virtual const std::string& getSinkName() = 0;
 };
 
-enum DeviceState {
+enum class DeviceState : uint8_t {
     Error,
     Ready,
     Playing,
