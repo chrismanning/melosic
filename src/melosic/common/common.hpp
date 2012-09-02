@@ -32,43 +32,6 @@ using boost::int64_t; using boost::uint64_t;
 
 namespace Melosic {
 
-class ErrorHandler {
-public:
-    virtual void report(const char * msg, const char * file = __FILE__, uint32_t line = __LINE__) = 0;
-};
-
-struct IBuffer {
-    virtual const void * ptr() = 0;
-    virtual size_t length() = 0;
-    virtual void ptr(const void * p) = 0;
-    virtual void length(size_t p) = 0;
-};
-
-class Buffer : public IBuffer {
-public:
-    Buffer() : ptr_(0), length_(0) {}
-
-    virtual const void * ptr() {
-        return ptr_;
-    }
-
-    virtual size_t length() {
-        return length_;
-    }
-
-    virtual void ptr(const void * p) {
-        ptr_ = p;
-    }
-
-    virtual void length(size_t p) {
-        length_ = p;
-    }
-
-private:
-    const void * ptr_;
-    size_t length_;
-};
-
 struct AudioSpecs {
     AudioSpecs() : channels(0), bps(0) , sample_rate(0), total_samples(0) {}
     AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples)
@@ -77,21 +40,6 @@ struct AudioSpecs {
     uint8_t bps;
     uint32_t sample_rate;
     uint64_t total_samples;
-};
-
-enum PlaybackState {
-    Playing,
-    Paused,
-    Stopped,
-};
-
-class PlaybackHandler : public ErrorHandler {
-public:
-    virtual void play() = 0;
-    virtual void pause() = 0;
-    virtual void stop() = 0;
-    virtual PlaybackState state() = 0;
-    virtual IBuffer * requestData(uint32_t bytes) = 0;
 };
 
 } // end namespace Melosic

@@ -30,13 +30,6 @@ void enforceEx(bool expression, Args&& ... arguments) {
     }
 }
 
-template <class Exception, class DyException, typename ... Args>
-void enforceEx(bool expression, Args&& ... arguments) {
-    if(!expression) {
-        throw static_cast<Exception>(DyException(std::forward<Args>(arguments)...));
-    }
-}
-
 struct Exception : public std::exception {
     Exception(const char * msg) : msg(msg) {}
     Exception(const std::function<const char *()>& lazyStr) : msg(lazyStr()) {}
