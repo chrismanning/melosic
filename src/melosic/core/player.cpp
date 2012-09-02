@@ -76,6 +76,7 @@ public:
     }
 
     std::chrono::milliseconds tell() {
+        std::cerr << "Tell...\n";
         return stream.tell();
     }
 

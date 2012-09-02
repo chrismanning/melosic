@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
 //        p.pause();
 //        std::this_thread::sleep_for(dur/2);
-//        p.seek(dur*4);
+        p.seek(dur*4);
         std::clog << p.tell().count() << "ms" << std::endl;
 //        p.pause();
         std::this_thread::sleep_for(dur);

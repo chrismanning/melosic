@@ -144,7 +144,6 @@ public:
     }
 
     virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
-//        this->flush();
         decltype(off) pos = 0;
         auto bps = this->get_bits_per_sample() / 8;
 //        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
@@ -160,7 +159,7 @@ public:
             off = -off;
         }
         buf.clear();
-        pos += off;
+        pos += off / bps;
 //        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
         if(seek_absolute(pos)) {
 //            std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
@@ -205,9 +204,9 @@ public:
 
     virtual void seek(std::chrono::milliseconds dur) {
         auto bps = pimpl->get_bits_per_sample()/8;
-        auto rate = pimpl->get_sample_rate() / 1000.0;
+        auto rate = pimpl->get_sample_rate();
 
-        this->seek(bps * rate * dur.count(), std::ios_base::beg);
+        pimpl->seek(bps * rate * dur.count() / 1000, std::ios_base::beg);
     }
 
     std::chrono::milliseconds tell() {
