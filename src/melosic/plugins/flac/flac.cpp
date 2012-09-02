@@ -35,8 +35,6 @@ public:
     FlacDecoderImpl(IO::BiDirectionalSeekable& input, std::deque<char>& buf, AudioSpecs& as)
         : input(input), buf(buf), as(as)
     {
-        io::seek(input, 0, std::ios_base::beg, std::ios_base::in);
-//        start = io::seek(input, 0, std::ios_base::cur);
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
     }
@@ -174,7 +172,6 @@ private:
     IO::BiDirectionalSeekable& input;
     std::deque<char>& buf;
     AudioSpecs& as;
-    std::streampos start;
 };
 
 class FlacDecoder : public Input::IFileSource {
