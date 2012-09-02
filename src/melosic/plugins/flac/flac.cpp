@@ -219,7 +219,7 @@ public:
 private:
     AudioSpecs as;
     std::deque<char> buf;
-    std::shared_ptr<FlacDecoderImpl> pimpl;
+    std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
 extern "C" void registerPluginObjects(Kernel& k) {
