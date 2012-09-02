@@ -31,7 +31,7 @@ namespace Input {
 
 class InputManager::impl {
 public:
-    std::shared_ptr<IFileSource> openFile(IO::File& file) {
+    Factory::result_type openFile(IO::File& file) {
         auto ext = path(file.filename()).extension().string();
 
         auto fact = factories.find(ext);
@@ -65,7 +65,7 @@ InputManager::InputManager() : pimpl(new impl) {}
 
 InputManager::~InputManager() {}
 
-std::shared_ptr<IFileSource> InputManager::openFile(IO::File& file) {
+Factory::result_type InputManager::openFile(IO::File& file) {
     return pimpl->openFile(file);
 }
 

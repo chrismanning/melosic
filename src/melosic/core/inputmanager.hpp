@@ -37,7 +37,7 @@ class InputManager {
 public:
     InputManager();
     ~InputManager();
-    std::shared_ptr<IFileSource> openFile(IO::File& file);
+    Factory::result_type openFile(IO::File& file);
     void addFactory(Factory fact, std::initializer_list<std::string> extensions);
 private:
     class impl;
