@@ -52,15 +52,19 @@ static const uint8_t bpss[] = {8, 16, 24, 24, 32};
 class AlsaOutput : public Output::IDeviceSink {
 public:
     AlsaOutput(Output::OutputDeviceName name)
-        : pdh(0), params(0), name(name.getName()), desc(name.getDesc()), state_(Output::DeviceState::Stopped)
+        : pdh(nullptr),
+          params(nullptr),
+          name(name.getName()),
+          desc(name.getDesc()),
+          state_(Output::DeviceState::Stopped)
     {}
 
     virtual ~AlsaOutput() {
         std::cerr << "Alsa instance being destroyed\n";
-        if(pdh) {
+        if(pdh != nullptr) {
             stop();
         }
-        if(params)
+        if(params != nullptr)
             snd_pcm_hw_params_free(params);
     }
 
@@ -68,11 +72,11 @@ public:
         std::lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
-        if(!pdh) {
+        if(pdh == nullptr) {
             enforceAlsaEx(snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
         }
 
-        if(!params) {
+        if(params == nullptr) {
             snd_pcm_hw_params_malloc(&params);
             snd_pcm_hw_params_any(pdh, params);
         }
@@ -180,7 +184,7 @@ public:
             enforceAlsaEx(snd_pcm_close(pdh));
         }
         state_ = Output::DeviceState::Stopped;
-        pdh = 0;
+        pdh = nullptr;
     }
 
     virtual Output::DeviceState state() {
@@ -194,13 +198,13 @@ public:
     }
 
     virtual std::streamsize write(const char* s, std::streamsize n) {
-        if(pdh) {
+        if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
             auto r = snd_pcm_writei(pdh, s, frames);
 
             std::lock_guard<Mutex> l(mu);
             if(r == -EPIPE) {
-                if(pdh) {
+                if(pdh != nullptr) {
                     snd_pcm_recover(pdh, r, false);
                 }
                 return n;
@@ -213,7 +217,7 @@ public:
                 std::cerr << "ALSA: not all frames written\n";
             }
 
-            if(pdh) {
+            if(pdh != nullptr) {
                 r = snd_pcm_frames_to_bytes(pdh, r);
             }
 
@@ -251,8 +255,7 @@ extern "C" void registerPluginObjects(Kernel& k) {
     char * name, * desc, * io;
     std::string filter = "Output";
 
-    auto ret = snd_device_name_hint(-1, "pcm", &hints);
-    enforceAlsaEx(ret);
+    enforceAlsaEx(snd_device_name_hint(-1, "pcm", &hints));
 
     auto& outman = k.getOutputManager();
 
