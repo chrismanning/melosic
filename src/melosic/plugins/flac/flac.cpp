@@ -37,6 +37,7 @@ public:
     {
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
+        start = input.seek(0, std::ios_base::cur, std::ios_base::in);
     }
 
     virtual ~FlacDecoderImpl() {
@@ -144,14 +145,13 @@ public:
 
     virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
 //        this->flush();
-        buf.clear();
         decltype(off) pos = 0;
         auto bps = this->get_bits_per_sample() / 8;
 //        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
 
         if(way == std::ios_base::cur) {
             if(off == 0) {
-                return input.seek(0, std::ios_base::cur, std::ios_base::in);
+                return input.seek(0, std::ios_base::cur, std::ios_base::in) - start;
             }
             pos = io::position_to_offset(input.seek(0, std::ios_base::cur, std::ios_base::in));
         }
@@ -159,6 +159,7 @@ public:
             pos = this->get_total_samples() * bps;
             off = -off;
         }
+        buf.clear();
         pos += off;
 //        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
         if(seek_absolute(pos)) {
@@ -172,6 +173,7 @@ private:
     IO::BiDirectionalSeekable& input;
     std::deque<char>& buf;
     AudioSpecs& as;
+    std::streampos start;
 };
 
 class FlacDecoder : public Input::IFileSource {
@@ -206,6 +208,15 @@ public:
         auto rate = pimpl->get_sample_rate() / 1000.0;
 
         this->seek(bps * rate * dur.count(), std::ios_base::beg);
+    }
+
+    std::chrono::milliseconds tell() {
+        auto bps = pimpl->get_bits_per_sample()/8;
+        auto rate = pimpl->get_sample_rate() / 1000.0;
+
+        auto pos = pimpl->seek(0, std::ios_base::cur);
+
+        return std::chrono::milliseconds((long)(pos / rate / bps));
     }
 
     virtual AudioSpecs& getAudioSpecs() {

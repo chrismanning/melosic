@@ -41,6 +41,7 @@ public:
     void pause();
     void stop();
     void seek(std::chrono::milliseconds dur);
+    std::chrono::milliseconds tell();
     void finish();
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
 private:

@@ -58,7 +58,7 @@ int main(int argc, char* argv[]) {
 //        std::clog << device->getSinkName() << std::endl;
 //        std::clog << device->getDeviceDescription() << std::endl;
 
-        Player p(*input_ptr, kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0"));
+        Player p(*input_ptr, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
 
         p.play();
 
@@ -67,7 +67,8 @@ int main(int argc, char* argv[]) {
 
 //        p.pause();
 //        std::this_thread::sleep_for(dur/2);
-        p.seek(dur*4);
+//        p.seek(dur*4);
+        std::clog << p.tell().count() << "ms" << std::endl;
 //        p.pause();
         std::this_thread::sleep_for(dur);
 

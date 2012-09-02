@@ -75,6 +75,10 @@ public:
         stream.seek(dur);
     }
 
+    std::chrono::milliseconds tell() {
+        return stream.tell();
+    }
+
     void finish() {
         if(playerThread.joinable()) {
             playerThread.join();
@@ -161,6 +165,10 @@ void Player::stop() {
 
 void Player::seek(std::chrono::milliseconds dur) {
     pimpl->seek(dur);
+}
+
+std::chrono::milliseconds Player::tell() {
+    return pimpl->tell();
 }
 
 void Player::finish() {
