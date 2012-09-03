@@ -25,6 +25,7 @@ using boost::format;
 namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
+#include <mutex>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
@@ -46,6 +47,7 @@ public:
     }
 
     bool end() {
+        std::lock_guard<Mutex> l(mu);
         auto state = (::FLAC__StreamDecoderState)get_state();
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
     }
@@ -173,17 +175,20 @@ private:
     std::deque<char>& buf;
     AudioSpecs& as;
     std::streampos start;
+    std::mutex mu;
+    typedef decltype(mu) Mutex;
 };
 
 class FlacDecoder : public Input::IFileSource {
 public:
-    FlacDecoder(IO::BiDirectionalSeekable& file) : pimpl(new FlacDecoderImpl(file, buf, as)) {}
+    FlacDecoder(IO::BiDirectionalSeekable& input) : pimpl(new FlacDecoderImpl(input, buf, as)) {}
 
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n";
     }
 
     virtual std::streamsize read(char * s, std::streamsize n) {
+        std::lock_guard<Mutex> l(mu);
         while((std::streamsize)buf.size() < n && *this) {
             enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
         }
@@ -203,6 +208,7 @@ public:
     }
 
     virtual void seek(std::chrono::milliseconds dur) {
+        std::lock_guard<Mutex> l(mu);
         auto bps = pimpl->get_bits_per_sample()/8;
         auto rate = pimpl->get_sample_rate();
 
@@ -210,6 +216,7 @@ public:
     }
 
     std::chrono::milliseconds tell() {
+        std::lock_guard<Mutex> l(mu);
         auto bps = pimpl->get_bits_per_sample()/8;
         auto rate = pimpl->get_sample_rate() / 1000.0;
 
@@ -219,6 +226,7 @@ public:
     }
 
     virtual AudioSpecs& getAudioSpecs() {
+        std::lock_guard<Mutex> l(mu);
         return as;
     }
 
@@ -230,6 +238,8 @@ private:
     AudioSpecs as;
     std::deque<char> buf;
     std::unique_ptr<FlacDecoderImpl> pimpl;
+    std::mutex mu;
+    typedef decltype(mu) Mutex;
 };
 
 extern "C" void registerPluginObjects(Kernel& k) {
