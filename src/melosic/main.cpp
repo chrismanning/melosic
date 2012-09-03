@@ -65,8 +65,10 @@ int main(int argc, char* argv[]) {
         std::chrono::milliseconds dur(5500);
         std::this_thread::sleep_for(dur);
 
-//        p.pause();
-//        std::this_thread::sleep_for(dur/2);
+        p.pause();
+        std::this_thread::sleep_for(dur/2);
+        p.play();
+        std::this_thread::sleep_for(dur/2);
         p.seek(dur*4);
         std::clog << p.tell().count() << "ms" << std::endl;
 //        p.pause();

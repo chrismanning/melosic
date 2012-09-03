@@ -150,7 +150,7 @@ public:
             state_ = Output::DeviceState::Playing;
         }
         else if(state_ == Output::DeviceState::Paused) {
-            pause();
+            unpause();
         }
     }
 
@@ -166,15 +166,19 @@ public:
             state_ = Output::DeviceState::Paused;
         }
         else if(state_ == Output::DeviceState::Paused) {
-            if(snd_pcm_hw_params_can_pause(params)) {
-                enforceAlsaEx(snd_pcm_pause(pdh, false));
-            }
-            else {
-                snd_pcm_prepare(pdh);
-                snd_pcm_start(pdh);
-            }
-            state_ = Output::DeviceState::Playing;
+            unpause();
         }
+    }
+
+    void unpause() {
+        if(snd_pcm_hw_params_can_pause(params)) {
+            enforceAlsaEx(snd_pcm_pause(pdh, false));
+        }
+        else {
+            snd_pcm_prepare(pdh);
+            snd_pcm_start(pdh);
+        }
+        state_ = Output::DeviceState::Playing;
     }
 
     virtual void stop() {
@@ -242,7 +246,7 @@ private:
     AudioSpecs current;
     std::string name;
     std::string desc;
-    std::recursive_mutex mu;
+    std::mutex mu;
     typedef decltype(mu) Mutex;
     Output::DeviceState state_;
 };
