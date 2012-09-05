@@ -31,7 +31,7 @@ namespace Input {
 
 class InputManager::impl {
 public:
-    Factory::result_type openFile(IO::File& file) {
+    Factory getFactory(IO::File& file) {
         auto ext = path(file.filename()).extension().string();
 
         auto fact = factories.find(ext);
@@ -40,7 +40,11 @@ public:
                                     [&file]() {
                                         return (file.filename() + ": cannot decode file").c_str();
                                     });
-        return fact->second(file);
+        return fact->second;
+    }
+
+    Factory::result_type openFile(IO::File& file) {
+        return getFactory(file)(file);
     }
 
     void addFactory(Factory fact, std::initializer_list<std::string> extensions) {
@@ -67,6 +71,10 @@ InputManager::~InputManager() {}
 
 Factory::result_type InputManager::openFile(IO::File& file) {
     return pimpl->openFile(file);
+}
+
+Factory InputManager::getFactory(IO::File& file) {
+    return pimpl->getFactory(file);
 }
 
 void InputManager::addFactory(Factory fact, std::initializer_list<std::string> extensions)

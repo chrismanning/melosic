@@ -20,6 +20,7 @@
 
 #include <chrono>
 #include <boost/iostreams/concepts.hpp>
+#include <melosic/common/stream.hpp>
 
 namespace Melosic {
 
@@ -28,13 +29,10 @@ struct IBuffer;
 
 namespace Input {
 
-class ISource{
+class ISource : public IO::SeekableSource {
 public:
     typedef char char_type;
-    typedef boost::iostreams::seekable_device_tag category;
     virtual ~ISource() {}
-    virtual std::streamsize read(char * s, std::streamsize n) = 0;
-    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) = 0;
     virtual void seek(std::chrono::milliseconds dur) = 0;
     virtual std::chrono::milliseconds tell() = 0;
     virtual Melosic::AudioSpecs& getAudioSpecs() = 0;

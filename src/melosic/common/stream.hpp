@@ -18,7 +18,7 @@
 #ifndef MELOSIC_STREAM_HPP
 #define MELOSIC_STREAM_HPP
 
-#include <iosfwd>
+#include <ios>
 #include <boost/iostreams/categories.hpp>
 namespace io = boost::iostreams;
 
@@ -61,7 +61,39 @@ public:
     typedef io::bidirectional_device_tag category;
 };
 
-class BiDirectionalSeekable : public BiDirectional {
+class SeekableSource : public Source {
+public:
+    typedef io::input_seekable category;
+
+    std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) {
+        return do_seekg(off, way);
+    }
+
+    std::streamoff tellg() {
+        return do_seekg(0, std::ios_base::cur);
+    }
+
+private:
+    virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way) = 0;
+};
+
+class SeekableSink : public Sink {
+public:
+    typedef io::output_seekable category;
+
+    std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) {
+        return do_seekp(off, way);
+    }
+
+    std::streamoff tellp() {
+        return do_seekp(0, std::ios_base::cur);
+    }
+
+private:
+    virtual std::streampos do_seekp(std::streamoff off, std::ios_base::seekdir way) = 0;
+};
+
+class BiDirectionalSeekable : virtual public SeekableSource, virtual public SeekableSink {
 public:
     typedef io::bidirectional_seekable category;
 
@@ -69,17 +101,15 @@ public:
                         std::ios_base::seekdir way,
                         std::ios_base::openmode which)
     {
-        return do_seek(off, way, which);
+        std::streampos r;
+        if(which & std::ios_base::in) {
+            r = seekg(off, way);
+        }
+        if(which & std::ios_base::out) {
+            r = seekp(off, way);
+        }
+        return r;
     }
-
-private:
-    virtual std::streampos do_seek(std::streamoff off,
-                                   std::ios_base::seekdir way,
-                                   std::ios_base::openmode which) = 0;
-};
-
-class SeekableSink : public Sink {
-    typedef io::input_seekable category;
 };
 
 }

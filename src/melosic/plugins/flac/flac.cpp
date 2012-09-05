@@ -33,12 +33,12 @@ using namespace Melosic;
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
-    FlacDecoderImpl(IO::BiDirectionalSeekable& input, std::deque<char>& buf, AudioSpecs& as)
+    FlacDecoderImpl(IO::SeekableSource& input, std::deque<char>& buf, AudioSpecs& as)
         : input(input), buf(buf), as(as)
     {
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
-        start = input.seek(0, std::ios_base::cur, std::ios_base::in);
+        start = input.tellg();
     }
 
     virtual ~FlacDecoderImpl() {
@@ -123,7 +123,7 @@ public:
     }
 
     virtual ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) {
-        auto off = io::position_to_offset(io::seek(input, absolute_byte_offset, std::ios_base::beg));
+        auto off = io::position_to_offset(input.seekg(absolute_byte_offset, std::ios_base::beg));
         if(off == (int64_t)absolute_byte_offset) {
 //            std::clog << "In seek callback: " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
             return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
@@ -134,14 +134,14 @@ public:
     }
 
     virtual ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) {
-        *absolute_byte_offset = (FLAC__uint64)io::position_to_offset(io::seek(input, 0, std::ios_base::cur));
+        *absolute_byte_offset = (FLAC__uint64)io::position_to_offset(input.tellg());
         return FLAC__STREAM_DECODER_TELL_STATUS_OK;
     }
 
     virtual ::FLAC__StreamDecoderLengthStatus length_callback(FLAC__uint64 *stream_length) {
-        auto cur = io::position_to_offset(io::seek(input, 0, std::ios_base::cur));
-        *stream_length = io::position_to_offset(io::seek(input, 0, std::ios_base::end));
-        io::seek(input, cur, std::ios_base::beg);
+        auto cur = io::position_to_offset(input.tellg());
+        *stream_length = io::position_to_offset(input.seekg(0, std::ios_base::end));
+        input.seekg(cur, std::ios_base::beg);
         return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
     }
 
@@ -152,9 +152,9 @@ public:
 
         if(way == std::ios_base::cur) {
             if(off == 0) {
-                return input.seek(0, std::ios_base::cur, std::ios_base::in) - start;
+                return input.tellg() - start;
             }
-            pos = io::position_to_offset(input.seek(0, std::ios_base::cur, std::ios_base::in));
+            pos = io::position_to_offset(input.tellg());
         }
         else if(way == std::ios_base::end) {
             pos = this->get_total_samples() * bps;
@@ -167,11 +167,11 @@ public:
 //            std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
             return io::offset_to_position(pos);
         }
-        return input.seek(0, std::ios_base::cur, std::ios_base::in);
+        return input.tellg();
     }
 
 private:
-    IO::BiDirectionalSeekable& input;
+    IO::SeekableSource& input;
     std::deque<char>& buf;
     AudioSpecs& as;
     std::streampos start;
@@ -179,15 +179,15 @@ private:
     typedef decltype(mu) Mutex;
 };
 
-class FlacDecoder : public Input::IFileSource {
+class FlacDecoder : public Input::ISource {
 public:
-    FlacDecoder(IO::BiDirectionalSeekable& input) : pimpl(new FlacDecoderImpl(input, buf, as)) {}
+    FlacDecoder(IO::SeekableSource& input) : pimpl(new FlacDecoderImpl(input, buf, as)) {}
 
     virtual ~FlacDecoder() {
         cerr << "Flac decoder being destroyed\n";
     }
 
-    virtual std::streamsize read(char * s, std::streamsize n) {
+    virtual std::streamsize do_read(char * s, std::streamsize n) {
         std::lock_guard<Mutex> l(mu);
         while((std::streamsize)buf.size() < n && *this) {
             enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
@@ -203,7 +203,7 @@ public:
         return r == 0 && !(*this) ? -1 : r;
     }
 
-    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
+    virtual std::streampos do_seekg(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
         return pimpl->seek(off, way);
     }
 

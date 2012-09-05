@@ -24,20 +24,21 @@ namespace Melosic {
 
 namespace IO {
 class File;
-class BiDirectionalSeekable;
+class SeekableSource;
 }
 
 namespace Input {
 
-class IFileSource;
+class ISource;
 
-typedef std::function<std::shared_ptr<IFileSource>(IO::BiDirectionalSeekable&)> Factory;
+typedef std::function<std::shared_ptr<ISource>(IO::SeekableSource&)> Factory;
 
 class InputManager {
 public:
     InputManager();
     ~InputManager();
     Factory::result_type openFile(IO::File& file);
+    Factory getFactory(IO::File& file);
     void addFactory(Factory fact, std::initializer_list<std::string> extensions);
 private:
     class impl;

@@ -76,8 +76,12 @@ private:
         return io::write(impl, s, n);
     }
 
-    virtual std::streampos do_seek(std::streamoff off, std::ios_base::seekdir way, std::ios_base::openmode which) {
-        return io::seek(impl, off, way, which);
+    virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way) {
+        return io::seek(impl, off, way, std::ios_base::in);
+    }
+
+    virtual std::streampos do_seekp(std::streamoff off, std::ios_base::seekdir way) {
+        return io::seek(impl, off, way, std::ios_base::out);
     }
 };
 
