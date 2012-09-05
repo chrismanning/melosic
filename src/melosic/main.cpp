@@ -22,6 +22,7 @@
 #include <melosic/common/common.hpp>
 #include <melosic/core/wav.hpp>
 #include <melosic/core/player.hpp>
+#include <melosic/core/track.hpp>
 using namespace Melosic;
 
 #include <thread>
@@ -46,7 +47,9 @@ int main(int argc, char* argv[]) {
         kernel.loadPlugin("alsa.melin");
         IO::File file_i("hitest.flac");
 //        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
-        auto input_ptr = kernel.getInputManager().openFile(file_i);
+
+        Track track(file_i, kernel.getInputManager().getFactory(file_i));
+//        auto input_ptr = kernel.getInputManager().openFile(file_i);
 //        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 
 //        io::copy(boost::ref(*input_ptr), boost::ref(output));
@@ -58,7 +61,9 @@ int main(int argc, char* argv[]) {
 //        std::clog << device->getSinkName() << std::endl;
 //        std::clog << device->getDeviceDescription() << std::endl;
 
-        Player p(*input_ptr, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
+        auto decoder = track.decode();
+
+        Player p(*decoder, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
 
         p.play();
 
