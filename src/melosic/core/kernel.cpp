@@ -43,7 +43,7 @@ public:
                                     });
 
         try {
-            auto const& filename = p.filename().string();
+            auto filename = p.filename().string();
 
             if(loadedPlugins.find(filename) != loadedPlugins.end()) {
                 std::cerr << "Plugin already loaded: " << filepath << std::endl;
