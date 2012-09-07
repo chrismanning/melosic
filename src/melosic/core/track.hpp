@@ -37,7 +37,7 @@ public:
     typedef IO::BiDirectionalSeekable::char_type char_type;
 
     Track(IO::BiDirectionalSeekable& input, Input::Factory factory);
-    Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::streamoff offset);
+    Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
     virtual ~Track();
     Track::TagsType& getTags();
     std::shared_ptr<Input::ISource> decode();

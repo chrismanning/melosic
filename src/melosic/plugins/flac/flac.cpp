@@ -39,6 +39,8 @@ public:
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
         start = input.tellg();
+        enforceEx<Exception>(process_single() && seek_absolute(0), "FLAC: Decoding failed to start");
+        buf.clear();
     }
 
     virtual ~FlacDecoderImpl() {

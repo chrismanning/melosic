@@ -45,10 +45,10 @@ int main(int argc, char* argv[]) {
         Kernel kernel;
         kernel.loadPlugin("flac.melin");
         kernel.loadPlugin("alsa.melin");
-        IO::File file_i("hitest.flac");
+        IO::File file_i("combtest.flac");
 //        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
 
-        Track track(file_i, kernel.getInputManager().getFactory(file_i));
+        Track track(file_i, kernel.getInputManager().getFactory(file_i), std::chrono::milliseconds(1040493));
 //        auto input_ptr = kernel.getInputManager().openFile(file_i);
 //        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
 

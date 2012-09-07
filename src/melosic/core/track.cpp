@@ -24,8 +24,9 @@ namespace Melosic {
 
 class Track::impl {
 public:
-    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory) : impl(base, input, factory, 0) {}
-    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory, std::streamoff offset) :
+    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory) :
+        impl(base, input, factory, std::chrono::milliseconds(0)) {}
+    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
         base(base),
         input(input),
         factory(factory),
@@ -37,18 +38,10 @@ public:
     ~impl() {}
 
     std::streamsize read(char * s, std::streamsize n) {
-        if(offset != input.tellg()) {
-            input.seek(offset, std::ios_base::beg, std::ios_base::in);
-        }
-        auto diff = input.read(s, n);
-        offset += diff;
-        return diff;
+        return input.read(s, n);
     }
 
     std::streamsize write(const char * s, std::streamsize n) {
-        if(offset != input.tellp()) {
-            offset += input.seek(offset, std::ios_base::beg, std::ios_base::out);
-        }
         return input.write(s, n);
     }
 
@@ -56,7 +49,7 @@ public:
                         std::ios_base::seekdir way,
                         std::ios_base::openmode which)
     {
-        return offset = input.seek(off, way, which);
+        return input.seek(off, way, which);
     }
 
     Track::TagsType& getTags() {
@@ -67,6 +60,7 @@ public:
         if(!decoder) {
             decoder = factory(base);
             as = decoder->getAudioSpecs();
+            decoder->seek(offset);
         }
         return decoder;
     }
@@ -96,14 +90,15 @@ private:
     Track& base;
     IO::BiDirectionalSeekable& input;
     Input::Factory factory;
-    std::streamoff offset;
+    std::chrono::milliseconds offset;
     AudioSpecs as;
     std::shared_ptr<Input::ISource> decoder;
     Track::TagsType tags;
 };
 
-Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory) : Track(input, factory, 0) {}
-Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::streamoff offset) :
+Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory) :
+    Track(input, factory, std::chrono::milliseconds(0)) {}
+Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
     pimpl(new impl(*this, input, factory, offset)) {}
 
 Track::~Track() {}
