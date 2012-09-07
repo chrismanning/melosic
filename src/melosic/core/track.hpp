@@ -38,7 +38,6 @@ public:
     Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
     virtual ~Track();
     Track::TagsType& getTags();
-    std::shared_ptr<Input::ISource> decode();
     virtual std::streamsize do_read(char * s, std::streamsize n);
     virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way);
     virtual void seek(std::chrono::milliseconds dur);

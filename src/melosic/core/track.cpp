@@ -57,10 +57,6 @@ public:
         return tags;
     }
 
-    std::shared_ptr<Input::ISource> decode() {
-        return decoder;
-    }
-
     void seek(std::chrono::milliseconds dur) {
         decoder->seek(dur + offset);
     }
@@ -110,10 +106,6 @@ std::streampos Track::do_seekg(std::streamoff off, std::ios_base::seekdir way) {
 
 Track::TagsType& Track::getTags() {
     return pimpl->getTags();
-}
-
-std::shared_ptr<Input::ISource> Track::decode() {
-    return pimpl->decode();
 }
 
 void Track::seek(std::chrono::milliseconds dur) {
