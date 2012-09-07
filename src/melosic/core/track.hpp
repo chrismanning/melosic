@@ -42,7 +42,6 @@ public:
     Track::TagsType& getTags();
     std::shared_ptr<Input::ISource> decode();
     virtual std::streamsize do_read(char * s, std::streamsize n);
-    virtual std::streamsize write(const char * s, std::streamsize n);
     virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way);
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();

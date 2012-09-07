@@ -46,10 +46,6 @@ public:
         return decoder->read(s, n);
     }
 
-    std::streamsize write(const char * s, std::streamsize n) {
-        return input.write(s, n);
-    }
-
     std::streampos seek(std::streamoff off,
                         std::ios_base::seekdir way,
                         std::ios_base::openmode which)
@@ -106,10 +102,6 @@ Track::~Track() {}
 
 std::streamsize Track::do_read(char * s, std::streamsize n) {
     return pimpl->read(s, n);
-}
-
-std::streamsize Track::write(const char * s, std::streamsize n) {
-    return pimpl->write(s, n);
 }
 
 std::streampos Track::do_seekg(std::streamoff off, std::ios_base::seekdir way) {
