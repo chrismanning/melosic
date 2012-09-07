@@ -33,8 +33,6 @@ class Track : public Input::ISource
 {
 public:
     typedef std::multimap<std::string, std::string> TagsType;
-    typedef IO::BiDirectionalSeekable::category category;
-    typedef IO::BiDirectionalSeekable::char_type char_type;
 
     Track(IO::BiDirectionalSeekable& input, Input::Factory factory);
     Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
