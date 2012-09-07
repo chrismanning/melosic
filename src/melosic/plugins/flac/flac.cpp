@@ -83,7 +83,7 @@ public:
                         buf.push_back((char)(buffer[j][i] >> 8));
                         break;
                     case 24:
-                        if(as.bps == 32)
+                        if(as.pad == 32)
                             buf.push_back(0);
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));

@@ -117,7 +117,7 @@ public:
                 while(++p != formats + sizeof(formats)) {
                     if(!snd_pcm_hw_params_test_format(pdh, params, *p)) {
                         fmt = *p;
-                        as.bps = bpss[p-formats];
+                        as.pad = bpss[p-formats];
                         break;
                     }
                     std::cerr << "unsupported format\n";

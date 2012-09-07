@@ -38,6 +38,7 @@ struct AudioSpecs {
         : channels(channels), bps(bps), sample_rate(sample_rate), total_samples(total_samples) {}
     uint8_t channels;
     uint8_t bps;
+    uint8_t pad = 0;
     uint32_t sample_rate;
     uint64_t total_samples;
 };

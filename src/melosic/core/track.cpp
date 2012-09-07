@@ -36,7 +36,6 @@ public:
     {
         input.seek(0, std::ios_base::beg, std::ios_base::in);
         decoder = factory(input);
-        as = decoder->getAudioSpecs();
         decoder->seek(offset);
     }
 
@@ -64,11 +63,11 @@ public:
     std::chrono::milliseconds tell() {
         auto pos = input.seek(0, std::ios_base::cur, std::ios_base::in);
 
-        return std::chrono::milliseconds((long)(pos / as.sample_rate * 1000 / as.bps));
+        return std::chrono::milliseconds((long)(pos / getAudioSpecs().sample_rate * 1000 / getAudioSpecs().bps));
     }
 
     AudioSpecs& getAudioSpecs() {
-        return as;
+        return decoder->getAudioSpecs();
     }
 
     explicit operator bool() {
@@ -83,7 +82,6 @@ private:
     IO::BiDirectionalSeekable& input;
     Input::Factory factory;
     std::chrono::milliseconds offset;
-    AudioSpecs as;
     std::shared_ptr<Input::ISource> decoder;
     std::once_flag decoderInitFlag;
     Track::TagsType tags;
