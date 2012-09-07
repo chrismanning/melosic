@@ -61,9 +61,7 @@ int main(int argc, char* argv[]) {
 //        std::clog << device->getSinkName() << std::endl;
 //        std::clog << device->getDeviceDescription() << std::endl;
 
-        auto decoder = track.decode();
-
-        Player p(*decoder, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
+        Player p(track, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
 
         p.play();
 

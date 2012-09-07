@@ -15,6 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <thread>
+#include <mutex>
+
 #include "track.hpp"
 #include <melosic/common/stream.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
@@ -24,21 +27,23 @@ namespace Melosic {
 
 class Track::impl {
 public:
-    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory) :
-        impl(base, input, factory, std::chrono::milliseconds(0)) {}
-    impl(Track& base, IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
-        base(base),
+    impl(IO::BiDirectionalSeekable& input, Input::Factory factory) :
+        impl(input, factory, std::chrono::milliseconds(0)) {}
+    impl(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
         input(input),
         factory(factory),
         offset(offset)
     {
         input.seek(0, std::ios_base::beg, std::ios_base::in);
+        decoder = factory(input);
+        as = decoder->getAudioSpecs();
+        decoder->seek(offset);
     }
 
     ~impl() {}
 
     std::streamsize read(char * s, std::streamsize n) {
-        return input.read(s, n);
+        return decoder->read(s, n);
     }
 
     std::streamsize write(const char * s, std::streamsize n) {
@@ -49,7 +54,7 @@ public:
                         std::ios_base::seekdir way,
                         std::ios_base::openmode which)
     {
-        return input.seek(off, way, which);
+        return decoder->seekg(off, way);
     }
 
     Track::TagsType& getTags() {
@@ -57,15 +62,11 @@ public:
     }
 
     std::shared_ptr<Input::ISource> decode() {
-        if(!decoder) {
-            decoder = factory(base);
-            as = decoder->getAudioSpecs();
-            decoder->seek(offset);
-        }
         return decoder;
     }
 
     void seek(std::chrono::milliseconds dur) {
+        decoder->seek(dur + offset);
     }
 
     std::chrono::milliseconds tell() {
@@ -87,19 +88,19 @@ public:
     }
 
 private:
-    Track& base;
     IO::BiDirectionalSeekable& input;
     Input::Factory factory;
     std::chrono::milliseconds offset;
     AudioSpecs as;
     std::shared_ptr<Input::ISource> decoder;
+    std::once_flag decoderInitFlag;
     Track::TagsType tags;
 };
 
 Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory) :
     Track(input, factory, std::chrono::milliseconds(0)) {}
 Track::Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
-    pimpl(new impl(*this, input, factory, offset)) {}
+    pimpl(new impl(input, factory, offset)) {}
 
 Track::~Track() {}
 
