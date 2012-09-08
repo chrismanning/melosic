@@ -36,7 +36,7 @@ namespace Melosic {
 
 namespace IO {
 
-class File : public BiDirectionalSeekable {
+class File : public BiDirectionalClosableSeekable {
 public:
     File(const std::string& filename, const openmode mode = mode_)
         : impl(io::file(filename, mode)), filename_(filename)
@@ -59,10 +59,6 @@ public:
         impl->open(filename_, mode);
     }
 
-    void close() {
-        impl->close();
-    }
-
 private:
     auto static const mode_ = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
     io::stream_buffer<io::file> impl;
@@ -82,6 +78,18 @@ private:
 
     virtual std::streampos do_seekp(std::streamoff off, std::ios_base::seekdir way) {
         return io::seek(impl, off, way, std::ios_base::out);
+    }
+
+    virtual void do_close() {
+        impl->close();
+    }
+
+    virtual bool do_isOpen() {
+        return bool(*this);
+    }
+
+    virtual void do_reOpen() {
+        open();
     }
 };
 

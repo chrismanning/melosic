@@ -34,8 +34,8 @@ class Track : public Input::ISource
 public:
     typedef std::multimap<std::string, std::string> TagsType;
 
-    Track(IO::BiDirectionalSeekable& input, Input::Factory factory);
-    Track(IO::BiDirectionalSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
+    Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory);
+    Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
     virtual ~Track();
     Track::TagsType& getTags();
     virtual std::streamsize do_read(char * s, std::streamsize n);

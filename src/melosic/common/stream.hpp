@@ -32,6 +32,26 @@ public:
     virtual ~Device() {}
 };
 
+class Closable : Device {
+public:
+    void close() {
+        do_close();
+    }
+
+    bool isOpen() {
+        return do_isOpen();
+    }
+
+    void reOpen() {
+        return do_reOpen();
+    }
+
+private:
+    virtual void do_close() = 0;
+    virtual bool do_isOpen() = 0;
+    virtual void do_reOpen() = 0;
+};
+
 class Source : public Device {
 public:
     typedef io::source_tag category;
@@ -110,6 +130,11 @@ public:
         }
         return r;
     }
+};
+
+class BiDirectionalClosableSeekable : virtual public BiDirectionalSeekable, virtual public Closable {
+public:
+    struct category : io::closable_tag, io::bidirectional_seekable {};
 };
 
 }
