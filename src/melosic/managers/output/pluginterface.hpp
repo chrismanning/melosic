@@ -57,7 +57,6 @@ public:
     virtual void stop() = 0;
     virtual DeviceState state() = 0;
     virtual std::streamsize write(const char* s, std::streamsize n) = 0;
-    virtual void changeState(DeviceState s) = 0;
 };
 
 class IFileSink : public ISink {

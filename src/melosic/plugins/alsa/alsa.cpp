@@ -197,11 +197,6 @@ public:
         return state_;
     }
 
-    virtual void changeState(Output::DeviceState s) {
-        std::lock_guard<Mutex> l(mu);
-        state_ = s;
-    }
-
     virtual std::streamsize write(const char* s, std::streamsize n) {
         std::lock_guard<Mutex> l(mu);
         if(pdh != nullptr) {
