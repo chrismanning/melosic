@@ -87,8 +87,15 @@ public:
     }
 
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device) {
-        device->stop();
-        device = std::move(device);
+        std::lock_guard<std::mutex> l(m);
+        auto tmp = this->device.release();
+        this->device = std::move(device);
+        this->device->prepareDevice(stream.getAudioSpecs());
+
+        if(tmp->state() == DeviceState::Playing) {
+            this->device->play();
+        }
+        delete tmp;
     }
 
 private:
@@ -99,42 +106,42 @@ private:
 
     void start() {
         std::cerr << "Thread starting\n";
-        try {
             std::vector<unsigned char> s(16384);
             std::streamsize n = 0;
             while(!end()) {
-                switch(device->state()) {
-                    case DeviceState::Playing: {
+                try {
+                    switch(device->state()) {
+                        case DeviceState::Playing: {
 //                        std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                        if(n == 0) {
-                            n = io::read(stream, (char*)&s[0], s.size());
-                            if(n == -1) {
-                                stop();
-                                break;
+                            if(n == 0) {
+                                n = io::read(stream, (char*)&s[0], s.size());
+                                if(n == -1) {
+                                    stop();
+                                    break;
+                                }
                             }
+                            n -= io::write(*device, (char*)&s[s.size()-n], n);
+                            break;
                         }
-                        n -= io::write(*device, (char*)&s[s.size()-n], n);
-                        break;
-                    }
-                    case DeviceState::Error:
-                        stop();
-                        break;
-                    case DeviceState::Stopped:
-                        n = 0;
-                        stream.seek(std::chrono::seconds(0));
-                    case DeviceState::Paused:
+                        case DeviceState::Error:
+                            stop();
+                            break;
+                        case DeviceState::Stopped:
+                            n = 0;
+                            stream.seek(std::chrono::seconds(0));
+                        case DeviceState::Paused:
 //                        std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                    case DeviceState::Ready:
-                    default:
-                        break;
+                        case DeviceState::Ready:
+                        default:
+                            break;
+                    }
+                }
+                catch(std::exception& e) {
+                    std::clog << e.what() << std::endl;
                 }
                 std::chrono::milliseconds dur(10);
                 std::this_thread::sleep_for(dur);
             }
-        }
-        catch(std::exception& e) {
-            std::clog << e.what() << std::endl;
-        }
 
         stop();
         std::cerr << "Thread ending\n";

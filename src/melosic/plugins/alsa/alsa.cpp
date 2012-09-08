@@ -29,6 +29,7 @@ using boost::format;
 #include <sstream>
 #include <array>
 #include <mutex>
+#include <thread>
 
 #include <melosic/common/common.hpp>
 
@@ -202,11 +203,11 @@ public:
     }
 
     virtual std::streamsize write(const char* s, std::streamsize n) {
+        std::lock_guard<Mutex> l(mu);
         if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
             auto r = snd_pcm_writei(pdh, s, frames);
 
-            std::lock_guard<Mutex> l(mu);
             if(r == -EPIPE) {
                 if(pdh != nullptr) {
                     snd_pcm_recover(pdh, r, false);

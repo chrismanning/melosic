@@ -72,6 +72,8 @@ int main(int argc, char* argv[]) {
         std::this_thread::sleep_for(dur/2);
         p.play();
         std::this_thread::sleep_for(dur/2);
+        p.changeOutput(kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0"));
+        p.play();
         p.seek(dur*4);
         std::clog << p.tell().count() << "ms" << std::endl;
 //        p.pause();
