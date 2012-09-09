@@ -52,7 +52,7 @@ private:
     Kernel& kernel;
     std::shared_ptr<IO::File> file;
     std::shared_ptr<Track> track;
-    std::shared_ptr<Player> player;
+    Player player;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

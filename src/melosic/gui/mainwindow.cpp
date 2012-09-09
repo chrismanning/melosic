@@ -24,7 +24,10 @@ namespace io = boost::iostreams;
 #include <melosic/core/wav.hpp>
 
 MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
-    QMainWindow(parent), ui(new Ui::MainWindow), kernel(kernel)
+    QMainWindow(parent),
+    ui(new Ui::MainWindow),
+    kernel(kernel)/*,
+    player(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"))*/
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
@@ -44,28 +47,31 @@ void MainWindow::on_actionOpen_triggered()
         file.reset(new IO::File(filename.toStdString()));
 
         track.reset(new Track(*file, kernel.getInputManager().getFactory(*file), std::chrono::milliseconds(0)));
-        player.reset(new Player(*track, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0")));
+        player.openStream(track);
     }
 }
 
 void MainWindow::on_actionPlay_triggered()
 {
-    if(player) {
-        if(player->state() == Output::DeviceState::Playing) {
-            player->pause();
+    if(bool(player)) {
+        if(player.state() == Output::DeviceState::Playing) {
+            player.pause();
             ui->playButton->setText("Play");
         }
-        else if(player->state() != Output::DeviceState::Playing) {
-            player->play();
+        else if(player.state() != Output::DeviceState::Playing) {
+            player.play();
             ui->playButton->setText("Pause");
         }
+    }
+    else {
+        player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
     }
 }
 
 void MainWindow::on_actionStop_triggered()
 {
-    if(player) {
-        player->stop();
+    if(bool(player)) {
+        player.stop();
         ui->playButton->setText("Play");
     }
 }

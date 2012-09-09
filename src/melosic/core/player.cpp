@@ -33,8 +33,9 @@ namespace Melosic {
 
 class Player::impl {
 public:
-    impl(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device) :
-        stream(stream),
+    impl() : impl(nullptr) {}
+
+    impl(std::unique_ptr<Output::IDeviceSink> device) :
         device(std::move(device)),
         end_(false),
         playerThread(&impl::start, this)
@@ -54,7 +55,7 @@ public:
     void play() {
         std::cerr << "Play...\n";
         if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error)
-            this->device->prepareDevice(stream.getAudioSpecs());
+            this->device->prepareDevice(stream->getAudioSpecs());
         device->play();
     }
 
@@ -74,12 +75,12 @@ public:
 
     void seek(std::chrono::milliseconds dur) {
         std::cerr << "Seek...\n";
-        stream.seek(dur);
+        stream->seek(dur);
     }
 
     std::chrono::milliseconds tell() {
         std::cerr << "Tell...\n";
-        return stream.tell();
+        return stream->tell();
     }
 
     void finish() {
@@ -92,12 +93,25 @@ public:
         std::lock_guard<std::mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
-        this->device->prepareDevice(stream.getAudioSpecs());
 
-        if(tmp->state() == DeviceState::Playing) {
-            this->device->play();
+        if(stream) {
+            this->device->prepareDevice(stream->getAudioSpecs());
         }
-        delete tmp;
+
+        if(tmp) {
+            if(tmp->state() == DeviceState::Playing) {
+                this->device->play();
+            }
+            delete tmp;
+        }
+    }
+
+    operator bool() {
+        return bool(device);
+    }
+
+    void openStream(std::shared_ptr<Input::ISource> stream) {
+        this->stream = stream;
     }
 
 private:
@@ -112,12 +126,12 @@ private:
             std::streamsize n = 0;
             while(!end()) {
                 try {
-                    if(device) {
+                    if(device && stream) {
                         switch(device->state()) {
                             case DeviceState::Playing: {
 //                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
                                 if(n < 1024) {
-                                    auto a = io::read(stream, (char*)&s[0], s.size());
+                                    auto a = io::read(*stream, (char*)&s[0], s.size());
                                     if(a == -1) {
                                         if(n == 0) {
                                             stop();
@@ -136,7 +150,7 @@ private:
                                 break;
                             case DeviceState::Stopped:
                                 n = 0;
-                                stream.seek(std::chrono::seconds(0));
+                                stream->seek(std::chrono::seconds(0));
                             case DeviceState::Paused:
 //                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
                             case DeviceState::Ready:
@@ -159,15 +173,17 @@ private:
         std::cerr << "Thread ending\n";
     }
 
-    Input::ISource& stream;
+    std::shared_ptr<Input::ISource> stream;
     std::unique_ptr<Output::IDeviceSink> device;
     bool end_;
     std::thread playerThread;
     std::mutex m;
 };
 
-Player::Player(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device)
-    : pimpl(new impl(stream, std::move(device))) {}
+Player::Player() : pimpl(new impl) {}
+
+Player::Player(std::unique_ptr<Output::IDeviceSink> device)
+    : pimpl(new impl(std::move(device))) {}
 
 Player::~Player() {}
 
@@ -201,6 +217,14 @@ void Player::finish() {
 
 void Player::changeOutput(std::unique_ptr<Output::IDeviceSink> device) {
     pimpl->changeOutput(std::move(device));
+}
+
+Player::operator bool() {
+    return bool(*pimpl);
+}
+
+void Player::openStream(std::shared_ptr<Input::ISource> stream) {
+    pimpl->openStream(stream);
 }
 
 }//end namespace Melosic

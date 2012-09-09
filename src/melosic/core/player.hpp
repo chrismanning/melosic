@@ -37,7 +37,8 @@ using Output::DeviceState;
 class Player
 {
 public:
-    Player(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device);
+    Player();
+    Player(std::unique_ptr<Output::IDeviceSink> device);
     ~Player();
 
     void play();
@@ -48,6 +49,8 @@ public:
     std::chrono::milliseconds tell();
     void finish();
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
+    explicit operator bool();
+    void openStream(std::shared_ptr<Input::ISource> stream);
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
