@@ -30,16 +30,36 @@ using boost::int64_t; using boost::uint64_t;
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/plugin.hpp>
 
+#ifdef WIN32
+#include <boost/thread.hpp>
+
+namespace std {
+  using boost::mutex;
+  using boost::recursive_mutex;
+  using boost::lock_guard;
+  using boost::condition_variable;
+  using boost::unique_lock;
+  using boost::thread;
+  namespace this_thread = boost::this_thread;
+}
+#endif
+
 namespace Melosic {
 
 struct AudioSpecs {
-    AudioSpecs() : channels(0), bps(0) , sample_rate(0), total_samples(0) {}
+    AudioSpecs() : channels(0), bps(0), sample_rate(0), total_samples(0) {}
     AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples)
-        : channels(channels), bps(bps), sample_rate(sample_rate), total_samples(total_samples) {}
+        : channels(channels),
+          bps(bps),
+          sample_rate(sample_rate),
+          target_sample_rate(sample_rate),
+          total_samples(total_samples) {}
+
     uint8_t channels;
     uint8_t bps;
-    uint8_t pad = 0;
+    uint8_t target_bps = 0;
     uint32_t sample_rate;
+    uint8_t target_sample_rate = 0;
     uint64_t total_samples;
 };
 

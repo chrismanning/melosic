@@ -23,10 +23,12 @@ namespace io = boost::iostreams;
 
 #include <melosic/core/wav.hpp>
 
-MainWindow::MainWindow(QWidget * parent) :
-    QMainWindow(parent), ui(new Ui::MainWindow)
+MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
+    QMainWindow(parent), ui(new Ui::MainWindow), kernel(kernel)
 {
     ui->setupUi(this);
+    ui->stopButton->setDefaultAction(ui->actionStop);
+    ui->playButton->setDefaultAction(ui->actionPlay);
 }
 
 MainWindow::~MainWindow()
@@ -35,40 +37,35 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::loadPlugins() {
-    kernel.loadPlugin("flac.melin");
-}
-
 void MainWindow::on_actionOpen_triggered()
 {
-    auto file = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
-    filename = file;
-//    files << IO::File(filename.toStdString());
+    auto filename = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
+    if(filename.length()) {
+        file.reset(new IO::File(filename.toStdString()));
+
+        track.reset(new Track(*file, kernel.getInputManager().getFactory(*file), std::chrono::milliseconds(0)));
+        player.reset(new Player(*track, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0")));
+    }
 }
 
 void MainWindow::on_actionPlay_triggered()
 {
-    if(files.length() > 0) {
-        //TODO: hook in to Qt event loop
-//        auto input_ptr = kernel.getInputManager().openFile(files.first());
-//        auto& input = *input_ptr;
-//        auto output = Output::WaveFile("test1.wav", input.getAudioSpecs());
-
-////        io::copy(boost::ref(input), output);
-
-//        std::vector<char> buf(4096);
-//        std::streamsize total = 0;
-
-//        while((bool)input) {
-//            std::streamsize amt;
-//            amt = io::read(input, buf.data(), 4096);
-//            if(amt > 0) {
-//                io::write(output, buf.data(), amt);
-//                total += amt;
-//            }
-//        }
+    if(player) {
+        if(player->state() == Output::DeviceState::Playing) {
+            player->pause();
+            ui->playButton->setText("Play");
+        }
+        else if(player->state() != Output::DeviceState::Playing) {
+            player->play();
+            ui->playButton->setText("Pause");
+        }
     }
-    else {
-        qDebug("Nothing to play");
+}
+
+void MainWindow::on_actionStop_triggered()
+{
+    if(player) {
+        player->stop();
+        ui->playButton->setText("Play");
     }
 }

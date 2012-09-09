@@ -32,15 +32,10 @@ public:
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
 
-        enforceEx<Exception>(exists(p),
-                                    [&filepath]() {
-                                        return (filepath + ": file does not exist").c_str();
-                                    });
+        enforceEx<Exception>(exists(p), (filepath + ": file does not exist").c_str());
 
         enforceEx<Exception>(p.extension() == ".melin" && is_regular_file(p),
-                                    [&filepath]() {
-                                        return (filepath + ": not a melosic plugin").c_str();
-                                    });
+                             (filepath + ": not a melosic plugin").c_str());
 
         try {
             auto filename = p.filename().string();

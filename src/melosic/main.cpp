@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-//#include <melosic/gui/application.hpp>
-//#include <melosic/gui/mainwindow.hpp>
+#include <melosic/gui/application.hpp>
+#include <melosic/gui/mainwindow.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/common.hpp>
@@ -34,57 +34,22 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetErrorMode(0x8000);
 #endif
-//    Application app(argc, argv);
 
-//    MainWindow win;
-//    win.show();
-//    win.loadPlugins();
-
-//    return app.exec();
     try {
+        Application app(argc, argv);
+
         Kernel kernel;
+
+        MainWindow win(kernel);
+        win.show();
         kernel.loadPlugin("flac.melin");
         kernel.loadPlugin("alsa.melin");
-        IO::File file_i("combtest.flac");
-//        IO::File file_o("test1.wav", ios_base::binary | ios_base::out | ios_base::trunc);
 
-        Track track(file_i, kernel.getInputManager().getFactory(file_i), std::chrono::milliseconds(1040493));
-//        auto input_ptr = kernel.getInputManager().openFile(file_i);
-//        Output::WaveFile output(file_o, input_ptr->getAudioSpecs());
-
-//        io::copy(boost::ref(*input_ptr), boost::ref(output));
-
-//        auto device = ;
-
-//        device->prepareDevice(input_ptr->getAudioSpecs());
-
-//        std::clog << device->getSinkName() << std::endl;
-//        std::clog << device->getDeviceDescription() << std::endl;
-
-        Player p(track, kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
-
-        p.play();
-
-        std::chrono::milliseconds dur(5500);
-        std::this_thread::sleep_for(dur);
-
-        p.pause();
-        std::this_thread::sleep_for(dur/2);
-        p.play();
-        std::this_thread::sleep_for(dur/2);
-        p.changeOutput(kernel.getOutputManager().getOutputDevice("iec958:CARD=PCH,DEV=0"));
-        p.play();
-        p.seek(dur*4);
-        std::clog << p.tell().count() << "ms" << std::endl;
-//        p.pause();
-        std::this_thread::sleep_for(dur);
-
-//        p.finish();
-
-        return 0;
+        return app.exec();
     }
     catch(std::exception& e) {
         std::clog << e.what() << std::endl;
         return -1;
     }
+
 }

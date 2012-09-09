@@ -85,14 +85,16 @@ public:
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
         enforceAlsaEx(snd_pcm_hw_params_set_channels(pdh, params, as.channels));
-        int dir;
+        int dir = 0;
+        enforceAlsaEx(snd_pcm_hw_params_set_rate_resample(pdh, params, false));
         unsigned rate = as.sample_rate;
         enforceAlsaEx(snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
+        as.target_sample_rate = rate;
+
         int frames = 1024;
         snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
         int buf = frames * 8;
         snd_pcm_hw_params_set_buffer_size_near(pdh, params, (snd_pcm_uframes_t*)&buf);
-        enforceAlsaEx(snd_pcm_hw_params_set_rate_resample(pdh, params, false));
 
         snd_pcm_format_t fmt;
 
@@ -118,7 +120,7 @@ public:
                 while(++p != formats + sizeof(formats)) {
                     if(!snd_pcm_hw_params_test_format(pdh, params, *p)) {
                         fmt = *p;
-                        as.pad = bpss[p-formats];
+                        as.target_bps = bpss[p-formats];
                         break;
                     }
                     std::cerr << "unsupported format\n";
@@ -184,7 +186,7 @@ public:
 
     virtual void stop() {
         std::lock_guard<Mutex> l(mu);
-        if(state_ != Output::DeviceState::Stopped && pdh) {
+        if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
             enforceAlsaEx(snd_pcm_drop(pdh));
             enforceAlsaEx(snd_pcm_close(pdh));
         }

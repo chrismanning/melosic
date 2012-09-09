@@ -21,6 +21,8 @@
 #include <QApplication>
 #include <QMessageBox>
 
+#include <melosic/common/error.hpp>
+
 class Application : public QApplication {
 public:
     Application(int argc, char* argv[]) : QApplication(argc, argv) {}
@@ -28,6 +30,11 @@ public:
     bool notify(QObject * receiver, QEvent * event) {
         try {
             return QApplication::notify(receiver, event);
+        }
+        catch(Melosic::Exception& e) {
+            QMessageBox error;
+            error.setText(QString(e.what()));
+            return error.exec();
         }
         catch(std::exception &e) {
             QMessageBox error;

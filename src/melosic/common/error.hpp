@@ -20,6 +20,7 @@
 
 #include <exception>
 #include <utility>
+#include <string>
 
 namespace Melosic {
 
@@ -32,13 +33,12 @@ void enforceEx(bool expression, Args&& ... arguments) {
 
 struct Exception : public std::exception {
     Exception(const char * msg) : msg(msg) {}
-    Exception(const std::function<const char *()>& lazyStr) : msg(lazyStr()) {}
 
     virtual const char * what() const throw() {
-        return msg;
+        return msg.c_str();
     }
 
-    const char * msg;
+    const std::string msg;
 };
 
 }

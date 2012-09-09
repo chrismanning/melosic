@@ -26,5 +26,5 @@ ELSEIF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl)
 ENDIF(${WIN32})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} melosiccore)
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
 

@@ -20,14 +20,38 @@
 
 #include <memory>
 #include <chrono>
+#include <deque>
+#include <boost/iostreams/concepts.hpp>
 
 namespace Melosic {
+
+class Track;
 
 class Playlist
 {
 public:
+    typedef boost::iostreams::input_seekable category;
+    typedef char char_type;
+    typedef Track value_type;
+    typedef std::deque<value_type> list_type;
+    typedef list_type::iterator iterator;
+    typedef list_type::const_iterator const_iterator;
+
     Playlist();
     ~Playlist();
+    std::streamsize read(char * s, std::streamsize n);
+    std::streampos seek(std::streamoff off, std::ios_base::seekdir way);
+    void seek(std::chrono::milliseconds dur);
+
+    iterator begin();
+    const_iterator cbegin();
+    iterator end();
+    const_iterator cend();
+    iterator insert(const_iterator pos, const value_type& value);
+    iterator insert(const_iterator pos, value_type&& value);
+    template <typename It>
+    iterator insert(const_iterator pos, It first, It last);
+    void clear();
 private:
     class impl;
     std::unique_ptr<impl> pimpl;

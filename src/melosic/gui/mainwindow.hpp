@@ -22,10 +22,12 @@
 #include <QMainWindow>
 #include <QApplication>
 #include <QList>
+#include <memory>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/core/track.hpp>
+#include <melosic/core/player.hpp>
 using namespace Melosic;
 
 namespace Ui {
@@ -37,19 +39,20 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     
 public:
-    explicit MainWindow(QWidget * parent = 0);
+    explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
     ~MainWindow();
-    void loadPlugins();
 
 private Q_SLOTS:
     void on_actionOpen_triggered();
     void on_actionPlay_triggered();
+    void on_actionStop_triggered();
 
 private:
-    Kernel kernel;
     Ui::MainWindow * ui;
-    QString filename;
-    QList<IO::File> files;
+    Kernel& kernel;
+    std::shared_ptr<IO::File> file;
+    std::shared_ptr<Track> track;
+    std::shared_ptr<Player> player;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

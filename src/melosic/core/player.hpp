@@ -29,7 +29,10 @@ class ISource;
 
 namespace Output {
 class IDeviceSink;
+enum class DeviceState : uint8_t;
 }
+
+using Output::DeviceState;
 
 class Player
 {
@@ -40,6 +43,7 @@ public:
     void play();
     void pause();
     void stop();
+    DeviceState state();
     void seek(std::chrono::milliseconds dur);
     std::chrono::milliseconds tell();
     void finish();

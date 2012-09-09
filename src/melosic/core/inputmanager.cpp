@@ -36,10 +36,7 @@ public:
 
         auto fact = factories.find(ext);
 
-        enforceEx<Exception>(fact != factories.end(),
-                                    [&file]() {
-                                        return (file.filename() + ": cannot decode file").c_str();
-                                    });
+        enforceEx<Exception>(fact != factories.end(), (file.filename() + ": cannot decode file").c_str());
         return fact->second;
     }
 

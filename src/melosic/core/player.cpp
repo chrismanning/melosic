@@ -31,8 +31,6 @@ namespace io = boost::iostreams;
 
 namespace Melosic {
 
-using Output::DeviceState;
-
 class Player::impl {
 public:
     impl(Input::ISource& stream, std::unique_ptr<Output::IDeviceSink> device) :
@@ -68,6 +66,10 @@ public:
     void stop() {
         std::cerr << "Stop...\n";
         device->stop();
+    }
+
+    DeviceState state() {
+        return device->state();
     }
 
     void seek(std::chrono::milliseconds dur) {
@@ -110,31 +112,41 @@ private:
             std::streamsize n = 0;
             while(!end()) {
                 try {
-                    switch(device->state()) {
-                        case DeviceState::Playing: {
-//                        std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                            if(n == 0) {
-                                n = io::read(stream, (char*)&s[0], s.size());
-                                if(n == -1) {
-                                    stop();
-                                    break;
+                    if(device) {
+                        switch(device->state()) {
+                            case DeviceState::Playing: {
+//                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
+                                if(n < 1024) {
+                                    auto a = io::read(stream, (char*)&s[0], s.size());
+                                    if(a == -1) {
+                                        if(n == 0) {
+                                            stop();
+                                        }
+                                        break;
+                                    }
+                                    else {
+                                        n += a;
+                                    }
                                 }
+                                n -= io::write(*device, (char*)&s[s.size()-n], n);
+                                break;
                             }
-                            n -= io::write(*device, (char*)&s[s.size()-n], n);
-                            break;
+                            case DeviceState::Error:
+//                                stop();
+                                break;
+                            case DeviceState::Stopped:
+                                n = 0;
+                                stream.seek(std::chrono::seconds(0));
+                            case DeviceState::Paused:
+//                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
+                            case DeviceState::Ready:
+                            default:
+                                break;
                         }
-                        case DeviceState::Error:
-                            stop();
-                            break;
-                        case DeviceState::Stopped:
-                            n = 0;
-                            stream.seek(std::chrono::seconds(0));
-                        case DeviceState::Paused:
-//                        std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                        case DeviceState::Ready:
-                        default:
-                            break;
                     }
+                }
+                catch(Exception& e) {
+                    std::clog << e.what() << std::endl;
                 }
                 catch(std::exception& e) {
                     std::clog << e.what() << std::endl;
@@ -169,6 +181,10 @@ void Player::pause() {
 
 void Player::stop() {
     pimpl->stop();
+}
+
+DeviceState Player::state() {
+    return pimpl->state();
 }
 
 void Player::seek(std::chrono::milliseconds dur) {
