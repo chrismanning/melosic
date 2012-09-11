@@ -21,7 +21,6 @@
 #include <iostream>
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
-#include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 
 #include <melosic/core/player.hpp>

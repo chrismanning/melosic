@@ -35,10 +35,6 @@ public:
         }
     }
 
-//    std::unique_ptr<IDeviceSink> getDefaultOutputDevice() {
-//        return 0;
-//    }
-
     std::unique_ptr<IDeviceSink> getOutputDevice(const std::string& name) {
         auto it = devices.find(name);
 
