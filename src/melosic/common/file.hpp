@@ -46,7 +46,7 @@ public:
 
     virtual ~File() {}
 
-    const std::string& filename() {
+    const std::string& filename() const {
         return filename_;
     }
 

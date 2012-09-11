@@ -31,7 +31,7 @@ namespace Input {
 
 class InputManager::impl {
 public:
-    Factory getFactory(IO::File& file) {
+    Factory getFactory(const IO::File& file) {
         auto ext = path(file.filename()).extension().string();
 
         auto fact = factories.find(ext);
@@ -70,7 +70,7 @@ Factory::result_type InputManager::openFile(IO::File& file) {
     return pimpl->openFile(file);
 }
 
-Factory InputManager::getFactory(IO::File& file) {
+Factory InputManager::getFactory(const IO::File& file) {
     return pimpl->getFactory(file);
 }
 

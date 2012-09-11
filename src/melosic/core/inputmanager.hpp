@@ -38,7 +38,7 @@ public:
     InputManager();
     ~InputManager();
     Factory::result_type openFile(IO::File& file);
-    Factory getFactory(IO::File& file);
+    Factory getFactory(const IO::File& file);
     void addFactory(Factory fact, std::initializer_list<std::string> extensions);
 private:
     class impl;
