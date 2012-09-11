@@ -25,6 +25,8 @@
 namespace io = boost::iostreams;
 
 #include <melosic/core/player.hpp>
+#include <melosic/core/playlist.hpp>
+#include <melosic/core/track.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/common/common.hpp>
@@ -54,33 +56,53 @@ public:
 
     void play() {
         std::cerr << "Play...\n";
-        if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error)
-            this->device->prepareDevice(stream->getAudioSpecs());
-        device->play();
+        if(device && playlist) {
+            if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error) {
+                if(playlist->current() != playlist->end()) {
+                    this->device->prepareDevice(playlist->current()->getAudioSpecs());
+                }
+            }
+            device->play();
+            stateChangedSig(DeviceState::Playing);
+        }
     }
 
     void pause() {
         std::cerr << "Pause...\n";
-        device->pause();
+        if(device) {
+            device->pause();
+            stateChangedSig(DeviceState::Paused);
+        }
     }
 
     void stop() {
         std::cerr << "Stop...\n";
-        device->stop();
+        if(device) {
+            device->stop();
+            stateChangedSig(DeviceState::Stopped);
+        }
     }
 
     DeviceState state() {
-        return device->state();
+        if(device) {
+            return device->state();
+        }
+        return DeviceState::Error;
     }
 
     void seek(std::chrono::milliseconds dur) {
         std::cerr << "Seek...\n";
-        stream->seek(dur);
+        if(playlist) {
+            playlist->seek(dur);
+        }
     }
 
     std::chrono::milliseconds tell() {
         std::cerr << "Tell...\n";
-        return stream->tell();
+        if(playlist && playlist->current() != playlist->end()) {
+            return playlist->current()->tell();
+        }
+        return std::chrono::milliseconds(0);
     }
 
     void finish() {
@@ -94,13 +116,14 @@ public:
         auto tmp = this->device.release();
         this->device = std::move(device);
 
-        if(stream) {
-            this->device->prepareDevice(stream->getAudioSpecs());
+        if(playlist && playlist->current() != playlist->end()) {
+            this->device->prepareDevice(playlist->current()->getAudioSpecs());
         }
 
         if(tmp) {
             if(tmp->state() == DeviceState::Playing) {
                 this->device->play();
+                stateChangedSig(DeviceState::Playing);
             }
             delete tmp;
         }
@@ -110,8 +133,20 @@ public:
         return bool(device);
     }
 
-    void openStream(std::shared_ptr<Input::ISource> stream) {
-        this->stream = stream;
+    void openPlaylist(std::shared_ptr<Playlist> playlist) {
+        std::lock_guard<std::mutex> l(m);
+        if(this->playlist && this->playlist->current() != this->playlist->end()) {
+            this->playlist->current()->close();
+        }
+        this->playlist = playlist;
+    }
+
+    boost::signals2::connection connectState(const StateSignal::slot_type& slot) {
+        return stateChangedSig.connect(slot);
+    }
+
+    boost::signals2::connection connectNotify(const NotifySignal::slot_type& slot) {
+        return notifySig.connect(slot);
     }
 
 private:
@@ -122,62 +157,65 @@ private:
 
     void start() {
         std::cerr << "Thread starting\n";
-            std::vector<unsigned char> s(16384);
-            std::streamsize n = 0;
-            while(!end()) {
-                try {
-                    if(device && stream) {
-                        switch(device->state()) {
-                            case DeviceState::Playing: {
+        std::vector<unsigned char> s(16384);
+        std::streamsize n = 0;
+        while(!end()) {
+            try {
+                if(device && playlist) {
+                    switch(device->state()) {
+                        case DeviceState::Playing: {
 //                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                                if(n < 1024) {
-                                    auto a = io::read(*stream, (char*)&s[0], s.size());
-                                    if(a == -1) {
-                                        if(n == 0) {
-                                            stop();
-                                        }
-                                        break;
+                            if(n < 1024) {
+                                auto a = io::read(*playlist, (char*)&s[0], s.size());
+                                if(a == -1) {
+                                    if(n == 0) {
+                                        stop();
                                     }
-                                    else {
-                                        n += a;
-                                    }
+                                    break;
                                 }
-                                n -= io::write(*device, (char*)&s[s.size()-n], n);
-                                break;
+                                else {
+                                    n += a;
+                                }
                             }
-                            case DeviceState::Error:
-//                                stop();
-                                break;
-                            case DeviceState::Stopped:
-                                n = 0;
-                                stream->seek(std::chrono::seconds(0));
-                            case DeviceState::Paused:
-//                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                            case DeviceState::Ready:
-                            default:
-                                break;
+                            n -= io::write(*device, (char*)&s[s.size()-n], n);
+                            break;
                         }
+                        case DeviceState::Error:
+                            cerr << "Irrecoverable error occured\n";
+                            device.reset();
+                            break;
+                        case DeviceState::Stopped:
+                            n = 0;
+                            playlist->seek(std::chrono::seconds(0));
+                        case DeviceState::Paused:
+//                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
+                        case DeviceState::Ready:
+                        default:
+                            break;
                     }
                 }
-                catch(Exception& e) {
-                    std::clog << e.what() << std::endl;
-                }
-                catch(std::exception& e) {
-                    std::clog << e.what() << std::endl;
-                }
-                std::chrono::milliseconds dur(10);
-                std::this_thread::sleep_for(dur);
             }
+            catch(Exception& e) {
+                std::clog << e.what() << std::endl;
+            }
+            catch(std::exception& e) {
+                std::clog << e.what() << std::endl;
+            }
+            std::chrono::milliseconds dur(10);
+            std::this_thread::sleep_for(dur);
+        }
 
         stop();
         std::cerr << "Thread ending\n";
     }
 
-    std::shared_ptr<Input::ISource> stream;
+    std::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::IDeviceSink> device;
     bool end_;
     std::thread playerThread;
     std::mutex m;
+    StateSignal stateChangedSig;
+    NotifySignal notifySig;
 };
 
 Player::Player() : pimpl(new impl) {}
@@ -223,8 +261,16 @@ Player::operator bool() {
     return bool(*pimpl);
 }
 
-void Player::openStream(std::shared_ptr<Input::ISource> stream) {
-    pimpl->openStream(stream);
+void Player::openPlaylist(std::shared_ptr<Playlist> playlist) {
+    pimpl->openPlaylist(playlist);
+}
+
+boost::signals2::connection Player::connectState(const StateSignal::slot_type& slot) {
+    return pimpl->connectState(slot);
+}
+
+boost::signals2::connection Player::connectNotify(const NotifySignal::slot_type& slot) {
+    return pimpl->connectNotify(slot);
 }
 
 }//end namespace Melosic

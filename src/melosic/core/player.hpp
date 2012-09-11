@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <chrono>
+#include <boost/signals2.hpp>
 
 namespace Melosic {
 
@@ -33,6 +34,8 @@ enum class DeviceState;
 }
 
 using Output::DeviceState;
+
+class Playlist;
 
 class Player
 {
@@ -50,7 +53,13 @@ public:
     void finish();
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
     explicit operator bool();
-    void openStream(std::shared_ptr<Input::ISource> stream);
+    void openPlaylist(std::shared_ptr<Playlist> playlist);
+
+    typedef boost::signals2::signal<void(DeviceState)> StateSignal;
+    boost::signals2::connection connectState(const StateSignal::slot_type& slot);
+
+    typedef boost::signals2::signal<void(std::chrono::milliseconds, std::chrono::milliseconds)> NotifySignal;
+    boost::signals2::connection connectNotify(const NotifySignal::slot_type& slot);
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
