@@ -97,6 +97,11 @@ private:
     virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way) = 0;
 };
 
+class SeekableClosableSource : public SeekableSource, public Closable {
+public:
+    struct category : io::closable_tag, io::input_seekable {};
+};
+
 class SeekableSink : public Sink {
 public:
     typedef io::output_seekable category;
