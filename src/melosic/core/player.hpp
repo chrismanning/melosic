@@ -29,7 +29,7 @@ class ISource;
 
 namespace Output {
 class IDeviceSink;
-enum class DeviceState : uint8_t;
+enum class DeviceState;
 }
 
 using Output::DeviceState;
