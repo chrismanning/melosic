@@ -23,11 +23,17 @@
 #include <QApplication>
 #include <QList>
 #include <memory>
+#include <boost/signals2.hpp>
 
-#include <melosic/common/common.hpp>
-#include <melosic/common/file.hpp>
-#include <melosic/core/track.hpp>
 #include <melosic/core/player.hpp>
+
+namespace Melosic {
+class Kernel;
+class Playlist;
+namespace Output {
+enum class DeviceState;
+}
+}
 using namespace Melosic;
 
 namespace Ui {
@@ -41,6 +47,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
     ~MainWindow();
+    void onStateChangeSlot(DeviceState state);
 
 private Q_SLOTS:
     void on_actionOpen_triggered();
@@ -50,9 +57,9 @@ private Q_SLOTS:
 private:
     Ui::MainWindow * ui;
     Kernel& kernel;
-    std::shared_ptr<IO::File> file;
-    std::shared_ptr<Track> track;
     Player player;
+    boost::signals2::connection playerStateConnection;
+    std::shared_ptr<Playlist> currentPlaylist;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

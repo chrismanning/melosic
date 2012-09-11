@@ -21,50 +21,81 @@
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 
-#include <melosic/core/wav.hpp>
+#include <melosic/common/common.hpp>
+#include <melosic/common/file.hpp>
+#include <melosic/core/track.hpp>
+#include <melosic/core/player.hpp>
+#include <melosic/core/playlist.hpp>
 
 MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    kernel(kernel)/*,
+    kernel(kernel),
+    currentPlaylist(new Playlist)/*,
     player(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"))*/
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
+    player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
+    playerStateConnection = player.connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
 }
 
 MainWindow::~MainWindow()
 {
     qDebug("Destroying main window");
     delete ui;
+    playerStateConnection.disconnect();
+}
+
+void MainWindow::onStateChangeSlot(DeviceState state) {
+    switch(state) {
+        case DeviceState::Playing:
+            ui->playButton->setText("Pause");
+            break;
+        case DeviceState::Error:
+            ui->playButton->setText("Play");
+            break;
+        case DeviceState::Stopped:
+            ui->playButton->setText("Play");
+            break;
+        case DeviceState::Paused:
+            ui->playButton->setText("Resume");
+            break;
+        case DeviceState::Ready:
+            ui->playButton->setText("Play");
+        default:
+            break;
+    }
 }
 
 void MainWindow::on_actionOpen_triggered()
 {
     auto filename = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
     if(filename.length()) {
-        file.reset(new IO::File(filename.toStdString()));
-
-        track.reset(new Track(*file, kernel.getInputManager().getFactory(*file), std::chrono::milliseconds(0)));
-        player.openStream(track);
+        std::unique_ptr<IO::File> file(new IO::File(filename.toStdString()));
+        currentPlaylist->emplace_back(std::move(file),
+                                      kernel.getInputManager().getFactory(*file),
+                                      std::chrono::milliseconds(0));
     }
 }
 
 void MainWindow::on_actionPlay_triggered()
 {
-    if(bool(player)) {
-        if(player.state() == Output::DeviceState::Playing) {
-            player.pause();
-            ui->playButton->setText("Play");
+    if(currentPlaylist->size()) {
+        player.openPlaylist(currentPlaylist);
+        if(bool(player)) {
+            if(player.state() == Output::DeviceState::Playing) {
+                player.pause();
+            }
+            else if(player.state() != Output::DeviceState::Playing) {
+                player.play();
+            }
         }
-        else if(player.state() != Output::DeviceState::Playing) {
+        else {
+            player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
             player.play();
-            ui->playButton->setText("Pause");
         }
-    }
-    else {
-        player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
     }
 }
 
@@ -72,6 +103,5 @@ void MainWindow::on_actionStop_triggered()
 {
     if(bool(player)) {
         player.stop();
-        ui->playButton->setText("Play");
     }
 }
