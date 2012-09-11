@@ -91,6 +91,11 @@ public:
         return std::chrono::milliseconds((long)(pos / getAudioSpecs().sample_rate * 1000 / getAudioSpecs().bps));
     }
 
+    std::chrono::milliseconds duration() {
+        auto& as = getAudioSpecs();
+        return std::chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
+    }
+
     AudioSpecs& getAudioSpecs() {
         return decoder->getAudioSpecs();
     }
@@ -149,6 +154,10 @@ void Track::seek(std::chrono::milliseconds dur) {
 
 std::chrono::milliseconds Track::tell() {
     return pimpl->tell();
+}
+
+std::chrono::milliseconds Track::duration() {
+    return pimpl->duration();
 }
 
 Melosic::AudioSpecs& Track::getAudioSpecs() {

@@ -45,6 +45,7 @@ public:
     virtual void do_reOpen();
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();
+    virtual std::chrono::milliseconds duration();
     virtual Melosic::AudioSpecs& getAudioSpecs();
     virtual explicit operator bool();
 private:
