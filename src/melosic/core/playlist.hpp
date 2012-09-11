@@ -20,7 +20,11 @@
 
 #include <memory>
 #include <chrono>
+#include <list>
 #include <deque>
+#include <mutex>
+#include <thread>
+#include <type_traits>
 #include <boost/iostreams/concepts.hpp>
 
 namespace Melosic {
@@ -32,29 +36,91 @@ class Playlist
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
-    typedef Track value_type;
-    typedef std::deque<value_type> list_type;
+
+    typedef std::deque<Track> list_type;
+    typedef list_type::value_type value_type;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
     typedef list_type::iterator iterator;
     typedef list_type::const_iterator const_iterator;
+    typedef list_type::size_type size_type;
 
     Playlist();
+    Playlist(const Playlist& b);
+    Playlist& operator=(const Playlist& b);
+    Playlist& operator=(Playlist&& b);
     ~Playlist();
     std::streamsize read(char * s, std::streamsize n);
     std::streampos seek(std::streamoff off, std::ios_base::seekdir way);
     void seek(std::chrono::milliseconds dur);
+    std::chrono::milliseconds duration();
+    void previous();
+    void next();
+    iterator& current();
+    const_iterator current() const;
+
+    reference operator[](size_type pos);
+    const_reference operator[](size_type pos) const;
+    reference front();
+    const_reference front() const;
+    reference back();
+    const_reference back() const;
 
     iterator begin();
-    const_iterator cbegin();
+    const_iterator begin() const;
     iterator end();
-    const_iterator cend();
-    iterator insert(const_iterator pos, const value_type& value);
-    iterator insert(const_iterator pos, value_type&& value);
-    template <typename It>
-    iterator insert(const_iterator pos, It first, It last);
-    void clear();
+    const_iterator end() const;
+
+    bool empty() const;
+    size_type size() const;
+    size_type max_size() const;
+
+    iterator insert(iterator pos, const value_type& value);
+    iterator insert(iterator pos, value_type&& value);
+    void push_back(const value_type& value);
+    void push_back(value_type&& value);
+    template<class ... Args>
+    void emplace_back(Args&& ... args) {
+        tracks.emplace_back(std::forward<Args>(args)...);
+    }
+
+//    template <typename It>
+//    iterator insert(const_iterator pos, It first, It last);
+//    iterator insert(const_iterator pos, std::initializer_list<value_type> ilist);
+//    template<class ... Args>
+//    iterator emplace(const_iterator pos, Args&& ... args);
+//    iterator erase(const_iterator pos);
+//    iterator erase(const_iterator first, const_iterator last);
+//    void clear();
+    void swap(Playlist& b) {
+        std::swap(tracks, b.tracks);
+    }
+
 private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
+    template <class It>
+    reference getTrack(size_type pos, It beg, std::random_access_iterator_tag) {
+        return beg[pos];
+    }
+    template <class It>
+    reference getTrack(size_type pos, It beg, std::bidirectional_iterator_tag) {
+        std::advance(beg, pos);
+        return *beg;
+    }
+
+    template <class It>
+    const_reference getTrack(size_type pos, It beg, std::random_access_iterator_tag) const {
+        return beg[pos];
+    }
+    template <class It>
+    const_reference getTrack(size_type pos, It beg, std::bidirectional_iterator_tag) const {
+        std::advance(beg, pos);
+        return *beg;
+    }
+
+    list_type tracks;
+    iterator current_track;
+    std::mutex mu;
+    typedef decltype(mu) Mutex;
 };
 
 }

@@ -15,25 +15,175 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <list>
+#include <algorithm>
 
 #include <melosic/core/track.hpp>
 #include "playlist.hpp"
 
 namespace Melosic {
 
-class Playlist::impl {
-public:
-    impl() {}
-
-    ~impl() {}
-
-private:
-    std::list<Track> tracks;
-};
-
-Playlist::Playlist() : pimpl(new impl) {}
+Playlist::Playlist() : current_track(begin()) {}
 
 Playlist::~Playlist() {}
+
+Playlist::Playlist(const Playlist& b) {
+
+}
+
+Playlist& Playlist::operator=(const Playlist& b) {
+    return *this;
+}
+
+Playlist& Playlist::operator=(Playlist&& b) {
+    return *this;
+}
+
+//IO
+std::streamsize Playlist::read(char * s, std::streamsize n) {
+    if(current() != end()) {
+        auto r = current()->read(s, n);
+        if(r < n) {
+            current()->close();
+            next();
+            if(current() != end()) {
+                current()->reOpen();
+                r += current()->read(s + r, n - r);
+            }
+        }
+        return r;
+    }
+    return -1;
+}
+
+std::streampos Playlist::seek(std::streamoff off, std::ios_base::seekdir way) {
+    if(current() != end()) {
+        return current()->seekg(off, way);
+    }
+    return 0;
+}
+
+void Playlist::seek(std::chrono::milliseconds dur) {
+    if(current() != end()) {
+        current()->seek(dur);
+    }
+}
+
+//playlist controls
+std::chrono::milliseconds Playlist::duration() {
+    return std::accumulate(begin(), end(), std::chrono::milliseconds(0),
+                           [](std::chrono::milliseconds a, Track b) { return a + b.duration();});
+}
+
+void Playlist::previous() {
+    if(current() == begin()) {
+        seek(std::chrono::milliseconds(0));
+    }
+    else if(size() >= 1) {
+        std::lock_guard<Mutex> l(mu);
+        current_track--;
+    }
+}
+
+void Playlist::next() {
+    if(current() != end()) {
+        std::lock_guard<Mutex> l(mu);
+        current_track++;
+    }
+}
+
+Playlist::iterator& Playlist::current() {
+    std::lock_guard<Mutex> l(mu);
+    return current_track;
+}
+
+Playlist::const_iterator Playlist::current() const {
+    return current_track;
+}
+
+Playlist::reference Playlist::operator[](size_type pos) {
+    return getTrack(pos, begin(), std::iterator_traits<iterator>::iterator_category());
+}
+
+Playlist::const_reference Playlist::operator[](size_type pos) const {
+    return getTrack(pos, begin(), std::iterator_traits<iterator>::iterator_category());
+}
+
+//element access
+Playlist::reference Playlist::front() {
+    return tracks.front();
+}
+
+Playlist::const_reference Playlist::front() const {
+    return tracks.front();
+}
+
+Playlist::reference Playlist::back() {
+    return tracks.back();
+}
+
+Playlist::const_reference Playlist::back() const {
+    return tracks.back();
+}
+
+//iterators
+Playlist::iterator Playlist::begin() {
+    return tracks.begin();
+}
+
+Playlist::const_iterator Playlist::begin() const {
+    return tracks.begin();
+}
+
+Playlist::iterator Playlist::end() {
+    return tracks.end();
+}
+
+Playlist::const_iterator Playlist::end() const {
+    return tracks.end();
+}
+
+//capacity
+bool Playlist::empty() const{
+    return tracks.empty();
+}
+
+Playlist::size_type Playlist::size() const {
+    return tracks.size();
+}
+
+Playlist::size_type Playlist::max_size() const {
+    return std::numeric_limits<size_type>::max();
+}
+
+//modifiers
+Playlist::iterator Playlist::insert(Playlist::iterator pos, const Playlist::value_type& value) {
+    auto r = tracks.insert(pos, value);
+    if(size() == 1) {
+        current_track = r;
+    }
+    return r;
+}
+
+Playlist::iterator Playlist::insert(Playlist::iterator pos, Playlist::value_type&& value) {
+    auto r = tracks.insert(pos, value);
+    if(size() == 1) {
+        current_track = r;
+    }
+    return r;
+}
+
+void Playlist::push_back(const Playlist::value_type& value) {
+    tracks.push_back(value);
+    if(size() == 1) {
+        current_track = tracks.begin();
+    }
+}
+
+void Playlist::push_back(Playlist::value_type&& value) {
+    tracks.push_back(value);
+    if(size() == 1) {
+        current_track = tracks.begin();
+    }
+}
 
 }//end namespace Melosic
