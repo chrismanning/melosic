@@ -39,11 +39,11 @@ int main(int argc, char* argv[]) {
         Application app(argc, argv);
 
         Kernel kernel;
+        kernel.loadPlugin("flac.melin");
+        kernel.loadPlugin("alsa.melin");
 
         MainWindow win(kernel);
         win.show();
-        kernel.loadPlugin("flac.melin");
-        kernel.loadPlugin("alsa.melin");
 
         return app.exec();
     }
