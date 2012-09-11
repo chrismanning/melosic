@@ -29,17 +29,20 @@
 
 namespace Melosic {
 
-class Track : public Input::ISource
+class Track : public Input::ISource, public IO::Closable
 {
 public:
     typedef std::multimap<std::string, std::string> TagsType;
 
-    Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory);
-    Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory, std::chrono::milliseconds offset);
+    Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory);
+    Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset);
     virtual ~Track();
     Track::TagsType& getTags();
     virtual std::streamsize do_read(char * s, std::streamsize n);
     virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way);
+    virtual void do_close();
+    virtual bool do_isOpen();
+    virtual void do_reOpen();
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();
     virtual Melosic::AudioSpecs& getAudioSpecs();

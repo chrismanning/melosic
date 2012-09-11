@@ -27,24 +27,36 @@ namespace Melosic {
 
 class Track::impl {
 public:
-    impl(IO::BiDirectionalClosableSeekable& input, Input::Factory factory) :
-        impl(input, factory, std::chrono::milliseconds(0)) {}
-    impl(IO::BiDirectionalClosableSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
-        input(input),
+    impl(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
+        impl(std::move(input), factory, std::chrono::milliseconds(0)) {}
+    impl(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset) :
+        input(std::move(input)),
         factory(factory),
         offset(offset)
     {
-        input.seek(0, std::ios_base::beg, std::ios_base::in);
-        decoder = factory(input);
-        input.close();
+        this->input->seek(0, std::ios_base::beg, std::ios_base::in);
+        decoder = factory(*this->input);
+        this->input->close();
     }
 
     ~impl() {}
 
+    bool isOpen() {
+        return input->isOpen();
+    }
+
+    void reOpen() {
+        input->reOpen();
+        decoder->seek(offset);
+    }
+
+    void close() {
+        input->close();
+    }
+
     std::streamsize read(char * s, std::streamsize n) {
-        if(!input.isOpen()) {
-            input.reOpen();
-            decoder->seek(offset);
+        if(!isOpen()) {
+            reOpen();
         }
         return decoder->read(s, n);
     }
@@ -53,9 +65,8 @@ public:
                         std::ios_base::seekdir way,
                         std::ios_base::openmode which)
     {
-        if(!input.isOpen()) {
-            input.reOpen();
-            decoder->seek(offset);
+        if(!isOpen()) {
+            reOpen();
         }
         return decoder->seekg(off, way);
     }
@@ -65,19 +76,17 @@ public:
     }
 
     void seek(std::chrono::milliseconds dur) {
-        if(!input.isOpen()) {
-            input.reOpen();
-            decoder->seek(offset);
+        if(!isOpen()) {
+            reOpen();
         }
         decoder->seek(dur + offset);
     }
 
     std::chrono::milliseconds tell() {
-        if(!input.isOpen()) {
-            input.reOpen();
-            decoder->seek(offset);
+        if(!isOpen()) {
+            reOpen();
         }
-        auto pos = input.seek(0, std::ios_base::cur, std::ios_base::in);
+        auto pos = input->seek(0, std::ios_base::cur, std::ios_base::in);
 
         return std::chrono::milliseconds((long)(pos / getAudioSpecs().sample_rate * 1000 / getAudioSpecs().bps));
     }
@@ -95,7 +104,7 @@ public:
     }
 
 private:
-    IO::BiDirectionalClosableSeekable& input;
+    std::unique_ptr<IO::BiDirectionalClosableSeekable> input;
     Input::Factory factory;
     std::chrono::milliseconds offset;
     std::shared_ptr<Input::ISource> decoder;
@@ -103,10 +112,10 @@ private:
     Track::TagsType tags;
 };
 
-Track::Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory) :
-    Track(input, factory, std::chrono::milliseconds(0)) {}
-Track::Track(IO::BiDirectionalClosableSeekable& input, Input::Factory factory, std::chrono::milliseconds offset) :
-    pimpl(new impl(input, factory, offset)) {}
+Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
+    Track(std::move(input), factory, std::chrono::milliseconds(0)) {}
+Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset) :
+    pimpl(new impl(std::move(input), factory, offset)) {}
 
 Track::~Track() {}
 
@@ -116,6 +125,18 @@ std::streamsize Track::do_read(char * s, std::streamsize n) {
 
 std::streampos Track::do_seekg(std::streamoff off, std::ios_base::seekdir way) {
     return pimpl->seek(off, way, std::ios_base::in);
+}
+
+void Track::do_close() {
+    pimpl->close();
+}
+
+bool Track::do_isOpen() {
+    return pimpl->isOpen();
+}
+
+void Track::do_reOpen() {
+    pimpl->reOpen();
 }
 
 Track::TagsType& Track::getTags() {
