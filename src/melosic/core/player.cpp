@@ -135,10 +135,17 @@ public:
 
     void openPlaylist(std::shared_ptr<Playlist> playlist) {
         std::lock_guard<std::mutex> l(m);
-        if(this->playlist && this->playlist->current() != this->playlist->end()) {
-            this->playlist->current()->close();
+        if(this->playlist != playlist) {
+            if(this->playlist && this->playlist->current() != this->playlist->end()) {
+                this->playlist->current()->close();
+            }
+            this->playlist = playlist;
         }
-        this->playlist = playlist;
+    }
+
+    std::shared_ptr<Playlist> currentPlaylist() {
+        std::lock_guard<std::mutex> l(m);
+        return playlist;
     }
 
     boost::signals2::connection connectState(const StateSignal::slot_type& slot) {
@@ -263,6 +270,10 @@ Player::operator bool() {
 
 void Player::openPlaylist(std::shared_ptr<Playlist> playlist) {
     pimpl->openPlaylist(playlist);
+}
+
+std::shared_ptr<Playlist> Player::currentPlaylist() {
+    return pimpl->currentPlaylist();
 }
 
 boost::signals2::connection Player::connectState(const StateSignal::slot_type& slot) {

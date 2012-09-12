@@ -54,6 +54,7 @@ public:
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
     explicit operator bool();
     void openPlaylist(std::shared_ptr<Playlist> playlist);
+    std::shared_ptr<Playlist> currentPlaylist();
 
     typedef boost::signals2::signal<void(DeviceState)> StateSignal;
     boost::signals2::connection connectState(const StateSignal::slot_type& slot);

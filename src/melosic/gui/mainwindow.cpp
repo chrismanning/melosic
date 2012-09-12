@@ -82,7 +82,9 @@ void MainWindow::on_actionOpen_triggered()
 void MainWindow::on_actionPlay_triggered()
 {
     if(currentPlaylist->size()) {
-        player.openPlaylist(currentPlaylist);
+        if(!player.currentPlaylist()) {
+            player.openPlaylist(currentPlaylist);
+        }
         if(bool(player)) {
             if(player.state() == Output::DeviceState::Playing) {
                 player.pause();
