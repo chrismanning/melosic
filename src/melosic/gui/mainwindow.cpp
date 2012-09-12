@@ -37,7 +37,6 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
-    player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
     playerStateConnection = player.connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
 }
 

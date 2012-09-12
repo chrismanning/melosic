@@ -111,10 +111,11 @@ public:
     }
 
     void changeOutput(std::unique_ptr<Output::IDeviceSink> device) {
-        std::lock_guard<std::mutex> l(m);
+        std::unique_lock<std::mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
+        l.unlock();
         if(playlist && playlist->current() != playlist->end()) {
             this->device->prepareDevice(playlist->current()->getAudioSpecs());
         }
