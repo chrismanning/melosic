@@ -1,7 +1,4 @@
-FIND_PACKAGE(Qt4 REQUIRED)
-INCLUDE(${QT_USE_FILE})
-ADD_DEFINITIONS(${QT_DEFINITIONS})
-ADD_DEFINITIONS(-DQT_SHARED)
+FIND_PACKAGE(Qt5Widgets REQUIRED)
 
 SET(SRC_LIST main.cpp)
 
@@ -27,4 +24,5 @@ ELSEIF(${UNIX})
 ENDIF(${WIN32})
 
 target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
+qt5_use_modules(${PN} Widgets)
 
