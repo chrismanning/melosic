@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     try {
-        Application app(argc, argv);
+        QApplication app(argc, argv);
 
         Kernel kernel;
         kernel.loadPlugin("flac.melin");
