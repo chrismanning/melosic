@@ -30,6 +30,7 @@ using boost::format;
 #include <array>
 #include <mutex>
 #include <thread>
+#include <boost/thread.hpp>
 
 #include <melosic/common/common.hpp>
 
@@ -142,11 +143,11 @@ public:
     }
 
     virtual void play() {
-        std::lock_guard<Mutex> l(mu);
+        std::unique_lock<Mutex> l(mu);
         if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
+            l.unlock();
             prepareDevice(current);
-            auto s = snd_pcm_state(pdh);
-            std::clog << snd_pcm_state_name(s) << std::endl;
+            l.lock();
         }
         if(state_ == Output::DeviceState::Ready) {
             enforceAlsaEx(snd_pcm_prepare(pdh));
@@ -195,15 +196,17 @@ public:
     }
 
     virtual Output::DeviceState state() {
-        std::lock_guard<Mutex> l(mu);
+        boost::shared_lock<Mutex> l(mu);
         return state_;
     }
 
     virtual std::streamsize write(const char* s, std::streamsize n) {
-        std::lock_guard<Mutex> l(mu);
+        std::unique_lock<Mutex> l(mu);
         if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
+//            l.unlock();
             auto r = snd_pcm_writei(pdh, s, frames);
+//            l.lock();
 
             if(r == -EPIPE) {
                 if(pdh != nullptr) {
@@ -244,7 +247,7 @@ private:
     AudioSpecs current;
     std::string name;
     std::string desc;
-    std::mutex mu;
+    boost::shared_mutex mu;
     typedef decltype(mu) Mutex;
     Output::DeviceState state_;
 };
