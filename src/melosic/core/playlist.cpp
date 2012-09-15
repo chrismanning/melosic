@@ -75,6 +75,7 @@ void Playlist::previous() {
         std::lock_guard<Mutex> l(mu);
         current_track--;
     }
+    trackChanged();
 }
 
 void Playlist::next() {
@@ -82,6 +83,7 @@ void Playlist::next() {
         std::lock_guard<Mutex> l(mu);
         current_track++;
     }
+    trackChanged();
 }
 
 Playlist::iterator& Playlist::current() {

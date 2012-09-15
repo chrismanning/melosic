@@ -26,6 +26,7 @@
 #include <thread>
 #include <type_traits>
 #include <boost/iostreams/concepts.hpp>
+#include <boost/signals2.hpp>
 
 namespace Melosic {
 
@@ -95,6 +96,12 @@ public:
         std::swap(tracks, b.tracks);
     }
 
+    //signals
+    typedef boost::signals2::signal<void()> TrackChangedSignal;
+    boost::signals2::connection connectTrackChanged(const TrackChangedSignal::slot_type& slot) {
+        return trackChanged.connect(slot);
+    }
+
 private:
     template <class It>
     reference getTrack(size_type pos, It beg, std::random_access_iterator_tag) {
@@ -118,6 +125,7 @@ private:
 
     list_type tracks;
     iterator current_track;
+    TrackChangedSignal trackChanged;
     std::mutex mu;
     typedef decltype(mu) Mutex;
 };
