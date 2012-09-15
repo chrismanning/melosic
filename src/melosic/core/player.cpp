@@ -155,7 +155,7 @@ public:
         return stateChangedSig.connect(slot);
     }
 
-    boost::signals2::connection connectNotify(const NotifySignal::slot_type& slot) {
+    boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot) {
         return notifySig.connect(slot);
     }
 
@@ -283,8 +283,8 @@ boost::signals2::connection Player::connectState(const StateSignal::slot_type& s
     return pimpl->connectState(slot);
 }
 
-boost::signals2::connection Player::connectNotify(const NotifySignal::slot_type& slot) {
-    return pimpl->connectNotify(slot);
+boost::signals2::connection Player::connectNotifySlot(const NotifySignal::slot_type& slot) {
+    return pimpl->connectNotifySlot(slot);
 }
 
 }//end namespace Melosic

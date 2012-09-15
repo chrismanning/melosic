@@ -60,7 +60,7 @@ public:
     boost::signals2::connection connectState(const StateSignal::slot_type& slot);
 
     typedef boost::signals2::signal<void(std::chrono::milliseconds, std::chrono::milliseconds)> NotifySignal;
-    boost::signals2::connection connectNotify(const NotifySignal::slot_type& slot);
+    boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot);
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
