@@ -51,7 +51,6 @@ public:
     Playlist& operator=(Playlist&& b);
     ~Playlist();
     std::streamsize read(char * s, std::streamsize n);
-    std::streampos seek(std::streamoff off, std::ios_base::seekdir way);
     void seek(std::chrono::milliseconds dur);
     std::chrono::milliseconds duration();
     void previous();

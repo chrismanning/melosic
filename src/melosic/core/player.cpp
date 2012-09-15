@@ -80,6 +80,9 @@ public:
             device->stop();
             stateChangedSig(DeviceState::Stopped);
         }
+        if(playlist && playlist->current() != playlist->end()) {
+            playlist->current()->reset();
+        }
     }
 
     DeviceState state() {

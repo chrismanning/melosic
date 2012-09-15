@@ -55,13 +55,6 @@ std::streamsize Playlist::read(char * s, std::streamsize n) {
     return -1;
 }
 
-std::streampos Playlist::seek(std::streamoff off, std::ios_base::seekdir way) {
-    if(current() != end()) {
-        return current()->seekg(off, way);
-    }
-    return 0;
-}
-
 void Playlist::seek(std::chrono::milliseconds dur) {
     if(current() != end()) {
         current()->seek(dur);
