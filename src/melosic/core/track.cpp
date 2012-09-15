@@ -61,16 +61,6 @@ public:
         return decoder->read(s, n);
     }
 
-    std::streampos seek(std::streamoff off,
-                        std::ios_base::seekdir way,
-                        std::ios_base::openmode which)
-    {
-        if(!isOpen()) {
-            reOpen();
-        }
-        return decoder->seekg(off, way);
-    }
-
     Track::TagsType& getTags() {
         return tags;
     }
@@ -86,9 +76,8 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        auto pos = input->seek(0, std::ios_base::cur, std::ios_base::in);
+        return decoder->tell();
 
-        return std::chrono::milliseconds((long)(pos / getAudioSpecs().sample_rate * 1000 / getAudioSpecs().bps));
     }
 
     std::chrono::milliseconds duration() {
@@ -126,10 +115,6 @@ Track::~Track() {}
 
 std::streamsize Track::do_read(char * s, std::streamsize n) {
     return pimpl->read(s, n);
-}
-
-std::streampos Track::do_seekg(std::streamoff off, std::ios_base::seekdir way) {
-    return pimpl->seek(off, way, std::ios_base::in);
 }
 
 void Track::do_close() {

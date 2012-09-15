@@ -29,7 +29,7 @@ struct IBuffer;
 
 namespace Input {
 
-class ISource : public IO::SeekableSource {
+class ISource : public IO::Source {
 public:
     typedef char char_type;
     virtual ~ISource() {}

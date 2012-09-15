@@ -34,7 +34,7 @@ using namespace Melosic;
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
     FlacDecoderImpl(IO::SeekableSource& input, std::deque<char>& buf, AudioSpecs& as)
-        : input(input), buf(buf), as(as)
+        : input(input), buf(buf), as(as), lastSample(0)
     {
         enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
@@ -72,6 +72,9 @@ public:
 
     virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
                                                             const FLAC__int32 * const buffer[]) {
+        lastSample = frame->header.number_type == FLAC__FRAME_NUMBER_TYPE_FRAME_NUMBER
+                     ? frame->header.number.frame_number : frame->header.number.sample_number;
+        lastSample += frame->header.blocksize * as.channels;
         for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
             for(unsigned j=0; j<frame->header.channels; j++,u++) {
                 switch(frame->header.bits_per_sample) {
@@ -136,7 +139,7 @@ public:
     }
 
     virtual ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) {
-        *absolute_byte_offset = (FLAC__uint64)io::position_to_offset(input.tellg());
+        *absolute_byte_offset = io::position_to_offset(input.tellg());
         return FLAC__STREAM_DECODER_TELL_STATUS_OK;
     }
 
@@ -147,29 +150,21 @@ public:
         return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
     }
 
-    virtual std::streampos seek(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
-        decltype(off) pos = 0;
-        auto bps = this->get_bits_per_sample() / 8;
-//        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+    void seek(std::chrono::milliseconds dur) {
+        auto rate = get_sample_rate() / 1000.0;
+        auto req = uint64_t(dur.count() * rate);
+        if(!seek_absolute(req)) {
+            std::clog << "Seek to " << dur.count() << "ms failed" << std::endl;
+        }
+//        else if(tell() != dur) {
+//            std::clog << "Seek missed\nRequested: " << dur.count() << "; Got: " << tell().count() << std::endl;
+//        }
+    }
 
-        if(way == std::ios_base::cur) {
-            if(off == 0) {
-                return input.tellg() - start;
-            }
-            pos = io::position_to_offset(input.tellg());
-        }
-        else if(way == std::ios_base::end) {
-            pos = this->get_total_samples() * bps;
-            off = -off;
-        }
-        buf.clear();
-        pos += off / bps;
-//        std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
-        if(seek_absolute(pos)) {
-//            std::clog << "In seek(): " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
-            return io::offset_to_position(pos);
-        }
-        return input.tellg();
+    std::chrono::milliseconds tell() {
+        auto rate = get_sample_rate() / 1000.0;
+        std::chrono::milliseconds time(int(lastSample / rate));
+        return time;
     }
 
 private:
@@ -179,6 +174,7 @@ private:
     std::streampos start;
     std::mutex mu;
     typedef decltype(mu) Mutex;
+    uint64_t lastSample;
 };
 
 class FlacDecoder : public Input::ISource {
@@ -195,36 +191,29 @@ public:
             enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
         }
 
-        auto m = std::move(buf.begin(), buf.begin() + std::min(n, (std::streamsize)buf.size()), s);
-        for(int i=0; i<m-s; i++) {
+        auto min = std::min(n, (std::streamsize)buf.size());
+        auto m = std::move(buf.begin(), buf.begin() + min, s);
+        for(int i=0; i<std::distance(s, m); i++) {
             buf.pop_front();
         }
 
-        auto r = m - s;
+        auto r = std::distance(s, m);
 
         return r == 0 && !(*this) ? -1 : r;
     }
 
-    virtual std::streampos do_seekg(boost::iostreams::stream_offset off, std::ios_base::seekdir way) {
-        return pimpl->seek(off, way);
-    }
-
     virtual void seek(std::chrono::milliseconds dur) {
-        std::lock_guard<Mutex> l(mu);
-        auto bps = pimpl->get_bits_per_sample()/8;
-        auto rate = pimpl->get_sample_rate();
-
-        pimpl->seek(bps * rate * dur.count() / 1000, std::ios_base::beg);
+        pimpl->seek(dur);
     }
 
     std::chrono::milliseconds tell() {
-        std::lock_guard<Mutex> l(mu);
-        auto bps = pimpl->get_bits_per_sample()/8;
-        auto rate = pimpl->get_sample_rate() / 1000.0;
+        return pimpl->tell();
+    }
 
-        auto pos = pimpl->seek(0, std::ios_base::cur);
-
-        return std::chrono::milliseconds((long)(pos / rate / bps));
+    virtual void reset() {
+        buf.clear();
+        enforceEx<Exception>(pimpl->reset(), "FLAC: Could not reset decoder");
+        seek(std::chrono::milliseconds(0));
     }
 
     virtual AudioSpecs& getAudioSpecs() {
