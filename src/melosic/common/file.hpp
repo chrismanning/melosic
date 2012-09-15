@@ -18,15 +18,11 @@
 #ifndef MELOSIC_FILE_HPP
 #define MELOSIC_FILE_HPP
 
-#include <algorithm>
 #include <string>
-#include <vector>
 #include <fstream>
 typedef std::ios_base::openmode openmode;
-#include <iterator>
-#include <type_traits>
 #include <boost/iostreams/stream_buffer.hpp>
-#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/device/file_descriptor.hpp>
 namespace io = boost::iostreams;
 
 #include <melosic/common/error.hpp>
@@ -39,7 +35,7 @@ namespace IO {
 class File : public BiDirectionalClosableSeekable {
 public:
     File(const std::string& filename, const openmode mode = mode_)
-        : impl(io::file(filename, mode)), filename_(filename)
+        : impl(filename, mode), filename_(filename)
     {
         enforceEx<Exception>((bool)(*this), (filename_ + ": could not open").c_str());
     }
@@ -51,17 +47,19 @@ public:
     }
 
     explicit operator bool() {
-        return impl->is_open();
+        return impl.is_open();
     }
 
     void open(const openmode mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out)
     {
-        impl->open(filename_, mode);
+        impl.open(filename_, mode);
     }
 
 private:
     auto static const mode_ = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
-    io::stream_buffer<io::file> impl;
+//    io::stream_buffer<io::file> impl;
+//    io::file_descriptor impl;
+    std::fstream impl;
     std::string filename_;
 
     virtual std::streamsize do_read(char * s, std::streamsize n) {
@@ -81,7 +79,7 @@ private:
     }
 
     virtual void do_close() {
-        impl->close();
+        impl.close();
     }
 
     virtual bool do_isOpen() {
