@@ -47,6 +47,7 @@ public:
 
     void reOpen() {
         input->reOpen();
+        reset();
         decoder->seek(offset);
     }
 
@@ -77,7 +78,10 @@ public:
             reOpen();
         }
         return decoder->tell();
+    }
 
+    void reset() {
+        decoder->reset();
     }
 
     std::chrono::milliseconds duration() {
@@ -139,6 +143,10 @@ void Track::seek(std::chrono::milliseconds dur) {
 
 std::chrono::milliseconds Track::tell() {
     return pimpl->tell();
+}
+
+void Track::reset() {
+    pimpl->reset();
 }
 
 std::chrono::milliseconds Track::duration() {

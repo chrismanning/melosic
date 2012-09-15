@@ -37,6 +37,7 @@ public:
     virtual std::chrono::milliseconds tell() = 0;
     virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
     virtual explicit operator bool() = 0;
+    virtual void reset() = 0;
 };
 
 class IFileSource : public ISource {

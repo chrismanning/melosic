@@ -38,6 +38,7 @@ public:
     Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset);
     virtual ~Track();
     Track::TagsType& getTags();
+    virtual void reset();
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();
     virtual std::chrono::milliseconds duration();
