@@ -177,6 +177,9 @@ private:
 //                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
                             if(n < 1024) {
                                 auto a = io::read(*playlist, (char*)&s[0], s.size());
+                                if(playlist->current() != playlist->end()) {
+                                    notifySig(playlist->current()->tell(), playlist->current()->duration());
+                                }
                                 if(a == -1) {
                                     if(n == 0) {
                                         stop();
