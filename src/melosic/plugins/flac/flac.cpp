@@ -49,7 +49,6 @@ public:
     }
 
     bool end() {
-        std::lock_guard<Mutex> l(mu);
         auto state = (::FLAC__StreamDecoderState)get_state();
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
     }
@@ -172,8 +171,6 @@ private:
     std::deque<char>& buf;
     AudioSpecs& as;
     std::streampos start;
-    std::mutex mu;
-    typedef decltype(mu) Mutex;
     uint64_t lastSample;
 };
 
@@ -186,7 +183,6 @@ public:
     }
 
     virtual std::streamsize do_read(char * s, std::streamsize n) {
-        std::lock_guard<Mutex> l(mu);
         while((std::streamsize)buf.size() < n && *this) {
             enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
         }
@@ -217,7 +213,6 @@ public:
     }
 
     virtual AudioSpecs& getAudioSpecs() {
-        std::lock_guard<Mutex> l(mu);
         return as;
     }
 
@@ -229,8 +224,6 @@ private:
     AudioSpecs as;
     std::deque<char> buf;
     std::unique_ptr<FlacDecoderImpl> pimpl;
-    std::mutex mu;
-    typedef decltype(mu) Mutex;
 };
 
 extern "C" void registerPluginObjects(Kernel& k) {
