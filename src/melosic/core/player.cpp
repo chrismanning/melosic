@@ -200,7 +200,6 @@ private:
                             break;
                         case DeviceState::Stopped:
                             n = 0;
-                            playlist->seek(std::chrono::seconds(0));
                         case DeviceState::Paused:
 //                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
                         case DeviceState::Ready:
@@ -211,9 +210,17 @@ private:
             }
             catch(Exception& e) {
                 std::clog << e.what() << std::endl;
+                stop();
+                playlist->next();
+                n = 0;
+                play();
             }
             catch(std::exception& e) {
                 std::clog << e.what() << std::endl;
+                stop();
+                playlist->next();
+                n = 0;
+                play();
             }
             std::chrono::milliseconds dur(10);
             std::this_thread::sleep_for(dur);
