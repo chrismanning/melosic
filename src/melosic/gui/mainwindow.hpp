@@ -58,9 +58,12 @@ private Q_SLOTS:
 private:
     Ui::MainWindow * ui;
     Kernel& kernel;
-    boost::signals2::connection playerStateConnection;
     std::shared_ptr<Playlist> currentPlaylist;
     std::shared_ptr<Player> player;
+    boost::signals2::connection playerStateConnection;
+    boost::signals2::connection seekerStateConnection;
+    boost::signals2::connection seekerNotifyConnection;
+    boost::signals2::connection playerSeekConnection;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

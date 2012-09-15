@@ -17,6 +17,7 @@
 
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
+#include "trackseeker.hpp"
 #include <QFileDialog>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
@@ -39,6 +40,9 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
     playerStateConnection = player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
+    playerSeekConnection = ui->trackSeeker->connectSeek(boost::bind(&Player::seek, player.get(), _1));
+    seekerStateConnection = player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot, ui->trackSeeker, _1));
+    seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot, ui->trackSeeker, _1, _2));
 }
 
 MainWindow::~MainWindow()
