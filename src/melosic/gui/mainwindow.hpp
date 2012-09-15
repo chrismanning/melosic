@@ -35,6 +35,7 @@ enum class DeviceState;
 }
 }
 using namespace Melosic;
+using Output::DeviceState;
 
 namespace Ui {
 class MainWindow;
@@ -57,9 +58,9 @@ private Q_SLOTS:
 private:
     Ui::MainWindow * ui;
     Kernel& kernel;
-    Player player;
     boost::signals2::connection playerStateConnection;
     std::shared_ptr<Playlist> currentPlaylist;
+    std::shared_ptr<Player> player;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

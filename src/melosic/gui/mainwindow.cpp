@@ -31,20 +31,21 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     kernel(kernel),
-    currentPlaylist(new Playlist)/*,
+    currentPlaylist(new Playlist),
+    player(new Player)/*,
     player(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"))*/
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
-    playerStateConnection = player.connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
+    playerStateConnection = player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
 }
 
 MainWindow::~MainWindow()
 {
-    qDebug("Destroying main window");
-    delete ui;
+    std::cerr << "Destroying main window\n";
     playerStateConnection.disconnect();
+    delete ui;
 }
 
 void MainWindow::onStateChangeSlot(DeviceState state) {
@@ -82,27 +83,27 @@ void MainWindow::on_actionOpen_triggered()
 void MainWindow::on_actionPlay_triggered()
 {
     if(currentPlaylist->size()) {
-        if(!player.currentPlaylist()) {
-            player.openPlaylist(currentPlaylist);
+        if(!player->currentPlaylist()) {
+            player->openPlaylist(currentPlaylist);
         }
-        if(bool(player)) {
-            if(player.state() == Output::DeviceState::Playing) {
-                player.pause();
+        if(bool(player) && bool(*player)) {
+            if(player->state() == Output::DeviceState::Playing) {
+                player->pause();
             }
-            else if(player.state() != Output::DeviceState::Playing) {
-                player.play();
+            else if(player->state() != Output::DeviceState::Playing) {
+                player->play();
             }
         }
         else {
-            player.changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
-            player.play();
+            player->changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
+            player->play();
         }
     }
 }
 
 void MainWindow::on_actionStop_triggered()
 {
-    if(bool(player)) {
-        player.stop();
+    if(bool(player) && bool(*player)) {
+        player->stop();
     }
 }
