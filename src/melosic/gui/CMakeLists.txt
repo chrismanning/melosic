@@ -5,8 +5,8 @@ ADD_DEFINITIONS(-DQT_SHARED)
 
 find_package(Boost REQUIRED)
 
-SET(qt-gui_SOURCES mainwindow.cpp)
-SET(qt-gui_HEADERS mainwindow.hpp)
+SET(qt-gui_SOURCES mainwindow.cpp trackseeker.cpp)
+SET(qt-gui_HEADERS mainwindow.hpp trackseeker.hpp)
 SET(qt-gui_FORMS mainwindow.ui)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ../.. . ${Boost_INCLUDE_DIRS})
