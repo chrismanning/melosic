@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <map>
-
 #include <melosic/core/outputmanager.hpp>
 #include <melosic/common/error.hpp>
 
@@ -45,12 +43,12 @@ public:
         return std::move(std::unique_ptr<IDeviceSink>(it->second(it->first)));
     }
 
-    const std::map<OutputDeviceName, Factory>& getFactories() {
+    const OutputManager::FactoryMap& getFactories() {
         return devices;
     }
 
 private:
-    std::map<OutputDeviceName, Factory> devices;
+    OutputManager::FactoryMap devices;
 };
 
 OutputManager::OutputManager() : pimpl(new impl) {}
@@ -69,7 +67,7 @@ std::unique_ptr<IDeviceSink> OutputManager::getOutputDevice(const std::string& n
     return pimpl->getOutputDevice(name);
 }
 
-const std::map<OutputDeviceName, Factory>& OutputManager::getFactories() {
+const OutputManager::FactoryMap& OutputManager::getFactories() {
     return pimpl->getFactories();
 }
 

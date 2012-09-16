@@ -18,6 +18,7 @@
 #ifndef MELOSIC_INPUT_MANAGER_H
 #define MELOSIC_INPUT_MANAGER_H
 
+#include <unordered_map>
 #include <memory>
 
 namespace Melosic {
@@ -35,6 +36,8 @@ typedef std::function<std::shared_ptr<ISource>(IO::SeekableSource&)> Factory;
 
 class InputManager {
 public:
+    typedef std::unordered_map<std::string, Factory> FactoryMap;
+
     InputManager();
     ~InputManager();
     Factory::result_type openFile(IO::File& file);

@@ -17,7 +17,6 @@
 
 #include <iostream>
 using std::cerr; using std::endl;
-#include <map>
 #include <boost/filesystem.hpp>
 using boost::filesystem::path;
 
@@ -59,7 +58,7 @@ public:
     }
 
 private:
-    std::map<std::string, Factory> factories;
+    InputManager::FactoryMap factories;
 };
 
 InputManager::InputManager() : pimpl(new impl) {}

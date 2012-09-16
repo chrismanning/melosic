@@ -29,7 +29,7 @@ namespace Output {
 
 class OutputDeviceName {
 public:
-    OutputDeviceName(std::string name) : name(name) {}
+    OutputDeviceName(std::string name) : OutputDeviceName(name, "") {}
     OutputDeviceName(std::string name, std::string desc) : name(name), desc(desc) {}
 
     const std::string& getName() const {
@@ -59,12 +59,14 @@ inline std::ostream& operator<<(std::ostream& out, const OutputDeviceName& b) {
 
 class OutputManager {
 public:
+    typedef std::map<OutputDeviceName, Factory> FactoryMap;
+
     OutputManager();
     ~OutputManager();
     void addFactory(Factory fact, std::initializer_list<std::string> avail);
     void addFactory(Factory fact, std::list<OutputDeviceName> avail);
     std::unique_ptr<IDeviceSink> getOutputDevice(const std::string& name);
-    const std::map<OutputDeviceName, Factory>& getFactories();
+    const FactoryMap& getFactories();
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
