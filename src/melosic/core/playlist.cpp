@@ -26,18 +26,6 @@ Playlist::Playlist() : current_track(begin()) {}
 
 Playlist::~Playlist() {}
 
-Playlist::Playlist(const Playlist& b) {
-
-}
-
-Playlist& Playlist::operator=(const Playlist& b) {
-    return *this;
-}
-
-Playlist& Playlist::operator=(Playlist&& b) {
-    return *this;
-}
-
 //IO
 std::streamsize Playlist::read(char * s, std::streamsize n) {
     if(current() != end()) {

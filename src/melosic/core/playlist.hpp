@@ -47,9 +47,6 @@ public:
     typedef list_type::size_type size_type;
 
     Playlist();
-    Playlist(const Playlist& b);
-    Playlist& operator=(const Playlist& b);
-    Playlist& operator=(Playlist&& b);
     ~Playlist();
     std::streamsize read(char * s, std::streamsize n);
     void seek(std::chrono::milliseconds dur);
