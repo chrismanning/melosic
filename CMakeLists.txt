@@ -1,7 +1,7 @@
 project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fPIC")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++11 -pthread")
 ADD_DEFINITIONS(-D_GLIBCXX_USE_NANOSLEEP)
 
