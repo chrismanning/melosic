@@ -6,7 +6,7 @@ SET(SRC_LIST ${SRC_LIST} player.hpp player.cpp)
 SET(SRC_LIST ${SRC_LIST} playlist.hpp playlist.cpp)
 SET(SRC_LIST ${SRC_LIST} track.hpp track.cpp)
 
-find_package(Boost COMPONENTS filesystem system iostreams REQUIRED)
+find_package(Boost COMPONENTS filesystem system iostreams thread REQUIRED)
 
 include_directories(../.. ${Boost_INCLUDE_DIRS})
 

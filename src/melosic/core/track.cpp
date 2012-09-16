@@ -17,6 +17,7 @@
 
 #include <thread>
 #include <mutex>
+#include <boost/thread.hpp>
 
 #include "track.hpp"
 #include <melosic/common/stream.hpp>
@@ -48,6 +49,7 @@ public:
     void reOpen() {
         input->reOpen();
         reset();
+        std::lock_guard<Mutex> l(mu);
         decoder->seek(offset);
     }
 
@@ -59,6 +61,7 @@ public:
         if(!isOpen()) {
             reOpen();
         }
+        std::lock_guard<Mutex> l(mu);
         return decoder->read(s, n);
     }
 
@@ -70,6 +73,7 @@ public:
         if(!isOpen()) {
             reOpen();
         }
+        std::lock_guard<Mutex> l(mu);
         decoder->seek(dur + offset);
     }
 
@@ -77,10 +81,12 @@ public:
         if(!isOpen()) {
             reOpen();
         }
+        boost::shared_lock<Mutex> l(mu);
         return decoder->tell();
     }
 
     void reset() {
+        std::lock_guard<Mutex> l(mu);
         decoder->reset();
     }
 
@@ -90,10 +96,12 @@ public:
     }
 
     AudioSpecs& getAudioSpecs() {
+        boost::shared_lock<Mutex> l(mu);
         return decoder->getAudioSpecs();
     }
 
     explicit operator bool() {
+        boost::shared_lock<Mutex> l(mu);
         if(decoder) {
             return bool(*decoder);
         }
@@ -108,6 +116,8 @@ private:
     std::shared_ptr<Input::ISource> decoder;
     std::once_flag decoderInitFlag;
     Track::TagsType tags;
+    typedef boost::shared_mutex Mutex;
+    Mutex mu;
 };
 
 Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
