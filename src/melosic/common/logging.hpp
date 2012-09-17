@@ -74,7 +74,7 @@ inline std::basic_ostream<CharT, TraitsT>& operator<< (
 
 inline void init() {
     auto formatter =
-            fmt::format("%1% [%2%] <%3%> %4%")
+            fmt::format("%1% [%2%]%|32T | <%3%> %4%")
                         % fmt::date_time("TimeStamp", keywords::format = "%d/%m/%y %H:%M:%S", std::nothrow)
                         % fmt::attr<std::string>("Channel", std::nothrow)
                         % fmt::attr<Severity>("Severity", std::nothrow)
