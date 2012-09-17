@@ -33,8 +33,8 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     ui(new Ui::MainWindow),
     kernel(kernel),
     currentPlaylist(new Playlist),
-    player(new Player)/*,
-    player(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"))*/
+    player(new Player),
+    logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
@@ -47,7 +47,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
 
 MainWindow::~MainWindow()
 {
-    std::cerr << "Destroying main window\n";
+    TRACE_LOG(logject) << "Destroying main window";
     playerStateConnection.disconnect();
     delete ui;
 }

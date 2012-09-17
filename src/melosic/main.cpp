@@ -30,16 +30,23 @@ using namespace Melosic;
 namespace io = boost::iostreams;
 using std::ios_base;
 
+static Logger::Logger logject(boost::log::keywords::channel = "Main");
+
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetErrorMode(0x8000);
 #endif
 
+    Logger::init();
+
     try {
         QApplication app(argc, argv);
 
         Kernel kernel;
+
+        LOG(logject) << "Loading Flac plugin";
         kernel.loadPlugin("flac.melin");
+        LOG(logject) << "Loading ALSA plugin";
         kernel.loadPlugin("alsa.melin");
 
         MainWindow win(kernel);
@@ -48,7 +55,7 @@ int main(int argc, char* argv[]) {
         return app.exec();
     }
     catch(std::exception& e) {
-        std::clog << e.what() << std::endl;
+        ERROR_LOG(logject) << e.what();
         return -1;
     }
 

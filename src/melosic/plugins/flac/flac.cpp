@@ -30,6 +30,9 @@ namespace io = boost::iostreams;
 #include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
 using namespace Melosic;
+using Logger::Severity;
+
+static Logger::Logger logject(boost::log::keywords::channel = "FLAC");
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
@@ -44,7 +47,7 @@ public:
     }
 
     virtual ~FlacDecoderImpl() {
-        cerr << "Flac decoder impl being destroyed\n";
+        TRACE_LOG(logject) << "Decoder impl being destroyed";
         finish();
     }
 
@@ -64,7 +67,7 @@ public:
             return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
         }
         catch(std::ios_base::failure& e) {
-            cerr << e.what() << endl;
+            ERROR_LOG(logject) << e.what();
             return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
         }
     }
@@ -98,7 +101,7 @@ public:
                         buf.push_back((char)(buffer[j][i] >> 24));
                         break;
                     default:
-                        std::clog << "Unsupported bps: " << frame->header.bits_per_sample << std::endl;
+                        throw Exception("Unsupported bps: " + frame->header.bits_per_sample);
                         break;
                 }
             }
@@ -108,7 +111,7 @@ public:
     }
 
     virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
-        cerr << "Got error callback: " << FLAC__StreamDecoderErrorStatusString[status] << endl;
+        ERROR_LOG(logject) << "Got error callback: " << FLAC__StreamDecoderErrorStatusString[status];
         throw Exception(FLAC__StreamDecoderErrorStatusString[status]);
     }
 
@@ -119,10 +122,10 @@ public:
 
             as = AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
 
-            cout << format("sample rate    : %u Hz") % as.sample_rate << endl;
-            cout << format("channels       : %u") % (uint16_t)as.channels << endl;
-            cout << format("bits per sample: %u") % (uint16_t)as.bps << endl;
-            cout << format("total samples  : %u") % as.total_samples << endl;
+            TRACE_LOG(logject) << format("sample rate    : %u Hz") % as.sample_rate;
+            TRACE_LOG(logject) << format("channels       : %u") % (uint16_t)as.channels;
+            TRACE_LOG(logject) << format("bits per sample: %u") % (uint16_t)as.bps;
+            TRACE_LOG(logject) << format("total samples  : %u") % as.total_samples;
         }
     }
 
@@ -153,7 +156,7 @@ public:
         auto rate = get_sample_rate() / 1000.0;
         auto req = uint64_t(dur.count() * rate);
         if(!seek_absolute(req)) {
-            std::clog << "Seek to " << dur.count() << "ms failed" << std::endl;
+            WARN_LOG(logject) << "Seek to " << dur.count() << "ms failed";
         }
 //        else if(tell() != dur) {
 //            std::clog << "Seek missed\nRequested: " << dur.count() << "; Got: " << tell().count() << std::endl;
@@ -172,14 +175,17 @@ private:
     AudioSpecs& as;
     std::streampos start;
     uint64_t lastSample;
+//    Logger::Logger log;
 };
 
 class FlacDecoder : public Input::ISource {
 public:
-    FlacDecoder(IO::SeekableSource& input) : pimpl(new FlacDecoderImpl(input, buf, as)) {}
+    FlacDecoder(IO::SeekableSource& input) :
+        pimpl(new FlacDecoderImpl(input, buf, as))
+    {}
 
     virtual ~FlacDecoder() {
-        cerr << "Flac decoder being destroyed\n";
+        TRACE_LOG(logject) << "Decoder being destroyed";
     }
 
     virtual std::streamsize do_read(char * s, std::streamsize n) {
@@ -231,5 +237,5 @@ extern "C" void registerPluginObjects(Kernel& k) {
 }
 
 extern "C" void destroyPluginObjects() {
-    cerr << "Destroying flac objects\n";
+    TRACE_LOG(logject) << "Destroying flac objects";
 }

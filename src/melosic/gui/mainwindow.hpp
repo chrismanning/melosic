@@ -26,6 +26,7 @@
 #include <boost/signals2.hpp>
 
 #include <melosic/core/player.hpp>
+#include <melosic/common/logging.hpp>
 
 namespace Melosic {
 class Kernel;
@@ -60,6 +61,7 @@ private:
     Kernel& kernel;
     std::shared_ptr<Playlist> currentPlaylist;
     std::shared_ptr<Player> player;
+    Logger::Logger logject;
     boost::signals2::connection playerStateConnection;
     boost::signals2::connection seekerStateConnection;
     boost::signals2::connection seekerNotifyConnection;

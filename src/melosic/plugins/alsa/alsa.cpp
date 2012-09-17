@@ -33,8 +33,10 @@ using boost::format;
 #include <boost/thread.hpp>
 
 #include <melosic/common/common.hpp>
-
 using namespace Melosic;
+using Logger::Severity;
+
+static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
 void enforceAlsaEx(int ret) {
     if(ret != 0) {
@@ -62,7 +64,7 @@ public:
     {}
 
     virtual ~AlsaOutput() {
-        std::cerr << "Alsa instance being destroyed\n";
+        TRACE_LOG(logject) << "ALSA instance being destroyed";
         if(pdh != nullptr) {
             stop();
         }
@@ -115,25 +117,26 @@ public:
         }
 
         if(snd_pcm_hw_params_test_format(pdh, params, fmt) < 0) {
-            std::cerr << "unsupported format\n";
+            WARN_LOG(logject) << "unsupported format";
             auto p = std::find(formats, formats + sizeof(formats), fmt);
             if(p != formats + sizeof(formats)) {
                 while(++p != formats + sizeof(formats)) {
+                    WARN_LOG(logject) << "trying higher bps";
                     if(!snd_pcm_hw_params_test_format(pdh, params, *p)) {
                         fmt = *p;
                         as.target_bps = bpss[p-formats];
                         break;
                     }
-                    std::cerr << "unsupported format\n";
+                    WARN_LOG(logject) << "unsupported format";
                 }
                 if(p == formats + sizeof(formats)) {
-                    std::cerr << "couldnt set format\n";
+                    ERROR_LOG(logject) << "couldnt set format";
                     return;
                 }
             }
         }
         if(snd_pcm_hw_params_set_format(pdh, params, fmt) < 0) {
-            std::cerr << "couldnt set format\n";
+            ERROR_LOG(logject) << "couldnt set format";
             return;
         }
 
@@ -215,11 +218,11 @@ public:
                 return n;
             }
             else if(r < 0) {
-                std::cerr << "ALSA: write error\n";
+                ERROR_LOG(logject) << "ALSA: write error";
                 return -1;
             }
             else if(r != frames) {
-                std::cerr << "ALSA: not all frames written\n";
+                ERROR_LOG(logject) << "ALSA: not all frames written";
             }
 
             if(pdh != nullptr) {
@@ -290,7 +293,7 @@ extern "C" void registerPluginObjects(Kernel& k) {
 }
 
 extern "C" void destroyPluginObjects() {
-    std::cerr << "Destroying alsa plugin objects\n";
+    TRACE_LOG(logject) << "Destroying alsa plugin objects";
     for(auto output : alsaPluginObjects) {
         delete output;
     }

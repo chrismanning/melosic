@@ -24,12 +24,15 @@ using boost::filesystem::path;
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/file.hpp>
+#include <melosic/common/logging.hpp>
 
 namespace Melosic {
 namespace Input {
 
 class InputManager::impl {
 public:
+    impl() : logject(boost::log::keywords::channel = "InputManager") {}
+
     Factory getFactory(const IO::File& file) {
         auto ext = path(file.filename()).extension().string();
 
@@ -52,13 +55,14 @@ public:
                 factories.insert(decltype(factories)::value_type(ext, fact));
             }
             else {
-                cerr << ext << ": can already be opened" << endl;
+                WARN_LOG(logject) << ext << ": already registered to decoder factory";
             }
         }
     }
 
 private:
     InputManager::FactoryMap factories;
+    Logger::Logger logject;
 };
 
 InputManager::InputManager() : pimpl(new impl) {}

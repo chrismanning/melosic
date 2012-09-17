@@ -8,7 +8,7 @@ SET(SRC_LIST main.cpp)
 #abbrev
 SET(PN ${PROJECT_NAME})
 
-find_package(Boost COMPONENTS filesystem system iostreams REQUIRED)
+find_package(Boost COMPONENTS filesystem system iostreams log log_setup REQUIRED)
 
 add_executable(${PN} ${SRC_LIST})
 

@@ -29,6 +29,7 @@ using boost::int64_t; using boost::uint64_t;
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/plugin.hpp>
+#include <melosic/common/logging.hpp>
 
 #ifdef WIN32
 #include <boost/thread.hpp>

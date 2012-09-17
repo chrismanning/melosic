@@ -39,7 +39,8 @@ public:
     impl(std::unique_ptr<Output::IDeviceSink> device) :
         device(std::move(device)),
         end_(false),
-        playerThread(&impl::start, this)
+        playerThread(&impl::start, this),
+        logject(boost::log::keywords::channel = "Player")
     {}
 
     ~impl() {
@@ -48,13 +49,13 @@ public:
             end_ = true;
         }
         if(playerThread.joinable()) {
-            std::cerr << "Closing thread\n";
+            TRACE_LOG(logject) << "Closing thread";
             playerThread.join();
         }
     }
 
     void play() {
-        std::cerr << "Play...\n";
+        TRACE_LOG(logject) << "Play...";
         if(device && playlist) {
             if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error) {
                 if(playlist->current() != playlist->end()) {
@@ -67,7 +68,7 @@ public:
     }
 
     void pause() {
-        std::cerr << "Pause...\n";
+        TRACE_LOG(logject) << "Pause...";
         if(device) {
             device->pause();
             stateChangedSig(DeviceState::Paused);
@@ -75,7 +76,7 @@ public:
     }
 
     void stop() {
-        std::cerr << "Stop...\n";
+        TRACE_LOG(logject) << "Stop...";
         if(device) {
             device->stop();
             stateChangedSig(DeviceState::Stopped);
@@ -93,14 +94,14 @@ public:
     }
 
     void seek(std::chrono::milliseconds dur) {
-        std::cerr << "Seek...\n";
+        TRACE_LOG(logject) << "Seek...";
         if(playlist) {
             playlist->seek(dur);
         }
     }
 
     std::chrono::milliseconds tell() {
-        std::cerr << "Tell...\n";
+        TRACE_LOG(logject) << "Tell...";
         if(playlist && playlist->current() != playlist->end()) {
             return playlist->current()->tell();
         }
@@ -166,7 +167,7 @@ private:
     }
 
     void start() {
-        std::cerr << "Thread starting\n";
+        TRACE_LOG(logject) << "Thread starting";
         std::vector<unsigned char> s(16384);
         std::streamsize n = 0;
         while(!end()) {
@@ -195,7 +196,7 @@ private:
                             break;
                         }
                         case DeviceState::Error:
-                            cerr << "Irrecoverable error occured\n";
+                            ERROR_LOG(logject) << "Irrecoverable error occured";
                             device.reset();
                             break;
                         case DeviceState::Stopped:
@@ -209,14 +210,14 @@ private:
                 }
             }
             catch(Exception& e) {
-                std::clog << e.what() << std::endl;
+                ERROR_LOG(logject) << e.what();
                 stop();
                 playlist->next();
                 n = 0;
                 play();
             }
             catch(std::exception& e) {
-                std::clog << e.what() << std::endl;
+                ERROR_LOG(logject) << e.what();
                 stop();
                 playlist->next();
                 n = 0;
@@ -227,13 +228,14 @@ private:
         }
 
         stop();
-        std::cerr << "Thread ending\n";
+        TRACE_LOG(logject) << "Thread ending";
     }
 
     std::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::IDeviceSink> device;
     bool end_;
     std::thread playerThread;
+    Logger::Logger logject;
     std::mutex m;
     StateSignal stateChangedSig;
     NotifySignal notifySig;

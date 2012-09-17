@@ -18,7 +18,10 @@
 #include <melosic/managers/output/pluginterface.hpp>
 #include "trackseeker.hpp"
 
-TrackSeeker::TrackSeeker(QWidget *parent) : QSlider(parent) {
+TrackSeeker::TrackSeeker(QWidget *parent) :
+    QSlider(parent),
+    logject(boost::log::keywords::channel = "TrackSeeker")
+{
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 //    setGeometry(0,0,500,20);
     setEnabled(false);
@@ -36,15 +39,15 @@ TrackSeeker::~TrackSeeker() {
 void TrackSeeker::onStateChangeSlot(DeviceState state) {
     switch(state) {
         case DeviceState::Playing:
-            std::cerr << "TrackSeeker Playing\n";
+            TRACE_LOG(logject) << "TrackSeeker Playing";
             if(!isEnabled()) {
                 setEnabled(true);
             }
             break;
         case DeviceState::Error:
-            std::cerr << "TrackSeeker Error\n";
+            TRACE_LOG(logject) << "TrackSeeker Error";
         case DeviceState::Stopped:
-            std::cerr << "TrackSeeker Stopped\n";
+            TRACE_LOG(logject) << "TrackSeeker Stopped";
 //            if(isEnabled()) {
 //                setEnabled(false);
 //            }

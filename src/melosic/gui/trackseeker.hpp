@@ -23,6 +23,8 @@
 #include <chrono>
 #include <boost/signals2.hpp>
 
+#include <melosic/common/logging.hpp>
+
 namespace Melosic {
 namespace Output {
 enum class DeviceState;
@@ -53,6 +55,7 @@ private Q_SLOTS:
     }
 
 private:
+    Logger::Logger logject;
     int seekTo;
     SeekSignal seek;
 };

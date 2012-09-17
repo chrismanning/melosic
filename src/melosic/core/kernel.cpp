@@ -23,12 +23,13 @@ using boost::filesystem::path;
 #include <melosic/core/inputmanager.hpp>
 #include <melosic/core/outputmanager.hpp>
 #include <melosic/core/kernel.hpp>
+#include <melosic/common/logging.hpp>
 
 namespace Melosic {
 
 class Kernel::impl {
 public:
-    impl(Kernel& k) : k(k) {}
+    impl(Kernel& k) : k(k), logject(boost::log::keywords::channel = "Kernel") {}
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
 
@@ -41,7 +42,7 @@ public:
             auto filename = p.filename().string();
 
             if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-                std::cerr << "Plugin already loaded: " << filepath << std::endl;
+                ERROR_LOG(logject) << "Plugin already loaded: " << filepath << std::endl;
                 return;
             }
 
@@ -68,6 +69,7 @@ private:
     Input::InputManager inman;
     Output::OutputManager outman;
     Kernel& k;
+    Logger::Logger logject;
 };
 
 Kernel::Kernel() : pimpl(new impl(*this)) {}
