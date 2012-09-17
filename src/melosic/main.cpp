@@ -37,9 +37,9 @@ int main(int argc, char* argv[]) {
     SetErrorMode(0x8000);
 #endif
 
-    Logger::init();
-
     try {
+        Logger::init();
+
         QApplication app(argc, argv);
 
         Kernel kernel;
