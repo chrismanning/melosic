@@ -33,8 +33,7 @@ TrackSeeker::TrackSeeker(QWidget *parent) :
     connect(this, SIGNAL(sliderReleased()), this, SLOT(onRelease()));
 }
 
-TrackSeeker::~TrackSeeker() {
-}
+TrackSeeker::~TrackSeeker() {}
 
 void TrackSeeker::onStateChangeSlot(DeviceState state) {
     switch(state) {

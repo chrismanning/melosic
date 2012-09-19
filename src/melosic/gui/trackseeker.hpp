@@ -33,8 +33,7 @@ enum class DeviceState;
 using namespace Melosic;
 using Output::DeviceState;
 
-class TrackSeeker : public QSlider
-{
+class TrackSeeker : public QSlider {
     Q_OBJECT
 public:
     explicit TrackSeeker(QWidget *parent = 0);

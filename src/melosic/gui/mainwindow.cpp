@@ -21,6 +21,7 @@
 #include <QFileDialog>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
+#include <QDesktopServices>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -45,8 +46,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot, ui->trackSeeker, _1, _2));
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     TRACE_LOG(logject) << "Destroying main window";
     playerStateConnection.disconnect();
     delete ui;
@@ -73,10 +73,12 @@ void MainWindow::onStateChangeSlot(DeviceState state) {
     }
 }
 
-void MainWindow::on_actionOpen_triggered()
-{
-    auto filename = QFileDialog::getOpenFileName(this, tr("Open file"), ".", tr("Audio Files (*.flac)"));
-    if(filename.length()) {
+void MainWindow::on_actionOpen_triggered() {
+    auto filenames = QFileDialog::getOpenFileNames(this, tr("Open file"),
+                                                   QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
+                                                   tr("Audio Files (*.flac)"), 0,
+                                                   QFileDialog::ReadOnly);
+    for(const auto& filename : filenames) {
         std::unique_ptr<IO::File> file(new IO::File(filename.toStdString()));
         currentPlaylist->emplace_back(std::move(file),
                                       kernel.getInputManager().getFactory(*file),
@@ -84,8 +86,7 @@ void MainWindow::on_actionOpen_triggered()
     }
 }
 
-void MainWindow::on_actionPlay_triggered()
-{
+void MainWindow::on_actionPlay_triggered() {
     if(currentPlaylist->size()) {
         if(!player->currentPlaylist()) {
             player->openPlaylist(currentPlaylist);
@@ -105,8 +106,7 @@ void MainWindow::on_actionPlay_triggered()
     }
 }
 
-void MainWindow::on_actionStop_triggered()
-{
+void MainWindow::on_actionStop_triggered() {
     if(bool(player) && bool(*player)) {
         player->stop();
     }
