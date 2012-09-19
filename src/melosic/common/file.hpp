@@ -55,40 +55,40 @@ public:
         impl.open(filename_, mode);
     }
 
+    virtual std::streamsize read(char * s, std::streamsize n) {
+        return io::read(impl, s, n);
+    }
+
+    virtual std::streamsize write(const char * s, std::streamsize n) {
+        return io::write(impl, s, n);
+    }
+
+    virtual std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) {
+        return io::seek(impl, off, way, std::ios_base::in);
+    }
+
+    virtual std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) {
+        return io::seek(impl, off, way, std::ios_base::out);
+    }
+
+    virtual void close() {
+        impl.close();
+    }
+
+    virtual bool isOpen() {
+        return bool(*this);
+    }
+
+    virtual void reOpen() {
+        open();
+    }
+
 private:
     auto static const mode_ = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
 //    io::stream_buffer<io::file> impl;
 //    io::file_descriptor impl;
     std::fstream impl;
     std::string filename_;
-
-    virtual std::streamsize do_read(char * s, std::streamsize n) {
-        return io::read(impl, s, n);
-    }
-
-    virtual std::streamsize do_write(const char * s, std::streamsize n) {
-        return io::write(impl, s, n);
-    }
-
-    virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way) {
-        return io::seek(impl, off, way, std::ios_base::in);
-    }
-
-    virtual std::streampos do_seekp(std::streamoff off, std::ios_base::seekdir way) {
-        return io::seek(impl, off, way, std::ios_base::out);
-    }
-
-    virtual void do_close() {
-        impl.close();
-    }
-
-    virtual bool do_isOpen() {
-        return bool(*this);
-    }
-
-    virtual void do_reOpen() {
-        open();
-    }
 };
 
 struct IOException : Exception {

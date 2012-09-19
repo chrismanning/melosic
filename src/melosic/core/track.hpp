@@ -44,12 +44,12 @@ public:
     virtual std::chrono::milliseconds duration();
     virtual Melosic::AudioSpecs& getAudioSpecs();
     virtual explicit operator bool();
-private:
-    virtual std::streamsize do_read(char * s, std::streamsize n);
-    virtual void do_close();
-    virtual bool do_isOpen();
-    virtual void do_reOpen();
+    virtual std::streamsize read(char * s, std::streamsize n);
+    virtual void close();
+    virtual bool isOpen();
+    virtual void reOpen();
 
+private:
     class impl;
     std::shared_ptr<impl> pimpl;
 };

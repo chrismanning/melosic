@@ -34,46 +34,21 @@ public:
 
 class Closable : Device {
 public:
-    void close() {
-        do_close();
-    }
-
-    bool isOpen() {
-        return do_isOpen();
-    }
-
-    void reOpen() {
-        return do_reOpen();
-    }
-
-private:
-    virtual void do_close() = 0;
-    virtual bool do_isOpen() = 0;
-    virtual void do_reOpen() = 0;
+    virtual void close() = 0;
+    virtual bool isOpen() = 0;
+    virtual void reOpen() = 0;
 };
 
 class Source : public Device {
 public:
     typedef io::source_tag category;
-
-    std::streamsize read(char * s, std::streamsize n) {
-        return do_read(s, n);
-    }
-
-private:
-    virtual std::streamsize do_read(char * s, std::streamsize n) = 0;
+    virtual std::streamsize read(char * s, std::streamsize n) = 0;
 };
 
 class Sink : public Device {
 public:
     typedef io::sink_tag category;
-
-    std::streamsize write(const char * s, std::streamsize n) {
-        return do_write(s, n);
-    }
-
-private:
-    virtual std::streamsize do_write(const char * s, std::streamsize n) = 0;
+    virtual std::streamsize write(const char * s, std::streamsize n) = 0;
 };
 
 class BiDirectional : virtual public Source, virtual public Sink {
@@ -84,17 +59,11 @@ public:
 class SeekableSource : public Source {
 public:
     typedef io::input_seekable category;
-
-    std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) {
-        return do_seekg(off, way);
-    }
+    virtual std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) = 0;
 
     std::streamoff tellg() {
-        return do_seekg(0, std::ios_base::cur);
+        return seekg(0, std::ios_base::cur);
     }
-
-private:
-    virtual std::streampos do_seekg(std::streamoff off, std::ios_base::seekdir way) = 0;
 };
 
 class SeekableClosableSource : public SeekableSource, public Closable {
@@ -105,17 +74,11 @@ public:
 class SeekableSink : public Sink {
 public:
     typedef io::output_seekable category;
-
-    std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) {
-        return do_seekp(off, way);
-    }
+    virtual std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) = 0;
 
     std::streamoff tellp() {
-        return do_seekp(0, std::ios_base::cur);
+        return seekp(0, std::ios_base::cur);
     }
-
-private:
-    virtual std::streampos do_seekp(std::streamoff off, std::ios_base::seekdir way) = 0;
 };
 
 class BiDirectionalSeekable : virtual public SeekableSource, virtual public SeekableSink {

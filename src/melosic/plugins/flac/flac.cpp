@@ -188,7 +188,7 @@ public:
         TRACE_LOG(logject) << "Decoder being destroyed";
     }
 
-    virtual std::streamsize do_read(char * s, std::streamsize n) {
+    virtual std::streamsize read(char * s, std::streamsize n) {
         while((std::streamsize)buf.size() < n && *this) {
             enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
         }

@@ -127,19 +127,19 @@ Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Fa
 
 Track::~Track() {}
 
-std::streamsize Track::do_read(char * s, std::streamsize n) {
+std::streamsize Track::read(char * s, std::streamsize n) {
     return pimpl->read(s, n);
 }
 
-void Track::do_close() {
+void Track::close() {
     pimpl->close();
 }
 
-bool Track::do_isOpen() {
+bool Track::isOpen() {
     return pimpl->isOpen();
 }
 
-void Track::do_reOpen() {
+void Track::reOpen() {
     pimpl->reOpen();
 }
 
