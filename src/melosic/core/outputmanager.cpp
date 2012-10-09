@@ -43,12 +43,12 @@ public:
         return std::move(std::unique_ptr<IDeviceSink>(it->second(it->first)));
     }
 
-    const OutputManager::FactoryMap& getFactories() {
+    const OutputManager::OutputFactoryMap& getOutputFactories() {
         return devices;
     }
 
 private:
-    OutputManager::FactoryMap devices;
+    OutputManager::OutputFactoryMap devices;
 };
 
 OutputManager::OutputManager() : pimpl(new impl) {}
@@ -67,8 +67,8 @@ std::unique_ptr<IDeviceSink> OutputManager::getOutputDevice(const std::string& n
     return pimpl->getOutputDevice(name);
 }
 
-const OutputManager::FactoryMap& OutputManager::getFactories() {
-    return pimpl->getFactories();
+const OutputManager::OutputFactoryMap& OutputManager::getOutputFactories() {
+    return pimpl->getOutputFactories();
 }
 
 }
