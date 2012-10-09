@@ -53,6 +53,16 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
+   <widget class="QComboBox" name="outputDevicesCBX">
+    <property name="geometry">
+     <rect>
+      <x>300</x>
+      <y>190</y>
+      <width>331</width>
+      <height>41</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

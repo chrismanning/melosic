@@ -40,10 +40,18 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
+
     playerStateConnection = player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
     playerSeekConnection = ui->trackSeeker->connectSeek(boost::bind(&Player::seek, player.get(), _1));
     seekerStateConnection = player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot, ui->trackSeeker, _1));
-    seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot, ui->trackSeeker, _1, _2));
+    seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
+                                                                   ui->trackSeeker, _1, _2));
+
+    auto devs = this->kernel.getOutputManager().getOutputFactories();
+    for(const auto& dev : devs) {
+        ui->outputDevicesCBX->addItem(QString::fromStdString(dev.first.getDesc()),
+                                                             QString::fromStdString(dev.first.getName()));
+    }
 }
 
 MainWindow::~MainWindow() {
@@ -99,15 +107,42 @@ void MainWindow::on_actionPlay_triggered() {
                 player->play();
             }
         }
-        else {
-            player->changeOutput(kernel.getOutputManager().getOutputDevice("front:CARD=PCH,DEV=0"));
-            player->play();
-        }
     }
 }
 
 void MainWindow::on_actionStop_triggered() {
     if(bool(player) && bool(*player)) {
         player->stop();
+    }
+}
+
+void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
+    LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
+
+    std::chrono::milliseconds time(0);
+    auto state = player->state();
+    if(state != Output::DeviceState::Stopped) {
+        time = player->tell();
+        player->stop();
+    }
+
+    player->changeOutput(kernel.getOutputManager()
+                               .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+
+    switch(state) {
+        case DeviceState::Playing:
+            player->play();
+            player->seek(time);
+            break;
+        case DeviceState::Paused:
+            player->play();
+            player->seek(time);
+            player->pause();
+            break;
+        case DeviceState::Error:
+        case DeviceState::Stopped:
+        case DeviceState::Ready:
+        default:
+            break;
     }
 }
