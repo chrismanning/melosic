@@ -40,7 +40,10 @@ static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
 void enforceAlsaEx(int ret) {
     if(ret != 0) {
-        throw Exception((str(format("ALSA: %s") % strdup(snd_strerror(ret)))).c_str());
+        std::stringstream tmp;
+        tmp << "Exception: " << strdup(snd_strerror(ret));
+        ERROR_LOG(logject) << tmp.str();
+        throw Exception(tmp.str().c_str());
     }
 }
 
@@ -115,6 +118,7 @@ public:
                 fmt = SND_PCM_FORMAT_S32_LE;
                 break;
         }
+        as.target_bps = as.bps;
 
         if(snd_pcm_hw_params_test_format(pdh, params, fmt) < 0) {
             WARN_LOG(logject) << "unsupported format";

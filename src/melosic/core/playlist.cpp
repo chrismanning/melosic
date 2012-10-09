@@ -16,6 +16,7 @@
 **************************************************************************/
 
 #include <algorithm>
+#include <numeric>
 
 #include <melosic/core/track.hpp>
 #include "playlist.hpp"
@@ -61,7 +62,7 @@ void Playlist::previous() {
     }
     else if(size() >= 1) {
         std::lock_guard<Mutex> l(mu);
-        current_track--;
+        --current_track;
     }
     trackChanged();
 }
@@ -69,7 +70,7 @@ void Playlist::previous() {
 void Playlist::next() {
     if(current() != end()) {
         std::lock_guard<Mutex> l(mu);
-        current_track++;
+        ++current_track;
     }
     trackChanged();
 }
