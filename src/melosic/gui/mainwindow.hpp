@@ -58,8 +58,8 @@ private Q_SLOTS:
 private:
     Ui::MainWindow * ui;
     Kernel& kernel;
-    std::shared_ptr<Playlist> currentPlaylist;
-    std::shared_ptr<Player> player;
+    boost::shared_ptr<Playlist> currentPlaylist;
+    boost::shared_ptr<Player> player;
     Logger::Logger logject;
     boost::signals2::connection playerStateConnection;
     boost::signals2::connection seekerStateConnection;

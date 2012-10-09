@@ -137,7 +137,7 @@ public:
         return bool(device);
     }
 
-    void openPlaylist(std::shared_ptr<Playlist> playlist) {
+    void openPlaylist(boost::shared_ptr<Playlist> playlist) {
         std::lock_guard<std::mutex> l(m);
         if(this->playlist != playlist) {
             if(this->playlist && this->playlist->current() != this->playlist->end()) {
@@ -147,7 +147,7 @@ public:
         }
     }
 
-    std::shared_ptr<Playlist> currentPlaylist() {
+    boost::shared_ptr<Playlist> currentPlaylist() {
         std::lock_guard<std::mutex> l(m);
         return playlist;
     }
@@ -231,7 +231,7 @@ private:
         TRACE_LOG(logject) << "Thread ending";
     }
 
-    std::shared_ptr<Playlist> playlist;
+    boost::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::IDeviceSink> device;
     bool end_;
     std::thread playerThread;
@@ -284,11 +284,11 @@ Player::operator bool() {
     return bool(*pimpl);
 }
 
-void Player::openPlaylist(std::shared_ptr<Playlist> playlist) {
+void Player::openPlaylist(boost::shared_ptr<Playlist> playlist) {
     pimpl->openPlaylist(playlist);
 }
 
-std::shared_ptr<Playlist> Player::currentPlaylist() {
+boost::shared_ptr<Playlist> Player::currentPlaylist() {
     return pimpl->currentPlaylist();
 }
 

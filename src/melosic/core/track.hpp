@@ -22,6 +22,7 @@
 #include <ios>
 #include <map>
 #include <chrono>
+#include <boost/shared_ptr.hpp>
 
 #include <melosic/common/stream.hpp>
 #include <melosic/core/inputmanager.hpp>
@@ -51,7 +52,7 @@ public:
 
 private:
     class impl;
-    std::shared_ptr<impl> pimpl;
+    boost::shared_ptr<impl> pimpl;
 };
 
 }
