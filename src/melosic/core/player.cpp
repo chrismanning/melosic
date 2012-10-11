@@ -301,3 +301,4 @@ boost::signals2::connection Player::connectNotifySlot(const NotifySignal::slot_t
 }
 
 }//end namespace Melosic
+

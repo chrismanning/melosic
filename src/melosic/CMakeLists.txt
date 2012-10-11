@@ -8,7 +8,7 @@ SET(SRC_LIST main.cpp)
 #abbrev
 SET(PN ${PROJECT_NAME})
 
-find_package(Boost COMPONENTS filesystem system iostreams log log_setup REQUIRED)
+find_package(Boost COMPONENTS filesystem system iostreams system log log_setup REQUIRED)
 
 add_executable(${PN} ${SRC_LIST})
 
@@ -20,11 +20,9 @@ add_subdirectory(gui)
 
 include_directories(.. ${Boost_INCLUDE_DIRS})
 
-IF(${WIN32})
-    SET(LINK_LIBS ${LINK_LIBS} boost_system)
-ELSEIF(${UNIX})
+IF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl)
-ENDIF(${WIN32})
+ENDIF(${UNIX})
 
 target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
 
