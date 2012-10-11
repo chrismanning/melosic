@@ -44,7 +44,7 @@ class MainWindow;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
-    
+
 public:
     explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
     ~MainWindow();
@@ -67,6 +67,7 @@ private:
     boost::signals2::connection seekerStateConnection;
     boost::signals2::connection seekerNotifyConnection;
     boost::signals2::connection playerSeekConnection;
+    int oldDeviceIndex;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

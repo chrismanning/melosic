@@ -22,6 +22,7 @@
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 #include <QDesktopServices>
+#include <QMessageBox>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -52,6 +53,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.first.getDesc()),
                                                              QString::fromStdString(dev.first.getName()));
     }
+    oldDeviceIndex = ui->outputDevicesCBX->currentIndex();
 }
 
 MainWindow::~MainWindow() {
@@ -117,32 +119,46 @@ void MainWindow::on_actionStop_triggered() {
 }
 
 void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
-    LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
+    try {
+        LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
 
-    std::chrono::milliseconds time(0);
-    auto state = player->state();
-    if(state != Output::DeviceState::Stopped) {
-        time = player->tell();
-        player->stop();
+        std::chrono::milliseconds time(0);
+        auto state = player->state();
+        if(state != Output::DeviceState::Stopped) {
+            time = player->tell();
+            player->stop();
+        }
+
+        player->changeOutput(kernel.getOutputManager()
+                                .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+
+        switch(state) {
+            case DeviceState::Playing:
+                player->play();
+                player->seek(time);
+                break;
+            case DeviceState::Paused:
+                player->play();
+                player->seek(time);
+                player->pause();
+                break;
+            case DeviceState::Error:
+            case DeviceState::Stopped:
+            case DeviceState::Ready:
+            default:
+                break;
+        }
+        oldDeviceIndex = index;
     }
+    catch(std::exception& e) {
+        LOG(logject) << "Exception caught: " << e.what();
 
-    player->changeOutput(kernel.getOutputManager()
-                               .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+        player->stop();
 
-    switch(state) {
-        case DeviceState::Playing:
-            player->play();
-            player->seek(time);
-            break;
-        case DeviceState::Paused:
-            player->play();
-            player->seek(time);
-            player->pause();
-            break;
-        case DeviceState::Error:
-        case DeviceState::Stopped:
-        case DeviceState::Ready:
-        default:
-            break;
+        QMessageBox error;
+        error.setText("Couldn't change output device.");
+        error.setDetailedText(e.what());
+        error.exec();
+        ui->outputDevicesCBX->setCurrentIndex(oldDeviceIndex);
     }
 }
