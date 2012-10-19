@@ -49,6 +49,7 @@ public:
     virtual void close();
     virtual bool isOpen();
     virtual void reOpen();
+    const std::string& sourceName() const;
 
 private:
     class impl;

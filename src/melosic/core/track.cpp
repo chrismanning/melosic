@@ -23,9 +23,11 @@
 #include <melosic/common/stream.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/common/common.hpp>
+#include <melosic/common/file.hpp>
 
 namespace Melosic {
 
+//TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
     impl(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
@@ -47,7 +49,9 @@ public:
     }
 
     void reOpen() {
-        input->reOpen();
+        if(!isOpen()) {
+            input->reOpen();
+        }
         reset();
         std::lock_guard<Mutex> l(mu);
         decoder->seek(offset);
@@ -107,6 +111,16 @@ public:
         }
         else
             return false;
+    }
+
+    const std::string& sourceName() const {
+        try {
+            return dynamic_cast<IO::File*>(input.get())->filename();
+        }
+        catch(...) {
+            static std::string tmp("unknown source");
+            return tmp;
+        }
     }
 
 private:
@@ -169,6 +183,10 @@ Melosic::AudioSpecs& Track::getAudioSpecs() {
 
 Track::operator bool() {
     return bool(*pimpl);
+}
+
+const std::string& Track::sourceName() const {
+    return pimpl->sourceName();
 }
 
 } //end namespace Melosic
