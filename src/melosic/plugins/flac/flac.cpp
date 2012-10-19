@@ -77,34 +77,46 @@ public:
         lastSample = frame->header.number_type == FLAC__FRAME_NUMBER_TYPE_FRAME_NUMBER
                      ? frame->header.number.frame_number : frame->header.number.sample_number;
         lastSample += frame->header.blocksize * as.channels;
-        for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
-            for(unsigned j=0; j<frame->header.channels; j++,u++) {
-                switch(frame->header.bits_per_sample) {
-                    case 8:
+        switch(frame->header.bits_per_sample) {
+            case 8:
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                    for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         buf.push_back((char)(buffer[j][i]));
-                        break;
-                    case 16:
+                    }
+                }
+                break;
+            case 16:
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                    for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
-                        break;
-                    case 24:
+                    }
+                }
+                break;
+            case 24:
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                    for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         if(as.target_bps == 32)
                             buf.push_back(0);
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
-                        break;
-                    case 32:
+                    }
+                }
+                break;
+            case 32:
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                    for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
                         buf.push_back((char)(buffer[j][i] >> 24));
-                        break;
-                    default:
-                        throw Exception("Unsupported bps: " + frame->header.bits_per_sample);
-                        break;
+                    }
                 }
-            }
+                break;
+            default:
+                throw Exception("Unsupported bps: " + frame->header.bits_per_sample);
+                break;
         }
 
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
@@ -157,6 +169,7 @@ public:
         auto req = uint64_t(dur.count() * rate);
         if(!seek_absolute(req)) {
             WARN_LOG(logject) << "Seek to " << dur.count() << "ms failed";
+            TRACE_LOG(logject) << "Position is " << tell().count() << "ms";
         }
 //        else if(tell() != dur) {
 //            std::clog << "Seek missed\nRequested: " << dur.count() << "; Got: " << tell().count() << std::endl;
@@ -195,13 +208,12 @@ public:
 
         auto min = std::min(n, (std::streamsize)buf.size());
         auto m = std::move(buf.begin(), buf.begin() + min, s);
-        for(int i=0; i<std::distance(s, m); i++) {
+        auto d = std::distance(s, m);
+        for(int i=0; i<d; i++) {
             buf.pop_front();
         }
 
-        auto r = std::distance(s, m);
-
-        return r == 0 && !(*this) ? -1 : r;
+        return d == 0 && !(*this) ? -1 : d;
     }
 
     virtual void seek(std::chrono::milliseconds dur) {
@@ -214,7 +226,7 @@ public:
 
     virtual void reset() {
         buf.clear();
-        enforceEx<Exception>(pimpl->reset(), "FLAC: Could not reset decoder");
+        pimpl->reset();
         seek(std::chrono::milliseconds(0));
     }
 
