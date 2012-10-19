@@ -34,7 +34,6 @@ using boost::format;
 
 #include <melosic/common/common.hpp>
 using namespace Melosic;
-using Logger::Severity;
 
 static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
@@ -85,8 +84,8 @@ public:
 
         if(params == nullptr) {
             snd_pcm_hw_params_malloc(&params);
-            snd_pcm_hw_params_any(pdh, params);
         }
+        snd_pcm_hw_params_any(pdh, params);
 
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
@@ -95,7 +94,10 @@ public:
         enforceAlsaEx(snd_pcm_hw_params_set_rate_resample(pdh, params, false));
         unsigned rate = as.sample_rate;
         enforceAlsaEx(snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
-        as.target_sample_rate = rate;
+        if(rate != as.sample_rate) {
+            WARN_LOG(logject) << "Sample rate: " << as.sample_rate << " not supported. Using " << rate;
+            as.target_sample_rate = rate;
+        }
 
         int frames = 1024;
         snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
@@ -145,8 +147,14 @@ public:
         }
 
         enforceAlsaEx(snd_pcm_hw_params(pdh, params));
-//        enforceAlsaEx(snd_pcm_prepare(pdh));
+
+        current = as;
+
         state_ = Output::DeviceState::Ready;
+    }
+
+    virtual Melosic::AudioSpecs currentSpecs() {
+        return current;
     }
 
     virtual void play() {

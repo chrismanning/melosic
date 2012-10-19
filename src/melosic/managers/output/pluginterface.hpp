@@ -51,6 +51,7 @@ public:
     typedef boost::iostreams::sink_tag category;
     virtual ~IDeviceSink() {}
     virtual void prepareDevice(Melosic::AudioSpecs& as) = 0;
+    virtual Melosic::AudioSpecs currentSpecs() = 0;
     virtual const std::string& getDeviceDescription() = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
