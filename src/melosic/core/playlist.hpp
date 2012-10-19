@@ -44,7 +44,7 @@ public:
     typedef const value_type& const_reference;
     typedef list_type::iterator iterator;
     typedef list_type::const_iterator const_iterator;
-    typedef list_type::size_type size_type;
+    typedef int size_type;
 
     Playlist();
     ~Playlist();
@@ -74,11 +74,31 @@ public:
 
     iterator insert(iterator pos, const value_type& value);
     iterator insert(iterator pos, value_type&& value);
+    template <typename InputIt>
+    void insert(iterator pos, InputIt first, InputIt last) {
+        tracks.insert(pos, first, last);
+        if(size() >= 1) {
+            current_track = begin();
+        }
+    }
+
     void push_back(const value_type& value);
     void push_back(value_type&& value);
-    template<class ... Args>
+    template <typename ... Args>
     void emplace_back(Args&& ... args) {
-        tracks.emplace_back(std::forward<Args>(args)...);
+        auto r = tracks.emplace_back(std::forward<Args>(args)...);
+        if(size() == 1) {
+            current_track = r;
+        }
+        return r;
+    }
+    template <typename ... Args>
+    iterator emplace(iterator pos, Args&& ... args) {
+        auto r = tracks.emplace(pos, std::forward<Args>(args)...);
+        if(size() == 1) {
+            current_track = r;
+        }
+        return r;
     }
 
 //    template <typename It>
