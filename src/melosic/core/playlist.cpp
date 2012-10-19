@@ -36,6 +36,7 @@ std::streamsize Playlist::read(char * s, std::streamsize n) {
             next();
             if(current() != end()) {
                 current()->reOpen();
+                current()->reset();
                 r += current()->read(s + r, n - r);
             }
         }
