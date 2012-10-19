@@ -23,6 +23,7 @@
 namespace io = boost::iostreams;
 #include <QDesktopServices>
 #include <QMessageBox>
+#include <list>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -35,12 +36,15 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     ui(new Ui::MainWindow),
     kernel(kernel),
     currentPlaylist(new Playlist),
+    playlistModel(new PlaylistModel(currentPlaylist, kernel)),
     player(new Player),
     logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);
     ui->playButton->setDefaultAction(ui->actionPlay);
+    ui->nextButton->setDefaultAction(ui->actionNext);
+    ui->playlistView->setModel(playlistModel);
 
     playerStateConnection = player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
     playerSeekConnection = ui->trackSeeker->connectSeek(boost::bind(&Player::seek, player.get(), _1));
@@ -88,12 +92,15 @@ void MainWindow::on_actionOpen_triggered() {
                                                    QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
                                                    tr("Audio Files (*.flac)"), 0,
                                                    QFileDialog::ReadOnly);
+
+    std::list<Track> tracks;
     for(const auto& filename : filenames) {
         std::unique_ptr<IO::File> file(new IO::File(filename.toStdString()));
-        currentPlaylist->emplace_back(std::move(file),
-                                      kernel.getInputManager().getFactory(*file),
-                                      std::chrono::milliseconds(0));
+        tracks.emplace_back(std::move(file),
+                            kernel.getInputManager().getFactory(*file),
+                            std::chrono::milliseconds(0));
     }
+    playlistModel->appendTracks(tracks.begin(), tracks.end());
 }
 
 void MainWindow::on_actionPlay_triggered() {
@@ -115,6 +122,12 @@ void MainWindow::on_actionPlay_triggered() {
 void MainWindow::on_actionStop_triggered() {
     if(bool(player) && bool(*player)) {
         player->stop();
+    }
+}
+
+void MainWindow::on_actionNext_triggered() {
+    if(bool(player) && bool(*player)) {
+        currentPlaylist->next();
     }
 }
 

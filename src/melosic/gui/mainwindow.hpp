@@ -24,6 +24,7 @@
 #include <QList>
 #include <memory>
 #include <boost/signals2.hpp>
+#include "playlistmodel.hpp"
 
 #include <melosic/core/player.hpp>
 #include <melosic/common/logging.hpp>
@@ -54,13 +55,14 @@ private Q_SLOTS:
     void on_actionOpen_triggered();
     void on_actionPlay_triggered();
     void on_actionStop_triggered();
-
+    void on_actionNext_triggered();
     void on_outputDevicesCBX_currentIndexChanged(int index);
 
 private:
-    Ui::MainWindow * ui;
+    Ui::MainWindow* ui;
     Kernel& kernel;
     boost::shared_ptr<Playlist> currentPlaylist;
+    PlaylistModel* playlistModel;
     boost::shared_ptr<Player> player;
     Logger::Logger logject;
     boost::signals2::connection playerStateConnection;
