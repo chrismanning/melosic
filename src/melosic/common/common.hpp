@@ -56,6 +56,17 @@ struct AudioSpecs {
           target_sample_rate(sample_rate),
           total_samples(total_samples) {}
 
+    bool operator==(const AudioSpecs& b) {
+        return channels == b.channels &&
+               bps == b.bps &&
+               sample_rate == b.sample_rate &&
+               target_bps == b.target_bps &&
+               target_sample_rate == b.target_sample_rate;
+    }
+    bool operator!=(const AudioSpecs& b) {
+        return !((*this) == b);
+    }
+
     uint8_t channels;
     uint8_t bps;
     uint8_t target_bps = 0;

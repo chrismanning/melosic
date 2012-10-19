@@ -144,6 +144,7 @@ public:
                 this->playlist->current()->close();
             }
             this->playlist = playlist;
+            playlist->connectTrackChanged(boost::bind(&impl::onTrackChangeSlot, this));
         }
     }
 
@@ -161,6 +162,17 @@ public:
     }
 
 private:
+    void onTrackChangeSlot() {
+        if(this->playlist && this->playlist->current() != this->playlist->end()) {
+            if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
+                stop();
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                device->prepareDevice(currentPlaylist()->current()->getAudioSpecs());
+                play();
+            }
+        }
+    }
+
     bool end() {
         std::lock_guard<std::mutex> l(m);
         return end_;
