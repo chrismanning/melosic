@@ -71,6 +71,9 @@ public:
     bool empty() const;
     size_type size() const;
     size_type max_size() const;
+    explicit operator bool() {
+        return current() != end();
+    }
 
     iterator insert(iterator pos, const value_type& value);
     iterator insert(iterator pos, value_type&& value);
