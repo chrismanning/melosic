@@ -27,19 +27,18 @@
 
 namespace Melosic {
 
+static Logger::Logger logject(boost::log::keywords::channel = "Track");
+
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
-    impl(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
-        impl(std::move(input), factory, std::chrono::milliseconds(0)) {}
-    impl(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset) :
-        input(std::move(input)),
-        factory(factory),
-        offset(offset)
+    impl(std::string filename, std::chrono::milliseconds start, std::chrono::milliseconds end) :
+        filename(filename), input(new IO::File(filename)), start(start), end(end)
     {
-        this->input->seek(0, std::ios_base::beg, std::ios_base::in);
-        decoder = factory(*this->input);
-        this->input->close();
+        input->seek(0, std::ios_base::beg, std::ios_base::in);
+        decoder = Kernel::getInstance().getDecoder(filename, *input);
+        decoder->reset();
+        input->close();
     }
 
     ~impl() {}
@@ -54,7 +53,7 @@ public:
         }
         reset();
         std::lock_guard<Mutex> l(mu);
-        decoder->seek(offset);
+        decoder->seek(start);
     }
 
     void close() {
@@ -65,8 +64,9 @@ public:
         if(!isOpen()) {
             reOpen();
         }
+        auto difference = (end > start) ? (end - tell()).count() : 0;
         std::lock_guard<Mutex> l(mu);
-        return decoder->read(s, n);
+        return decoder->read(s, (difference < n) ? n : difference);
     }
 
     Track::TagsType& getTags() {
@@ -78,7 +78,7 @@ public:
             reOpen();
         }
         std::lock_guard<Mutex> l(mu);
-        decoder->seek(dur + offset);
+        decoder->seek(dur + start);
     }
 
     std::chrono::milliseconds tell() {
@@ -86,7 +86,7 @@ public:
             reOpen();
         }
         boost::shared_lock<Mutex> l(mu);
-        return decoder->tell();
+        return decoder->tell() - start;
     }
 
     void reset() {
@@ -94,8 +94,8 @@ public:
         decoder->reset();
     }
 
-    std::chrono::milliseconds duration() {
-        auto& as = getAudioSpecs();
+    std::chrono::milliseconds duration() const {
+        auto& as = const_cast<impl*>(this)->getAudioSpecs();
         return std::chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
 
@@ -124,22 +124,33 @@ public:
     }
 
 private:
+    friend class Track;
+    const std::string& filename;
     std::unique_ptr<IO::BiDirectionalClosableSeekable> input;
-    Input::Factory factory;
-    std::chrono::milliseconds offset;
-    std::shared_ptr<Input::ISource> decoder;
+    std::chrono::milliseconds start, end;
+    std::unique_ptr<Input::Source> decoder;
     std::once_flag decoderInitFlag;
     Track::TagsType tags;
     typedef boost::shared_mutex Mutex;
     Mutex mu;
 };
 
-Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory) :
-    Track(std::move(input), factory, std::chrono::milliseconds(0)) {}
-Track::Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset) :
-    pimpl(new impl(std::move(input), factory, offset)) {}
+Track::Track(const std::string& filename, std::chrono::milliseconds start, std::chrono::milliseconds end) :
+    pimpl(new impl(filename, start, end)) {}
 
 Track::~Track() {}
+
+Track::Track(const Track& b) {
+    auto filename = b.sourceName();
+    TRACE_LOG(logject) << "Copying " << filename;
+    pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
+}
+
+void Track::operator=(const Track& b) {
+    auto filename = b.sourceName();
+    TRACE_LOG(logject) << "Assigning " << filename;
+    pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
+}
 
 std::streamsize Track::read(char * s, std::streamsize n) {
     return pimpl->read(s, n);
@@ -173,7 +184,7 @@ void Track::reset() {
     pimpl->reset();
 }
 
-std::chrono::milliseconds Track::duration() {
+std::chrono::milliseconds Track::duration() const {
     return pimpl->duration();
 }
 

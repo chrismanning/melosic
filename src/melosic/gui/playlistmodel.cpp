@@ -22,10 +22,9 @@
 #include <melosic/core/track.hpp>
 #include <melosic/common/file.hpp>
 
-PlaylistModel::PlaylistModel(boost::shared_ptr<Melosic::Playlist> playlist, Melosic::Kernel& kernel, QObject* parent) :
+PlaylistModel::PlaylistModel(boost::shared_ptr<Melosic::Playlist> playlist, QObject* parent) :
     QAbstractListModel(parent),
     playlist(playlist),
-    kernel(kernel),
     logject(boost::log::keywords::channel = "PlaylistModel") {}
 
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
@@ -118,8 +117,7 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     }
 
     for(const auto& filename : filenames) {
-        std::unique_ptr<Melosic::IO::File> file(new Melosic::IO::File(filename.toStdString()));
-        begin = emplace(begin, std::move(file), kernel.getInputManager().getFactory(*file));
+        begin = emplace(begin, filename.toStdString());
     }
 
     return true;

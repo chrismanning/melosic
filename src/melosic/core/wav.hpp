@@ -29,7 +29,7 @@ namespace io = boost::iostreams;
 namespace Melosic {
 namespace Output {
 
-class WaveFile : public IFileSink {
+class WaveFile : public FileSink {
 public:
     WaveFile(IO::File& file, AudioSpecs as)
         : filename(file.filename())

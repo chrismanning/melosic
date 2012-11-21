@@ -42,14 +42,14 @@ int main(int argc, char* argv[]) {
 
         QApplication app(argc, argv);
 
-        Kernel kernel;
+        Kernel& kernel = Kernel::getInstance();
 
         LOG(logject) << "Loading Flac plugin";
         kernel.loadPlugin("flac.melin");
         LOG(logject) << "Loading ALSA plugin";
         kernel.loadPlugin("alsa.melin");
 
-        MainWindow win(kernel);
+        MainWindow win;
         win.show();
 
         return app.exec();

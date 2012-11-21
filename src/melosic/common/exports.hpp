@@ -34,7 +34,7 @@ class Kernel;
 
 #include <functional>
 
-extern "C" void registerPluginObjects(Melosic::Kernel& k);
+extern "C" void registerPluginObjects();
 typedef decltype(registerPluginObjects) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
 extern "C" void destroyPluginObjects();

@@ -25,7 +25,6 @@
 #include <boost/shared_ptr.hpp>
 
 #include <melosic/common/stream.hpp>
-#include <melosic/core/inputmanager.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
 
 namespace Melosic {
@@ -35,14 +34,19 @@ class Track : public Input::Source, public IO::Closable
 public:
     typedef std::multimap<std::string, std::string> TagsType;
 
-    Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory);
-    Track(std::unique_ptr<IO::BiDirectionalClosableSeekable> input, Input::Factory factory, std::chrono::milliseconds offset);
+    Track(const std::string& filename,
+          std::chrono::milliseconds start = std::chrono::milliseconds(0),
+          std::chrono::milliseconds end = std::chrono::milliseconds(0));
+
     virtual ~Track();
+    Track(const Track&);
+    void operator=(const Track&);
+
     Track::TagsType& getTags();
     virtual void reset();
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();
-    virtual std::chrono::milliseconds duration();
+    virtual std::chrono::milliseconds duration() const;
     virtual Melosic::AudioSpecs& getAudioSpecs();
     virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
@@ -53,7 +57,7 @@ public:
 
 private:
     class impl;
-    boost::shared_ptr<impl> pimpl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }

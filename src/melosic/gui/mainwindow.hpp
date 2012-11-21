@@ -47,7 +47,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
+    explicit MainWindow(QWidget * parent = 0);
     ~MainWindow();
     void onStateChangeSlot(DeviceState state);
 
@@ -60,7 +60,6 @@ private Q_SLOTS:
 
 private:
     Ui::MainWindow* ui;
-    Kernel& kernel;
     boost::shared_ptr<Playlist> currentPlaylist;
     PlaylistModel* playlistModel;
     boost::shared_ptr<Player> player;

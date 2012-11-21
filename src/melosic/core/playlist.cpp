@@ -19,9 +19,12 @@
 #include <numeric>
 
 #include <melosic/core/track.hpp>
+#include <melosic/common/logging.hpp>
 #include "playlist.hpp"
 
 namespace Melosic {
+
+static Logger::Logger logject(boost::log::keywords::channel = "Playlist");
 
 Playlist::Playlist() : current_track(begin()) {}
 
@@ -54,7 +57,7 @@ void Playlist::seek(std::chrono::milliseconds dur) {
 //playlist controls
 std::chrono::milliseconds Playlist::duration() {
     return std::accumulate(begin(), end(), std::chrono::milliseconds(0),
-                           [](std::chrono::milliseconds a, Track b) { return a + b.duration();});
+                           [&](std::chrono::milliseconds a, Track& b) { return a + b.duration();});
 }
 
 void Playlist::previous() {
@@ -140,32 +143,17 @@ Playlist::size_type Playlist::max_size() const {
     return std::numeric_limits<size_type>::max();
 }
 
-//modifiers
-Playlist::iterator Playlist::insert(Playlist::iterator pos, const Playlist::value_type& value) {
-    auto r = tracks.insert(pos, value);
-    if(size() == 1) {
-        current_track = r;
-    }
-    return r;
-}
-
 Playlist::iterator Playlist::insert(Playlist::iterator pos, Playlist::value_type&& value) {
+    TRACE_LOG(logject) << value.sourceName();
     auto r = tracks.insert(pos, value);
     if(size() == 1) {
         current_track = r;
     }
     return r;
-}
-
-void Playlist::push_back(const Playlist::value_type& value) {
-    tracks.push_back(value);
-    if(size() == 1) {
-        current_track = tracks.begin();
-    }
 }
 
 void Playlist::push_back(Playlist::value_type&& value) {
-    tracks.push_back(value);
+    tracks.push_back(std::move(value));
     if(size() == 1) {
         current_track = tracks.begin();
     }

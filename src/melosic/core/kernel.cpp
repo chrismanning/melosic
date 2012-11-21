@@ -19,17 +19,19 @@
 #include <boost/filesystem.hpp>
 using boost::filesystem::path;
 
+#include <melosic/common/file.hpp>
 #include <melosic/common/plugin.hpp>
-#include <melosic/core/inputmanager.hpp>
-#include <melosic/core/outputmanager.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/logging.hpp>
+#include <melosic/core/track.hpp>
+#include <melosic/managers/output/pluginterface.hpp>
 
 namespace Melosic {
 
 class Kernel::impl {
 public:
-    impl(Kernel& k) : k(k), logject(boost::log::keywords::channel = "Kernel") {}
+    impl() : logject(boost::log::keywords::channel = "Kernel") {}
+
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
 
@@ -47,7 +49,7 @@ public:
             }
 
             std::shared_ptr<Plugin> pl(new Plugin(p));
-            pl->registerPluginObjects(k);
+            pl->registerPluginObjects();
             loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, pl));
         }
         catch(PluginException& e) {
@@ -56,46 +58,106 @@ public:
         }
     }
 
-    Input::InputManager& getInputManager() {
-        return inman;
+    void addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
+        auto bef = inputFactories.size();
+        auto pos = inputFactories.find(extension);
+        if(pos == inputFactories.end()) {
+            inputFactories.insert(decltype(inputFactories)::value_type(extension, fact));
+        }
+        else {
+            WARN_LOG(logject) << extension << ": already registered to decoder factory";
+        }
+        assert(++bef == inputFactories.size());
     }
 
-    Output::OutputManager& getOutputManager() {
-        return outman;
+    template<class StringList>
+    void addOutputDevices(Kernel::OutputFactory fact, StringList avail) {
+        for(auto device : avail) {
+            auto it = outputFactories.find(device);
+            if(it == outputFactories.end()) {
+                outputFactories.insert(typename decltype(outputFactories)::value_type(device, fact));
+            }
+        }
+    }
+
+    Kernel::InputFactory getInputFactory(const std::string& filename) {
+        auto ext = path(filename).extension().string();
+
+        auto fact = inputFactories.find(ext);
+
+        enforceEx<Exception>(fact != inputFactories.end(), (filename + ": cannot decode file").c_str());
+        return fact->second;
+    }
+
+    std::unique_ptr<Input::Source> getDecoder(const boost::filesystem::path& file,
+                                              IO::BiDirectionalClosableSeekable& input) {
+        return getInputFactory(file.string())(input);
+    }
+
+    std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename) {
+        auto it = outputFactories.find(devicename);
+
+        if(it == outputFactories.end()) {
+            throw Exception("No such output device");
+        }
+
+        return std::unique_ptr<Output::DeviceSink>(it->second(it->first));
+    }
+
+    std::list<OutputDeviceName> getOutputDeviceNames() {
+        std::list<OutputDeviceName> names;
+        for(const auto& name : outputFactories) {
+            names.push_back(name.first);
+        }
+        return names;
     }
 
 private:
     std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
-    Input::InputManager inman;
-    Output::OutputManager outman;
-    Kernel& k;
     Logger::Logger logject;
+    std::map<std::string, Kernel::InputFactory> inputFactories;
+    std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
 };
 
-Kernel::Kernel() : pimpl(new impl(*this)) {}
+Kernel::Kernel() : pimpl(new impl) {}
 
 Kernel::~Kernel() {}
+
+Kernel& Kernel::getInstance() {
+    static Kernel instance;
+    return instance;
+}
 
 void Kernel::loadPlugin(const std::string& filepath) {
     pimpl->loadPlugin(filepath);
 }
 
-void Kernel::loadAllPlugins() {
-//        foreach(pe; dirEntries("plugins", "*.so", SpanMode.depth)) {
-//            if(pe.name.canFind("qt")) {
-//                continue;
-//            }
-//            loadPlugin(pe.name);
-//        }
+void Kernel::loadAllPlugins() {}
+
+void Kernel::addInputExtension(InputFactory fact, const std::string& extension) {
+    pimpl->addInputExtension(fact, extension);
 }
 
-Input::InputManager& Kernel::getInputManager() {
-    return pimpl->getInputManager();
+void Kernel::addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail) {
+    pimpl->addOutputDevices(fact, avail);
 }
 
-Output::OutputManager& Kernel::getOutputManager() {
-    return pimpl->getOutputManager();
+void Kernel::addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail) {
+    pimpl->addOutputDevices(fact, avail);
 }
 
+std::unique_ptr<Input::Source> Kernel::getDecoder(const boost::filesystem::path& file,
+                                                  IO::BiDirectionalClosableSeekable& input) {
+    return pimpl->getDecoder(file, input);
 }
+
+std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& devicename) {
+    return pimpl->getOutputDevice(devicename);
+}
+
+std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
+    return pimpl->getOutputDeviceNames();
+}
+
+} // end namespace Melosic
 

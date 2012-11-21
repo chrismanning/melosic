@@ -91,8 +91,8 @@ public:
         }
     }
 
-    void registerPluginObjects(Kernel& k) {
-        registerPlugin_(k);
+    void registerPluginObjects() {
+        registerPlugin_();
     }
 
 private:

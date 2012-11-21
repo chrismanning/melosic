@@ -23,9 +23,7 @@ using std::cout; using std::cerr; using std::endl;
 #include <boost/cstdint.hpp>
 using boost::int64_t; using boost::uint64_t;
 
-#include <melosic/core/inputmanager.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
-#include <melosic/core/outputmanager.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/plugin.hpp>
@@ -56,14 +54,14 @@ struct AudioSpecs {
           target_sample_rate(sample_rate),
           total_samples(total_samples) {}
 
-    bool operator==(const AudioSpecs& b) {
+    bool operator==(const AudioSpecs& b) const {
         return channels == b.channels &&
                bps == b.bps &&
                sample_rate == b.sample_rate &&
                target_bps == b.target_bps &&
                target_sample_rate == b.target_sample_rate;
     }
-    bool operator!=(const AudioSpecs& b) {
+    bool operator!=(const AudioSpecs& b) const {
         return !((*this) == b);
     }
 

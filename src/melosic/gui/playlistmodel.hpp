@@ -21,6 +21,7 @@
 #include <QAbstractListModel>
 
 #include <melosic/core/playlist.hpp>
+#include <melosic/core/track.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/logging.hpp>
 
@@ -33,27 +34,14 @@ struct DataRoles {
 };
 }
 
-template<typename... Args> struct count;
-
-template<>
-struct count<> {
-static const int value = 0;
-};
-
-template<typename T, typename... Args>
-struct count<T, Args...> {
-static const int value = 1 + count<Args...>::value;
-};
-
 class PlaylistModel : public QAbstractListModel
 {
     Q_OBJECT
     boost::shared_ptr<Melosic::Playlist> playlist;
-    Melosic::Kernel& kernel;
     Melosic::Logger::Logger logject;
 
 public:
-    explicit PlaylistModel(boost::shared_ptr<Melosic::Playlist> playlist, Melosic::Kernel& kernel, QObject* parent = 0);
+    explicit PlaylistModel(boost::shared_ptr<Melosic::Playlist> playlist, QObject* parent = 0);
     int rowCount(const QModelIndex& parent = QModelIndex()) const;
     QVariant data(const QModelIndex& index, int role) const;
     Qt::ItemFlags flags(const QModelIndex &index) const;
@@ -65,6 +53,16 @@ public:
         auto beg = playlist->end() - playlist->begin();
         beginInsertRows(QModelIndex(), beg, beg + std::distance(first, last));
         playlist->insert(playlist->end(), first, last);
+        endInsertRows();
+    }
+
+    template <class StringList>
+    void appendFiles(StringList filenames) {
+        auto beg = playlist->end() - playlist->begin();
+        beginInsertRows(QModelIndex(), beg, beg + filenames.size());
+        for(const auto& filename : filenames) {
+            playlist->emplace_back(filename);
+        }
         endInsertRows();
     }
 

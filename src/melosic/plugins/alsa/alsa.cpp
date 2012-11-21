@@ -57,7 +57,7 @@ static const uint8_t bpss[] = {8, 16, 24, 24, 32};
 
 class AlsaOutput : public Output::DeviceSink {
 public:
-    AlsaOutput(Output::OutputDeviceName name)
+    AlsaOutput(OutputDeviceName name)
         : pdh(nullptr),
           params(nullptr),
           name(name.getName()),
@@ -267,9 +267,7 @@ private:
     Output::DeviceState state_;
 };
 
-static std::list<AlsaOutput*> alsaPluginObjects;
-
-extern "C" void registerPluginObjects(Kernel& k) {
+extern "C" void registerPluginObjects() {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -277,36 +275,33 @@ extern "C" void registerPluginObjects(Kernel& k) {
 
     enforceAlsaEx(snd_device_name_hint(-1, "pcm", &hints));
 
-    auto& outman = k.getOutputManager();
-
-    std::list<Output::OutputDeviceName> names;
+    std::list<OutputDeviceName> names;
 
     n = hints;
-    while(*n != NULL) {
+    TRACE_LOG(logject) << "Enumerating output devices";
+    while(*n != nullptr) {
         name = snd_device_name_get_hint(*n, "NAME");
         desc = snd_device_name_get_hint(*n, "DESC");
         io = snd_device_name_get_hint(*n, "IOID");
-        if(io == NULL || filter == io) {
+        if(io == nullptr || filter == io) {
             if(name && desc) {
                 names.emplace_back(name, desc);
+                TRACE_LOG(logject) << names.back();
             }
         }
-        if(name != NULL)
+        if(name != nullptr)
             free(name);
-        if(desc != NULL)
+        if(desc != nullptr)
             free(desc);
-        if(io != NULL)
+        if(io != nullptr)
             free(io);
         n++;
     }
     snd_device_name_free_hint(hints);
 
-    outman.addFactory(factory<std::unique_ptr<AlsaOutput>>(), names);
+    Kernel::getInstance().addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
 extern "C" void destroyPluginObjects() {
-    TRACE_LOG(logject) << "Destroying alsa plugin objects";
-    for(auto output : alsaPluginObjects) {
-        delete output;
-    }
+//    TRACE_LOG(logject) << "Destroying alsa plugin objects";
 }

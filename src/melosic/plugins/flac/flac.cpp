@@ -244,10 +244,10 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" void registerPluginObjects(Kernel& k) {
-    k.getInputManager().addFactory(factory<std::shared_ptr<FlacDecoder>>(), {".flac"});
+extern "C" void registerPluginObjects() {
+    Kernel::getInstance().addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
 extern "C" void destroyPluginObjects() {
-    TRACE_LOG(logject) << "Destroying flac objects";
+//    TRACE_LOG(logject) << "Destroying flac objects";
 }

@@ -75,7 +75,6 @@ public:
         return current() != end();
     }
 
-    iterator insert(iterator pos, const value_type& value);
     iterator insert(iterator pos, value_type&& value);
     template <typename InputIt>
     void insert(iterator pos, InputIt first, InputIt last) {
@@ -85,15 +84,13 @@ public:
         }
     }
 
-    void push_back(const value_type& value);
     void push_back(value_type&& value);
     template <typename ... Args>
     void emplace_back(Args&& ... args) {
-        auto r = tracks.emplace_back(std::forward<Args>(args)...);
+        tracks.emplace_back(std::forward<Args>(args)...);
         if(size() == 1) {
-            current_track = r;
+            current_track = begin();
         }
-        return r;
     }
     template <typename ... Args>
     iterator emplace(iterator pos, Args&& ... args) {
@@ -106,9 +103,7 @@ public:
 
 //    template <typename It>
 //    iterator insert(const_iterator pos, It first, It last);
-//    iterator insert(const_iterator pos, std::initializer_list<value_type> ilist);
 //    template<class ... Args>
-//    iterator emplace(const_iterator pos, Args&& ... args);
 //    iterator erase(const_iterator pos);
 //    iterator erase(const_iterator first, const_iterator last);
 //    void clear();

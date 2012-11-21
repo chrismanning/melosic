@@ -31,12 +31,11 @@ namespace io = boost::iostreams;
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 
-MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
+MainWindow::MainWindow(QWidget * parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    kernel(kernel),
     currentPlaylist(new Playlist),
-    playlistModel(new PlaylistModel(currentPlaylist, kernel)),
+    playlistModel(new PlaylistModel(currentPlaylist)),
     player(new Player),
     logject(boost::log::keywords::channel = "MainWindow")
 {
@@ -52,10 +51,10 @@ MainWindow::MainWindow(Kernel& kernel, QWidget * parent) :
     seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
                                                                    ui->trackSeeker, _1, _2));
 
-    auto devs = this->kernel.getOutputManager().getOutputFactories();
+    auto devs = Kernel::getInstance().getOutputDeviceNames();
     for(const auto& dev : devs) {
-        ui->outputDevicesCBX->addItem(QString::fromStdString(dev.first.getDesc()),
-                                                             QString::fromStdString(dev.first.getName()));
+        ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
+                                                             QString::fromStdString(dev.getName()));
     }
     oldDeviceIndex = ui->outputDevicesCBX->currentIndex();
 }
@@ -92,15 +91,11 @@ void MainWindow::on_actionOpen_triggered() {
                                                    QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
                                                    tr("Audio Files (*.flac)"), 0,
                                                    QFileDialog::ReadOnly);
-
-    std::list<Track> tracks;
+    std::list<std::string> names;
     for(const auto& filename : filenames) {
-        std::unique_ptr<IO::File> file(new IO::File(filename.toStdString()));
-        tracks.emplace_back(std::move(file),
-                            kernel.getInputManager().getFactory(*file),
-                            std::chrono::milliseconds(0));
+        names.push_back(filename.toStdString());
     }
-    playlistModel->appendTracks(tracks.begin(), tracks.end());
+    playlistModel->appendFiles(names);
 }
 
 void MainWindow::on_actionPlay_triggered() {
@@ -142,8 +137,8 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
             player->stop();
         }
 
-        player->changeOutput(kernel.getOutputManager()
-                                .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+        player->changeOutput(Kernel::getInstance()
+                             .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
 
         switch(state) {
             case DeviceState::Playing:
@@ -169,7 +164,7 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
         player->stop();
 
         QMessageBox error;
-        error.setText("Couldn't change output device.");
+        error.setText("EXception");
         error.setDetailedText(e.what());
         error.exec();
         ui->outputDevicesCBX->setCurrentIndex(oldDeviceIndex);
