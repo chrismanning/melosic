@@ -21,6 +21,8 @@
 #include <string>
 #include <boost/iostreams/concepts.hpp>
 
+#include <melosic/common/stream.hpp>
+
 namespace Melosic {
 
 class PlaybackHandler;
@@ -31,10 +33,11 @@ namespace Output {
 struct DeviceCapabilities {
 };
 
-class ISink {
+class Sink : public IO::Sink {
 public:
-    virtual ~ISink() {}
+    virtual ~Sink() {}
     virtual const std::string& getSinkName() = 0;
+    virtual void prepareSink(Melosic::AudioSpecs& as) = 0;
 };
 
 enum class DeviceState {
@@ -45,27 +48,20 @@ enum class DeviceState {
     Stopped,
 };
 
-class IDeviceSink : public ISink {
+class DeviceSink : public Sink {
 public:
-    typedef char char_type;
-    typedef boost::iostreams::sink_tag category;
-    virtual ~IDeviceSink() {}
-    virtual void prepareDevice(Melosic::AudioSpecs& as) = 0;
-    virtual Melosic::AudioSpecs currentSpecs() = 0;
-    virtual const std::string& getDeviceDescription() = 0;
+    virtual ~DeviceSink() {}
+    virtual const Melosic::AudioSpecs& currentSpecs() = 0;
+    virtual const std::string& getSinkDescription() = 0;
     virtual void play() = 0;
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual DeviceState state() = 0;
-    virtual std::streamsize write(const char* s, std::streamsize n) = 0;
 };
 
-class IFileSink : public ISink {
+class FileSink : public Sink, IO::Closable {
 public:
-    typedef char char_type;
-    typedef boost::iostreams::sink_tag category;
-    virtual ~IFileSink() {}
-    virtual std::streamsize write(const char* s, std::streamsize n) = 0;
+    virtual ~FileSink() {}
 };
 
 }

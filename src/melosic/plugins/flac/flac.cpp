@@ -191,7 +191,7 @@ private:
 //    Logger::Logger log;
 };
 
-class FlacDecoder : public Input::ISource {
+class FlacDecoder : public Input::Source {
 public:
     FlacDecoder(IO::SeekableSource& input) :
         pimpl(new FlacDecoderImpl(input, buf, as))

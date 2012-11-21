@@ -30,7 +30,7 @@
 
 namespace Melosic {
 
-class Track : public Input::ISource, public IO::Closable
+class Track : public Input::Source, public IO::Closable
 {
 public:
     typedef std::multimap<std::string, std::string> TagsType;

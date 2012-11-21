@@ -29,10 +29,10 @@ struct IBuffer;
 
 namespace Input {
 
-class ISource : public IO::Source {
+class Source : public IO::Source {
 public:
     typedef char char_type;
-    virtual ~ISource() {}
+    virtual ~Source() {}
     virtual void seek(std::chrono::milliseconds dur) = 0;
     virtual std::chrono::milliseconds tell() = 0;
     virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
@@ -40,9 +40,8 @@ public:
     virtual void reset() = 0;
 };
 
-class IFileSource : public ISource {
-public:
-    virtual ~IFileSource() {}
+class FileSource : public Source {
+    virtual const std::string& getFilename() = 0;
 };
 
 }

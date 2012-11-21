@@ -55,7 +55,7 @@ static const snd_pcm_format_t formats[] = {
 };
 static const uint8_t bpss[] = {8, 16, 24, 24, 32};
 
-class AlsaOutput : public Output::IDeviceSink {
+class AlsaOutput : public Output::DeviceSink {
 public:
     AlsaOutput(Output::OutputDeviceName name)
         : pdh(nullptr),
@@ -74,7 +74,7 @@ public:
             snd_pcm_hw_params_free(params);
     }
 
-    virtual void prepareDevice(AudioSpecs& as) {
+    virtual void prepareSink(AudioSpecs& as) {
         std::lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
@@ -153,7 +153,7 @@ public:
         state_ = Output::DeviceState::Ready;
     }
 
-    virtual Melosic::AudioSpecs currentSpecs() {
+    virtual const Melosic::AudioSpecs& currentSpecs() {
         return current;
     }
 
@@ -161,7 +161,7 @@ public:
         std::unique_lock<Mutex> l(mu);
         if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
             l.unlock();
-            prepareDevice(current);
+            prepareSink(current);
             l.lock();
         }
         if(state_ == Output::DeviceState::Ready) {
@@ -248,7 +248,7 @@ public:
         }
     }
 
-    virtual const std::string& getDeviceDescription() {
+    virtual const std::string& getSinkDescription() {
         return desc;
     }
 

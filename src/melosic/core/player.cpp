@@ -36,7 +36,7 @@ class Player::impl {
 public:
     impl() : impl(nullptr) {}
 
-    impl(std::unique_ptr<Output::IDeviceSink> device) :
+    impl(std::unique_ptr<Output::DeviceSink> device) :
         device(std::move(device)),
         end_(false),
         playerThread(&impl::start, this),
@@ -59,7 +59,7 @@ public:
         if(device && playlist) {
             if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error) {
                 if(playlist->current() != playlist->end()) {
-                    this->device->prepareDevice(playlist->current()->getAudioSpecs());
+                    this->device->prepareSink(playlist->current()->getAudioSpecs());
                 }
             }
             device->play();
@@ -114,14 +114,14 @@ public:
         }
     }
 
-    void changeOutput(std::unique_ptr<Output::IDeviceSink> device) {
+    void changeOutput(std::unique_ptr<Output::DeviceSink> device) {
         std::unique_lock<std::mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
         l.unlock();
         if(playlist && playlist->current() != playlist->end()) {
-            this->device->prepareDevice(playlist->current()->getAudioSpecs());
+            this->device->prepareSink(playlist->current()->getAudioSpecs());
         }
 
         if(tmp) {
@@ -167,7 +167,7 @@ private:
             if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
                 stop();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                device->prepareDevice(currentPlaylist()->current()->getAudioSpecs());
+                device->prepareSink(currentPlaylist()->current()->getAudioSpecs());
                 play();
             }
         }
@@ -244,7 +244,7 @@ private:
     }
 
     boost::shared_ptr<Playlist> playlist;
-    std::unique_ptr<Output::IDeviceSink> device;
+    std::unique_ptr<Output::DeviceSink> device;
     bool end_;
     std::thread playerThread;
     Logger::Logger logject;
@@ -255,7 +255,7 @@ private:
 
 Player::Player() : pimpl(new impl) {}
 
-Player::Player(std::unique_ptr<Output::IDeviceSink> device)
+Player::Player(std::unique_ptr<Output::DeviceSink> device)
     : pimpl(new impl(std::move(device))) {}
 
 Player::~Player() {}
@@ -288,7 +288,7 @@ void Player::finish() {
     pimpl->finish();
 }
 
-void Player::changeOutput(std::unique_ptr<Output::IDeviceSink> device) {
+void Player::changeOutput(std::unique_ptr<Output::DeviceSink> device) {
     pimpl->changeOutput(std::move(device));
 }
 

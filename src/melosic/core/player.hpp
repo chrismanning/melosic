@@ -24,12 +24,8 @@
 
 namespace Melosic {
 
-namespace Input {
-class ISource;
-}
-
 namespace Output {
-class IDeviceSink;
+class DeviceSink;
 enum class DeviceState;
 }
 
@@ -41,7 +37,7 @@ class Player
 {
 public:
     Player();
-    Player(std::unique_ptr<Output::IDeviceSink> device);
+    Player(std::unique_ptr<Output::DeviceSink> device);
     ~Player();
 
     void play();
@@ -51,7 +47,7 @@ public:
     void seek(std::chrono::milliseconds dur);
     std::chrono::milliseconds tell();
     void finish();
-    void changeOutput(std::unique_ptr<Output::IDeviceSink> device);
+    void changeOutput(std::unique_ptr<Output::DeviceSink> device);
     explicit operator bool();
     void openPlaylist(boost::shared_ptr<Playlist> playlist);
     boost::shared_ptr<Playlist> currentPlaylist();
