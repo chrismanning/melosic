@@ -58,7 +58,7 @@ public:
         TRACE_LOG(logject) << "Play...";
         if(device && playlist) {
             if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error) {
-                if(playlist->current() != playlist->end()) {
+                if(*playlist) {
                     this->device->prepareSink(playlist->current()->getAudioSpecs());
                 }
             }
@@ -81,8 +81,9 @@ public:
             device->stop();
             stateChangedSig(DeviceState::Stopped);
         }
-        if(playlist && playlist->current() != playlist->end()) {
+        if(playlist && *playlist) {
             playlist->current()->reset();
+            playlist->current()->close();
         }
     }
 
@@ -102,7 +103,7 @@ public:
 
     std::chrono::milliseconds tell() {
         TRACE_LOG(logject) << "Tell...";
-        if(playlist && playlist->current() != playlist->end()) {
+        if(playlist && *playlist) {
             return playlist->current()->tell();
         }
         return std::chrono::milliseconds(0);
@@ -120,7 +121,7 @@ public:
         this->device = std::move(device);
 
         l.unlock();
-        if(playlist && playlist->current() != playlist->end()) {
+        if(playlist && *playlist) {
             this->device->prepareSink(playlist->current()->getAudioSpecs());
         }
 
@@ -140,7 +141,7 @@ public:
     void openPlaylist(boost::shared_ptr<Playlist> playlist) {
         std::lock_guard<std::mutex> l(m);
         if(this->playlist != playlist) {
-            if(this->playlist && this->playlist->current() != this->playlist->end()) {
+            if(this->playlist && *(this->playlist)) {
                 this->playlist->current()->close();
             }
             this->playlist = playlist;
@@ -163,7 +164,7 @@ public:
 
 private:
     void onTrackChangeSlot() {
-        if(this->playlist && this->playlist->current() != this->playlist->end()) {
+        if(playlist && *playlist) {
             if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
                 stop();
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
