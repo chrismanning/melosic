@@ -43,6 +43,7 @@ public:
         enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
         start = input.tellg();
         enforceEx<Exception>(process_single() && seek_absolute(0), "FLAC: Decoding failed to start");
+        reset();
         buf.clear();
     }
 
@@ -225,9 +226,9 @@ public:
     }
 
     virtual void reset() {
-        buf.clear();
         pimpl->reset();
         seek(std::chrono::milliseconds(0));
+        buf.clear();
     }
 
     virtual AudioSpecs& getAudioSpecs() {

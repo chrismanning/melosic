@@ -37,8 +37,7 @@ public:
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
         decoder = Kernel::getInstance().getDecoder(filename, *input);
-        decoder->reset();
-        input->close();
+        close();
     }
 
     ~impl() {}
@@ -90,6 +89,9 @@ public:
     }
 
     void reset() {
+        if(!isOpen()) {
+            reOpen();
+        }
         std::lock_guard<Mutex> l(mu);
         decoder->reset();
     }
