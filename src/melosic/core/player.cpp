@@ -18,7 +18,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
-#include <iostream>
+#include <array>
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
@@ -181,7 +181,7 @@ private:
 
     void start() {
         TRACE_LOG(logject) << "Thread starting";
-        std::vector<unsigned char> s(16384);
+        std::array<unsigned char,16384> s;
         std::streamsize n = 0;
         while(!end()) {
             try {
