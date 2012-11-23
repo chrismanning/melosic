@@ -35,6 +35,8 @@ std::streamsize Playlist::read(char * s, std::streamsize n) {
     if(current() != end()) {
         auto r = current()->read(s, n);
         if(r < n) {
+            if(r < 0)
+                r = 0;
             current()->close();
             next();
             if(current() != end()) {
