@@ -32,8 +32,7 @@ namespace Output {
 class WaveFile : public FileSink {
 public:
     WaveFile(IO::File& file, AudioSpecs as)
-        : filename(file.filename())
-        , file(file)
+        : file(file)
         , as(as)
     {
         auto ex = as.bps % 8 || as.channels > 2;
@@ -93,7 +92,7 @@ public:
     }
 
     virtual const std::string& getSinkName() {
-        return filename;
+        return file.filename().string();
     }
 
     virtual std::streamsize write(const char * s, std::streamsize n) {
@@ -101,7 +100,6 @@ public:
     }
 
 private:
-    const std::string& filename;
     IO::File& file;
     AudioSpecs as;
 };

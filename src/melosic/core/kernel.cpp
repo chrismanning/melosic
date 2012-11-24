@@ -19,18 +19,23 @@
 #include <boost/filesystem.hpp>
 using boost::filesystem::path;
 
+#include <taglib/flacfile.h>
+
 #include <melosic/common/file.hpp>
 #include <melosic/common/plugin.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/logging.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/core/taglibfile.hpp>
 
 namespace Melosic {
 
+static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
+
 class Kernel::impl {
 public:
-    impl() : logject(boost::log::keywords::channel = "Kernel") {}
+    impl() {}
 
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
@@ -58,18 +63,6 @@ public:
         }
     }
 
-    void addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
-        auto bef = inputFactories.size();
-        auto pos = inputFactories.find(extension);
-        if(pos == inputFactories.end()) {
-            inputFactories.insert(decltype(inputFactories)::value_type(extension, fact));
-        }
-        else {
-            WARN_LOG(logject) << extension << ": already registered to decoder factory";
-        }
-        assert(++bef == inputFactories.size());
-    }
-
     template<class StringList>
     void addOutputDevices(Kernel::OutputFactory fact, StringList avail) {
         for(auto device : avail) {
@@ -78,20 +71,6 @@ public:
                 outputFactories.insert(typename decltype(outputFactories)::value_type(device, fact));
             }
         }
-    }
-
-    Kernel::InputFactory getInputFactory(const std::string& filename) {
-        auto ext = path(filename).extension().string();
-
-        auto fact = inputFactories.find(ext);
-
-        enforceEx<Exception>(fact != inputFactories.end(), (filename + ": cannot decode file").c_str());
-        return fact->second;
-    }
-
-    std::unique_ptr<Input::Source> getDecoder(const boost::filesystem::path& file,
-                                              IO::BiDirectionalClosableSeekable& input) {
-        return getInputFactory(file.string())(input);
     }
 
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename) {
@@ -114,10 +93,71 @@ public:
 
 private:
     std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
-    Logger::Logger logject;
-    std::map<std::string, Kernel::InputFactory> inputFactories;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
 };
+
+std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
+
+
+static std::map<std::string, Kernel::InputFactory>& inputFactories() {
+    static std::map<std::string, Kernel::InputFactory> instance;
+    return instance;
+}
+
+class Kernel::FileTypeResolver::impl {
+public:
+    impl(IO::File& file) : file(file) {}
+
+    std::unique_ptr<Input::Source> getDecoder() {
+        auto ext = file.filename().extension().string();
+
+        auto fact = inputFactories().find(ext);
+
+        enforceEx<Exception>(fact != inputFactories().end(), (file.filename().string() + ": cannot decode file").c_str());
+        return fact->second(file);
+    }
+
+    std::unique_ptr<TagLib::File> getTagReader() {
+        auto ext = file.filename().extension();
+        taglibfile.reset(new IO::TagLibFile(file));
+        if(ext == ".flac") {
+            return std::unique_ptr<TagLib::File>(new TagLib::FLAC::File(taglibfile.get(), nullptr));
+        }
+        return nullptr;
+    }
+
+    static void addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
+        auto bef = inputFactories().size();
+        auto pos = inputFactories().find(extension);
+        if(pos == inputFactories().end()) {
+            inputFactories().insert(std::remove_reference<decltype(inputFactories())>::type::value_type(extension, fact));
+        }
+        else {
+            WARN_LOG(logject) << extension << ": already registered to decoder factory";
+        }
+        assert(++bef == inputFactories().size());
+    }
+
+private:
+    IO::File& file;
+    std::unique_ptr<IO::TagLibFile> taglibfile;
+};
+
+Kernel::FileTypeResolver::FileTypeResolver(IO::File& file) {
+    pimpl.reset(new impl(file));
+}
+
+void Kernel::FileTypeResolver::addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
+    pimpl->addInputExtension(fact, extension);
+}
+
+std::unique_ptr<Input::Source> Kernel::FileTypeResolver::getDecoder() {
+    return std::move(pimpl->getDecoder());
+}
+
+std::unique_ptr<TagLib::File> Kernel::FileTypeResolver::getTagReader() {
+    return std::move(pimpl->getTagReader());
+}
 
 Kernel::Kernel() : pimpl(new impl) {}
 
@@ -134,21 +174,12 @@ void Kernel::loadPlugin(const std::string& filepath) {
 
 void Kernel::loadAllPlugins() {}
 
-void Kernel::addInputExtension(InputFactory fact, const std::string& extension) {
-    pimpl->addInputExtension(fact, extension);
-}
-
 void Kernel::addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail) {
     pimpl->addOutputDevices(fact, avail);
 }
 
 void Kernel::addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail) {
     pimpl->addOutputDevices(fact, avail);
-}
-
-std::unique_ptr<Input::Source> Kernel::getDecoder(const boost::filesystem::path& file,
-                                                  IO::BiDirectionalClosableSeekable& input) {
-    return pimpl->getDecoder(file, input);
 }
 
 std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& devicename) {

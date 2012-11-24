@@ -24,6 +24,7 @@ typedef std::ios_base::openmode openmode;
 #include <boost/iostreams/stream_buffer.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
 namespace io = boost::iostreams;
+#include <boost/filesystem.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/stream.hpp>
@@ -34,15 +35,15 @@ namespace IO {
 
 class File : public BiDirectionalClosableSeekable {
 public:
-    File(const std::string& filename, const openmode mode = mode_)
-        : impl(filename, mode), filename_(filename)
+    File(const boost::filesystem::path& filename, const openmode mode = mode_)
+        : impl(filename.string(), mode), filename_(filename)
     {
-        enforceEx<Exception>((bool)(*this), (filename_ + ": could not open").c_str());
+        enforceEx<Exception>((bool)(*this), (filename_.string() + ": could not open").c_str());
     }
 
     virtual ~File() {}
 
-    const std::string& filename() const {
+    const boost::filesystem::path& filename() const {
         return filename_;
     }
 
@@ -52,7 +53,7 @@ public:
 
     void open(const openmode mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out)
     {
-        impl.open(filename_, mode);
+        impl.open(filename_.string(), mode);
     }
 
     virtual std::streamsize read(char * s, std::streamsize n) {
@@ -88,7 +89,7 @@ private:
 //    io::stream_buffer<io::file> impl;
 //    io::file_descriptor impl;
     std::fstream impl;
-    std::string filename_;
+    boost::filesystem::path filename_;
 };
 
 struct IOException : Exception {

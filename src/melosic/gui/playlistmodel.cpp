@@ -38,11 +38,14 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
     if(index.row() >= playlist->size())
         return QVariant();
 
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-        return QString::fromStdString((*playlist)[index.row()].sourceName());
-//        return QString("%1ms").arg(const_cast<Melosic::Track&>((*playlist)[index.row()]).duration().count());
-    else if(role == (int)Melosic::DataRoles::SourceName)
-        return QString::fromStdString((*playlist)[index.row()].sourceName());
+    if(role == Qt::DisplayRole || role == Qt::EditRole) {
+        const auto& track = (*playlist)[index.row()];
+        return QString::fromStdString(track.sourceName() + " " + track.getTag("artist"));
+    }
+    else if(role == (int)Melosic::DataRoles::SourceName) {
+        const auto& track = (*playlist)[index.row()];
+        return QString::fromStdString(track.sourceName() + " " + track.getTag("artist"));
+    }
     else
         return QVariant();
 }

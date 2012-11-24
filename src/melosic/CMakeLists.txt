@@ -10,6 +10,9 @@ SET(PN ${PROJECT_NAME})
 
 find_package(Boost COMPONENTS filesystem system iostreams system log log_setup REQUIRED)
 
+find_package(Taglib REQUIRED)
+SET(TAGLIB_MIN_VERSION "1.8")
+
 add_executable(${PN} ${SRC_LIST})
 
 add_subdirectory(core)
@@ -24,5 +27,5 @@ IF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl)
 ENDIF(${UNIX})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
 

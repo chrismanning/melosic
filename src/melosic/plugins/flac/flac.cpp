@@ -246,7 +246,7 @@ private:
 };
 
 extern "C" void registerPluginObjects() {
-    Kernel::getInstance().addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
+    Kernel::FileTypeResolver::addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
 extern "C" void destroyPluginObjects() {

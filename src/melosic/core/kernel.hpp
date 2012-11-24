@@ -24,6 +24,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <taglib/tfile.h>
+
 namespace Melosic {
 
 namespace Input {
@@ -35,7 +37,7 @@ class OutputManager;
 class DeviceSink;
 }
 namespace IO {
-class BiDirectionalClosableSeekable;
+class File;
 }
 class Track;
 class OutputDeviceName;
@@ -52,26 +54,36 @@ public:
     void loadPlugin(const std::string& filepath);
     void loadAllPlugins();
 
-    void addInputExtension(InputFactory fact, const std::string& extension);
-    template <typename List>
-    void addInputExtensions(InputFactory fact, const List& extensions) {
-        for(const auto& ext : extensions) {
-            addInputExtension(fact, ext);
-        }
-    }
-    template <typename String>
-    void addInputExtensions(InputFactory fact, const std::initializer_list<String>& extensions) {
-        for(const auto& ext : extensions) {
-            addInputExtension(fact, ext);
-        }
-    }
     void addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail);
     void addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail);
 
-    std::unique_ptr<Input::Source> getDecoder(const boost::filesystem::path& file,
-                                              IO::BiDirectionalClosableSeekable& input);
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
+
+    class FileTypeResolver {
+    public:
+        FileTypeResolver(IO::File&);
+        std::unique_ptr<Input::Source> getDecoder();
+        std::unique_ptr<TagLib::File> getTagReader();
+
+        static void addInputExtension(InputFactory fact, const std::string& extension);
+        template <typename List>
+        static void addInputExtensions(InputFactory fact, const List& extensions) {
+            for(const auto& ext : extensions) {
+                addInputExtension(fact, ext);
+            }
+        }
+        template <typename String>
+        static void addInputExtensions(InputFactory fact, const std::initializer_list<String>& extensions) {
+            for(const auto& ext : extensions) {
+                addInputExtension(fact, ext);
+            }
+        }
+
+    private:
+        class impl;
+        static std::unique_ptr<impl> pimpl;
+    };
 
 private:
     Kernel();

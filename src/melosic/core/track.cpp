@@ -19,6 +19,9 @@
 #include <mutex>
 #include <boost/thread.hpp>
 
+#include <taglib/tpropertymap.h>
+#include <taglib/tfile.h>
+
 #include "track.hpp"
 #include <melosic/common/stream.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
@@ -33,10 +36,11 @@ static Logger::Logger logject(boost::log::keywords::channel = "Track");
 class Track::impl {
 public:
     impl(std::string filename, std::chrono::milliseconds start, std::chrono::milliseconds end) :
-        filename(filename), input(new IO::File(filename)), start(start), end(end)
+        filename(filename), input(new IO::File(filename)), start(start), end(end), fileResolver(*input)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
-        decoder = Kernel::getInstance().getDecoder(filename, *input);
+        decoder = fileResolver.getDecoder();
+        reloadTags();
         close();
     }
 
@@ -66,10 +70,6 @@ public:
         auto difference = (end > start) ? (end - tell()).count() : 0;
         std::lock_guard<Mutex> l(mu);
         return decoder->read(s, (difference < n) ? n : difference);
-    }
-
-    Track::TagsType& getTags() {
-        return tags;
     }
 
     void seek(std::chrono::milliseconds dur) {
@@ -106,6 +106,22 @@ public:
         return decoder->getAudioSpecs();
     }
 
+    std::string getTag(const std::string& key) const {
+        auto val = tags.find(key);
+
+        if(val != tags.end()) {
+            return val->second.front().to8Bit(true);
+        }
+        static std::string str("?");
+        return str;
+    }
+
+    void reloadTags() {
+        taglibfile = fileResolver.getTagReader();
+        tags = taglibfile->properties();
+        TRACE_LOG(logject) << tags.toString().to8Bit(true);
+    }
+
     explicit operator bool() {
         boost::shared_lock<Mutex> l(mu);
         if(decoder) {
@@ -116,23 +132,18 @@ public:
     }
 
     const std::string& sourceName() const {
-        try {
-            return dynamic_cast<IO::File*>(input.get())->filename();
-        }
-        catch(...) {
-            static std::string tmp("unknown source");
-            return tmp;
-        }
+        return input->filename().string();
     }
 
 private:
     friend class Track;
     const std::string& filename;
-    std::unique_ptr<IO::BiDirectionalClosableSeekable> input;
+    std::unique_ptr<IO::File> input;
     std::chrono::milliseconds start, end;
+    Kernel::FileTypeResolver fileResolver;
     std::unique_ptr<Input::Source> decoder;
-    std::once_flag decoderInitFlag;
-    Track::TagsType tags;
+    std::unique_ptr<TagLib::File> taglibfile;
+    TagLib::PropertyMap tags;
     typedef boost::shared_mutex Mutex;
     Mutex mu;
 };
@@ -170,10 +181,6 @@ void Track::reOpen() {
     pimpl->reOpen();
 }
 
-Track::TagsType& Track::getTags() {
-    return pimpl->getTags();
-}
-
 void Track::seek(std::chrono::milliseconds dur) {
     pimpl->seek(dur);
 }
@@ -192,6 +199,10 @@ std::chrono::milliseconds Track::duration() const {
 
 Melosic::AudioSpecs& Track::getAudioSpecs() {
     return pimpl->getAudioSpecs();
+}
+
+std::string Track::getTag(const std::string& key) const {
+    return pimpl->getTag(key);
 }
 
 Track::operator bool() {

@@ -32,7 +32,6 @@ namespace Melosic {
 class Track : public Input::Source, public IO::Closable
 {
 public:
-    typedef std::multimap<std::string, std::string> TagsType;
 
     Track(const std::string& filename,
           std::chrono::milliseconds start = std::chrono::milliseconds(0),
@@ -42,12 +41,12 @@ public:
     Track(const Track&);
     void operator=(const Track&);
 
-    Track::TagsType& getTags();
     virtual void reset();
     virtual void seek(std::chrono::milliseconds dur);
     virtual std::chrono::milliseconds tell();
     virtual std::chrono::milliseconds duration() const;
     virtual Melosic::AudioSpecs& getAudioSpecs();
+    std::string getTag(const std::string& key) const;
     virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
     virtual void close();
