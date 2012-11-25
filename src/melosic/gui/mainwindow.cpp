@@ -45,24 +45,27 @@ MainWindow::MainWindow(QWidget * parent) :
     ui->nextButton->setDefaultAction(ui->actionNext);
     ui->playlistView->setModel(playlistModel);
 
-    playerStateConnection = player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1));
-    playerSeekConnection = ui->trackSeeker->connectSeek(boost::bind(&Player::seek, player.get(), _1));
-    seekerStateConnection = player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot, ui->trackSeeker, _1));
-    seekerNotifyConnection = player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
-                                                                   ui->trackSeeker, _1, _2));
+    ssConnections.emplace_back(player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1)));
+    ssConnections.emplace_back(ui->trackSeeker->connectSeek(
+                                   TrackSeeker::SeekSignal::slot_type(&Player::seek, player.get(), _1)
+                                   .track_foreign(std::weak_ptr<Player>(player))));
+    ssConnections.emplace_back(player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot,
+                                                                ui->trackSeeker, _1)));
+    ssConnections.emplace_back(player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
+                                                                     ui->trackSeeker, _1, _2)));
 
     auto devs = Kernel::getInstance().getOutputDeviceNames();
     for(const auto& dev : devs) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
-                                                             QString::fromStdString(dev.getName()));
+                                      QString::fromStdString(dev.getName()));
     }
     oldDeviceIndex = ui->outputDevicesCBX->currentIndex();
 }
 
 MainWindow::~MainWindow() {
     TRACE_LOG(logject) << "Destroying main window";
-    playerStateConnection.disconnect();
     delete ui;
+    delete playlistModel;
 }
 
 void MainWindow::onStateChangeSlot(DeviceState state) {

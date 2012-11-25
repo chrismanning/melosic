@@ -64,10 +64,7 @@ private:
     PlaylistModel* playlistModel;
     boost::shared_ptr<Player> player;
     Logger::Logger logject;
-    boost::signals2::connection playerStateConnection;
-    boost::signals2::connection seekerStateConnection;
-    boost::signals2::connection seekerNotifyConnection;
-    boost::signals2::connection playerSeekConnection;
+    std::list<boost::signals2::scoped_connection> ssConnections;
     int oldDeviceIndex;
 };
 
