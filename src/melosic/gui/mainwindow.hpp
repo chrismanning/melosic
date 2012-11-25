@@ -62,7 +62,7 @@ private:
     Ui::MainWindow* ui;
     boost::shared_ptr<Playlist> currentPlaylist;
     PlaylistModel* playlistModel;
-    boost::shared_ptr<Player> player;
+    std::shared_ptr<Player> player;
     Logger::Logger logject;
     std::list<boost::signals2::scoped_connection> ssConnections;
     int oldDeviceIndex;

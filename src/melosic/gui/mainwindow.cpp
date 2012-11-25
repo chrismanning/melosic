@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget * parent) :
     ui(new Ui::MainWindow),
     currentPlaylist(new Playlist),
     playlistModel(new PlaylistModel(currentPlaylist)),
-    player(new Player),
+    player(Kernel::getInstance().getPlayer()),
     logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);

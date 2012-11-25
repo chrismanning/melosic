@@ -28,6 +28,7 @@ using boost::filesystem::path;
 #include <melosic/core/track.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/taglibfile.hpp>
+#include <melosic/core/player.hpp>
 
 namespace Melosic {
 
@@ -35,7 +36,7 @@ static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
 
 class Kernel::impl {
 public:
-    impl() {}
+    impl() : player(new Player) {}
 
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
@@ -91,9 +92,14 @@ public:
         return names;
     }
 
+    std::shared_ptr<Player> getPlayer() {
+        return player;
+    }
+
 private:
     std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
+    std::shared_ptr<Player> player;
 };
 
 std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
@@ -188,6 +194,10 @@ std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& d
 
 std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
     return pimpl->getOutputDeviceNames();
+}
+
+std::shared_ptr<Player> Kernel::getPlayer() {
+    return pimpl->getPlayer();
 }
 
 } // end namespace Melosic

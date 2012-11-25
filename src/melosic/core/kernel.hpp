@@ -28,6 +28,8 @@
 
 namespace Melosic {
 
+class Player;
+
 namespace Input {
 class InputManager;
 class Source;
@@ -59,6 +61,8 @@ public:
 
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
+
+    std::shared_ptr<Player> getPlayer();
 
     class FileTypeResolver {
     public:
