@@ -35,8 +35,10 @@ namespace IO {
 
 class File : public BiDirectionalClosableSeekable {
 public:
-    File(const boost::filesystem::path& filename, const openmode mode = mode_)
-        : impl(filename.string(), mode), filename_(filename)
+    auto static const defaultMode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
+
+    File(const boost::filesystem::path& filename, const openmode mode_ = defaultMode)
+        : impl(filename.string(), mode_), filename_(filename), mode_(mode_)
     {
         enforceEx<Exception>((bool)(*this), (filename_.string() + ": could not open").c_str());
     }
@@ -47,7 +49,7 @@ public:
         return filename_;
     }
 
-    explicit operator bool() {
+    explicit operator bool() const {
         return impl.is_open();
     }
 
@@ -76,20 +78,28 @@ public:
         impl.close();
     }
 
-    virtual bool isOpen() {
-        return bool(*this);
+    virtual bool isOpen() const {
+        return impl.is_open();
     }
 
     virtual void reOpen() {
         open();
     }
 
+    std::ios_base::openmode mode() const {
+        return mode_;
+    }
+
+    void clear() {
+        impl.clear();
+    }
+
 private:
-    auto static const mode_ = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
 //    io::stream_buffer<io::file> impl;
 //    io::file_descriptor impl;
     std::fstream impl;
     boost::filesystem::path filename_;
+    std::ios_base::openmode mode_;
 };
 
 struct IOException : Exception {

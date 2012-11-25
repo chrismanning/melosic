@@ -35,7 +35,7 @@ public:
 class Closable : Device {
 public:
     virtual void close() = 0;
-    virtual bool isOpen() = 0;
+    virtual bool isOpen() const = 0;
     virtual void reOpen() = 0;
 };
 

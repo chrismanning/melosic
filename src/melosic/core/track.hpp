@@ -50,7 +50,7 @@ public:
     virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
     virtual void close();
-    virtual bool isOpen();
+    virtual bool isOpen() const;
     virtual void reOpen();
     const std::string& sourceName() const;
 

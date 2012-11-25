@@ -188,7 +188,7 @@ void Track::close() {
     pimpl->close();
 }
 
-bool Track::isOpen() {
+bool Track::isOpen() const {
     return pimpl->isOpen();
 }
 

@@ -46,7 +46,7 @@ void TagLibFile::removeBlock(ulong start, ulong length) {
 }
 
 bool TagLibFile::readOnly() const {
-    return false;
+    return !(file.mode() & std::ios_base::out);
 }
 
 bool TagLibFile::isOpen() const {
@@ -70,7 +70,9 @@ void TagLibFile::seek(long offset, TagLib::IOStream::Position p) {
     file.seekg(offset, d);
 }
 
-void TagLibFile::clear() {}
+void TagLibFile::clear() {
+    file.clear();
+}
 
 long TagLibFile::tell() const {
     return file.tellg();
