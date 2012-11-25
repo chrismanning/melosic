@@ -66,7 +66,7 @@ public:
     {}
 
     virtual ~AlsaOutput() {
-        TRACE_LOG(logject) << "ALSA instance being destroyed";
+//        TRACE_LOG(logject) << "ALSA instance being destroyed";
         if(pdh != nullptr) {
             stop();
         }
