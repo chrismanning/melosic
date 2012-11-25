@@ -54,6 +54,9 @@ public:
     virtual void reOpen();
     const std::string& sourceName() const;
 
+    void reloadTags();
+    void reloadDecoder();
+
 private:
     class impl;
     std::unique_ptr<impl> pimpl;

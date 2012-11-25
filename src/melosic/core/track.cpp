@@ -39,7 +39,7 @@ public:
         filename(filename), input(new IO::File(filename)), start(start), end(end), fileResolver(*input)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
-        decoder = fileResolver.getDecoder();
+        reloadDecoder();
         reloadTags();
         close();
     }
@@ -116,9 +116,24 @@ public:
         return str;
     }
 
+    void reloadDecoder() {
+        if(!isOpen()) {
+            reOpen();
+        }
+        std::lock_guard<Mutex> l(mu);
+        decoder = fileResolver.getDecoder();
+    }
+
     void reloadTags() {
+        if(!isOpen()) {
+            reOpen();
+        }
+        auto pos = tell();
+        std::unique_lock<Mutex> l(mu);
         taglibfile = fileResolver.getTagReader();
         tags = taglibfile->properties();
+        l.unlock();
+        seek(pos);
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
@@ -211,6 +226,14 @@ Track::operator bool() {
 
 const std::string& Track::sourceName() const {
     return pimpl->sourceName();
+}
+
+void Track::reloadTags() {
+    pimpl->reloadTags();
+}
+
+void Track::reloadDecoder() {
+    pimpl->reloadDecoder();
 }
 
 } //end namespace Melosic
