@@ -101,7 +101,8 @@ public:
     }
 
     virtual void close() {
-        impl.close();
+        if(isOpen())
+            impl.close();
     }
 
     virtual bool isOpen() const {
