@@ -95,11 +95,10 @@ public:
     }
 
     void reset() {
-        if(!isOpen()) {
-            reOpen();
+        if(isOpen()) {
+            boost::lock_guard<Mutex> l(mu);
+            decoder->reset();
         }
-        boost::lock_guard<Mutex> l(mu);
-        decoder->reset();
     }
 
     chrono::milliseconds duration() const {
