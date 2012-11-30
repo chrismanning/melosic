@@ -24,7 +24,6 @@
 #include <QList>
 #include <memory>
 #include <boost/signals2.hpp>
-#include "playlistmodel.hpp"
 
 #include <melosic/core/player.hpp>
 #include <melosic/common/logging.hpp>
@@ -38,6 +37,8 @@ enum class DeviceState;
 }
 using namespace Melosic;
 using Output::DeviceState;
+
+class PlaylistModel;
 
 namespace Ui {
 class MainWindow;

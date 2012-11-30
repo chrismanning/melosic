@@ -19,11 +19,14 @@
 #define PLAYLISTMODEL_HPP
 
 #include <QAbstractListModel>
+#include <QStringList>
 
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/logging.hpp>
+#include <melosic/common/error.hpp>
+#include <melosic/common/file.hpp>
 
 namespace Melosic {
 struct DataRoles {
@@ -57,13 +60,25 @@ public:
     }
 
     template <class StringList>
-    void appendFiles(StringList filenames) {
+    QStringList appendFiles(const StringList& filenames) {
         auto beg = playlist->end() - playlist->begin();
+        QStringList failList;
         beginInsertRows(QModelIndex(), beg, beg + filenames.size());
         for(const auto& filename : filenames) {
-            playlist->emplace_back(filename);
+            try {
+                playlist->emplace_back(filename);
+            }
+            catch(Melosic::UnsupportedFileTypeException& e) {
+                if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
+                    failList << QString::fromStdString(path->string()) + ": file type not supported";
+            }
+            catch(Melosic::DecoderException& e) {
+                if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
+                    failList << QString::fromStdString(path->string()) + ": file could not be decoded";
+            }
         }
         endInsertRows();
+        return failList;
     }
 
     template<typename ... Args>

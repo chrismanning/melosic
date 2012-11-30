@@ -73,6 +73,12 @@ struct AudioSpecs {
     uint64_t total_samples;
 };
 
+namespace ErrorTag {
+typedef boost::error_info<struct tagBPS, uint8_t> BPS;
+typedef boost::error_info<struct tagChannels, uint8_t> Channels;
+typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
+}
+
 } // end namespace Melosic
 
 #endif // MELOSIC_COMMON_HPP

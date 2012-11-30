@@ -38,9 +38,10 @@ public:
     auto static const defaultMode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
 
     File(const boost::filesystem::path& filename, const openmode mode_ = defaultMode)
-        : impl(filename.string(), mode_), filename_(filename), mode_(mode_)
+        : filename_(filename), mode_(mode_)
     {
-        enforceEx<Exception>((bool)(*this), (filename_.string() + ": could not open").c_str());
+        impl.exceptions(impl.failbit | impl.badbit);
+        open(mode());
     }
 
     virtual ~File() {}
@@ -55,23 +56,48 @@ public:
 
     void open(const openmode mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out)
     {
-        impl.open(filename_.string(), mode);
+        try {
+            impl.open(filename_.string(), mode);
+        }
+        catch(std::ios_base::failure& e) {
+            BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(filename_));
+        }
     }
 
     virtual std::streamsize read(char * s, std::streamsize n) {
-        return io::read(impl, s, n);
+        try {
+            return io::read(impl, s, n);
+        }
+        catch(std::ios_base::failure& e) {
+            BOOST_THROW_EXCEPTION(FileReadException() << ErrorTag::FilePath(filename_));
+        }
     }
 
     virtual std::streamsize write(const char * s, std::streamsize n) {
-        return io::write(impl, s, n);
+        try {
+            return io::write(impl, s, n);
+        }
+        catch(std::ios_base::failure& e) {
+            BOOST_THROW_EXCEPTION(FileWriteException() << ErrorTag::FilePath(filename_));
+        }
     }
 
     virtual std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) {
-        return io::seek(impl, off, way, std::ios_base::in);
+        try {
+            return io::seek(impl, off, way, std::ios_base::in);
+        }
+        catch(std::ios_base::failure& e) {
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_));
+        }
     }
 
     virtual std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) {
-        return io::seek(impl, off, way, std::ios_base::out);
+        try {
+            return io::seek(impl, off, way, std::ios_base::out);
+        }
+        catch(std::ios_base::failure& e) {
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_));
+        }
     }
 
     virtual void close() {
@@ -100,12 +126,6 @@ private:
     std::fstream impl;
     boost::filesystem::path filename_;
     std::ios_base::openmode mode_;
-};
-
-struct IOException : Exception {
-    IOException(const File& fs, const char * msg) : Exception(msg), fs(fs) {}
-private:
-    const File& fs;
 };
 
 } // IO

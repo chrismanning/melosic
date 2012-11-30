@@ -32,18 +32,20 @@ using boost::format;
 #include <thread>
 #include <boost/thread.hpp>
 
+#include <melosic/common/error.hpp>
+#include <melosic/common/logging.hpp>
+#include <melosic/core/kernel.hpp>
 #include <melosic/common/common.hpp>
 using namespace Melosic;
 
 static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
-void enforceAlsaEx(int ret) {
-    if(ret != 0) {
-        std::stringstream tmp;
-        tmp << "Exception: " << strdup(snd_strerror(ret));
-        ERROR_LOG(logject) << tmp.str();
-        throw Exception(tmp.str().c_str());
-    }
+#define ALSA_THROW_IF(Exc, ret) if(ret != 0) {\
+    std::stringstream tmp;\
+    tmp << "Exception: " << strdup(snd_strerror(ret));\
+    MELOSIC_THROW(Exc() << ErrorTag::Output::DeviceErrStr(tmp.str())\
+    << ErrorTag::Plugin::Info(::alsaInfo),\
+    tmp.str(), logject);\
 }
 
 static const snd_pcm_format_t formats[] = {
@@ -66,7 +68,6 @@ public:
     {}
 
     virtual ~AlsaOutput() {
-//        TRACE_LOG(logject) << "ALSA instance being destroyed";
         if(pdh != nullptr) {
             stop();
         }
@@ -79,7 +80,7 @@ public:
         current = as;
         state_ = Output::DeviceState::Error;
         if(pdh == nullptr) {
-            enforceAlsaEx(snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
+            ALSA_THROW_IF(DeviceOpenException, snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
         }
 
         if(params == nullptr) {
@@ -89,11 +90,11 @@ public:
 
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
-        enforceAlsaEx(snd_pcm_hw_params_set_channels(pdh, params, as.channels));
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_channels(pdh, params, as.channels));
         int dir = 0;
-        enforceAlsaEx(snd_pcm_hw_params_set_rate_resample(pdh, params, false));
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_resample(pdh, params, false));
         unsigned rate = as.sample_rate;
-        enforceAlsaEx(snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
         if(rate != as.sample_rate) {
             WARN_LOG(logject) << "Sample rate: " << as.sample_rate << " not supported. Using " << rate;
             as.target_sample_rate = rate;
@@ -146,7 +147,7 @@ public:
             return;
         }
 
-        enforceAlsaEx(snd_pcm_hw_params(pdh, params));
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params(pdh, params));
 
         current = as;
 
@@ -165,7 +166,7 @@ public:
             l.lock();
         }
         if(state_ == Output::DeviceState::Ready) {
-            enforceAlsaEx(snd_pcm_prepare(pdh));
+            ALSA_THROW_IF(DeviceOpenException, snd_pcm_prepare(pdh));
             state_ = Output::DeviceState::Playing;
         }
         else if(state_ == Output::DeviceState::Paused) {
@@ -177,10 +178,10 @@ public:
         std::lock_guard<Mutex> l(mu);
         if(state_ == Output::DeviceState::Playing) {
             if(snd_pcm_hw_params_can_pause(params)) {
-                enforceAlsaEx(snd_pcm_pause(pdh, true));
+                ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, true));
             }
             else {
-                enforceAlsaEx(snd_pcm_drop(pdh));
+                ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
             }
             state_ = Output::DeviceState::Paused;
         }
@@ -191,7 +192,7 @@ public:
 
     void unpause() {
         if(snd_pcm_hw_params_can_pause(params)) {
-            enforceAlsaEx(snd_pcm_pause(pdh, false));
+            ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, false));
         }
         else {
             snd_pcm_prepare(pdh);
@@ -203,8 +204,8 @@ public:
     virtual void stop() {
         std::lock_guard<Mutex> l(mu);
         if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
-            enforceAlsaEx(snd_pcm_drop(pdh));
-            enforceAlsaEx(snd_pcm_close(pdh));
+            ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
+            ALSA_THROW_IF(DeviceException, snd_pcm_close(pdh));
         }
         state_ = Output::DeviceState::Stopped;
         pdh = nullptr;
@@ -231,7 +232,7 @@ public:
             }
             else if(r < 0) {
                 ERROR_LOG(logject) << "ALSA: write error";
-                return -1;
+                ALSA_THROW_IF(DeviceWriteException, r);
             }
             else if(r != frames) {
                 ERROR_LOG(logject) << "ALSA: not all frames written";
@@ -273,7 +274,7 @@ extern "C" void registerPluginObjects() {
     char * name, * desc, * io;
     std::string filter = "Output";
 
-    enforceAlsaEx(snd_device_name_hint(-1, "pcm", &hints));
+    ALSA_THROW_IF(DeviceOpenException, snd_device_name_hint(-1, "pcm", &hints));
 
     std::list<OutputDeviceName> names;
 

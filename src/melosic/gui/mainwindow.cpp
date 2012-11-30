@@ -18,6 +18,7 @@
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "trackseeker.hpp"
+#include "playlistmodel.hpp"
 #include <QFileDialog>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
@@ -98,7 +99,13 @@ void MainWindow::on_actionOpen_triggered() {
     for(const auto& filename : filenames) {
         names.push_back(filename.toStdString());
     }
-    playlistModel->appendFiles(names);
+    QStringList fails = playlistModel->appendFiles(names);
+    if(fails.size()) {
+        QMessageBox failmsg(QMessageBox::Warning, "Failed to add tracks", "", QMessageBox::Ok, this);
+        failmsg.setText(QString::number(fails.size()) + " tracks could not be added.");
+        failmsg.setDetailedText(fails.join("\n"));
+        failmsg.exec();
+    }
 }
 
 void MainWindow::on_actionPlay_triggered() {

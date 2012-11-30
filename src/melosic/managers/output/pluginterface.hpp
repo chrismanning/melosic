@@ -20,13 +20,19 @@
 
 #include <string>
 #include <boost/iostreams/concepts.hpp>
+#include <boost/exception/error_info.hpp>
 
 #include <melosic/common/stream.hpp>
 
 namespace Melosic {
 
-class PlaybackHandler;
 struct AudioSpecs;
+
+namespace ErrorTag {
+namespace Output {
+typedef boost::error_info<struct tagDeviceErrStr, std::string> DeviceErrStr;
+}
+}
 
 namespace Output {
 

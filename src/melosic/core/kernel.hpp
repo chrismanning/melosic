@@ -26,6 +26,8 @@
 
 #include <taglib/tfile.h>
 
+#include <melosic/common/error.hpp>
+
 namespace Melosic {
 
 class Player;
@@ -118,6 +120,10 @@ private:
 };
 inline std::ostream& operator<<(std::ostream& out, const OutputDeviceName& b) {
     return out << b.name + (b.desc.size() ? (": " + b.desc) : "");
+}
+
+namespace ErrorTag {
+typedef boost::error_info<struct tagDeviceName, std::string> DeviceName;
 }
 
 }

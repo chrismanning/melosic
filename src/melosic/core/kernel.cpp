@@ -41,35 +41,31 @@ public:
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
 
-        enforceEx<Exception>(exists(p), (filepath + ": file does not exist").c_str());
-
-        enforceEx<Exception>(p.extension() == ".melin" && is_regular_file(p),
-                             (filepath + ": not a melosic plugin").c_str());
-
-        try {
-            auto filename = p.filename().string();
-
-            if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-                ERROR_LOG(logject) << "Plugin already loaded: " << filepath << std::endl;
-                return;
-            }
-
-            std::shared_ptr<Plugin> pl(new Plugin(p));
-            pl->registerPluginObjects();
-            loadedPlugins.insert(decltype(loadedPlugins)::value_type(filename, pl));
+        if(!exists(p) && !is_regular_file(p)) {
+            BOOST_THROW_EXCEPTION(FileNotFoundException() << ErrorTag::FilePath(absolute(p)));
         }
-        catch(PluginException& e) {
-            std::cerr << e.what() << std::endl;
-            throw;
+
+        if(p.extension() != ".melin") {
+            BOOST_THROW_EXCEPTION(PluginInvalidException() << ErrorTag::FilePath(absolute(p)));
         }
+
+        auto filename = p.filename().string();
+
+        if(loadedPlugins.find(filename) != loadedPlugins.end()) {
+            ERROR_LOG(logject) << "Plugin already loaded: " << filepath << std::endl;
+            return;
+        }
+
+        std::shared_ptr<Plugin::Plugin> pl(new Plugin::Plugin(p));
+        loadedPlugins.insert({filename, pl});
     }
 
     template<class StringList>
     void addOutputDevices(Kernel::OutputFactory fact, StringList avail) {
-        for(auto device : avail) {
+        for(const auto& device : avail) {
             auto it = outputFactories.find(device);
             if(it == outputFactories.end()) {
-                outputFactories.insert(typename decltype(outputFactories)::value_type(device, fact));
+                outputFactories.insert({device, fact});
             }
         }
     }
@@ -78,10 +74,10 @@ public:
         auto it = outputFactories.find(devicename);
 
         if(it == outputFactories.end()) {
-            throw Exception("No such output device");
+            BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(devicename));
         }
 
-        return std::unique_ptr<Output::DeviceSink>(it->second(it->first));
+        return it->second(it->first);
     }
 
     std::list<OutputDeviceName> getOutputDeviceNames() {
@@ -103,7 +99,6 @@ private:
 };
 
 std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
-
 
 static std::map<std::string, Kernel::InputFactory>& inputFactories() {
     static std::map<std::string, Kernel::InputFactory> instance;

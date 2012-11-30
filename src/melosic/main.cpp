@@ -19,13 +19,10 @@
 #include <melosic/gui/mainwindow.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/common/common.hpp>
-#include <melosic/core/wav.hpp>
-#include <melosic/core/player.hpp>
-#include <melosic/core/track.hpp>
+#include <melosic/common/error.hpp>
+#include <melosic/common/plugin.hpp>
 using namespace Melosic;
 
-#include <thread>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 using std::ios_base;
@@ -44,15 +41,38 @@ int main(int argc, char* argv[]) {
 
         Kernel& kernel = Kernel::getInstance();
 
-        LOG(logject) << "Loading Flac plugin";
         kernel.loadPlugin("flac.melin");
-        LOG(logject) << "Loading ALSA plugin";
         kernel.loadPlugin("alsa.melin");
 
         MainWindow win;
         win.show();
 
         return app.exec();
+    }
+    catch(PluginVersionMismatch& e) {
+        auto* info = boost::get_error_info<ErrorTag::Plugin::Info>(e);
+        assert(info != nullptr);
+        std::stringstream str;
+        str << info->name << " Plugin API version mismatch. Expected: ";
+        str << Plugin::expectedAPIVersion() << "; Got: ";
+        str << info->APIVersion;
+        ERROR_LOG(logject) << str.str();
+        TRACE_LOG(logject) << boost::diagnostic_information(e);
+        TRACE_LOG(logject) << info;
+    }
+    catch(PluginException& e) {
+        std::string str("Plugin error");
+        if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
+            str += ": " + path->string();
+        }
+        if(auto* symbol = boost::get_error_info<ErrorTag::Plugin::Symbol>(e)) {
+            str += ": undefined symbol: " + *symbol;
+        }
+        ERROR_LOG(logject) << str;
+        TRACE_LOG(logject) << boost::diagnostic_information(e);
+    }
+    catch(boost::exception& e) {
+        TRACE_LOG(logject) << boost::diagnostic_information(e);
     }
     catch(std::exception& e) {
         ERROR_LOG(logject) << e.what();

@@ -21,11 +21,10 @@
 using boost::factory;
 #include <boost/format.hpp>
 using boost::format;
-#include <boost/iostreams/stream_buffer.hpp>
+#include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
-#include <mutex>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
@@ -34,21 +33,25 @@ using Logger::Severity;
 
 static Logger::Logger logject(boost::log::keywords::channel = "FLAC");
 
+#define FLAC_THROW_IF(Exc, cond, flacptr) if(!cond) {\
+    auto str = flacptr->get_state().as_cstring();\
+    MELOSIC_THROW(Exc() << ErrorTag::Plugin::Info(::flacInfo), str, logject);\
+}
+
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
 public:
     FlacDecoderImpl(IO::SeekableSource& input, std::deque<char>& buf, AudioSpecs& as)
         : input(input), buf(buf), as(as), lastSample(0)
     {
-        enforceEx<Exception>(init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, "FLAC: Cannot initialise decoder");
-        enforceEx<Exception>(process_until_end_of_metadata(), "FLAC: Processing of metadata failed");
+        FLAC_THROW_IF(DecoderInitException, init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, this);
+        FLAC_THROW_IF(MetadataException, process_until_end_of_metadata(), this);
         start = input.tellg();
-        enforceEx<Exception>(process_single() && seek_absolute(0), "FLAC: Decoding failed to start");
+        FLAC_THROW_IF(AudioDataInvalidException, process_single() && seek_absolute(0), this);
         reset();
         buf.clear();
     }
 
     virtual ~FlacDecoderImpl() {
-        TRACE_LOG(logject) << "Decoder impl being destroyed";
         finish();
     }
 
@@ -66,6 +69,10 @@ public:
                 return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
             }
             return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
+        }
+        catch(ReadException& e) {
+            ERROR_LOG(logject) << "Read error: decoder aborting";
+            return FLAC__STREAM_DECODER_READ_STATUS_ABORT;
         }
         catch(std::ios_base::failure& e) {
             ERROR_LOG(logject) << e.what();
@@ -116,7 +123,7 @@ public:
                 }
                 break;
             default:
-                throw Exception("Unsupported bps: " + frame->header.bits_per_sample);
+                BOOST_THROW_EXCEPTION(AudioDataUnsupported() << ErrorTag::BPS(frame->header.bits_per_sample));
                 break;
         }
 
@@ -124,8 +131,10 @@ public:
     }
 
     virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
-        ERROR_LOG(logject) << "Got error callback: " << FLAC__StreamDecoderErrorStatusString[status];
-        throw Exception(FLAC__StreamDecoderErrorStatusString[status]);
+        MELOSIC_THROW(DecoderException() <<
+                      ErrorTag::DecodeErrStr(FLAC__StreamDecoderErrorStatusString[status]),
+                      FLAC__StreamDecoderErrorStatusString[status],
+                      logject);
     }
 
     virtual void metadata_callback(const ::FLAC__StreamMetadata *metadata) {
@@ -189,7 +198,6 @@ private:
     AudioSpecs& as;
     std::streampos start;
     uint64_t lastSample;
-//    Logger::Logger log;
 };
 
 class FlacDecoder : public Input::Source {
@@ -198,13 +206,11 @@ public:
         pimpl(new FlacDecoderImpl(input, buf, as))
     {}
 
-    virtual ~FlacDecoder() {
-        TRACE_LOG(logject) << "Decoder being destroyed";
-    }
+    virtual ~FlacDecoder() {}
 
     virtual std::streamsize read(char * s, std::streamsize n) {
         while((std::streamsize)buf.size() < n && *this) {
-            enforceEx<Exception>(pimpl->process_single() && !buf.empty(), "FLAC: Fatal processing error");
+            FLAC_THROW_IF(AudioDataInvalidException, pimpl->process_single() && !buf.empty(), pimpl.get());
         }
 
         auto min = std::min(n, (std::streamsize)buf.size());

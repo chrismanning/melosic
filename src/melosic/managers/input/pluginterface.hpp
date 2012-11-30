@@ -21,11 +21,15 @@
 #include <chrono>
 #include <boost/iostreams/concepts.hpp>
 #include <melosic/common/stream.hpp>
+#include <melosic/common/error.hpp>
 
 namespace Melosic {
 
+namespace ErrorTag {
+typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
+}
+
 struct AudioSpecs;
-struct IBuffer;
 
 namespace Input {
 

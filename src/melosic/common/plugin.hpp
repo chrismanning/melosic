@@ -57,29 +57,36 @@ using boost::filesystem::absolute;
 
 #include <melosic/common/exports.hpp>
 #include <melosic/common/error.hpp>
+#include <melosic/common/logging.hpp>
 
 namespace Melosic {
 
-struct PluginException : public Exception {
-    PluginException() : Exception(DLError()) {
-    }
-};
+namespace ErrorTag {
+namespace Plugin {
+typedef boost::error_info<struct tagPluginSymbol, std::string> Symbol;
+typedef boost::error_info<struct tagPluginMsg, std::string> Msg;
+typedef boost::error_info<struct tagPluginInfo, Melosic::Plugin::Info> Info;
+}
+}
 
-struct PluginSymbolException : public PluginException {
-    PluginSymbolException(DLHandle handle) {
-        DLClose(handle);
-    }
-};
 
 class Plugin {
 public:
-    Plugin(const boost::filesystem::path& filename) {
-        handle = DLOpen(absolute(filename).string().c_str());
+    Plugin(const boost::filesystem::path& filename) :
+        pluginPath(absolute(filename)),
+        logject(boost::log::keywords::channel = "Plugin")
+    {
+        handle = DLOpen(pluginPath.string().c_str());
 
-        enforceEx<PluginException>(handle != 0);
+        if(handle == nullptr) {
+            BOOST_THROW_EXCEPTION(PluginException() <<
+                                  ErrorTag::FilePath(pluginPath) <<
+                                  ErrorTag::Plugin::Msg(DLError()));
+        }
 
         registerPlugin_ = getFunction<registerPlugin_F>("registerPluginObjects");
         destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPluginObjects");
+        LOG(logject) << "Plugin loaded: " << info;
     }
 
     ~Plugin() {
@@ -93,19 +100,45 @@ public:
 
     void registerPluginObjects() {
         registerPlugin_();
+        if(info.APIVersion != expectedAPIVersion()) {
+            BOOST_THROW_EXCEPTION(PluginVersionMismatch() <<
+                                  ErrorTag::FilePath(pluginPath) <<
+                                  ErrorTag::Plugin::Info(info));
+        }
+    }
+
+    const Info& getInfo() {
+        return info;
     }
 
 private:
     template <typename T>
-    std::function<T> getFunction(std::string symbolName) {
+    std::function<T> getFunction(const std::string& symbolName) {
+#ifdef _POSIX_VERSION
+        DLError(); //clear err
+#endif
         auto sym = DLGetSym(handle, symbolName.c_str());
-        enforceEx<PluginSymbolException>(sym != 0, handle);
+        auto err = DLError();
+#ifdef _POSIX_VERSION
+        if(err != nullptr) {
+#endif
+#ifdef _WIN32
+        if(sym == nullptr) {
+#endif
+            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() <<
+                                  ErrorTag::FilePath(pluginPath) <<
+                                  ErrorTag::Plugin::Symbol(symbolName)<<
+                                  ErrorTag::Plugin::Msg(err));
+        }
         return reinterpret_cast<T*>(sym);
     }
 
+    boost::filesystem::path pluginPath;
     registerPlugin_T registerPlugin_;
     destroyPlugin_T destroyPlugin_;
     DLHandle handle;
+    Logger::Logger logject;
+    Info info;
 };
 
 } // end namespace Melosic

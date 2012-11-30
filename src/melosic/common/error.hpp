@@ -22,6 +22,11 @@
 #include <utility>
 #include <string>
 
+#include <boost/exception/all.hpp>
+#include <boost/filesystem/path.hpp>
+
+#define MELOSIC_THROW(a, str, logger) ERROR_LOG(logger) << str; BOOST_THROW_EXCEPTION(a)
+
 namespace Melosic {
 
 template <class Exception, typename ... Args>
@@ -31,15 +36,55 @@ void enforceEx(bool expression, Args&& ... arguments) {
     }
 }
 
-struct Exception : public std::exception {
-    Exception(const char * msg) : msg(msg) {}
+//base exception type
+struct Exception : virtual boost::exception, virtual std::exception {};
+//IO related exceptions
+struct IOException : virtual Exception {};
+struct ReadException : virtual IOException {};
+struct WriteException : virtual IOException {};
+struct ReadOnlyException : virtual WriteException {};
+struct SeekException : virtual IOException {};
+//file exceptions
+struct FileException : virtual IOException {};
+struct FileOpenException : virtual FileException {};
+struct FileNotFoundException : virtual FileOpenException {};
+struct FileSeekException : virtual SeekException, virtual FileException {};
+struct FileReadException : virtual ReadException, virtual FileException {};
+struct FileWriteException : virtual WriteException, virtual FileException {};
+struct FileReadOnlyException : virtual ReadOnlyException, virtual FileException {};
+//device exceptions
+struct DeviceException : virtual IOException {};
+struct DeviceOpenException : virtual DeviceException {};
+struct DeviceNotFoundException : virtual DeviceOpenException {};
+struct DeviceParamException : virtual DeviceException {};
+struct DeviceBusyException : virtual DeviceOpenException {};
+struct DeviceReadException : virtual DeviceException, virtual ReadException {};
+struct DeviceWriteException : virtual DeviceException, virtual WriteException {};
+//decoder exceptions
+struct DecoderException : virtual Exception {};
+struct DecoderInitException : virtual DecoderException {};
+struct UnsupportedTypeException : virtual DecoderException {};
+struct UnsupportedFileTypeException : virtual UnsupportedTypeException, virtual FileException {};
+struct AudioDataInvalidException : virtual DecoderException {};
+struct AudioDataUnsupported : virtual DecoderException {};
+//metadata exceptions
+struct MetadataException : virtual Exception, virtual FileException {};
+struct MetadataNotFoundException : virtual MetadataException {};
+struct MetadataUnsupportedException : virtual MetadataException {};
+struct MetadataInvalidException : virtual MetadataException {};
+//player exceptions
 
-    virtual const char * what() const throw() {
-        return msg.c_str();
-    }
+//plugin exceptions
+struct PluginException : virtual Exception {};
+struct PluginInvalidException : virtual PluginException {};
+struct PluginSymbolNotFoundException : virtual PluginException {};
+struct PluginVersionMismatch : virtual PluginException {};
+//playlist exceptions
 
-    const std::string msg;
-};
+
+namespace ErrorTag {
+typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
+}
 
 }
 

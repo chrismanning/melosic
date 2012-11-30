@@ -222,8 +222,22 @@ private:
                     }
                 }
             }
-            catch(Exception& e) {
-                ERROR_LOG(logject) << e.what();
+            //TODO: copy caught exceptions to main thread
+            catch(AudioDataInvalidException& e) {
+                std::stringstream str;
+                str << "Decoder encountered error in data; ";
+                if(auto* file = boost::get_error_info<ErrorTag::FilePath>(e)) {
+                    str << "file: " << *file << ";";
+                }
+                ERROR_LOG(logject) << str.str();
+                stop();
+                playlist->next();
+                n = 0;
+                play();
+            }
+            catch(boost::exception& e) {
+                ERROR_LOG(logject) << "Exception caught; Diagnostics following";
+                ERROR_LOG(logject) << boost::diagnostic_information(e);
                 stop();
                 playlist->next();
                 n = 0;
