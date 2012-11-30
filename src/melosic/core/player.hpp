@@ -40,6 +40,9 @@ public:
     Player(std::unique_ptr<Output::DeviceSink> device);
     ~Player();
 
+    Player(const Player&) = delete;
+    Player& operator=(const Player&) = delete;
+
     void play();
     void pause();
     void stop();

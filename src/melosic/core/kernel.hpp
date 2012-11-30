@@ -49,6 +49,9 @@ public:
     typedef std::function<std::unique_ptr<Input::Source>(IO::BiDirectionalClosableSeekable&)> InputFactory;
     typedef std::function<std::unique_ptr<Output::DeviceSink>(const OutputDeviceName&)> OutputFactory;
 
+    Kernel(const Kernel&) = delete;
+    void operator=(const Kernel&) = delete;
+
     ~Kernel();
 
     static Kernel& getInstance();
@@ -91,8 +94,6 @@ public:
 
 private:
     Kernel();
-    Kernel(const Kernel&);
-    void operator=(const Kernel&);
 
     class impl;
     std::unique_ptr<impl> pimpl;
