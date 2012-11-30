@@ -19,7 +19,8 @@
 #define MELOSIC_PLAYER_HPP
 
 #include <memory>
-#include <chrono>
+#include <boost/chrono.hpp>
+namespace chrono = boost::chrono;
 #include <boost/signals2.hpp>
 
 namespace Melosic {
@@ -47,8 +48,8 @@ public:
     void pause();
     void stop();
     DeviceState state();
-    void seek(std::chrono::milliseconds dur);
-    std::chrono::milliseconds tell();
+    void seek(chrono::milliseconds dur);
+    chrono::milliseconds tell();
     void finish();
     void changeOutput(std::unique_ptr<Output::DeviceSink> device);
     explicit operator bool();
@@ -58,7 +59,7 @@ public:
     typedef boost::signals2::signal<void(DeviceState)> StateSignal;
     boost::signals2::connection connectState(const StateSignal::slot_type& slot);
 
-    typedef boost::signals2::signal<void(std::chrono::milliseconds, std::chrono::milliseconds)> NotifySignal;
+    typedef boost::signals2::signal<void(chrono::milliseconds, chrono::milliseconds)> NotifySignal;
     boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot);
 private:
     class impl;

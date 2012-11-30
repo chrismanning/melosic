@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <thread>
-#include <mutex>
 #include <boost/thread.hpp>
 
 #include <taglib/tpropertymap.h>
@@ -35,7 +33,7 @@ static Logger::Logger logject(boost::log::keywords::channel = "Track");
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
-    impl(boost::filesystem::path filepath, boost::chrono::milliseconds start, boost::chrono::milliseconds end) :
+    impl(boost::filesystem::path filepath, chrono::milliseconds start, chrono::milliseconds end) :
         input(new IO::File(filepath)), start(start), end(end), fileResolver(filepath)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
@@ -80,15 +78,15 @@ public:
         }
     }
 
-    void seek(std::chrono::milliseconds dur) {
+    void seek(chrono::milliseconds dur) {
         if(!isOpen()) {
             reOpen();
         }
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         decoder->seek(dur + start);
     }
 
-    std::chrono::milliseconds tell() {
+    chrono::milliseconds tell() {
         if(!isOpen()) {
             reOpen();
         }
@@ -100,13 +98,13 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         decoder->reset();
     }
 
-    std::chrono::milliseconds duration() const {
+    chrono::milliseconds duration() const {
         auto& as = const_cast<impl*>(this)->getAudioSpecs();
-        return std::chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
+        return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
 
     AudioSpecs& getAudioSpecs() {
@@ -140,7 +138,7 @@ public:
             reOpen();
         }
         auto pos = tell();
-        std::unique_lock<Mutex> l(mu);
+        boost::unique_lock<Mutex> l(mu);
         taglibfile = fileResolver.getTagReader(*input);
         tags = taglibfile->properties();
         l.unlock();
@@ -164,7 +162,7 @@ public:
 private:
     friend class Track;
     std::unique_ptr<IO::File> input;
-    std::chrono::milliseconds start, end;
+    chrono::milliseconds start, end;
     Kernel::FileTypeResolver fileResolver;
     std::unique_ptr<Input::Source> decoder;
     std::unique_ptr<TagLib::File> taglibfile;
@@ -174,7 +172,7 @@ private:
     Mutex mu;
 };
 
-Track::Track(const std::string& filename, std::chrono::milliseconds start, std::chrono::milliseconds end) :
+Track::Track(const std::string& filename, chrono::milliseconds start, chrono::milliseconds end) :
     pimpl(new impl(filename, start, end)) {}
 
 Track::~Track() {}
@@ -207,11 +205,11 @@ void Track::reOpen() {
     pimpl->reOpen();
 }
 
-void Track::seek(std::chrono::milliseconds dur) {
+void Track::seek(chrono::milliseconds dur) {
     pimpl->seek(dur);
 }
 
-std::chrono::milliseconds Track::tell() {
+chrono::milliseconds Track::tell() {
     return pimpl->tell();
 }
 
@@ -219,7 +217,7 @@ void Track::reset() {
     pimpl->reset();
 }
 
-std::chrono::milliseconds Track::duration() const {
+chrono::milliseconds Track::duration() const {
     return pimpl->duration();
 }
 

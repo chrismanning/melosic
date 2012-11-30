@@ -21,8 +21,8 @@
 #include <memory>
 #include <ios>
 #include <map>
-#include <chrono>
 #include <boost/shared_ptr.hpp>
+#include <boost/chrono.hpp>
 
 #include <melosic/common/stream.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
@@ -34,17 +34,17 @@ class Track : public Input::Source, public IO::Closable
 public:
 
     Track(const std::string& filename,
-          std::chrono::milliseconds start = std::chrono::milliseconds(0),
-          std::chrono::milliseconds end = std::chrono::milliseconds(0));
+          chrono::milliseconds start = chrono::milliseconds(0),
+          chrono::milliseconds end = chrono::milliseconds(0));
 
     virtual ~Track();
     Track(const Track&);
     void operator=(const Track&);
 
     virtual void reset();
-    virtual void seek(std::chrono::milliseconds dur);
-    virtual std::chrono::milliseconds tell();
-    virtual std::chrono::milliseconds duration() const;
+    virtual void seek(chrono::milliseconds dur);
+    virtual chrono::milliseconds tell();
+    virtual chrono::milliseconds duration() const;
     virtual Melosic::AudioSpecs& getAudioSpecs();
     std::string getTag(const std::string& key) const;
     virtual explicit operator bool();

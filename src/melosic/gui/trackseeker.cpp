@@ -60,7 +60,7 @@ void TrackSeeker::onStateChangeSlot(DeviceState state) {
     }
 }
 
-void TrackSeeker::onNotifySlot(std::chrono::milliseconds current, std::chrono::milliseconds total) {
+void TrackSeeker::onNotifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     if(!isSliderDown()) {
         setRange(0, total.count());
 //        std::clog << "Total: " << total.count();

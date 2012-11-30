@@ -49,7 +49,7 @@ MainWindow::MainWindow(QWidget * parent) :
     ssConnections.emplace_back(player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1)));
     ssConnections.emplace_back(ui->trackSeeker->connectSeek(
                                    TrackSeeker::SeekSignal::slot_type(&Player::seek, player.get(), _1)
-                                   .track_foreign(std::weak_ptr<Player>(player))));
+                                   .track(player)));
     ssConnections.emplace_back(player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot,
                                                                 ui->trackSeeker, _1)));
     ssConnections.emplace_back(player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
@@ -140,7 +140,7 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
     try {
         LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
 
-        std::chrono::milliseconds time(0);
+        chrono::milliseconds time(0);
         auto state = player->state();
         if(state != Output::DeviceState::Stopped) {
             time = player->tell();

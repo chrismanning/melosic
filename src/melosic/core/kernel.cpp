@@ -88,14 +88,14 @@ public:
         return names;
     }
 
-    std::shared_ptr<Player> getPlayer() {
+    boost::shared_ptr<Player> getPlayer() {
         return player;
     }
 
 private:
     std::map<std::string, std::shared_ptr<Plugin::Plugin>> loadedPlugins;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
-    std::shared_ptr<Player> player;
+    boost::shared_ptr<Player> player;
 };
 
 std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
@@ -217,7 +217,7 @@ std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
     return pimpl->getOutputDeviceNames();
 }
 
-std::shared_ptr<Player> Kernel::getPlayer() {
+boost::shared_ptr<Player> Kernel::getPlayer() {
     return pimpl->getPlayer();
 }
 

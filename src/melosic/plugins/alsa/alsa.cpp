@@ -28,8 +28,6 @@ using boost::format;
 #include <string>
 #include <sstream>
 #include <array>
-#include <mutex>
-#include <thread>
 #include <boost/thread.hpp>
 
 #include <melosic/common/error.hpp>
@@ -83,7 +81,7 @@ public:
     }
 
     virtual void prepareSink(AudioSpecs& as) {
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
         if(pdh == nullptr) {
@@ -166,7 +164,7 @@ public:
     }
 
     virtual void play() {
-        std::unique_lock<Mutex> l(mu);
+        boost::unique_lock<Mutex> l(mu);
         if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
             l.unlock();
             prepareSink(current);
@@ -182,7 +180,7 @@ public:
     }
 
     virtual void pause() {
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         if(state_ == Output::DeviceState::Playing) {
             if(snd_pcm_hw_params_can_pause(params)) {
                 ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, true));
@@ -209,7 +207,7 @@ public:
     }
 
     virtual void stop() {
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
             ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
             ALSA_THROW_IF(DeviceException, snd_pcm_close(pdh));
@@ -224,7 +222,7 @@ public:
     }
 
     virtual std::streamsize write(const char* s, std::streamsize n) {
-        std::unique_lock<Mutex> l(mu);
+        boost::unique_lock<Mutex> l(mu);
         if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
 //            l.unlock();

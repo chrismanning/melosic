@@ -20,7 +20,6 @@
 
 #include <memory>
 #include <string>
-#include <chrono>
 
 #include <boost/filesystem.hpp>
 
@@ -65,7 +64,7 @@ public:
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
 
-    std::shared_ptr<Player> getPlayer();
+    boost::shared_ptr<Player> getPlayer();
 
     class FileTypeResolver {
     public:

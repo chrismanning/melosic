@@ -22,6 +22,8 @@
 using std::cout; using std::cerr; using std::endl;
 #include <boost/cstdint.hpp>
 using boost::int64_t; using boost::uint64_t;
+#include <boost/chrono.hpp>
+namespace chrono = boost::chrono;
 
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/managers/output/pluginterface.hpp>

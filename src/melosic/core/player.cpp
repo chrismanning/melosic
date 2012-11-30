@@ -15,10 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <thread>
-#include <mutex>
-#include <chrono>
 #include <array>
+#include <boost/thread.hpp>
+#include <boost/chrono.hpp>
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
@@ -45,7 +44,7 @@ public:
 
     ~impl() {
         if(!end()) {
-            std::lock_guard<std::mutex> l(m);
+            boost::lock_guard<Mutex> l(m);
             end_ = true;
         }
         if(playerThread.joinable()) {
@@ -94,19 +93,19 @@ public:
         return DeviceState::Error;
     }
 
-    void seek(std::chrono::milliseconds dur) {
+    void seek(chrono::milliseconds dur) {
         TRACE_LOG(logject) << "Seek...";
         if(playlist) {
             playlist->seek(dur);
         }
     }
 
-    std::chrono::milliseconds tell() {
+    chrono::milliseconds tell() {
         TRACE_LOG(logject) << "Tell...";
         if(playlist && *playlist) {
             return playlist->current()->tell();
         }
-        return std::chrono::milliseconds(0);
+        return chrono::milliseconds(0);
     }
 
     void finish() {
@@ -116,7 +115,7 @@ public:
     }
 
     void changeOutput(std::unique_ptr<Output::DeviceSink> device) {
-        std::unique_lock<std::mutex> l(m);
+        boost::unique_lock<Mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
@@ -134,12 +133,12 @@ public:
         }
     }
 
-    operator bool() {
+    explicit operator bool() {
         return bool(device);
     }
 
     void openPlaylist(boost::shared_ptr<Playlist> playlist) {
-        std::lock_guard<std::mutex> l(m);
+        boost::lock_guard<Mutex> l(m);
         if(this->playlist != playlist) {
             if(this->playlist && *(this->playlist)) {
                 this->playlist->current()->close();
@@ -150,7 +149,7 @@ public:
     }
 
     boost::shared_ptr<Playlist> currentPlaylist() {
-        std::lock_guard<std::mutex> l(m);
+        boost::lock_guard<Mutex> l(m);
         return playlist;
     }
 
@@ -167,7 +166,7 @@ private:
         if(playlist && *playlist) {
             if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
                 stop();
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                boost::this_thread::sleep_for(chrono::milliseconds(10));
                 device->prepareSink(currentPlaylist()->current()->getAudioSpecs());
                 play();
             }
@@ -175,7 +174,7 @@ private:
     }
 
     bool end() {
-        std::lock_guard<std::mutex> l(m);
+        boost::lock_guard<Mutex> l(m);
         return end_;
     }
 
@@ -250,8 +249,9 @@ private:
                 n = 0;
                 play();
             }
-            std::chrono::milliseconds dur(10);
-            std::this_thread::sleep_for(dur);
+
+            static chrono::milliseconds dur(10);
+            boost::this_thread::sleep_for(dur);
         }
 
         stop();
@@ -261,9 +261,10 @@ private:
     boost::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::DeviceSink> device;
     bool end_;
-    std::thread playerThread;
+    boost::thread playerThread;
     Logger::Logger logject;
-    std::mutex m;
+    typedef boost::mutex Mutex;
+    Mutex m;
     StateSignal stateChangedSig;
     NotifySignal notifySig;
 };
@@ -291,11 +292,11 @@ DeviceState Player::state() {
     return pimpl->state();
 }
 
-void Player::seek(std::chrono::milliseconds dur) {
+void Player::seek(chrono::milliseconds dur) {
     pimpl->seek(dur);
 }
 
-std::chrono::milliseconds Player::tell() {
+chrono::milliseconds Player::tell() {
     return pimpl->tell();
 }
 

@@ -50,24 +50,24 @@ std::streamsize Playlist::read(char * s, std::streamsize n) {
     return -1;
 }
 
-void Playlist::seek(std::chrono::milliseconds dur) {
+void Playlist::seek(chrono::milliseconds dur) {
     if(current() != end()) {
         current()->seek(dur);
     }
 }
 
 //playlist controls
-std::chrono::milliseconds Playlist::duration() {
-    return std::accumulate(begin(), end(), std::chrono::milliseconds(0),
-                           [&](std::chrono::milliseconds a, Track& b) { return a + b.duration();});
+chrono::milliseconds Playlist::duration() {
+    return std::accumulate(begin(), end(), chrono::milliseconds(0),
+                           [&](chrono::milliseconds a, Track& b) { return a + b.duration();});
 }
 
 void Playlist::previous() {
     if(current() == begin()) {
-        seek(std::chrono::milliseconds(0));
+        seek(chrono::milliseconds(0));
     }
     else if(size() >= 1) {
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         --current_track;
     }
     trackChanged();
@@ -75,14 +75,14 @@ void Playlist::previous() {
 
 void Playlist::next() {
     if(current() != end()) {
-        std::lock_guard<Mutex> l(mu);
+        boost::lock_guard<Mutex> l(mu);
         ++current_track;
     }
     trackChanged();
 }
 
 Playlist::iterator& Playlist::current() {
-    std::lock_guard<Mutex> l(mu);
+    boost::lock_guard<Mutex> l(mu);
     return current_track;
 }
 

@@ -18,7 +18,8 @@
 #ifndef MELOSIC_INPUT_PLUGINTERFACE_H
 #define MELOSIC_INPUT_PLUGINTERFACE_H
 
-#include <chrono>
+#include <boost/chrono.hpp>
+namespace chrono = boost::chrono;
 #include <boost/iostreams/concepts.hpp>
 #include <melosic/common/stream.hpp>
 #include <melosic/common/error.hpp>
@@ -37,8 +38,8 @@ class Source : public IO::Source {
 public:
     typedef char char_type;
     virtual ~Source() {}
-    virtual void seek(std::chrono::milliseconds dur) = 0;
-    virtual std::chrono::milliseconds tell() = 0;
+    virtual void seek(chrono::milliseconds dur) = 0;
+    virtual chrono::milliseconds tell() = 0;
     virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
     virtual explicit operator bool() = 0;
     virtual void reset() = 0;

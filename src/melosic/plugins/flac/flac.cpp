@@ -181,7 +181,7 @@ public:
         return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
     }
 
-    void seek(std::chrono::milliseconds dur) {
+    void seek(chrono::milliseconds dur) {
         auto rate = get_sample_rate() / 1000.0;
         auto req = uint64_t(dur.count() * rate);
         if(!seek_absolute(req)) {
@@ -193,9 +193,9 @@ public:
 //        }
     }
 
-    std::chrono::milliseconds tell() {
+    chrono::milliseconds tell() {
         auto rate = get_sample_rate() / 1000.0;
-        std::chrono::milliseconds time(int(lastSample / rate));
+        chrono::milliseconds time(int(lastSample / rate));
         return time;
     }
 
@@ -223,24 +223,22 @@ public:
         auto min = std::min(n, (std::streamsize)buf.size());
         auto m = std::move(buf.begin(), buf.begin() + min, s);
         auto d = std::distance(s, m);
-        for(int i=0; i<d; i++) {
-            buf.pop_front();
-        }
+        buf.erase(buf.begin(), buf.begin() + d);
 
         return d == 0 && !(*this) ? -1 : d;
     }
 
-    virtual void seek(std::chrono::milliseconds dur) {
+    virtual void seek(chrono::milliseconds dur) {
         pimpl->seek(dur);
     }
 
-    std::chrono::milliseconds tell() {
+    chrono::milliseconds tell() {
         return pimpl->tell();
     }
 
     virtual void reset() {
         pimpl->reset();
-        seek(std::chrono::milliseconds(0));
+        seek(chrono::milliseconds(0));
         buf.clear();
     }
 

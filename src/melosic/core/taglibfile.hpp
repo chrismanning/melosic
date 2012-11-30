@@ -28,7 +28,9 @@ class File;
 
 class TagLibFile : public TagLib::IOStream {
 public:
-    explicit TagLibFile(File& file) : file(file) {}
+    explicit TagLibFile(File& file) : file(file) {
+        seek(0);
+    }
 
     TagLib::FileName name() const;
     TagLib::ByteVector readBlock(ulong length);

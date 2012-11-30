@@ -19,14 +19,14 @@
 #define MELOSIC_PLAYLIST_HPP
 
 #include <memory>
-#include <chrono>
+#include <boost/thread.hpp>
 #include <list>
 #include <deque>
-#include <mutex>
-#include <thread>
 #include <type_traits>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/signals2.hpp>
+#include <boost/chrono.hpp>
+namespace chrono = boost::chrono;
 
 namespace Melosic {
 
@@ -49,8 +49,8 @@ public:
     Playlist();
     ~Playlist();
     std::streamsize read(char * s, std::streamsize n);
-    void seek(std::chrono::milliseconds dur);
-    std::chrono::milliseconds duration();
+    void seek(chrono::milliseconds dur);
+    chrono::milliseconds duration();
     void previous();
     void next();
     iterator& current();
@@ -141,7 +141,7 @@ private:
     list_type tracks;
     iterator current_track;
     TrackChangedSignal trackChanged;
-    std::mutex mu;
+    boost::mutex mu;
     typedef decltype(mu) Mutex;
 };
 

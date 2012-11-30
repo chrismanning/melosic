@@ -8,7 +8,7 @@ SET(SRC_LIST ${SRC_LIST} playlist.hpp playlist.cpp)
 SET(SRC_LIST ${SRC_LIST} track.hpp track.cpp)
 SET(SRC_LIST ${SRC_LIST} taglibfile.hpp taglibfile.cpp)
 
-find_package(Boost COMPONENTS filesystem system iostreams thread REQUIRED)
+find_package(Boost COMPONENTS filesystem system iostreams thread chrono REQUIRED)
 
 include_directories(../.. ${Boost_INCLUDE_DIRS})
 
