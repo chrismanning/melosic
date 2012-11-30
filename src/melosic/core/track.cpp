@@ -35,31 +35,33 @@ static Logger::Logger logject(boost::log::keywords::channel = "Track");
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
-    impl(std::string filename, std::chrono::milliseconds start, std::chrono::milliseconds end) :
-        filename(filename), input(new IO::File(filename)), start(start), end(end), fileResolver(*input)
+    impl(boost::filesystem::path filepath, boost::chrono::milliseconds start, boost::chrono::milliseconds end) :
+        input(new IO::File(filepath)), start(start), end(end), fileResolver(filepath)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
         reloadDecoder();
         reloadTags();
+        taglibfile.reset();
         close();
     }
 
     ~impl() {}
 
     bool isOpen() {
-        return input->isOpen();
+        return input->isOpen() && bool(decoder);
     }
 
     void reOpen() {
-        if(!isOpen()) {
+        if(!input->isOpen()) {
             input->reOpen();
         }
-        reset();
-        std::lock_guard<Mutex> l(mu);
-        decoder->seek(start);
+        assert(input->isOpen());
+        reloadDecoder();
+        seek(start-start);
     }
 
     void close() {
+        decoder.reset();
         input->close();
     }
 
@@ -67,9 +69,15 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        auto difference = (end > start) ? (end - tell()).count() : 0;
-        std::lock_guard<Mutex> l(mu);
-        return decoder->read(s, (difference < n) ? n : difference);
+        try {
+            auto difference = (end > start) ? (end - tell()).count() : 0;
+            boost::lock_guard<Mutex> l(mu);
+            return decoder->read(s, (difference < n) ? n : difference);
+        }
+        catch(AudioDataInvalidException& e) {
+            e << ErrorTag::FilePath(sourceName());
+            throw;
+        }
     }
 
     void seek(std::chrono::milliseconds dur) {
@@ -102,8 +110,7 @@ public:
     }
 
     AudioSpecs& getAudioSpecs() {
-        boost::shared_lock<Mutex> l(mu);
-        return decoder->getAudioSpecs();
+        return as;
     }
 
     std::string getTag(const std::string& key) const {
@@ -117,11 +124,15 @@ public:
     }
 
     void reloadDecoder() {
-        if(!isOpen()) {
-            reOpen();
+        try {
+            boost::lock_guard<Mutex> l(mu);
+            decoder = fileResolver.getDecoder(*input);
+            as = decoder->getAudioSpecs();
         }
-        std::lock_guard<Mutex> l(mu);
-        decoder = fileResolver.getDecoder();
+        catch(DecoderException& e) {
+            e << ErrorTag::FilePath(input->filename());
+            throw;
+        }
     }
 
     void reloadTags() {
@@ -130,7 +141,7 @@ public:
         }
         auto pos = tell();
         std::unique_lock<Mutex> l(mu);
-        taglibfile = fileResolver.getTagReader();
+        taglibfile = fileResolver.getTagReader(*input);
         tags = taglibfile->properties();
         l.unlock();
         seek(pos);
@@ -152,13 +163,13 @@ public:
 
 private:
     friend class Track;
-    const std::string& filename;
     std::unique_ptr<IO::File> input;
     std::chrono::milliseconds start, end;
     Kernel::FileTypeResolver fileResolver;
     std::unique_ptr<Input::Source> decoder;
     std::unique_ptr<TagLib::File> taglibfile;
     TagLib::PropertyMap tags;
+    AudioSpecs as;
     typedef boost::shared_mutex Mutex;
     Mutex mu;
 };

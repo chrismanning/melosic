@@ -107,24 +107,49 @@ static std::map<std::string, Kernel::InputFactory>& inputFactories() {
 
 class Kernel::FileTypeResolver::impl {
 public:
-    impl(IO::File& file) : file(file) {}
-
-    std::unique_ptr<Input::Source> getDecoder() {
-        auto ext = file.filename().extension().string();
+    impl(const boost::filesystem::path& filepath) {
+        auto ext = filepath.extension().string();
 
         auto fact = inputFactories().find(ext);
 
-        enforceEx<Exception>(fact != inputFactories().end(), (file.filename().string() + ": cannot decode file").c_str());
-        return fact->second(file);
+        if(fact != inputFactories().end()) {
+            decoderFactory = fact->second;
+        }
+        else {
+            decoderFactory = [](decltype(decoderFactory)::argument_type& a) -> decltype(decoderFactory)::result_type {
+                try {
+                    IO::File& b = dynamic_cast<IO::File&>(a);
+                    BOOST_THROW_EXCEPTION(UnsupportedFileTypeException() <<
+                                          ErrorTag::FilePath(absolute(b.filename())));
+                }
+                catch(std::bad_cast& e) {
+                    BOOST_THROW_EXCEPTION(UnsupportedTypeException());
+                }
+            };
+        }
+
+        if(ext == ".flac") {
+                tagFactory = std::bind([&](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
+                                           return new TagLib::FLAC::File(a, b);
+                                       },
+                                       std::placeholders::_1,
+                                       nullptr);
+        }
+        else {
+            tagFactory = [&](TagLib::IOStream* /*a*/) -> TagLib::File* {
+                BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
+                                      ErrorTag::FilePath(absolute(filepath)));
+            };
+        }
     }
 
-    std::unique_ptr<TagLib::File> getTagReader() {
-        auto ext = file.filename().extension();
-        taglibfile.reset(new IO::TagLibFile(file));
-        if(ext == ".flac") {
-            return std::unique_ptr<TagLib::File>(new TagLib::FLAC::File(taglibfile.get(), nullptr));
-        }
-        return nullptr;
+    std::unique_ptr<Input::Source> getDecoder(IO::File& file) {
+        return decoderFactory(file);
+    }
+
+    std::unique_ptr<TagLib::File> getTagReader(IO::File& file) {
+        taglibFile.reset(new IO::TagLibFile(file));
+        return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
     }
 
     static void addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
@@ -134,30 +159,31 @@ public:
             inputFactories().insert(std::remove_reference<decltype(inputFactories())>::type::value_type(extension, fact));
         }
         else {
-            WARN_LOG(logject) << extension << ": already registered to decoder factory";
+            WARN_LOG(logject) << extension << ": already registered to a decoder factory";
         }
         assert(++bef == inputFactories().size());
     }
 
 private:
-    IO::File& file;
-    std::unique_ptr<IO::TagLibFile> taglibfile;
+    InputFactory decoderFactory;
+    std::unique_ptr<TagLib::IOStream> taglibFile;
+    std::function<TagLib::File*(TagLib::IOStream*)> tagFactory;
 };
 
-Kernel::FileTypeResolver::FileTypeResolver(IO::File& file) {
-    pimpl.reset(new impl(file));
+Kernel::FileTypeResolver::FileTypeResolver(const boost::filesystem::path& filepath) {
+    pimpl.reset(new impl(filepath));
 }
 
 void Kernel::FileTypeResolver::addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
     pimpl->addInputExtension(fact, extension);
 }
 
-std::unique_ptr<Input::Source> Kernel::FileTypeResolver::getDecoder() {
-    return std::move(pimpl->getDecoder());
+std::unique_ptr<Input::Source> Kernel::FileTypeResolver::getDecoder(IO::File& file) {
+    return std::move(pimpl->getDecoder(file));
 }
 
-std::unique_ptr<TagLib::File> Kernel::FileTypeResolver::getTagReader() {
-    return std::move(pimpl->getTagReader());
+std::unique_ptr<TagLib::File> Kernel::FileTypeResolver::getTagReader(IO::File& file) {
+    return std::move(pimpl->getTagReader(file));
 }
 
 Kernel::Kernel() : pimpl(new impl) {}

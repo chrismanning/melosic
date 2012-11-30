@@ -33,17 +33,15 @@ namespace Melosic {
 class Player;
 
 namespace Input {
-class InputManager;
 class Source;
 }
 namespace Output {
-class OutputManager;
 class DeviceSink;
 }
 namespace IO {
 class File;
+class BiDirectionalClosableSeekable;
 }
-class Track;
 class OutputDeviceName;
 
 class Kernel {
@@ -68,9 +66,9 @@ public:
 
     class FileTypeResolver {
     public:
-        FileTypeResolver(IO::File&);
-        std::unique_ptr<Input::Source> getDecoder();
-        std::unique_ptr<TagLib::File> getTagReader();
+        FileTypeResolver(const boost::filesystem::path&);
+        std::unique_ptr<Input::Source> getDecoder(IO::File& file);
+        std::unique_ptr<TagLib::File> getTagReader(IO::File& file);
 
         static void addInputExtension(InputFactory fact, const std::string& extension);
         template <typename List>
