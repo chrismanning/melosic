@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
+    std::map<std::string, std::shared_ptr<Plugin::Plugin>> loadedPlugins;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
     std::shared_ptr<Player> player;
 };

@@ -40,6 +40,13 @@ using namespace Melosic;
 
 static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
+static const Plugin::Info alsaInfo{"ALSA",
+                                   Plugin::Type::outputDevice,
+                                   Plugin::generateVersion(1,0,0),
+                                   Plugin::expectedAPIVersion(),
+                                   ::time_when_compiled()
+                                  };
+
 #define ALSA_THROW_IF(Exc, ret) if(ret != 0) {\
     std::stringstream tmp;\
     tmp << "Exception: " << strdup(snd_strerror(ret));\
@@ -268,7 +275,9 @@ private:
     Output::DeviceState state_;
 };
 
-extern "C" void registerPluginObjects() {
+extern "C" void registerPlugin(Plugin::Info* info) {
+    *info = ::alsaInfo;
+
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -303,6 +312,5 @@ extern "C" void registerPluginObjects() {
     Kernel::getInstance().addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
-extern "C" void destroyPluginObjects() {
-//    TRACE_LOG(logject) << "Destroying alsa plugin objects";
+extern "C" void destroyPlugin() {
 }

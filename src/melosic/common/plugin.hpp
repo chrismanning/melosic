@@ -69,6 +69,7 @@ typedef boost::error_info<struct tagPluginInfo, Melosic::Plugin::Info> Info;
 }
 }
 
+namespace Plugin {
 
 class Plugin {
 public:
@@ -84,8 +85,9 @@ public:
                                   ErrorTag::Plugin::Msg(DLError()));
         }
 
-        registerPlugin_ = getFunction<registerPlugin_F>("registerPluginObjects");
-        destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPluginObjects");
+        registerPlugin_ = getFunction<registerPlugin_F>("registerPlugin");
+        destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
+        registerPlugin();
         LOG(logject) << "Plugin loaded: " << info;
     }
 
@@ -98,8 +100,8 @@ public:
         }
     }
 
-    void registerPluginObjects() {
-        registerPlugin_();
+    void registerPlugin() {
+        registerPlugin_(&info);
         if(info.APIVersion != expectedAPIVersion()) {
             BOOST_THROW_EXCEPTION(PluginVersionMismatch() <<
                                   ErrorTag::FilePath(pluginPath) <<
@@ -141,6 +143,7 @@ private:
     Info info;
 };
 
+} // end namespace Plugin
 } // end namespace Melosic
 
 #endif // MELOSIC_PLUGIN_HPP

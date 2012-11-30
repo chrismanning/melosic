@@ -33,6 +33,13 @@ using Logger::Severity;
 
 static Logger::Logger logject(boost::log::keywords::channel = "FLAC");
 
+static const Plugin::Info flacInfo{"FLAC",
+                                   Plugin::Type::decode,
+                                   Plugin::generateVersion(1,0,0),
+                                   Plugin::expectedAPIVersion(),
+                                   ::time_when_compiled()
+                                  };
+
 #define FLAC_THROW_IF(Exc, cond, flacptr) if(!cond) {\
     auto str = flacptr->get_state().as_cstring();\
     MELOSIC_THROW(Exc() << ErrorTag::Plugin::Info(::flacInfo), str, logject);\
@@ -251,10 +258,10 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" void registerPluginObjects() {
+extern "C" void registerPlugin(Plugin::Info* info) {
+    *info = ::flacInfo;
     Kernel::FileTypeResolver::addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
-extern "C" void destroyPluginObjects() {
-//    TRACE_LOG(logject) << "Destroying flac objects";
+extern "C" void destroyPlugin() {
 }
