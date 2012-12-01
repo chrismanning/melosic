@@ -39,7 +39,7 @@ public:
 
     virtual ~Track();
     Track(const Track&);
-    void operator=(const Track&);
+    Track& operator=(const Track&);
 
     virtual void reset();
     virtual void seek(chrono::milliseconds dur);

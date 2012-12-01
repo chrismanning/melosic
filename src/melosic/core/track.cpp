@@ -188,10 +188,11 @@ Track::Track(const Track& b) {
     pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
 }
 
-void Track::operator=(const Track& b) {
+Track& Track::operator=(const Track& b) {
     auto filename = b.sourceName();
     TRACE_LOG(logject) << "Assigning " << filename;
     pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
+    return *this;
 }
 
 std::streamsize Track::read(char * s, std::streamsize n) {
