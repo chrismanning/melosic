@@ -102,6 +102,10 @@ public:
     }
 
     chrono::milliseconds duration() const {
+        if(end > start) {
+            return end - start;
+        }
+
         auto& as = const_cast<impl*>(this)->getAudioSpecs();
         return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
