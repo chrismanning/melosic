@@ -106,11 +106,13 @@ public:
             return end - start;
         }
 
-        auto& as = const_cast<impl*>(this)->getAudioSpecs();
         return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
 
     AudioSpecs& getAudioSpecs() {
+        return as;
+    }
+    const AudioSpecs& getAudioSpecs() const {
         return as;
     }
 
@@ -225,6 +227,9 @@ chrono::milliseconds Track::duration() const {
 }
 
 Melosic::AudioSpecs& Track::getAudioSpecs() {
+    return pimpl->getAudioSpecs();
+}
+const AudioSpecs& Track::getAudioSpecs() const {
     return pimpl->getAudioSpecs();
 }
 

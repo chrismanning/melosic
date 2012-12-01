@@ -46,6 +46,7 @@ public:
     virtual chrono::milliseconds tell();
     virtual chrono::milliseconds duration() const;
     virtual Melosic::AudioSpecs& getAudioSpecs();
+    virtual const Melosic::AudioSpecs& getAudioSpecs() const;
     std::string getTag(const std::string& key) const;
     virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
