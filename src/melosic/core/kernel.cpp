@@ -36,7 +36,7 @@ static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
 
 class Kernel::impl {
 public:
-    impl() : player(new Player) {}
+    impl() {}
 
     void loadPlugin(const std::string& filepath) {
         path p(filepath);
@@ -85,17 +85,12 @@ public:
         for(const auto& name : outputFactories) {
             names.push_back(name.first);
         }
-        return names;
-    }
-
-    boost::shared_ptr<Player> getPlayer() {
-        return player;
+        return std::move(names);
     }
 
 private:
     std::map<std::string, std::shared_ptr<Plugin::Plugin>> loadedPlugins;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
-    boost::shared_ptr<Player> player;
 };
 
 std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
@@ -217,8 +212,9 @@ std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
     return pimpl->getOutputDeviceNames();
 }
 
-boost::shared_ptr<Player> Kernel::getPlayer() {
-    return pimpl->getPlayer();
+Player& Kernel::getPlayer() {
+    static Player player;
+    return player;
 }
 
 } // end namespace Melosic

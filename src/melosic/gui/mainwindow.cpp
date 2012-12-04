@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget * parent) :
     ui(new Ui::MainWindow),
     currentPlaylist(new Playlist),
     playlistModel(new PlaylistModel(currentPlaylist)),
-    player(Kernel::getInstance().getPlayer()),
+    player(Kernel::getPlayer()),
     logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
@@ -46,14 +46,12 @@ MainWindow::MainWindow(QWidget * parent) :
     ui->nextButton->setDefaultAction(ui->actionNext);
     ui->playlistView->setModel(playlistModel);
 
-    ssConnections.emplace_back(player->connectState(boost::bind(&MainWindow::onStateChangeSlot, this, _1)));
-    ssConnections.emplace_back(ui->trackSeeker->connectSeek(
-                                   TrackSeeker::SeekSignal::slot_type(&Player::seek, player.get(), _1)
-                                   .track(player)));
-    ssConnections.emplace_back(player->connectState(boost::bind(&TrackSeeker::onStateChangeSlot,
-                                                                ui->trackSeeker, _1)));
-    ssConnections.emplace_back(player->connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
-                                                                     ui->trackSeeker, _1, _2)));
+    ssConnections.emplace_back(player.connectStateSlot(boost::bind(&MainWindow::onStateChangeSlot, this, _1)));
+    ssConnections.emplace_back(ui->trackSeeker->connectSeek(boost::bind(&Player::seek, &player, _1)));
+    ssConnections.emplace_back(player.connectStateSlot(boost::bind(&TrackSeeker::onStateChangeSlot,
+                                                                   ui->trackSeeker, _1)));
+    ssConnections.emplace_back(player.connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
+                                                                    ui->trackSeeker, _1, _2)));
 
     auto devs = Kernel::getInstance().getOutputDeviceNames();
     for(const auto& dev : devs) {
@@ -110,28 +108,28 @@ void MainWindow::on_actionOpen_triggered() {
 
 void MainWindow::on_actionPlay_triggered() {
     if(currentPlaylist->size()) {
-        if(!player->currentPlaylist()) {
-            player->openPlaylist(currentPlaylist);
+        if(!player.currentPlaylist()) {
+            player.openPlaylist(currentPlaylist);
         }
-        if(bool(player) && bool(*player)) {
-            if(player->state() == Output::DeviceState::Playing) {
-                player->pause();
+        if(bool(player)) {
+            if(player.state() == Output::DeviceState::Playing) {
+                player.pause();
             }
-            else if(player->state() != Output::DeviceState::Playing) {
-                player->play();
+            else if(player.state() != Output::DeviceState::Playing) {
+                player.play();
             }
         }
     }
 }
 
 void MainWindow::on_actionStop_triggered() {
-    if(bool(player) && bool(*player)) {
-        player->stop();
+    if(bool(player)) {
+        player.stop();
     }
 }
 
 void MainWindow::on_actionNext_triggered() {
-    if(bool(player) && bool(*player)) {
+    if(bool(player)) {
         currentPlaylist->next();
     }
 }
@@ -141,24 +139,24 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
         LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
 
         chrono::milliseconds time(0);
-        auto state = player->state();
+        auto state = player.state();
         if(state != Output::DeviceState::Stopped) {
-            time = player->tell();
-            player->stop();
+            time = player.tell();
+            player.stop();
         }
 
-        player->changeOutput(Kernel::getInstance()
-                             .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+        player.changeOutput(Kernel::getInstance()
+                            .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
 
         switch(state) {
             case DeviceState::Playing:
-                player->play();
-                player->seek(time);
+                player.play();
+                player.seek(time);
                 break;
             case DeviceState::Paused:
-                player->play();
-                player->seek(time);
-                player->pause();
+                player.play();
+                player.seek(time);
+                player.pause();
                 break;
             case DeviceState::Error:
             case DeviceState::Stopped:
@@ -171,7 +169,7 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
     catch(std::exception& e) {
         LOG(logject) << "Exception caught: " << e.what();
 
-        player->stop();
+        player.stop();
 
         QMessageBox error;
         error.setText("EXception");

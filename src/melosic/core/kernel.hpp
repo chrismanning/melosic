@@ -64,7 +64,7 @@ public:
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
 
-    boost::shared_ptr<Player> getPlayer();
+    static Player& getPlayer();
 
     class FileTypeResolver {
     public:
