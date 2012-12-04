@@ -113,10 +113,10 @@ public:
         auto fact = inputFactories().find(ext);
 
         if(fact != inputFactories().end()) {
-            decoderFactory = fact->second;
+            decoderFactory = std::cref(fact->second);
         }
         else {
-            decoderFactory = [](decltype(decoderFactory)::argument_type& a) -> decltype(decoderFactory)::result_type {
+            decoderFactory = [](decltype(decoderFactory)::argument_type a) -> decltype(decoderFactory)::result_type {
                 try {
                     IO::File& b = dynamic_cast<IO::File&>(a);
                     BOOST_THROW_EXCEPTION(UnsupportedFileTypeException() <<
