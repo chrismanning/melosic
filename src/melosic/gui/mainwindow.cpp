@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget * parent) :
     ssConnections.emplace_back(player.connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
                                                                     ui->trackSeeker, _1, _2)));
 
-    auto devs = Kernel::getInstance().getOutputDeviceNames();
+    std::list<OutputDeviceName> devs = std::move(Kernel::getInstance().getOutputDeviceNames());
     for(const auto& dev : devs) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
                                       QString::fromStdString(dev.getName()));
