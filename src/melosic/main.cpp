@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
 
         kernel.loadPlugin("flac.melin");
         kernel.loadPlugin("alsa.melin");
+        kernel.loadPlugin("lastfm.melin");
 
         MainWindow win;
         win.show();
