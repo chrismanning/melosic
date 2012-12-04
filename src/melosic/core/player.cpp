@@ -144,7 +144,8 @@ public:
                 this->playlist->current()->close();
             }
             this->playlist = playlist;
-            playlist->connectTrackChanged(boost::bind(&impl::onTrackChangeSlot, this));
+            playlist->connectTrackChangedSlot(boost::bind(&impl::onTrackChangeSlot, this));
+            playlistChangedSig(playlist);
         }
     }
 
@@ -153,12 +154,16 @@ public:
         return playlist;
     }
 
-    boost::signals2::connection connectState(const StateSignal::slot_type& slot) {
+    boost::signals2::connection connectStateSlot(const StateSignal::slot_type& slot) {
         return stateChangedSig.connect(slot);
     }
 
     boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot) {
         return notifySig.connect(slot);
+    }
+
+    boost::signals2::connection connectPlaylistChangeSlot(const PlaylistChangeSignal::slot_type& slot) {
+        return playlistChangedSig.connect(slot);
     }
 
 private:
@@ -267,6 +272,7 @@ private:
     Mutex m;
     StateSignal stateChangedSig;
     NotifySignal notifySig;
+    PlaylistChangeSignal playlistChangedSig;
 };
 
 Player::Player() : pimpl(new impl) {}
@@ -320,12 +326,16 @@ boost::shared_ptr<Playlist> Player::currentPlaylist() {
     return pimpl->currentPlaylist();
 }
 
-boost::signals2::connection Player::connectState(const StateSignal::slot_type& slot) {
-    return pimpl->connectState(slot);
+boost::signals2::connection Player::connectStateSlot(const StateSignal::slot_type& slot) {
+    return pimpl->connectStateSlot(slot);
 }
 
 boost::signals2::connection Player::connectNotifySlot(const NotifySignal::slot_type& slot) {
     return pimpl->connectNotifySlot(slot);
+}
+
+boost::signals2::connection Player::connectPlaylistChangeSlot(const PlaylistChangeSignal::slot_type& slot) {
+    return pimpl->connectPlaylistChangeSlot(slot);
 }
 
 }//end namespace Melosic

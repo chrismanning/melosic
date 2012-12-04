@@ -57,10 +57,13 @@ public:
     boost::shared_ptr<Playlist> currentPlaylist();
 
     typedef boost::signals2::signal<void(DeviceState)> StateSignal;
-    boost::signals2::connection connectState(const StateSignal::slot_type& slot);
+    boost::signals2::connection connectStateSlot(const StateSignal::slot_type& slot);
 
     typedef boost::signals2::signal<void(chrono::milliseconds, chrono::milliseconds)> NotifySignal;
     boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot);
+
+    typedef boost::signals2::signal<void(boost::shared_ptr<Playlist>)> PlaylistChangeSignal;
+    boost::signals2::connection connectPlaylistChangeSlot(const PlaylistChangeSignal::slot_type& slot);
 private:
     class impl;
     std::unique_ptr<impl> pimpl;

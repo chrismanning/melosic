@@ -79,8 +79,9 @@ public:
     template <typename InputIt>
     void insert(iterator pos, InputIt first, InputIt last) {
         tracks.insert(pos, first, last);
-        if(size() >= 1) {
+        if(size() == 1) {
             current_track = begin();
+            trackChanged(*current_track);
         }
     }
 
@@ -90,6 +91,7 @@ public:
         tracks.emplace_back(std::forward<Args>(args)...);
         if(size() == 1) {
             current_track = begin();
+            trackChanged(*current_track);
         }
     }
     template <typename ... Args>
@@ -97,6 +99,7 @@ public:
         auto r = tracks.emplace(pos, std::forward<Args>(args)...);
         if(size() == 1) {
             current_track = r;
+            trackChanged(*current_track);
         }
         return r;
     }
@@ -112,8 +115,8 @@ public:
     }
 
     //signals
-    typedef boost::signals2::signal<void()> TrackChangedSignal;
-    boost::signals2::connection connectTrackChanged(const TrackChangedSignal::slot_type& slot) {
+    typedef boost::signals2::signal<void(const Track&)> TrackChangedSignal;
+    boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
         return trackChanged.connect(slot);
     }
 

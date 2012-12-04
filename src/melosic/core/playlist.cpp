@@ -70,7 +70,7 @@ void Playlist::previous() {
         boost::lock_guard<Mutex> l(mu);
         --current_track;
     }
-    trackChanged();
+    trackChanged(*current());
 }
 
 void Playlist::next() {
@@ -78,7 +78,7 @@ void Playlist::next() {
         boost::lock_guard<Mutex> l(mu);
         ++current_track;
     }
-    trackChanged();
+    trackChanged(*current());
 }
 
 Playlist::iterator& Playlist::current() {
@@ -150,6 +150,7 @@ Playlist::iterator Playlist::insert(Playlist::iterator pos, Playlist::value_type
     auto r = tracks.insert(pos, value);
     if(size() == 1) {
         current_track = r;
+        trackChanged(*current_track);
     }
     return r;
 }
@@ -158,6 +159,7 @@ void Playlist::push_back(Playlist::value_type&& value) {
     tracks.push_back(std::move(value));
     if(size() == 1) {
         current_track = tracks.begin();
+        trackChanged(*current_track);
     }
 }
 
