@@ -30,6 +30,11 @@
 
 #include <functional>
 #include <ctime>
+#include <cstdint>
+#include <ostream>
+#include <string>
+#include <sstream>
+#include <vector>
 
 #define MELOSIC_PLUGIN_API_VERSION 1,0,0
 
@@ -40,13 +45,14 @@ constexpr uint32_t generateVersion(uint8_t major, uint8_t mid, uint8_t minor) {
     return (major << 16) | (mid << 8) | minor;
 }
 
-enum class Type {
-    decode,
-    encode,
-    outputDevice,
-    inputDevice,
-    utility,
-    service
+enum Type {
+    decode = 0x1,
+    encode = 0x2,
+    outputDevice = 0x4,
+    inputDevice = 0x8,
+    utility = 0x10,
+    service = 0x20,
+    gui = 0x40
 };
 
 struct Version {
@@ -67,16 +73,18 @@ extern constexpr Version expectedAPIVersion() {
 struct Info {
     Info() = default;
     std::string name;
-    Type type;
+    uint32_t type;
     Version version;
     Version APIVersion;
     std::time_t built;
 };
 inline std::ostream& operator<<(std::ostream& out, const Info& info) {
+    std::vector<char> str(40);
+    std::strftime(&str[0], str.size(), "%x %X %Z", std::localtime(&info.built));
     return out << info.name
                << " " << info.version
                << " compiled for Melosic API " << info.APIVersion
-               << " on " << std::asctime(std::localtime(&info.built));;
+               << " on " << str.data();
 }
 
 } // end namespace Plugin
