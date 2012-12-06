@@ -30,6 +30,7 @@
 namespace Melosic {
 
 class Player;
+class Configuration;
 
 namespace Input {
 class Source;
@@ -54,6 +55,7 @@ public:
     ~Kernel();
 
     static Kernel& getInstance();
+    static Player& getPlayer();
 
     void loadPlugin(const std::string& filepath);
     void loadAllPlugins();
@@ -61,10 +63,10 @@ public:
     void addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail);
     void addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail);
 
+    static Configuration& getConfig();
+
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
-
-    static Player& getPlayer();
 
     class FileTypeResolver {
     public:

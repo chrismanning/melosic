@@ -5,6 +5,7 @@ SET(SRC_LIST ${SRC_LIST} player.hpp player.cpp)
 SET(SRC_LIST ${SRC_LIST} playlist.hpp playlist.cpp)
 SET(SRC_LIST ${SRC_LIST} track.hpp track.cpp)
 SET(SRC_LIST ${SRC_LIST} taglibfile.hpp taglibfile.cpp)
+SET(SRC_LIST ${SRC_LIST} configuration.hpp configuration.cpp)
 
 find_package(Boost COMPONENTS filesystem system iostreams thread chrono REQUIRED)
 

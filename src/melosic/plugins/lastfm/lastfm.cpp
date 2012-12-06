@@ -25,6 +25,7 @@
 #include <melosic/core/track.hpp>
 #include <melosic/common/logging.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/core/configuration.hpp>
 using namespace Melosic;
 
 static Logger::Logger logject(boost::log::keywords::channel = "LastFM");
@@ -83,6 +84,7 @@ void Scrobbler::stateChangedSlot(DeviceState state) {
 
 static boost::shared_ptr<Scrobbler> scrobbler;
 static std::list<boost::signals2::scoped_connection> connections;
+static Configuration conf;
 
 void Scrobbler::playlistChangeSlot(boost::shared_ptr<Playlist> playlist) {
     connections.emplace_back(
@@ -95,7 +97,39 @@ void Scrobbler::playlistChangeSlot(boost::shared_ptr<Playlist> playlist) {
 }
 
 void Scrobbler::printError(int code, QString msg) {
-    ERROR_LOG(logject) << msg.toStdString();
+    ERROR_LOG(logject) << code << ": " << msg.toStdString();
+}
+
+void refreshConfig(const std::string& key, const std::string& value) {
+    if(key == "username") {
+        lastfm::ws::Username = QString::fromStdString(value);
+    }
+    else if(key == "scrobbling") {
+        if(value == "true") {
+            scrobbler.reset(new Scrobbler);
+
+            connections.emplace_back(
+                        Kernel::getPlayer().connectNotifySlot(
+                            Player::NotifySignal::slot_type(&Scrobbler::notifySlot,
+                                                            scrobbler.get(),
+                                                            _1,
+                                                            _2).track(scrobbler)));
+            connections.emplace_back(
+                        Kernel::getPlayer().connectStateSlot(
+                            Player::StateSignal::slot_type(&Scrobbler::stateChangedSlot,
+                                                           scrobbler.get(),
+                                                           _1).track(scrobbler)));
+            connections.emplace_back(
+                        Kernel::getPlayer().connectPlaylistChangeSlot(
+                            Player::PlaylistChangeSignal::slot_type(&Scrobbler::playlistChangeSlot,
+                                                                    scrobbler.get(),
+                                                                    _1).track(scrobbler)));
+        }
+        else {
+            connections.clear();
+            scrobbler.reset();
+        }
+    }
 }
 
 extern "C" void registerPlugin(Plugin::Info* info) {
@@ -103,26 +137,11 @@ extern "C" void registerPlugin(Plugin::Info* info) {
 
     lastfm::ws::ApiKey = "47ee6adfdb3c68daeea2786add5e242d";
     lastfm::ws::SharedSecret = "64a3811653376876431daad679ce5b67";
-    lastfm::ws::Username = "fat_chris";
 
-    scrobbler.reset(new Scrobbler);
-
-    connections.emplace_back(
-                Kernel::getPlayer().connectNotifySlot(
-                    Player::NotifySignal::slot_type(&Scrobbler::notifySlot,
-                                                    scrobbler.get(),
-                                                    _1,
-                                                    _2).track(scrobbler)));
-    connections.emplace_back(
-                Kernel::getPlayer().connectStateSlot(
-                    Player::StateSignal::slot_type(&Scrobbler::stateChangedSlot,
-                                                   scrobbler.get(),
-                                                   _1).track(scrobbler)));
-    connections.emplace_back(
-                Kernel::getPlayer().connectPlaylistChangeSlot(
-                    Player::PlaylistChangeSignal::slot_type(&Scrobbler::playlistChangeSlot,
-                                                            scrobbler.get(),
-                                                            _1).track(scrobbler)));
+    ::conf.putNode("username", "");
+    ::conf.putNode("sessionkey", "");
+    ::conf.putNode("scrobbling", "false");
+    Kernel::getConfig().putChild("lastfm", ::conf).connectVariableUpdateSlot(refreshConfig);
 }
 
 extern "C" void destroyPlugin() {}

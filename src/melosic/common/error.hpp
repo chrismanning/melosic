@@ -52,6 +52,9 @@ struct FileSeekException : virtual SeekException, virtual FileException {};
 struct FileReadException : virtual ReadException, virtual FileException {};
 struct FileWriteException : virtual WriteException, virtual FileException {};
 struct FileReadOnlyException : virtual ReadOnlyException, virtual FileException {};
+namespace ErrorTag {
+typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
+}
 //device exceptions
 struct DeviceException : virtual IOException {};
 struct DeviceOpenException : virtual DeviceException {};
@@ -81,9 +84,13 @@ struct PluginSymbolNotFoundException : virtual PluginException {};
 struct PluginVersionMismatch : virtual PluginException {};
 //playlist exceptions
 
-
+//config exceptions
+struct ConfigException : virtual Exception {};
+struct KeyNotFoundException : virtual ConfigException {};
+struct ChildNotFoundException : virtual ConfigException {};
 namespace ErrorTag {
-typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
+typedef boost::error_info<struct tagConfigKey, std::string> ConfigKey;
+typedef boost::error_info<struct tagConfigChild, std::string> ConfigChild;
 }
 
 }

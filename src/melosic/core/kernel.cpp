@@ -29,6 +29,7 @@ using boost::filesystem::path;
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/taglibfile.hpp>
 #include <melosic/core/player.hpp>
+#include <melosic/core/configuration.hpp>
 
 namespace Melosic {
 
@@ -190,6 +191,16 @@ Kernel& Kernel::getInstance() {
     return instance;
 }
 
+Player& Kernel::getPlayer() {
+    static Player player;
+    return player;
+}
+
+Configuration& Kernel::getConfig() {
+    static Configuration config;
+    return config;
+}
+
 void Kernel::loadPlugin(const std::string& filepath) {
     pimpl->loadPlugin(filepath);
 }
@@ -210,11 +221,6 @@ std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& d
 
 std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
     return pimpl->getOutputDeviceNames();
-}
-
-Player& Kernel::getPlayer() {
-    static Player player;
-    return player;
 }
 
 } // end namespace Melosic
