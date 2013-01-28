@@ -20,8 +20,10 @@
 
 #include <memory>
 #include <string>
+#include <functional>
 
 #include <boost/filesystem.hpp>
+#include <boost/function.hpp>
 
 #include <taglib/tfile.h>
 
@@ -44,18 +46,19 @@ class BiDirectionalClosableSeekable;
 }
 class OutputDeviceName;
 
-class Kernel {
+class Kernel : public std::enable_shared_from_this<Kernel> {
 public:
     typedef std::function<std::unique_ptr<Input::Source>(IO::BiDirectionalClosableSeekable&)> InputFactory;
     typedef std::function<std::unique_ptr<Output::DeviceSink>(const OutputDeviceName&)> OutputFactory;
 
+    Kernel();
+
     Kernel(const Kernel&) = delete;
-    void operator=(const Kernel&) = delete;
+    Kernel& operator=(const Kernel&) = delete;
 
     ~Kernel();
 
-    static Kernel& getInstance();
-    static Player& getPlayer();
+    Player& getPlayer();
 
     void loadPlugin(const std::string& filepath);
     void loadAllPlugins();
@@ -63,39 +66,43 @@ public:
     void addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail);
     void addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail);
 
-    static Configuration& getConfig();
+    Configuration& getConfig();
+    void saveConfig();
+    void loadConfig();
 
     std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename);
     std::list<OutputDeviceName> getOutputDeviceNames();
 
-    class FileTypeResolver {
-    public:
-        FileTypeResolver(const boost::filesystem::path&);
+    void addInputExtension(InputFactory fact, const std::string& extension);
+    template <typename List>
+    void addInputExtensions(InputFactory fact, const List& extensions) {
+        for(const auto& ext : extensions) {
+            addInputExtension(fact, ext);
+        }
+    }
+    template <typename String>
+    void addInputExtensions(InputFactory fact, const std::initializer_list<String>& extensions) {
+        for(const auto& ext : extensions) {
+            addInputExtension(fact, ext);
+        }
+    }
+
+    struct FileTypeResolver {
+        FileTypeResolver(std::shared_ptr<Kernel> kernel, const boost::filesystem::path&);
         std::unique_ptr<Input::Source> getDecoder(IO::File& file);
         std::unique_ptr<TagLib::File> getTagReader(IO::File& file);
 
-        static void addInputExtension(InputFactory fact, const std::string& extension);
-        template <typename List>
-        static void addInputExtensions(InputFactory fact, const List& extensions) {
-            for(const auto& ext : extensions) {
-                addInputExtension(fact, ext);
-            }
-        }
-        template <typename String>
-        static void addInputExtensions(InputFactory fact, const std::initializer_list<String>& extensions) {
-            for(const auto& ext : extensions) {
-                addInputExtension(fact, ext);
-            }
-        }
-
     private:
-        class impl;
-        static std::unique_ptr<impl> pimpl;
+        InputFactory decoderFactory;
+        std::unique_ptr<TagLib::IOStream> taglibFile;
+        std::function<TagLib::File*(TagLib::IOStream*)> tagFactory;
     };
 
-private:
-    Kernel();
+    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path) {
+        return FileTypeResolver(shared_from_this(), path);
+    }
 
+private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };

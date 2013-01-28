@@ -15,41 +15,33 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef LASTFM_TAG_HPP
+#define LASTFM_TAG_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <string>
 
-namespace Melosic {
+#include <opqit/opaque_iterator_fwd.hpp>
+#include <network/uri.hpp>
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
-}
+#include "utilities.hpp"
 
-struct AudioSpecs;
+namespace LastFM {
 
-namespace Input {
+class Service;
 
-class Source : public IO::Source {
-public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
+struct Tag {
+    Tag(const std::string& tag, const std::string& url) : name(tag), url(url) {}
+    Tag& operator=(const std::string& tag);
+    boost::iterator_range<opqit::opaque_iterator<Tag, opqit::forward>> getSimilar(std::shared_ptr<Service> lastserv);
+
+    std::string name;
+    network::uri url;
+    int reach = 0;
+    int taggings = 0;
+    bool streamable = false;
+    std::string wiki;
 };
 
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
+}//namespace LastFM
 
-}
-}
-
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // LASTFM_TAG_HPP

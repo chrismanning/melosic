@@ -17,9 +17,11 @@
 
 #include <algorithm>
 #include <numeric>
+#include <thread>
+using std::unique_lock; using std::lock_guard;
 
 #include <melosic/core/track.hpp>
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 #include "playlist.hpp"
 
 namespace Melosic {
@@ -67,22 +69,22 @@ void Playlist::previous() {
         seek(chrono::milliseconds(0));
     }
     else if(size() >= 1) {
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         --current_track;
     }
-    trackChanged(*current());
+    trackChanged(*current(), true);
 }
 
 void Playlist::next() {
     if(current() != end()) {
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         ++current_track;
     }
-    trackChanged(*current());
+    trackChanged(*current(), current() != end());
 }
 
 Playlist::iterator& Playlist::current() {
-    boost::lock_guard<Mutex> l(mu);
+    lock_guard<Mutex> l(mu);
     return current_track;
 }
 
@@ -150,7 +152,7 @@ Playlist::iterator Playlist::insert(Playlist::iterator pos, Playlist::value_type
     auto r = tracks.insert(pos, value);
     if(size() == 1) {
         current_track = r;
-        trackChanged(*current_track);
+        trackChanged(*current_track, current() != end());
     }
     return r;
 }
@@ -159,7 +161,7 @@ void Playlist::push_back(Playlist::value_type&& value) {
     tracks.push_back(std::move(value));
     if(size() == 1) {
         current_track = tracks.begin();
-        trackChanged(*current_track);
+        trackChanged(*current_track, current() != end());
     }
 }
 

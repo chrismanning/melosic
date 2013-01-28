@@ -81,7 +81,7 @@ struct MetadataInvalidException : virtual MetadataException {};
 struct PluginException : virtual Exception {};
 struct PluginInvalidException : virtual PluginException {};
 struct PluginSymbolNotFoundException : virtual PluginException {};
-struct PluginVersionMismatch : virtual PluginException {};
+struct PluginVersionMismatchException : virtual PluginException {};
 //playlist exceptions
 
 //config exceptions
@@ -91,6 +91,18 @@ struct ChildNotFoundException : virtual ConfigException {};
 namespace ErrorTag {
 typedef boost::error_info<struct tagConfigKey, std::string> ConfigKey;
 typedef boost::error_info<struct tagConfigChild, std::string> ConfigChild;
+}
+
+//network exceptions
+struct NetworkException : virtual Exception {};
+struct HttpException : virtual NetworkException {};
+struct ServiceNotAvailableException : virtual NetworkException {};
+namespace ErrorTag {
+struct _HttpStatus {
+    uint16_t status_code;
+    std::string status_str;
+};
+typedef boost::error_info<struct tagHttpStatus, _HttpStatus> HttpStatus;
 }
 
 }

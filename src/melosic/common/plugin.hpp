@@ -57,7 +57,7 @@ using boost::filesystem::absolute;
 
 #include <melosic/common/exports.hpp>
 #include <melosic/common/error.hpp>
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 
 namespace Melosic {
 
@@ -73,7 +73,7 @@ namespace Plugin {
 
 class Plugin {
 public:
-    Plugin(const boost::filesystem::path& filename) :
+    Plugin(const boost::filesystem::path& filename, Kernel* kernel) :
         pluginPath(absolute(filename)),
         logject(boost::log::keywords::channel = "Plugin")
     {
@@ -87,7 +87,7 @@ public:
 
         registerPlugin_ = getFunction<registerPlugin_F>("registerPlugin");
         destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
-        registerPlugin();
+        registerPlugin(kernel);
         LOG(logject) << "Plugin loaded: " << info;
     }
 
@@ -100,10 +100,10 @@ public:
         }
     }
 
-    void registerPlugin() {
-        registerPlugin_(&info);
+    void registerPlugin(Kernel* kernel) {
+        registerPlugin_(&info, kernel);
         if(info.APIVersion != expectedAPIVersion()) {
-            BOOST_THROW_EXCEPTION(PluginVersionMismatch() <<
+            BOOST_THROW_EXCEPTION(PluginVersionMismatchException() <<
                                   ErrorTag::FilePath(pluginPath) <<
                                   ErrorTag::Plugin::Info(info));
         }

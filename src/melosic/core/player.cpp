@@ -16,8 +16,9 @@
 **************************************************************************/
 
 #include <array>
-#include <boost/thread.hpp>
-#include <boost/chrono.hpp>
+#include <thread>
+namespace this_thread = std::this_thread;
+using std::thread; using std::mutex; using std::unique_lock; using std::lock_guard;
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
@@ -27,6 +28,7 @@ namespace io = boost::iostreams;
 #include <melosic/core/track.hpp>
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/core/logging.hpp>
 #include <melosic/common/common.hpp>
 
 namespace Melosic {
@@ -44,7 +46,7 @@ public:
 
     ~impl() {
         if(!end()) {
-            boost::lock_guard<Mutex> l(m);
+            lock_guard<Mutex> l(m);
             end_ = true;
         }
         if(playerThread.joinable()) {
@@ -115,7 +117,7 @@ public:
     }
 
     void changeOutput(std::unique_ptr<Output::DeviceSink> device) {
-        boost::unique_lock<Mutex> l(m);
+        unique_lock<Mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
@@ -137,8 +139,8 @@ public:
         return bool(device);
     }
 
-    void openPlaylist(boost::shared_ptr<Playlist> playlist) {
-        boost::lock_guard<Mutex> l(m);
+    void openPlaylist(std::shared_ptr<Playlist> playlist) {
+        lock_guard<Mutex> l(m);
         if(this->playlist != playlist) {
             if(this->playlist && *(this->playlist)) {
                 this->playlist->current()->close();
@@ -149,8 +151,8 @@ public:
         }
     }
 
-    boost::shared_ptr<Playlist> currentPlaylist() {
-        boost::lock_guard<Mutex> l(m);
+    std::shared_ptr<Playlist> currentPlaylist() {
+        lock_guard<Mutex> l(m);
         return playlist;
     }
 
@@ -171,7 +173,7 @@ private:
         if(playlist && *playlist) {
             if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
                 stop();
-                boost::this_thread::sleep_for(chrono::milliseconds(10));
+                this_thread::sleep_for(chrono::milliseconds(10));
                 device->prepareSink(currentPlaylist()->current()->getAudioSpecs());
                 play();
             }
@@ -179,7 +181,7 @@ private:
     }
 
     bool end() {
-        boost::lock_guard<Mutex> l(m);
+        lock_guard<Mutex> l(m);
         return end_;
     }
 
@@ -255,20 +257,19 @@ private:
                 play();
             }
 
-            static chrono::milliseconds dur(10);
-            boost::this_thread::sleep_for(dur);
+            this_thread::sleep_for(chrono::milliseconds(10));
         }
 
         stop();
         TRACE_LOG(logject) << "Thread ending";
     }
 
-    boost::shared_ptr<Playlist> playlist;
+    std::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::DeviceSink> device;
     bool end_;
-    boost::thread playerThread;
+    thread playerThread;
     Logger::Logger logject;
-    typedef boost::mutex Mutex;
+    typedef mutex Mutex;
     Mutex m;
     StateSignal stateChangedSig;
     NotifySignal notifySig;
@@ -318,11 +319,11 @@ Player::operator bool() {
     return bool(*pimpl);
 }
 
-void Player::openPlaylist(boost::shared_ptr<Playlist> playlist) {
+void Player::openPlaylist(std::shared_ptr<Playlist> playlist) {
     pimpl->openPlaylist(playlist);
 }
 
-boost::shared_ptr<Playlist> Player::currentPlaylist() {
+std::shared_ptr<Playlist> Player::currentPlaylist() {
     return pimpl->currentPlaylist();
 }
 

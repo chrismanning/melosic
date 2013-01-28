@@ -19,10 +19,12 @@
 #include "ui_mainwindow.h"
 #include "trackseeker.hpp"
 #include "playlistmodel.hpp"
+#include "configurationdialog.hpp"
 #include <QFileDialog>
 #include <boost/iostreams/copy.hpp>
 namespace io = boost::iostreams;
 #include <QDesktopServices>
+#include <QStandardPaths>
 #include <QMessageBox>
 #include <list>
 
@@ -32,12 +34,13 @@ namespace io = boost::iostreams;
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 
-MainWindow::MainWindow(QWidget * parent) :
+MainWindow::MainWindow(std::shared_ptr<Kernel> kernel, QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
+    kernel(kernel),
     currentPlaylist(new Playlist),
-    playlistModel(new PlaylistModel(currentPlaylist)),
-    player(Kernel::getPlayer()),
+    playlistModel(new PlaylistModel(kernel, currentPlaylist)),
+    player(kernel->getPlayer()),
     logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
@@ -46,14 +49,34 @@ MainWindow::MainWindow(QWidget * parent) :
     ui->nextButton->setDefaultAction(ui->actionNext);
     ui->playlistView->setModel(playlistModel);
 
-    ssConnections.emplace_back(player.connectStateSlot(boost::bind(&MainWindow::onStateChangeSlot, this, _1)));
-    ssConnections.emplace_back(ui->trackSeeker->connectSeek(boost::bind(&Player::seek, &player, _1)));
-    ssConnections.emplace_back(player.connectStateSlot(boost::bind(&TrackSeeker::onStateChangeSlot,
-                                                                   ui->trackSeeker, _1)));
-    ssConnections.emplace_back(player.connectNotifySlot(boost::bind(&TrackSeeker::onNotifySlot,
-                                                                    ui->trackSeeker, _1, _2)));
+    ssConnections.emplace_back(player.connectStateSlot(
+                                   Player::StateSignal::slot_type(
+                                       &MainWindow::onStateChangeSlot, this, _1
+                                       )
+                                   )
+                               );
+    ssConnections.emplace_back(ui->trackSeeker->connectSeek(
+                                   TrackSeeker::SeekSignal::slot_type(
+                                       &Player::seek, &player, _1
+                                       )
+                                   )
+                               );
+    ssConnections.emplace_back(player.connectStateSlot(
+                                   Player::StateSignal::slot_type(
+                                       &TrackSeeker::onStateChangeSlot,
+                                       ui->trackSeeker, _1
+                                       )
+                                   )
+                               );
+    ssConnections.emplace_back(player.connectNotifySlot(
+                                   Player::NotifySignal::slot_type(
+                                       &TrackSeeker::onNotifySlot,
+                                       ui->trackSeeker, _1, _2
+                                       )
+                                   )
+                               );
 
-    std::list<OutputDeviceName> devs = std::move(Kernel::getInstance().getOutputDeviceNames());
+    std::list<OutputDeviceName> devs = std::move(kernel->getOutputDeviceNames());
     for(const auto& dev : devs) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
                                       QString::fromStdString(dev.getName()));
@@ -90,7 +113,7 @@ void MainWindow::onStateChangeSlot(DeviceState state) {
 
 void MainWindow::on_actionOpen_triggered() {
     auto filenames = QFileDialog::getOpenFileNames(this, tr("Open file"),
-                                                   QDesktopServices::storageLocation(QDesktopServices::MusicLocation),
+                                                   QStandardPaths::writableLocation(QStandardPaths::MusicLocation),
                                                    tr("Audio Files (*.flac)"), 0,
                                                    QFileDialog::ReadOnly);
     std::list<std::string> names;
@@ -145,8 +168,8 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
             player.stop();
         }
 
-        player.changeOutput(Kernel::getInstance()
-                            .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+        player.changeOutput(kernel
+                            ->getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
 
         switch(state) {
             case DeviceState::Playing:
@@ -172,9 +195,14 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
         player.stop();
 
         QMessageBox error;
-        error.setText("EXception");
+        error.setText("Exception");
         error.setDetailedText(e.what());
         error.exec();
         ui->outputDevicesCBX->setCurrentIndex(oldDeviceIndex);
     }
+}
+
+void MainWindow::on_actionOptions_triggered() {
+    ConfigurationDialog c(kernel);
+    c.exec();
 }

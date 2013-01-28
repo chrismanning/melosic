@@ -19,18 +19,43 @@
 
 namespace Melosic {
 
-Configuration::Configuration() {}
+Configuration::Configuration(const std::string& name) : name(name) {}
 
-Configuration::Configuration(const Configuration& b) : children(b.children), nodes(b.nodes) {}
+Configuration::Configuration(const Configuration& b) : children(b.children), nodes(b.nodes), name(b.name) {}
 
 Configuration& Configuration::operator=(const Configuration& b) {
     children = b.children;
     nodes = b.nodes;
+    name = b.name;
 
     return *this;
 }
 
-const std::string& Configuration::getNode(const std::string& key) {
+const std::string& Configuration::getName() const {
+    return name;
+}
+
+bool Configuration::existsNode(const std::string& key) {
+    try {
+        getNode(key);
+        return true;
+    }
+    catch(KeyNotFoundException& e) {
+        return false;
+    }
+}
+
+bool Configuration::existsChild(const std::string &key) {
+    try {
+        getChild(key);
+        return true;
+    }
+    catch(ChildNotFoundException& e) {
+        return false;
+    }
+}
+
+const Configuration::VarType& Configuration::getNode(const std::string& key) {
     auto it = nodes.find(key);
     if(it != nodes.end()) {
         return it->second;
@@ -43,7 +68,7 @@ const std::string& Configuration::getNode(const std::string& key) {
 Configuration& Configuration::getChild(const std::string& key) {
     auto it = children.find(key);
     if(it != children.end()) {
-        return it->second;
+        return *(it->second);
     }
     else {
         BOOST_THROW_EXCEPTION(ChildNotFoundException() << ErrorTag::ConfigChild(key));
@@ -51,10 +76,14 @@ Configuration& Configuration::getChild(const std::string& key) {
 }
 
 Configuration& Configuration::putChild(const std::string& key, const Configuration& child) {
-    return children[key] = child;
+    ChildMap::iterator it(children.find(key));
+    if(it != children.end())
+        children.erase(it);
+    std::string tmp(key);
+    return *children.insert(tmp, child.clone()).first->second;
 }
 
-const std::string& Configuration::putNode(const std::string& key, const std::string& value) {
+const Configuration::VarType& Configuration::putNode(const std::string& key, const VarType& value) {
     variableUpdated(key, value);
     return nodes[key] = value;
 }

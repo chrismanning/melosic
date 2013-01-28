@@ -16,6 +16,8 @@
 **************************************************************************/
 
 #include <boost/thread.hpp>
+#include <thread>
+using std::thread; using std::mutex; using std::unique_lock; using std::lock_guard;
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -33,8 +35,12 @@ static Logger::Logger logject(boost::log::keywords::channel = "Track");
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
-    impl(boost::filesystem::path filepath, chrono::milliseconds start, chrono::milliseconds end) :
-        input(new IO::File(filepath)), start(start), end(end), fileResolver(filepath)
+    impl(std::shared_ptr<Melosic::Kernel> kernel,
+         boost::filesystem::path filepath,
+         chrono::milliseconds start,
+         chrono::milliseconds end)
+        : kernel(kernel),
+          input(new IO::File(filepath)), start(start), end(end), fileResolver(kernel, filepath)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
         reloadDecoder();
@@ -166,6 +172,7 @@ public:
 
 private:
     friend class Track;
+    std::shared_ptr<Melosic::Kernel> kernel;
     std::unique_ptr<IO::File> input;
     chrono::milliseconds start, end;
     Kernel::FileTypeResolver fileResolver;
@@ -177,21 +184,24 @@ private:
     Mutex mu;
 };
 
-Track::Track(const std::string& filename, chrono::milliseconds start, chrono::milliseconds end) :
-    pimpl(new impl(filename, start, end)) {}
+Track::Track(std::shared_ptr<Melosic::Kernel> kernel,
+             const std::string& filename,
+             chrono::milliseconds start,
+             chrono::milliseconds end)
+    : pimpl(new impl(kernel, filename, start, end)) {}
 
 Track::~Track() {}
 
 Track::Track(const Track& b) {
     auto filename = b.sourceName();
     TRACE_LOG(logject) << "Copying " << filename;
-    pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
+    pimpl.reset(new impl(b.pimpl->kernel, filename, b.pimpl->start, b.pimpl->end));
 }
 
 Track& Track::operator=(const Track& b) {
     auto filename = b.sourceName();
     TRACE_LOG(logject) << "Assigning " << filename;
-    pimpl.reset(new impl(filename, b.pimpl->start, b.pimpl->end));
+    pimpl.reset(new impl(b.pimpl->kernel, filename, b.pimpl->start, b.pimpl->end));
     return *this;
 }
 

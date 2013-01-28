@@ -29,8 +29,8 @@ TrackSeeker::TrackSeeker(QWidget *parent) :
     setMaximum(0);
     setTracking(false);
 
-    connect(this, SIGNAL(sliderMoved(int)), this, SLOT(updateSeekTo(int)));
-    connect(this, SIGNAL(sliderReleased()), this, SLOT(onRelease()));
+    connect(this, &TrackSeeker::sliderMoved, this, &TrackSeeker::updateSeekTo);
+    connect(this, &TrackSeeker::sliderReleased, this, &TrackSeeker::onRelease);
 }
 
 TrackSeeker::~TrackSeeker() {}

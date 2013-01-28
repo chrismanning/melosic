@@ -15,41 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
-
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include "pcmbuffer.hpp"
 
 namespace Melosic {
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
-}
-
-struct AudioSpecs;
-
-namespace Input {
-
-class Source : public IO::Source {
-public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
-};
-
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
+PCMBuffer::PCMBuffer() {}
 
 }
-}
-
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H

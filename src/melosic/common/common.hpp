@@ -19,17 +19,17 @@
 #define MELOSIC_COMMON_HPP
 
 #include <iostream>
-using std::cout; using std::cerr; using std::endl;
+using std::cout; using std::endl;
 #include <boost/cstdint.hpp>
 using boost::int64_t; using boost::uint64_t;
-#include <boost/chrono.hpp>
-namespace chrono = boost::chrono;
+#include <chrono>
+namespace chrono = std::chrono;
 
 #include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/plugin.hpp>
-#include <melosic/common/logging.hpp>
+//#include <melosic/core/logging.hpp>
 
 #ifdef WIN32
 #include <boost/thread.hpp>

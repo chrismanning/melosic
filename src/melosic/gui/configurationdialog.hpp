@@ -15,41 +15,41 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef CONFIGURATIONDIALOG_HPP
+#define CONFIGURATIONDIALOG_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <QDialog>
+#include <QStackedLayout>
+#include <QTreeWidget>
+#include <QList>
+
+#include <memory>
 
 namespace Melosic {
-
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
+class Kernel;
 }
 
-struct AudioSpecs;
+class ConfigWidget;
 
-namespace Input {
-
-class Source : public IO::Source {
+class ConfigurationDialog : public QDialog
+{
+    Q_OBJECT
+    
 public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
+    explicit ConfigurationDialog(std::shared_ptr<Melosic::Kernel> kernel, QWidget* parent = 0);
+    ~ConfigurationDialog();
+
+public Q_SLOTS:
+    void apply();
+
+private Q_SLOTS:
+    void changeConfigWidget(QTreeWidgetItem* item);
+
+private:
+    QStackedLayout* stackLayout;
+    QTreeWidget* items;
+    std::shared_ptr<Melosic::Kernel> kernel;
+    QList<ConfigWidget*> visited;
 };
 
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
-
-}
-}
-
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // CONFIGURATIONDIALOG_HPP

@@ -15,41 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#include "tag.hpp"
+#include "service.hpp"
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <opqit/opaque_iterator.hpp>
 
-namespace Melosic {
+#include <list>
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
+namespace LastFM {
+
+Tag& Tag::operator=(const std::string& tag) {
+    name = tag;
+    return *this;
 }
 
-struct AudioSpecs;
+boost::iterator_range<opqit::opaque_iterator<Tag, opqit::forward>> Tag::getSimilar(std::shared_ptr<Service> lastserv) {
+    static std::list<Tag> similar;
+    if(!similar.empty())
+        return boost::make_iterator_range(similar);
 
-namespace Input {
-
-class Source : public IO::Source {
-public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
-};
-
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
-
-}
+    return boost::make_iterator_range(similar);
 }
 
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+}

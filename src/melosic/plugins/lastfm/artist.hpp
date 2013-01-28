@@ -15,41 +15,35 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef LASTFM_ARTIST_HPP
+#define LASTFM_ARTIST_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <list>
+#include <memory>
 
-namespace Melosic {
+#include "utilities.hpp"
+#include "tag.hpp"
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
-}
+namespace LastFM {
+class Service;
 
-struct AudioSpecs;
+struct Artist {
+    Artist() = default;
+    Artist(const std::string& artist) : name(artist) {}
+    Artist(const std::string& artist, const std::string& url) : name(artist), url(url) {}
+    Artist& operator=(const Artist& artist);
+    Artist& operator=(const std::string& artist);
 
-namespace Input {
+    void getInfo(std::shared_ptr<Service> lastserv, bool autocorrect = false);
+    boost::iterator_range<opqit::opaque_iterator<Artist, opqit::forward>> getSimilar(std::shared_ptr<Service> lastserv);
 
-class Source : public IO::Source {
-public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
+    std::string name;
+    network::uri url;
+    std::string biographySummary, biography;
+    bool streamable;
+    std::list<Tag> tags;
 };
 
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
+}//namespace LastFM
 
-}
-}
-
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // LASTFM_ARTIST_HPP

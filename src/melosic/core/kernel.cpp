@@ -24,7 +24,7 @@ using boost::filesystem::path;
 #include <melosic/common/file.hpp>
 #include <melosic/common/plugin.hpp>
 #include <melosic/core/kernel.hpp>
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/taglibfile.hpp>
@@ -37,9 +37,9 @@ static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
 
 class Kernel::impl {
 public:
-    impl() {}
+    impl() : config("root") {}
 
-    void loadPlugin(const std::string& filepath) {
+    void loadPlugin(const std::string& filepath, std::shared_ptr<Kernel> kernel) {
         path p(filepath);
 
         if(!exists(p) && !is_regular_file(p)) {
@@ -53,12 +53,11 @@ public:
         auto filename = p.filename().string();
 
         if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-            ERROR_LOG(logject) << "Plugin already loaded: " << filepath << std::endl;
+            ERROR_LOG(logject) << "Plugin already loaded: " << filepath;
             return;
         }
 
-        std::shared_ptr<Plugin::Plugin> pl(new Plugin::Plugin(p));
-        loadedPlugins.insert({filename, pl});
+        loadedPlugins.emplace(filename, std::make_shared<Plugin::Plugin>(p, kernel.get()));
     }
 
     template<class StringList>
@@ -66,7 +65,7 @@ public:
         for(const auto& device : avail) {
             auto it = outputFactories.find(device);
             if(it == outputFactories.end()) {
-                outputFactories.insert({device, fact});
+                outputFactories.emplace(device, fact);
             }
         }
     }
@@ -92,117 +91,74 @@ public:
 private:
     std::map<std::string, std::shared_ptr<Plugin::Plugin>> loadedPlugins;
     std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
+    std::map<std::string, Kernel::InputFactory> inputFactories;
+    Player player;
+    Configuration config;
+    friend class Kernel;
 };
 
-std::unique_ptr<Kernel::FileTypeResolver::impl> Kernel::FileTypeResolver::pimpl;
+//std::map<std::string, Kernel::InputFactory> Kernel::FileTypeResolver::inputFactories;
 
-static std::map<std::string, Kernel::InputFactory>& inputFactories() {
-    static std::map<std::string, Kernel::InputFactory> instance;
-    return instance;
-}
+Kernel::FileTypeResolver::FileTypeResolver(std::shared_ptr<Kernel> kernel, const boost::filesystem::path& filepath) {
+    auto ext = filepath.extension().string();
 
-class Kernel::FileTypeResolver::impl {
-public:
-    impl(const boost::filesystem::path& filepath) {
-        auto ext = filepath.extension().string();
+    auto& inputFactories = kernel->pimpl->inputFactories;
+    auto fact = inputFactories.find(ext);
 
-        auto fact = inputFactories().find(ext);
-
-        if(fact != inputFactories().end()) {
-            decoderFactory = std::cref(fact->second);
-        }
-        else {
-            decoderFactory = [](decltype(decoderFactory)::argument_type a) -> decltype(decoderFactory)::result_type {
-                try {
-                    IO::File& b = dynamic_cast<IO::File&>(a);
-                    BOOST_THROW_EXCEPTION(UnsupportedFileTypeException() <<
-                                          ErrorTag::FilePath(absolute(b.filename())));
-                }
-                catch(std::bad_cast& e) {
-                    BOOST_THROW_EXCEPTION(UnsupportedTypeException());
-                }
-            };
-        }
-
-        if(ext == ".flac") {
-                tagFactory = std::bind([&](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
-                                           return new TagLib::FLAC::File(a, b);
-                                       },
-                                       std::placeholders::_1,
-                                       nullptr);
-        }
-        else {
-            tagFactory = [&](TagLib::IOStream* /*a*/) -> TagLib::File* {
-                BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
-                                      ErrorTag::FilePath(absolute(filepath)));
-            };
-        }
+    if(fact != inputFactories.end()) {
+        decoderFactory = fact->second;
+    }
+    else {
+        decoderFactory = [](decltype(decoderFactory)::argument_type a) -> decltype(decoderFactory)::result_type {
+            try {
+                IO::File& b = dynamic_cast<IO::File&>(a);
+                BOOST_THROW_EXCEPTION(UnsupportedFileTypeException() <<
+                                      ErrorTag::FilePath(absolute(b.filename())));
+            }
+            catch(std::bad_cast& e) {
+                BOOST_THROW_EXCEPTION(UnsupportedTypeException());
+            }
+        };
     }
 
-    std::unique_ptr<Input::Source> getDecoder(IO::File& file) {
-        return decoderFactory(file);
+    if(ext == ".flac") {
+        tagFactory = std::bind([&](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
+                return new TagLib::FLAC::File(a, b);
+        },
+        std::placeholders::_1,
+        nullptr);
     }
-
-    std::unique_ptr<TagLib::File> getTagReader(IO::File& file) {
-        taglibFile.reset(new IO::TagLibFile(file));
-        return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
+    else {
+        tagFactory = [&](TagLib::IOStream*) -> TagLib::File* {
+            BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
+                                  ErrorTag::FilePath(absolute(filepath)));
+        };
     }
-
-    static void addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
-        auto bef = inputFactories().size();
-        auto pos = inputFactories().find(extension);
-        if(pos == inputFactories().end()) {
-            inputFactories().insert(std::remove_reference<decltype(inputFactories())>::type::value_type(extension, fact));
-        }
-        else {
-            WARN_LOG(logject) << extension << ": already registered to a decoder factory";
-        }
-        assert(++bef == inputFactories().size());
-    }
-
-private:
-    InputFactory decoderFactory;
-    std::unique_ptr<TagLib::IOStream> taglibFile;
-    std::function<TagLib::File*(TagLib::IOStream*)> tagFactory;
-};
-
-Kernel::FileTypeResolver::FileTypeResolver(const boost::filesystem::path& filepath) {
-    pimpl.reset(new impl(filepath));
-}
-
-void Kernel::FileTypeResolver::addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
-    pimpl->addInputExtension(fact, extension);
 }
 
 std::unique_ptr<Input::Source> Kernel::FileTypeResolver::getDecoder(IO::File& file) {
-    return std::move(pimpl->getDecoder(file));
+    return decoderFactory(file);
 }
 
 std::unique_ptr<TagLib::File> Kernel::FileTypeResolver::getTagReader(IO::File& file) {
-    return std::move(pimpl->getTagReader(file));
+    taglibFile.reset(new IO::TagLibFile(file));
+    return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
 }
 
 Kernel::Kernel() : pimpl(new impl) {}
 
 Kernel::~Kernel() {}
 
-Kernel& Kernel::getInstance() {
-    static Kernel instance;
-    return instance;
-}
-
 Player& Kernel::getPlayer() {
-    static Player player;
-    return player;
+    return pimpl->player;
 }
 
 Configuration& Kernel::getConfig() {
-    static Configuration config;
-    return config;
+    return pimpl->config;
 }
 
 void Kernel::loadPlugin(const std::string& filepath) {
-    pimpl->loadPlugin(filepath);
+    pimpl->loadPlugin(filepath, this->shared_from_this());
 }
 
 void Kernel::loadAllPlugins() {}
@@ -221,6 +177,19 @@ std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& d
 
 std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
     return pimpl->getOutputDeviceNames();
+}
+
+void Kernel::addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
+    auto& inputFactories = pimpl->inputFactories;
+    auto bef = inputFactories.size();
+    auto pos = inputFactories.find(extension);
+    if(pos == inputFactories.end()) {
+        inputFactories.emplace(extension, fact);
+    }
+    else {
+        WARN_LOG(logject) << extension << ": already registered to a decoder factory";
+    }
+    assert(++bef == inputFactories.size());
 }
 
 } // end namespace Melosic

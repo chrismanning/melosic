@@ -1,21 +1,29 @@
 set(LASTFM lastfm)
 
-find_package(LibLastFm REQUIRED)
+find_package(Qt5Widgets REQUIRED)
 
-find_package(Qt4 REQUIRED)
-ADD_DEFINITIONS(${QT_DEFINITIONS})
-ADD_DEFINITIONS(-DQT_SHARED)
-ADD_DEFINITIONS(-Dslots=Q_SLOTS -Dsignals=Q_SIGNALS)
-SET(QT_USE_QTXML TRUE)
-SET(QT_USE_QTNETWORK TRUE)
-INCLUDE(${QT_USE_FILE})
-QT4_WRAP_CPP(SRC lastfm.hpp)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Boost REQUIRED)
+SET(SRC lastfm.cpp)
+SET(SRC ${SRC} lastfmconfig.cpp)
+SET(SRC ${SRC} lastfmconfig.cpp)
+SET(SRC ${SRC} scrobbler.cpp)
+SET(SRC ${SRC} service.cpp)
+SET(SRC ${SRC} tag.cpp)
+SET(SRC ${SRC} user.cpp)
+SET(SRC ${SRC} artist.cpp)
+SET(SRC ${SRC} track.cpp)
+SET(SRC ${SRC} biography.cpp)
 
-add_library(${LASTFM} SHARED lastfm.cpp ${SRC})
+find_package(Boost COMPONENTS serialization REQUIRED)
 
-target_link_libraries(${LASTFM} ${LIBLASTFM_LIBRARIES} melosiccore)
+add_library(${LASTFM} SHARED ${SRC})
+
+qt5_use_modules(${LASTFM} Widgets)
+
+target_link_libraries(${LASTFM} melosiccore ${boost_LIBRARIES})
+target_link_libraries(${LASTFM} cppnetlib-uri cppnetlib-http-client cppnetlib-http-client-connections ssl crypto)
 set_target_properties(${LASTFM} PROPERTIES PREFIX "")
 set_target_properties(${LASTFM} PROPERTIES SUFFIX ".melin")
-include_directories(${LIBLASTFM_INCLUDE_DIR} ${Boost_INCLUDE_DIRS} ../../..)
+include_directories(${Qt5Widgets_INCLUDES} ${Boost_INCLUDE_DIRS} ../../..)

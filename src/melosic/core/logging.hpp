@@ -21,16 +21,11 @@
 #include <boost/log/core.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
-#include <boost/log/filters.hpp>
-#include <boost/log/utility/init/to_file.hpp>
-#include <boost/log/utility/init/to_console.hpp>
-#include <boost/log/utility/init/common_attributes.hpp>
-#include <boost/log/formatters.hpp>
+#include <boost/log/expressions.hpp>
 namespace logging = boost::log;
+namespace expr = boost::log::expressions;
 namespace sinks = boost::log::sinks;
 namespace src = boost::log::sources;
-namespace fmt = boost::log::formatters;
-namespace flt = boost::log::filters;
 namespace attrs = boost::log::attributes;
 namespace keywords = boost::log::keywords;
 
@@ -72,18 +67,7 @@ inline std::basic_ostream<CharT, TraitsT>& operator<< (
     return strm;
 }
 
-inline void init() {
-    auto formatter =
-            fmt::format("%1% [%2%]%|32T | <%3%> %4%")
-                        % fmt::date_time("TimeStamp", keywords::format = "%d/%m/%y %H:%M:%S", std::nothrow)
-                        % fmt::attr<std::string>("Channel", std::nothrow)
-                        % fmt::attr<Severity>("Severity", std::nothrow)
-                        % fmt::message();
-
-    logging::init_log_to_console(std::clog, keywords::format = formatter);
-
-    logging::add_common_attributes();
-}
+void init();
 
 }//end namespace Logger
 }//end namespace Melosic

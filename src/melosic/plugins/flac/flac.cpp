@@ -256,9 +256,9 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" void registerPlugin(Plugin::Info* info) {
+extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
     *info = ::flacInfo;
-    Kernel::FileTypeResolver::addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
+    kernel->addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
 extern "C" void destroyPlugin() {

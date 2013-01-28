@@ -19,26 +19,25 @@
 #define MELOSIC_PLAYLIST_HPP
 
 #include <memory>
-#include <boost/thread.hpp>
-#include <list>
-#include <deque>
+#include <vector>
 #include <type_traits>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/signals2.hpp>
-#include <boost/chrono.hpp>
-namespace chrono = boost::chrono;
+#include <thread>
+using std::mutex;
+#include <chrono>
+namespace chrono = std::chrono;
 
 namespace Melosic {
 
 class Track;
 
-class Playlist
-{
+class Playlist {
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
 
-    typedef std::deque<Track> list_type;
+    typedef std::vector<Track> list_type;
     typedef list_type::value_type value_type;
     typedef value_type& reference;
     typedef const value_type& const_reference;
@@ -81,7 +80,7 @@ public:
         tracks.insert(pos, first, last);
         if(size() == 1) {
             current_track = begin();
-            trackChanged(*current_track);
+            trackChanged(*current_track, true);
         }
     }
 
@@ -91,7 +90,7 @@ public:
         tracks.emplace_back(std::forward<Args>(args)...);
         if(size() == 1) {
             current_track = begin();
-            trackChanged(*current_track);
+            trackChanged(*current_track, true);
         }
     }
     template <typename ... Args>
@@ -99,7 +98,7 @@ public:
         auto r = tracks.emplace(pos, std::forward<Args>(args)...);
         if(size() == 1) {
             current_track = r;
-            trackChanged(*current_track);
+            trackChanged(*current_track, true);
         }
         return r;
     }
@@ -115,7 +114,7 @@ public:
     }
 
     //signals
-    typedef boost::signals2::signal<void(const Track&)> TrackChangedSignal;
+    typedef boost::signals2::signal<void(const Track&, bool)> TrackChangedSignal;
     boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
         return trackChanged.connect(slot);
     }
@@ -144,7 +143,7 @@ private:
     list_type tracks;
     iterator current_track;
     TrackChangedSignal trackChanged;
-    boost::mutex mu;
+    mutex mu;
     typedef decltype(mu) Mutex;
 };
 

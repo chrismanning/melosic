@@ -15,7 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/gui/application.hpp>
+//#include <melosic/gui/application.hpp>
+#include <QApplication>
 #include <melosic/gui/mainwindow.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/file.hpp>
@@ -39,18 +40,18 @@ int main(int argc, char* argv[]) {
 
         QApplication app(argc, argv);
 
-        Kernel& kernel = Kernel::getInstance();
+        std::shared_ptr<Kernel> kernel = std::make_shared<Kernel>();
 
-        kernel.loadPlugin("flac.melin");
-        kernel.loadPlugin("alsa.melin");
-        kernel.loadPlugin("lastfm.melin");
+        kernel->loadPlugin("../lib/flac.melin");
+        kernel->loadPlugin("../lib/alsa.melin");
+        kernel->loadPlugin("../lib/lastfm.melin");
 
-        MainWindow win;
+        MainWindow win(kernel);
         win.show();
 
         return app.exec();
     }
-    catch(PluginVersionMismatch& e) {
+    catch(PluginVersionMismatchException& e) {
         auto* info = boost::get_error_info<ErrorTag::Plugin::Info>(e);
         assert(info != nullptr);
         std::stringstream str;

@@ -21,10 +21,12 @@
 #include <QAbstractListModel>
 #include <QStringList>
 
+#include <memory>
+
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/kernel.hpp>
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/file.hpp>
 
@@ -35,16 +37,20 @@ struct DataRoles {
         Track
     };
 };
+class Kernel;
 }
 
 class PlaylistModel : public QAbstractListModel
 {
     Q_OBJECT
-    boost::shared_ptr<Melosic::Playlist> playlist;
+    std::shared_ptr<Melosic::Playlist> playlist;
+    std::shared_ptr<Melosic::Kernel> kernel;
     Melosic::Logger::Logger logject;
 
 public:
-    explicit PlaylistModel(boost::shared_ptr<Melosic::Playlist> playlist, QObject* parent = 0);
+    PlaylistModel(std::shared_ptr<Melosic::Kernel> kernel,
+                  std::shared_ptr<Melosic::Playlist> playlist,
+                  QObject* parent = 0);
     int rowCount(const QModelIndex& parent = QModelIndex()) const;
     QVariant data(const QModelIndex& index, int role) const;
     Qt::ItemFlags flags(const QModelIndex &index) const;
@@ -66,7 +72,7 @@ public:
         beginInsertRows(QModelIndex(), beg, beg + filenames.size());
         for(const auto& filename : filenames) {
             try {
-                playlist->emplace_back(filename);
+                playlist->emplace_back(kernel, filename);
             }
             catch(Melosic::UnsupportedFileTypeException& e) {
                 if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))

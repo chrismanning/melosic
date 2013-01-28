@@ -15,41 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef MELOSIC_PCMBUFFER_HPP
+#define MELOSIC_PCMBUFFER_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <melosic/common/common.hpp>
+#include <melosic/common/properties.hpp>
 
 namespace Melosic {
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
-}
-
-struct AudioSpecs;
-
-namespace Input {
-
-class Source : public IO::Source {
+class PCMBuffer {
 public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
+    PCMBuffer();
+
+    void reserve(size_t samples);
+    void pushSample(int sample, uint8_t bits);
+
+    readWriteProperty(uint8_t, bitDepth, BitDepth)
+    readWriteProperty(uint32_t, sampleRate, SampleRate)
+    readWriteProperty(AudioSpecs, audioSpecs, AudioSpecs)
 };
 
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
-};
+} //end namespace Melosic
 
-}
-}
-
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // MELOSIC_PCMBUFFER_HPP

@@ -29,11 +29,12 @@
 
 namespace Melosic {
 
-class Track : public Input::Source, public IO::Closable
-{
-public:
+class Kernel;
 
-    Track(const std::string& filename,
+class Track : public Input::Source, public IO::Closable {
+public:
+    Track(std::shared_ptr<Melosic::Kernel> kernel,
+          const std::string& filename,
           chrono::milliseconds start = chrono::milliseconds(0),
           chrono::milliseconds end = chrono::milliseconds(0));
 

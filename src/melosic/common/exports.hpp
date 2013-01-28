@@ -39,6 +39,7 @@
 #define MELOSIC_PLUGIN_API_VERSION 1,0,0
 
 namespace Melosic {
+class Kernel;
 namespace Plugin {
 
 constexpr uint32_t generateVersion(uint8_t major, uint8_t mid, uint8_t minor) {
@@ -90,15 +91,14 @@ inline std::ostream& operator<<(std::ostream& out, const Info& info) {
 } // end namespace Plugin
 } // end namespace Melosic
 
-extern "C" void registerPlugin(Melosic::Plugin::Info*);
+extern "C" void registerPlugin(Melosic::Plugin::Info*, Melosic::Kernel*);
 typedef decltype(registerPlugin) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
 extern "C" void destroyPlugin();
 typedef decltype(destroyPlugin) destroyPlugin_F;
 typedef std::function<destroyPlugin_F> destroyPlugin_T;
 
-extern inline time_t time_when_compiled()
-{
+extern inline time_t time_when_compiled() {
     std::string datestr = __DATE__;
     std::string timestr = __TIME__;
 

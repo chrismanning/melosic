@@ -18,41 +18,4 @@
 #ifndef LASTFM_HPP
 #define LASTFM_HPP
 
-#include <QtCore>
-
-#include <lastfm/Audioscrobbler.h>
-#include <lastfm/Track.h>
-
-#include <boost/chrono.hpp>
-namespace chrono = boost::chrono;
-#include <boost/shared_ptr.hpp>
-#include <boost/signals2/connection.hpp>
-
-namespace Melosic {
-class Track;
-class Playlist;
-namespace Output {
-enum class DeviceState;
-}
-}
-using namespace Melosic;
-
-class Scrobbler : QObject {
-    Q_OBJECT
-public:
-    Scrobbler();
-
-    void notifySlot(chrono::milliseconds current, chrono::milliseconds total);
-    void trackChangedSlot(const Track& newTrack);
-    void stateChangedSlot(Output::DeviceState state);
-    void playlistChangeSlot(boost::shared_ptr<Playlist> playlist);
-
-private Q_SLOTS:
-    void printError(int code, QString msg);
-
-private:
-    lastfm::Audioscrobbler as;
-    boost::shared_ptr<lastfm::Track> currentTrack;
-};
-
 #endif // LASTFM_HPP

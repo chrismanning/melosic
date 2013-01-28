@@ -18,37 +18,78 @@
 #ifndef MELOSIC_CONFIGURATION_HPP
 #define MELOSIC_CONFIGURATION_HPP
 
+//#include <QIcon>
+class QIcon;
+
 #include <memory>
 #include <map>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/ptr_container/serialize_ptr_map.hpp>
 #include <boost/signals2.hpp>
+#include <boost/variant.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/variant.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <melosic/common/error.hpp>
+
+class ConfigWidget;
 
 namespace Melosic {
 
 class Configuration {
 public:
-    typedef boost::signals2::signal<void(const std::string&, const std::string&)> VarUpdateSignal;
+    typedef boost::variant<std::string, bool, int64_t, double> VarType;
+    typedef boost::signals2::signal<void(const std::string&, const VarType&)> VarUpdateSignal;
+    typedef boost::ptr_map<std::string, Configuration> ChildMap;
+    typedef std::map<std::string, VarType> NodeMap;
 
-    Configuration();
+    Configuration(const std::string& name);
+    Configuration() : Configuration("") {}
 
-    Configuration(const Configuration& b);
-    Configuration& operator=(const Configuration& b);
-
+    const std::string& getName() const;
     bool existsNode(const std::string& key);
     bool existsChild(const std::string& key);
-    const std::string& getNode(const std::string& key);
+    const VarType& getNode(const std::string& key);
     Configuration& getChild(const std::string& key);
     Configuration& putChild(const std::string& key, const Configuration& child);
-    const std::string& putNode(const std::string& key, const std::string& value);
+    const VarType& putNode(const std::string& key, const VarType& value);
     boost::signals2::connection connectVariableUpdateSlot(const VarUpdateSignal::slot_type& slot);
+    boost::iterator_range<ChildMap::iterator> getChildren() {
+        return boost::make_iterator_range(children);
+    }
+    boost::iterator_range<ChildMap::const_iterator> getChildren() const {
+        return boost::make_iterator_range(children);
+    }
 
-private:
-    std::map<std::string, Configuration> children;
-    std::map<std::string, std::string> nodes;
+    virtual ConfigWidget* createWidget();
+    virtual QIcon* getIcon() const;
+
+    virtual Configuration* clone() const {
+        return new Configuration(*this);
+    }
+
+protected:
+    Configuration(const Configuration& b);
+    Configuration& operator=(const Configuration& b);
+    ChildMap children;
+    NodeMap nodes;
     VarUpdateSignal variableUpdated;
+    std::string name;
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int /*version*/) {
+        ar & children;
+        ar & nodes;
+        ar & name;
+    }
 };
+
+inline Melosic::Configuration* new_clone(const Melosic::Configuration& conf) {
+    return conf.clone();
+}
 
 } //end namespace Melosic
 

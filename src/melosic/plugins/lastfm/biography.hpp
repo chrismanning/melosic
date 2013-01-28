@@ -15,41 +15,34 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUT_PLUGINTERFACE_H
-#define MELOSIC_INPUT_PLUGINTERFACE_H
+#ifndef LASTFM_BIOGRAPHY_HPP
+#define LASTFM_BIOGRAPHY_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <boost/iostreams/concepts.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/common/error.hpp>
+#include <QWidget>
+#include <QLabel>
+#include <QVBoxLayout>
 
-namespace Melosic {
+#include <memory>
 
-namespace ErrorTag {
-typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
-}
+namespace LastFM {
 
-struct AudioSpecs;
+class Service;
 
-namespace Input {
-
-class Source : public IO::Source {
+class BiographyWidget : public QWidget {
+    Q_OBJECT
 public:
-    typedef char char_type;
-    virtual ~Source() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
-};
+    BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent = 0);
 
-class FileSource : public Source {
-    virtual const std::string& getFilename() = 0;
+Q_SIGNALS:
+
+public Q_SLOTS:
+
+private:
+    std::weak_ptr<Service> lastserv;
+    QLabel* text;
+    QVBoxLayout* layout;
 };
 
 }
-}
 
-#endif // MELOSIC_INPUT_PLUGINTERFACE_H
+#endif // LASTFM_BIOGRAPHY_HPP

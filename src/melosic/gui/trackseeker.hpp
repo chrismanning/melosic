@@ -20,11 +20,11 @@
 
 #include <QSlider>
 #include <QHBoxLayout>
-#include <boost/chrono.hpp>
-namespace chrono = boost::chrono;
+#include <chrono>
+namespace chrono = std::chrono;
 #include <boost/signals2.hpp>
 
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 
 namespace Melosic {
 namespace Output {

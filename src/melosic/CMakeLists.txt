@@ -1,9 +1,5 @@
-FIND_PACKAGE(Qt4 REQUIRED)
-INCLUDE(${QT_USE_FILE})
-ADD_DEFINITIONS(${QT_DEFINITIONS})
+FIND_PACKAGE(Qt5Widgets REQUIRED)
 ADD_DEFINITIONS(-DQT_SHARED)
-
-SET(SRC_LIST main.cpp)
 
 #abbrev
 SET(PN ${PROJECT_NAME})
@@ -13,7 +9,7 @@ find_package(Boost COMPONENTS filesystem system iostreams system log log_setup R
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
-add_executable(${PN} ${SRC_LIST})
+SET(SRC_LIST main.cpp)
 
 add_subdirectory(core)
 add_subdirectory(common)
@@ -21,11 +17,18 @@ add_subdirectory(managers)
 add_subdirectory(plugins)
 add_subdirectory(gui)
 
-include_directories(.. ${Boost_INCLUDE_DIRS})
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xlinker ")
+
+add_executable(${PN} ${SRC_LIST})
+
+qt5_use_modules(${PN} Widgets)
+
+include_directories(.. ${Boost_INCLUDE_DIRS} ${Qt5Widgets_INCLUDES})
 
 IF(${UNIX})
-    SET(LINK_LIBS ${LINK_LIBS} dl)
+    SET(LINK_LIBS ${LINK_LIBS} dl /usr/local/lib64/libboost_log.a cxxrt)
 ENDIF(${UNIX})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} ${LINK_LIBS} melosiccore qt-gui)
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} melosiccore qt-gui ${LINK_LIBS})
+
 

@@ -31,7 +31,7 @@ using boost::format;
 #include <boost/thread.hpp>
 
 #include <melosic/common/error.hpp>
-#include <melosic/common/logging.hpp>
+#include <melosic/core/logging.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/common.hpp>
 using namespace Melosic;
@@ -273,7 +273,7 @@ private:
     Output::DeviceState state_;
 };
 
-extern "C" void registerPlugin(Plugin::Info* info) {
+extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
     *info = ::alsaInfo;
 
     //TODO: make this more C++-like
@@ -307,7 +307,7 @@ extern "C" void registerPlugin(Plugin::Info* info) {
     }
     snd_device_name_free_hint(hints);
 
-    Kernel::getInstance().addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
+    kernel->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
 extern "C" void destroyPlugin() {
