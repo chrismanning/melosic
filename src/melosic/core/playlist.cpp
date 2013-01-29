@@ -21,6 +21,8 @@
 using std::mutex; using std::unique_lock; using std::lock_guard;
 #include <deque>
 
+#include <boost/container/stable_vector.hpp>
+
 #include <melosic/core/track.hpp>
 #include <melosic/core/logging.hpp>
 #include "playlist.hpp"
@@ -87,26 +89,14 @@ public:
         return current_track_;
     }
 
-    Playlist::const_iterator currentTrack() const {
-        return current_track_;
-    }
-
     //element access
     Playlist::reference front() {
         lock_guard<Mutex> l(mu);
         return tracks.front();
     }
 
-    Playlist::const_reference front() const {
-        return tracks.front();
-    }
-
     Playlist::reference back() {
         lock_guard<Mutex> l(mu);
-        return tracks.back();
-    }
-
-    Playlist::const_reference back() const {
         return tracks.back();
     }
 
@@ -116,23 +106,12 @@ public:
         return tracks.begin();
     }
 
-    Playlist::const_iterator begin() const {
-        return tracks.begin();
-    }
-
     Playlist::iterator end() {
         lock_guard<Mutex>l(mu);
         return tracks.end();
     }
 
-    Playlist::const_iterator end() const {
-        return tracks.end();
-    }
-
     //capacity
-    bool empty() const{
-        return tracks.empty();
-    }
     bool empty() {
         lock_guard<Mutex> l(mu);
         return tracks.empty();
@@ -142,12 +121,9 @@ public:
         lock_guard<Mutex> l(mu);
         return tracks.size();
     }
-    Playlist::size_type size() const {
-        return tracks.size();
-    }
 
     Playlist::size_type max_size() const {
-        return std::numeric_limits<size_type>::max();
+        return std::numeric_limits<Playlist::size_type>::max();
     }
 
     Playlist::iterator insert(Playlist::iterator pos, Playlist::value_type&& value) {
@@ -186,14 +162,9 @@ public:
     }
 
 private:
-    Playlist::reference getTrack(Playlist::size_type pos, Playlist::iterator beg) {
-        std::advance(beg, pos);
-        return *beg;
-    }
-
     Logger::Logger logject;
     Playlist::iterator current_track_;
-    typedef std::deque<Playlist::value_type> list_type;
+    typedef boost::container::stable_vector<Playlist::value_type> list_type;
     list_type tracks;
     Playlist::TrackChangedSignal trackChanged;
     typedef mutex Mutex;
@@ -236,11 +207,11 @@ Playlist::const_iterator Playlist::currentTrack() const {
 }
 
 Playlist::reference Playlist::operator[](size_type pos) {
-    return pimpl->getTrack(pos, begin());
+    return pimpl->tracks[pos];
 }
 
 Playlist::const_reference Playlist::operator[](size_type pos) const {
-    return pimpl->getTrack(pos, pimpl->begin());
+    return pimpl->tracks[pos];
 }
 
 //element access
