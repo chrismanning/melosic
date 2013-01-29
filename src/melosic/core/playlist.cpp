@@ -19,6 +19,7 @@
 #include <numeric>
 #include <thread>
 using std::mutex; using std::unique_lock; using std::lock_guard;
+#include <deque>
 
 #include <melosic/core/track.hpp>
 #include <melosic/core/logging.hpp>
@@ -92,6 +93,7 @@ public:
 
     //element access
     Playlist::reference front() {
+        lock_guard<Mutex> l(mu);
         return tracks.front();
     }
 
@@ -100,6 +102,7 @@ public:
     }
 
     Playlist::reference back() {
+        lock_guard<Mutex> l(mu);
         return tracks.back();
     }
 
@@ -109,6 +112,7 @@ public:
 
     //iterators
     Playlist::iterator begin() {
+        lock_guard<Mutex> l(mu);
         return tracks.begin();
     }
 
@@ -117,6 +121,7 @@ public:
     }
 
     Playlist::iterator end() {
+        lock_guard<Mutex>l(mu);
         return tracks.end();
     }
 
@@ -128,7 +133,15 @@ public:
     bool empty() const{
         return tracks.empty();
     }
+    bool empty() {
+        lock_guard<Mutex> l(mu);
+        return tracks.empty();
+    }
 
+    Playlist::size_type size() {
+        lock_guard<Mutex> l(mu);
+        return tracks.size();
+    }
     Playlist::size_type size() const {
         return tracks.size();
     }
@@ -138,8 +151,9 @@ public:
     }
 
     Playlist::iterator insert(Playlist::iterator pos, Playlist::value_type&& value) {
-        TRACE_LOG(logject) << value.sourceName();
+        unique_lock<Mutex> l(mu);
         auto r = tracks.insert(pos.cast_to<list_type::iterator>(), value);
+        l.unlock();
         if(size() == 1) {
             current_track_ = r;
             trackChanged(*current_track_, currentTrack() != end());
@@ -148,7 +162,9 @@ public:
     }
 
     void insert(Playlist::iterator pos, Playlist::iterator first, iterator last) {
+        unique_lock<Mutex> l(mu);
         tracks.insert(pos.cast_to<list_type::iterator>(), first, last);
+        l.unlock();
         if(size() == 1) {
             current_track_ = begin();
             trackChanged(*current_track_, true);
@@ -156,30 +172,13 @@ public:
     }
 
     void push_back(Playlist::value_type&& value) {
+        unique_lock<Mutex> l(mu);
         tracks.push_back(std::move(value));
+        l.unlock();
         if(size() == 1) {
             current_track_ = tracks.begin();
             trackChanged(*current_track_, currentTrack() != end());
         }
-    }
-
-    template <typename ... Args>
-    void emplace_back(Args&& ... args) {
-        tracks.emplace_back(std::forward<Args>(args)...);
-        if(size() == 1) {
-            current_track_ = begin();
-            trackChanged(*current_track_, true);
-        }
-    }
-
-    template <typename ... Args>
-    Playlist::iterator emplace(iterator pos, Args&& ... args) {
-        auto r = tracks.emplace(pos, std::forward<Args>(args)...);
-        if(size() == 1) {
-            current_track_ = r;
-            trackChanged(*current_track_, true);
-        }
-        return r;
     }
 
     boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
@@ -194,7 +193,7 @@ private:
 
     Logger::Logger logject;
     Playlist::iterator current_track_;
-    typedef std::vector<Playlist::value_type> list_type;
+    typedef std::deque<Playlist::value_type> list_type;
     list_type tracks;
     Playlist::TrackChangedSignal trackChanged;
     typedef mutex Mutex;
