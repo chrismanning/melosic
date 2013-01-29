@@ -19,14 +19,13 @@
 #define MELOSIC_PLAYLIST_HPP
 
 #include <memory>
-#include <vector>
-#include <type_traits>
 #include <boost/iostreams/concepts.hpp>
 #include <boost/signals2.hpp>
-#include <thread>
-using std::mutex;
 #include <chrono>
 namespace chrono = std::chrono;
+#include <boost/range/iterator_range.hpp>
+
+#include <opqit/opaque_iterator.hpp>
 
 namespace Melosic {
 
@@ -37,23 +36,25 @@ public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
 
-    typedef std::vector<Track> list_type;
-    typedef list_type::value_type value_type;
+    typedef Track value_type;
     typedef value_type& reference;
     typedef const value_type& const_reference;
-    typedef list_type::iterator iterator;
-    typedef list_type::const_iterator const_iterator;
+    typedef opqit::opaque_iterator<value_type, opqit::random> iterator;
+    typedef opqit::opaque_iterator<const value_type, opqit::random> const_iterator;
+    typedef boost::iterator_range<iterator> range;
+    typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
     Playlist();
     ~Playlist();
-    std::streamsize read(char * s, std::streamsize n);
+
+    std::streamsize read(char* s, std::streamsize n);
     void seek(chrono::milliseconds dur);
-    chrono::milliseconds duration();
+    chrono::milliseconds duration() const;
     void previous();
     void next();
-    iterator& current();
-    const_iterator current() const;
+    iterator& currentTrack();
+    const_iterator currentTrack() const;
 
     reference operator[](size_type pos);
     const_reference operator[](size_type pos) const;
@@ -71,36 +72,21 @@ public:
     size_type size() const;
     size_type max_size() const;
     explicit operator bool() {
-        return current() != end();
+        return currentTrack() != end();
     }
 
     iterator insert(iterator pos, value_type&& value);
-    template <typename InputIt>
-    void insert(iterator pos, InputIt first, InputIt last) {
-        tracks.insert(pos, first, last);
-        if(size() == 1) {
-            current_track = begin();
-            trackChanged(*current_track, true);
-        }
-    }
+    void insert(iterator pos, iterator first, iterator last);
 
     void push_back(value_type&& value);
     template <typename ... Args>
     void emplace_back(Args&& ... args) {
-        tracks.emplace_back(std::forward<Args>(args)...);
-        if(size() == 1) {
-            current_track = begin();
-            trackChanged(*current_track, true);
-        }
+        emplace(end(), std::forward<Args>(args)...);
     }
+
     template <typename ... Args>
     iterator emplace(iterator pos, Args&& ... args) {
-        auto r = tracks.emplace(pos, std::forward<Args>(args)...);
-        if(size() == 1) {
-            current_track = r;
-            trackChanged(*current_track, true);
-        }
-        return r;
+        return insert(pos, std::move(value_type(std::forward<Args>(args)...)));
     }
 
 //    template <typename It>
@@ -109,42 +95,15 @@ public:
 //    iterator erase(const_iterator pos);
 //    iterator erase(const_iterator first, const_iterator last);
 //    void clear();
-    void swap(Playlist& b) {
-        std::swap(tracks, b.tracks);
-    }
+    void swap(Playlist& b);
 
     //signals
     typedef boost::signals2::signal<void(const Track&, bool)> TrackChangedSignal;
-    boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
-        return trackChanged.connect(slot);
-    }
+    boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot);
 
 private:
-    template <class It>
-    reference getTrack(size_type pos, It beg, std::random_access_iterator_tag) {
-        return beg[pos];
-    }
-    template <class It>
-    reference getTrack(size_type pos, It beg, std::bidirectional_iterator_tag) {
-        std::advance(beg, pos);
-        return *beg;
-    }
-
-    template <class It>
-    const_reference getTrack(size_type pos, It beg, std::random_access_iterator_tag) const {
-        return beg[pos];
-    }
-    template <class It>
-    const_reference getTrack(size_type pos, It beg, std::bidirectional_iterator_tag) const {
-        std::advance(beg, pos);
-        return *beg;
-    }
-
-    list_type tracks;
-    iterator current_track;
-    TrackChangedSignal trackChanged;
-    mutex mu;
-    typedef decltype(mu) Mutex;
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
 }

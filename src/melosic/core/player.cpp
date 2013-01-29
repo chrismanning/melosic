@@ -23,6 +23,8 @@ using std::thread; using std::mutex; using std::unique_lock; using std::lock_gua
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
 
+#include <opqit/opaque_iterator.hpp>
+
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
@@ -60,7 +62,7 @@ public:
         if(device && playlist) {
             if(device->state() == DeviceState::Stopped || device->state() == DeviceState::Error) {
                 if(*playlist) {
-                    this->device->prepareSink(playlist->current()->getAudioSpecs());
+                    this->device->prepareSink(playlist->currentTrack()->getAudioSpecs());
                 }
             }
             device->play();
@@ -83,8 +85,8 @@ public:
             stateChangedSig(DeviceState::Stopped);
         }
         if(playlist && *playlist) {
-            playlist->current()->reset();
-            playlist->current()->close();
+            playlist->currentTrack()->reset();
+            playlist->currentTrack()->close();
         }
     }
 
@@ -105,7 +107,7 @@ public:
     chrono::milliseconds tell() {
         TRACE_LOG(logject) << "Tell...";
         if(playlist && *playlist) {
-            return playlist->current()->tell();
+            return playlist->currentTrack()->tell();
         }
         return chrono::milliseconds(0);
     }
@@ -123,7 +125,7 @@ public:
 
         l.unlock();
         if(playlist && *playlist) {
-            this->device->prepareSink(playlist->current()->getAudioSpecs());
+            this->device->prepareSink(playlist->currentTrack()->getAudioSpecs());
         }
 
         if(tmp) {
@@ -143,7 +145,7 @@ public:
         lock_guard<Mutex> l(m);
         if(this->playlist != playlist) {
             if(this->playlist && *(this->playlist)) {
-                this->playlist->current()->close();
+                this->playlist->currentTrack()->close();
             }
             this->playlist = playlist;
             playlist->connectTrackChangedSlot(boost::bind(&impl::onTrackChangeSlot, this));
@@ -171,10 +173,10 @@ public:
 private:
     void onTrackChangeSlot() {
         if(playlist && *playlist) {
-            if(device->currentSpecs() != currentPlaylist()->current()->getAudioSpecs()) {
+            if(device->currentSpecs() != currentPlaylist()->currentTrack()->getAudioSpecs()) {
                 stop();
                 this_thread::sleep_for(chrono::milliseconds(10));
-                device->prepareSink(currentPlaylist()->current()->getAudioSpecs());
+                device->prepareSink(currentPlaylist()->currentTrack()->getAudioSpecs());
                 play();
             }
         }
@@ -198,12 +200,12 @@ private:
                             if(n < 1024) {
                                 auto a = io::read(*playlist, (char*)&s[0], s.size());
                                 if(bool(*playlist)) {
-                                    notifySig(playlist->current()->tell(), playlist->current()->duration());
+                                    notifySig(playlist->currentTrack()->tell(), playlist->currentTrack()->duration());
                                 }
                                 if(a == -1) {
                                     if(n == 0) {
                                         stop();
-                                        playlist->current() = playlist->begin();
+                                        playlist->currentTrack() = playlist->begin();
                                     }
                                     break;
                                 }

@@ -23,6 +23,8 @@
 
 #include <memory>
 
+#include <opqit/opaque_iterator.hpp>
+
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/kernel.hpp>

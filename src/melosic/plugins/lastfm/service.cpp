@@ -23,8 +23,6 @@
 #include <network/http/request.hpp>
 #include <network/http/response.hpp>
 #include <network/uri/uri_builder.hpp>
-#include "service.hpp"
-#include "track.hpp"
 
 #include <boost/range/adaptor/map.hpp>
 using namespace boost::adaptors;
@@ -33,6 +31,9 @@ using namespace boost::adaptors;
 #include <melosic/core/logging.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
+
+#include "service.hpp"
+#include "track.hpp"
 
 static Melosic::Logger::Logger logject(boost::log::keywords::channel = "LastFM::Service");
 
@@ -136,7 +137,7 @@ void Service::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
                 Melosic::Playlist::TrackChangedSignal::slot_type(&Service::trackChangedSlot,
                                                                  shared_from_this(),
                                                                  _1, _2));
-    trackChangedSlot(*playlist->current(), true);
+    trackChangedSlot(*playlist->currentTrack(), true);
 }
 
 void Service::trackChangedSlot(const Melosic::Track& newTrack, bool alive) {

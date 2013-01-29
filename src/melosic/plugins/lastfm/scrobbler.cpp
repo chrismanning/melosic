@@ -25,8 +25,6 @@ using Melosic::Output::DeviceState;
 #include "service.hpp"
 #include "track.hpp"
 
-#include <opqit/opaque_iterator.hpp>
-
 namespace LastFM {
 
 Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
@@ -59,8 +57,8 @@ void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) 
                 Melosic::Playlist::TrackChangedSignal::slot_type(&Scrobbler::trackChangedSlot,
                                                                  shared_from_this(),
                                                                  _1, _2));
-    if(playlist->current() != playlist->end())
-        trackChangedSlot(*playlist->current(), true);
+    if(playlist->currentTrack() != playlist->end())
+        trackChangedSlot(*playlist->currentTrack(), true);
 }
 
 void fun(Track& t) {

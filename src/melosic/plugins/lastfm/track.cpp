@@ -50,13 +50,11 @@ struct Track::impl {
         : name(name),
           artist(artist),
           url(url),
-          lastserv(lastserv)/*,
-          thread(boost::bind(&impl::getInfo, this, false))*/
+          lastserv(lastserv)
     {}
 
     impl(std::weak_ptr<Service> lastserv, const Melosic::Track& track)
-        : lastserv(lastserv)/*,
-          thread(boost::bind(&impl::getInfo, this, false))*/
+        : lastserv(lastserv)
     {
         {   auto artist = track.getTag("artist");
             if(artist != "?")
