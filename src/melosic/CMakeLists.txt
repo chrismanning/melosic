@@ -4,7 +4,7 @@ ADD_DEFINITIONS(-DQT_SHARED)
 #abbrev
 SET(PN ${PROJECT_NAME})
 
-find_package(Boost COMPONENTS filesystem system iostreams system log log_setup REQUIRED)
+find_package(Boost COMPONENTS filesystem iostreams system log log_setup REQUIRED)
 
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")

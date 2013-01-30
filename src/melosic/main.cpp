@@ -15,7 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-//#include <melosic/gui/application.hpp>
 #include <QApplication>
 #include <melosic/gui/mainwindow.hpp>
 #include <melosic/core/kernel.hpp>
@@ -24,16 +23,11 @@
 #include <melosic/common/plugin.hpp>
 using namespace Melosic;
 
-#include <boost/iostreams/copy.hpp>
-namespace io = boost::iostreams;
-using std::ios_base;
-
-static Logger::Logger logject(boost::log::keywords::channel = "Main");
-
 int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetErrorMode(0x8000);
 #endif
+    Logger::Logger logject(boost::log::keywords::channel = "Main");
 
     try {
         Logger::init();
