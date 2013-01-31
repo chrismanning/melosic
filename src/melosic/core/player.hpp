@@ -42,6 +42,7 @@ public:
     ~Player();
 
     Player(const Player&) = delete;
+    Player(Player&&) = delete;
     Player& operator=(const Player&) = delete;
 
     void play();

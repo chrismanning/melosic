@@ -122,14 +122,14 @@ Kernel::FileTypeResolver::FileTypeResolver(std::shared_ptr<Kernel> kernel, const
     }
 
     if(ext == ".flac") {
-        tagFactory = std::bind([&](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
+        tagFactory = std::bind([](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
                 return new TagLib::FLAC::File(a, b);
         },
         std::placeholders::_1,
         nullptr);
     }
     else {
-        tagFactory = [&](TagLib::IOStream*) -> TagLib::File* {
+        tagFactory = [=](TagLib::IOStream*) -> TagLib::File* {
             BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
                                   ErrorTag::FilePath(absolute(filepath)));
         };

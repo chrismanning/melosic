@@ -54,6 +54,7 @@ public:
     Kernel();
 
     Kernel(const Kernel&) = delete;
+    Kernel(Kernel&&) = delete;
     Kernel& operator=(const Kernel&) = delete;
 
     ~Kernel();
