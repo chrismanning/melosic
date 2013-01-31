@@ -23,15 +23,35 @@
 #include <QCheckBox>
 #include <QDoubleValidator>
 #include <QIntValidator>
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QFormLayout>
 
 #include <boost/variant/static_visitor.hpp>
+
+#include <melosic/core/configuration.hpp>
+using Melosic::Configuration;
 
 class ConfigWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit ConfigWidget(QWidget *parent = 0);
+    explicit ConfigWidget(QWidget* parent = nullptr);
 
     virtual void apply() = 0;
+};
+
+class GenericConfigWidget : public ConfigWidget {
+    Q_OBJECT
+public:
+    GenericConfigWidget( Configuration& conf, QWidget* parent = nullptr);
+    virtual void apply();
+
+protected:
+    Configuration& conf;
+    QVBoxLayout* layout;
+private:
+    QGroupBox* gen;
+    QFormLayout* form;
 };
 
 enum class ConfigType {
@@ -42,29 +62,10 @@ enum class ConfigType {
 };
 
 struct ConfigVisitor : boost::static_visitor<QWidget*> {
-    QWidget* operator()(const std::string& val) {
-        auto le = new QLineEdit(QString::fromStdString(val));
-        le->setProperty("type", int(ConfigType::String));
-        return le;
-    }
-    QWidget* operator()(bool val) {
-        auto cb = new QCheckBox;
-        cb->setChecked(val);
-        cb->setProperty("type", int(ConfigType::Bool));
-        return cb;
-    }
-    QWidget* operator()(int64_t val) {
-        auto le = new QLineEdit(QString::number(val));
-        le->setValidator(new QIntValidator);
-        le->setProperty("type", int(ConfigType::Int));
-        return le;
-    }
-    QWidget* operator()(double val) {
-        auto le = new QLineEdit(QString::number(val));
-        le->setValidator(new QDoubleValidator);
-        le->setProperty("type", int(ConfigType::Float));
-        return le;
-    }
+    QWidget* operator()(const std::string& val);
+    QWidget* operator()(bool val);
+    QWidget* operator()(int64_t val);
+    QWidget* operator()(double val);
 };
 
 #endif // MELOSIC_CONFIGWIDGET_HPP

@@ -35,7 +35,7 @@ const std::string& Configuration::getName() const {
     return name;
 }
 
-bool Configuration::existsNode(const std::string& key) {
+bool Configuration::existsNode(const std::string& key) const {
     try {
         getNode(key);
         return true;
@@ -45,7 +45,7 @@ bool Configuration::existsNode(const std::string& key) {
     }
 }
 
-bool Configuration::existsChild(const std::string &key) {
+bool Configuration::existsChild(const std::string& key) const {
     try {
         getChild(key);
         return true;
@@ -55,7 +55,7 @@ bool Configuration::existsChild(const std::string &key) {
     }
 }
 
-const Configuration::VarType& Configuration::getNode(const std::string& key) {
+const Configuration::VarType& Configuration::getNode(const std::string& key) const {
     auto it = nodes.find(key);
     if(it != nodes.end()) {
         return it->second;
@@ -66,6 +66,16 @@ const Configuration::VarType& Configuration::getNode(const std::string& key) {
 }
 
 Configuration& Configuration::getChild(const std::string& key) {
+    auto it = children.find(key);
+    if(it != children.end()) {
+        return *(it->second);
+    }
+    else {
+        BOOST_THROW_EXCEPTION(ChildNotFoundException() << ErrorTag::ConfigChild(key));
+    }
+}
+
+const Configuration& Configuration::getChild(const std::string& key) const {
     auto it = children.find(key);
     if(it != children.end()) {
         return *(it->second);

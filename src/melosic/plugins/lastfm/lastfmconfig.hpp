@@ -18,9 +18,6 @@
 #ifndef LASTFMCONFIG_HPP
 #define LASTFMCONFIG_HPP
 
-#include <QVBoxLayout>
-#include <QGroupBox>
-#include <QFormLayout>
 #include <QPushButton>
 
 #include <melosic/core/configuration.hpp>
@@ -46,20 +43,14 @@ private:
     }
 };
 
-class LastFmConfigWidget : public ConfigWidget {
+class LastFmConfigWidget : public GenericConfigWidget {
     Q_OBJECT
 public:
-    LastFmConfigWidget(Configuration::NodeMap& nodes, Configuration& conf);
+    LastFmConfigWidget(Configuration& conf, QWidget* parent = nullptr);
+    void apply();
 private Q_SLOTS:
     void authenticate();
 private:
-    void apply();
-
-    Configuration::NodeMap& nodes;
-    Configuration& conf;
-    QVBoxLayout* layout;
-    QGroupBox* gen;
-    QFormLayout* form;
     QPushButton* authButton;
 };
 

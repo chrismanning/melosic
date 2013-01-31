@@ -18,7 +18,6 @@
 #ifndef MELOSIC_CONFIGURATION_HPP
 #define MELOSIC_CONFIGURATION_HPP
 
-//#include <QIcon>
 class QIcon;
 
 #include <memory>
@@ -49,10 +48,11 @@ public:
     Configuration() : Configuration("") {}
 
     const std::string& getName() const;
-    bool existsNode(const std::string& key);
-    bool existsChild(const std::string& key);
-    const VarType& getNode(const std::string& key);
+    bool existsNode(const std::string& key) const;
+    bool existsChild(const std::string& key) const;
+    const VarType& getNode(const std::string& key) const;
     Configuration& getChild(const std::string& key);
+    const Configuration& getChild(const std::string& key) const;
     Configuration& putChild(const std::string& key, const Configuration& child);
     const VarType& putNode(const std::string& key, const VarType& value);
     boost::signals2::connection connectVariableUpdateSlot(const VarUpdateSignal::slot_type& slot);
@@ -61,6 +61,20 @@ public:
     }
     boost::iterator_range<ChildMap::const_iterator> getChildren() const {
         return boost::make_iterator_range(children);
+    }
+
+    NodeMap::iterator begin() {
+        return nodes.begin();
+    }
+    NodeMap::const_iterator begin() const {
+        return nodes.begin();
+    }
+
+    NodeMap::iterator end() {
+        return nodes.end();
+    }
+    NodeMap::const_iterator end() const {
+        return nodes.end();
     }
 
     virtual ConfigWidget* createWidget();

@@ -37,65 +37,20 @@ LastFmConfig::LastFmConfig() :
 
 LastFmConfig::~LastFmConfig() {}
 
-LastFmConfigWidget::LastFmConfigWidget(Configuration::NodeMap& nodes, Configuration& conf) : nodes(nodes), conf(conf) {
-    layout = new QVBoxLayout;
-    gen = new QGroupBox("General");
-    form = new QFormLayout;
-
-    ConfigVisitor cv;
-    for(const auto& v : nodes) {
-        auto label = new QLabel(QString(toTitle(v.first).c_str()));
-        QWidget* w = v.second.apply_visitor(cv);
-        w->setProperty("key", QString::fromStdString(v.first));
-        form->addRow(label, w);
-    }
+LastFmConfigWidget::LastFmConfigWidget(Configuration& conf, QWidget* parent)
+    : GenericConfigWidget(conf, parent)
+{
     authButton = new QPushButton("Authenticate");
     authButton->setToolTip("Only do this once per user!!\nIf \"Session Key\" is already present do NOT do this");
     connect(authButton, &QPushButton::clicked, this, &LastFmConfigWidget::authenticate);
-    form->addWidget(authButton);
-
-    gen->setLayout(form);
-
-    layout->addWidget(gen);
-    this->setLayout(layout);
+    layout->addWidget(authButton);
 }
 
 void LastFmConfigWidget::apply() {
-    for(int i=0; i<form->rowCount(); ++i) {
-        auto item = form->itemAt(i, QFormLayout::FieldRole);
-        if(QWidget* w = item->widget()) {
-            if(w == authButton)
-                continue;
-            LastFmConfig::VarType v;
-            switch(ConfigType(w->property("type").toInt())) {
-                case ConfigType::String:
-                    if(auto le = dynamic_cast<QLineEdit*>(w)) {
-                        v = le->text().toStdString();
-                    }
-                    break;
-                case ConfigType::Bool:
-                    if(auto cb = dynamic_cast<QCheckBox*>(w)) {
-                        v = cb->isChecked();
-                    }
-                    break;
-                case ConfigType::Int:
-                    if(auto le = dynamic_cast<QLineEdit*>(w)) {
-                        v = le->text().toLong();
-                    }
-                    break;
-                case ConfigType::Float:
-                    if(auto le = dynamic_cast<QLineEdit*>(w)) {
-                        v = le->text().toDouble();
-                    }
-                    break;
-            }
-            conf.putNode(w->property("key").toString().toStdString(), v);
-        }
-    }
+    GenericConfigWidget::apply();
 
-    std::string key, username;
-    if((key = boost::get<std::string>(nodes["session key"])) == "" &&
-            (username = boost::get<std::string>(nodes["username"])) != "")
+    if(boost::get<std::string>(conf.getNode("session key")) == "" &&
+            boost::get<std::string>(conf.getNode("username")) != "")
     {
         authenticate();
     }
@@ -163,9 +118,7 @@ void LastFmConfigWidget::authenticate() {
 }
 
 ConfigWidget* LastFmConfig::createWidget() {
-    auto w = new LastFmConfigWidget(nodes, *this);
-
-    return w;
+    return new LastFmConfigWidget(*this);
 }
 
 QIcon* LastFmConfig::getIcon() const {
