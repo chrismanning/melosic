@@ -26,7 +26,7 @@ namespace chrono = std::chrono;
 namespace Melosic {
 
 namespace Output {
-class DeviceSink;
+class PlayerSink;
 enum class DeviceState;
 }
 
@@ -34,11 +34,10 @@ using Output::DeviceState;
 
 class Playlist;
 
-class Player
-{
+class Player {
 public:
     Player();
-    Player(std::unique_ptr<Output::DeviceSink> device);
+    Player(std::unique_ptr<Output::PlayerSink> device);
     ~Player();
 
     Player(const Player&) = delete;
@@ -52,7 +51,7 @@ public:
     void seek(chrono::milliseconds dur);
     chrono::milliseconds tell();
     void finish();
-    void changeOutput(std::unique_ptr<Output::DeviceSink> device);
+    void changeOutput(std::unique_ptr<Output::PlayerSink> device);
     explicit operator bool();
     void openPlaylist(std::shared_ptr<Playlist> playlist);
     std::shared_ptr<Playlist> currentPlaylist();

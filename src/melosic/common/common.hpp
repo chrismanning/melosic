@@ -18,18 +18,10 @@
 #ifndef MELOSIC_COMMON_HPP
 #define MELOSIC_COMMON_HPP
 
-#include <iostream>
-using std::cout; using std::endl;
 #include <boost/cstdint.hpp>
 using boost::int64_t; using boost::uint64_t;
 #include <chrono>
 namespace chrono = std::chrono;
-
-#include <melosic/managers/input/pluginterface.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
-#include <melosic/core/kernel.hpp>
-#include <melosic/common/plugin.hpp>
-//#include <melosic/core/logging.hpp>
 
 #ifdef WIN32
 #include <boost/thread.hpp>
@@ -44,43 +36,5 @@ namespace std {
   namespace this_thread = boost::this_thread;
 }
 #endif
-
-namespace Melosic {
-
-struct AudioSpecs {
-    AudioSpecs() : channels(0), bps(0), sample_rate(0), total_samples(0) {}
-    AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples)
-        : channels(channels),
-          bps(bps),
-          sample_rate(sample_rate),
-          target_sample_rate(sample_rate),
-          total_samples(total_samples) {}
-
-    bool operator==(const AudioSpecs& b) const {
-        return channels == b.channels &&
-               bps == b.bps &&
-               sample_rate == b.sample_rate &&
-               target_bps == b.target_bps &&
-               target_sample_rate == b.target_sample_rate;
-    }
-    bool operator!=(const AudioSpecs& b) const {
-        return !((*this) == b);
-    }
-
-    uint8_t channels;
-    uint8_t bps;
-    uint8_t target_bps = 0;
-    uint32_t sample_rate;
-    uint8_t target_sample_rate = 0;
-    uint64_t total_samples;
-};
-
-namespace ErrorTag {
-typedef boost::error_info<struct tagBPS, uint8_t> BPS;
-typedef boost::error_info<struct tagChannels, uint8_t> Channels;
-typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
-}
-
-} // end namespace Melosic
 
 #endif // MELOSIC_COMMON_HPP

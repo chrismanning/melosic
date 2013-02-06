@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,27 +15,29 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#ifndef MELOSIC_ENCODERMANAGER_HPP
+#define MELOSIC_ENCODERMANAGER_HPP
 
 #include <memory>
-#include <string>
 
-namespace LastFM {
+namespace Melosic {
+namespace Encoder {
 
-class User {
+class Manager {
 public:
-    User(const std::string& username);
-    User(const std::string& username, const std::string& sessionKey);
+    Manager();
+    ~Manager();
 
-    void authenticate();
-    const std::string& sessionKey();
+    Manager(Manager&&) = delete;
+    Manager(const Manager&&) = delete;
+    Manager& operator=(const Manager&) = delete;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-}//namespace LastFM
+} // namespace Encoder
+} // namespace Melosic
 
-#endif // USER_HPP
+#endif // MELOSIC_ENCODERMANAGER_HPP

@@ -26,7 +26,7 @@
 #include <boost/signals2.hpp>
 
 #include <melosic/core/player.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 
 namespace Melosic {
 class Kernel;
@@ -48,7 +48,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(std::shared_ptr<Kernel> kernel, QWidget * parent = 0);
+    explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
     ~MainWindow();
     void onStateChangeSlot(DeviceState state);
 
@@ -62,7 +62,7 @@ private Q_SLOTS:
 
 private:
     Ui::MainWindow* ui;
-    std::shared_ptr<Kernel> kernel;
+    Kernel& kernel;
     std::shared_ptr<Playlist> currentPlaylist;
     PlaylistModel* playlistModel;
     Player& player;

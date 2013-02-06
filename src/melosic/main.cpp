@@ -20,7 +20,9 @@
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/error.hpp>
-#include <melosic/common/plugin.hpp>
+#include <melosic/melin/exports.hpp>
+#include <melosic/melin/plugin.hpp>
+#include <melosic/melin/config.hpp>
 using namespace Melosic;
 
 int main(int argc, char* argv[]) {
@@ -34,11 +36,13 @@ int main(int argc, char* argv[]) {
 
         QApplication app(argc, argv);
 
-        std::shared_ptr<Kernel> kernel = std::make_shared<Kernel>();
+        Kernel kernel;
+        Plugin::Manager& plugman = kernel.getPluginManager();
 
-        kernel->loadPlugin("../lib/flac.melin");
-        kernel->loadPlugin("../lib/alsa.melin");
-        kernel->loadPlugin("../lib/lastfm.melin");
+        plugman.loadPlugin("../lib/flac.melin");
+        plugman.loadPlugin("../lib/alsa.melin");
+        plugman.loadPlugin("../lib/lastfm.melin");
+        kernel.getConfigManager().loadConfig();
 
         MainWindow win(kernel);
         win.show();

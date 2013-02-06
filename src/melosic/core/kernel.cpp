@@ -15,137 +15,44 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <string>
+#include <functional>
 #include <map>
+
 #include <boost/filesystem.hpp>
 using boost::filesystem::path;
 
-#include <taglib/flacfile.h>
-
+#include <melosic/common/error.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/common/plugin.hpp>
 #include <melosic/core/kernel.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 #include <melosic/core/track.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
 #include <melosic/core/taglibfile.hpp>
 #include <melosic/core/player.hpp>
-#include <melosic/core/configuration.hpp>
+#include <melosic/melin/config.hpp>
+#include <melosic/melin/plugin.hpp>
+#include <melosic/melin/input.hpp>
+#include <melosic/melin/decoder.hpp>
+#include <melosic/melin/output.hpp>
+#include <melosic/melin/encoder.hpp>
 
 namespace Melosic {
 
 static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
 
 class Kernel::impl {
-public:
-    impl() : config("root") {}
-
-    void loadPlugin(const std::string& filepath, std::shared_ptr<Kernel> kernel) {
-        path p(filepath);
-
-        if(!exists(p) && !is_regular_file(p)) {
-            BOOST_THROW_EXCEPTION(FileNotFoundException() << ErrorTag::FilePath(absolute(p)));
-        }
-
-        if(p.extension() != ".melin") {
-            BOOST_THROW_EXCEPTION(PluginInvalidException() << ErrorTag::FilePath(absolute(p)));
-        }
-
-        auto filename = p.filename().string();
-
-        if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-            ERROR_LOG(logject) << "Plugin already loaded: " << filepath;
-            return;
-        }
-
-        loadedPlugins.emplace(filename, std::make_shared<Plugin::Plugin>(p, kernel.get()));
-    }
-
-    template<class StringList>
-    void addOutputDevices(Kernel::OutputFactory fact, StringList avail) {
-        for(const auto& device : avail) {
-            auto it = outputFactories.find(device);
-            if(it == outputFactories.end()) {
-                outputFactories.emplace(device, fact);
-            }
-        }
-    }
-
-    std::unique_ptr<Output::DeviceSink> getOutputDevice(const std::string& devicename) {
-        auto it = outputFactories.find(devicename);
-
-        if(it == outputFactories.end()) {
-            BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(devicename));
-        }
-
-        return it->second(it->first);
-    }
-
-    std::list<OutputDeviceName> getOutputDeviceNames() {
-        std::list<OutputDeviceName> names;
-        for(const auto& name : outputFactories) {
-            names.push_back(name.first);
-        }
-        return std::move(names);
-    }
-
-private:
-    std::map<std::string, std::shared_ptr<Plugin::Plugin>> loadedPlugins;
-    std::map<OutputDeviceName, Kernel::OutputFactory> outputFactories;
-    std::map<std::string, Kernel::InputFactory> inputFactories;
+    impl(Kernel& k) : plugman(k) {}
+    Plugin::Manager plugman;
     Player player;
-    Configuration config;
+    Input::Manager inman;
+    Decoder::Manager decman;
+    Output::Manager outman;
+    Encoder::Manager encman;
+    Config::Manager config;
     friend class Kernel;
 };
 
-//std::map<std::string, Kernel::InputFactory> Kernel::FileTypeResolver::inputFactories;
-
-Kernel::FileTypeResolver::FileTypeResolver(std::shared_ptr<Kernel> kernel, const boost::filesystem::path& filepath) {
-    auto ext = filepath.extension().string();
-
-    auto& inputFactories = kernel->pimpl->inputFactories;
-    auto fact = inputFactories.find(ext);
-
-    if(fact != inputFactories.end()) {
-        decoderFactory = fact->second;
-    }
-    else {
-        decoderFactory = [](decltype(decoderFactory)::argument_type a) -> decltype(decoderFactory)::result_type {
-            try {
-                IO::File& b = dynamic_cast<IO::File&>(a);
-                BOOST_THROW_EXCEPTION(UnsupportedFileTypeException() <<
-                                      ErrorTag::FilePath(absolute(b.filename())));
-            }
-            catch(std::bad_cast& e) {
-                BOOST_THROW_EXCEPTION(UnsupportedTypeException());
-            }
-        };
-    }
-
-    if(ext == ".flac") {
-        tagFactory = std::bind([](TagLib::IOStream* a, TagLib::ID3v2::FrameFactory* b) {
-                return new TagLib::FLAC::File(a, b);
-        },
-        std::placeholders::_1,
-        nullptr);
-    }
-    else {
-        tagFactory = [=](TagLib::IOStream*) -> TagLib::File* {
-            BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
-                                  ErrorTag::FilePath(absolute(filepath)));
-        };
-    }
-}
-
-std::unique_ptr<Input::Source> Kernel::FileTypeResolver::getDecoder(IO::File& file) {
-    return decoderFactory(file);
-}
-
-std::unique_ptr<TagLib::File> Kernel::FileTypeResolver::getTagReader(IO::File& file) {
-    taglibFile.reset(new IO::TagLibFile(file));
-    return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
-}
-
-Kernel::Kernel() : pimpl(new impl) {}
+Kernel::Kernel() : pimpl(new impl(*this)) {}
 
 Kernel::~Kernel() {}
 
@@ -153,43 +60,28 @@ Player& Kernel::getPlayer() {
     return pimpl->player;
 }
 
-Configuration& Kernel::getConfig() {
+Config::Manager& Kernel::getConfigManager() {
     return pimpl->config;
 }
 
-void Kernel::loadPlugin(const std::string& filepath) {
-    pimpl->loadPlugin(filepath, this->shared_from_this());
+Input::Manager& Kernel::getInputManager() {
+    return pimpl->inman;
 }
 
-void Kernel::loadAllPlugins() {}
-
-void Kernel::addOutputDevices(OutputFactory fact, std::initializer_list<std::string> avail) {
-    pimpl->addOutputDevices(fact, avail);
+Decoder::Manager& Kernel::getDecoderManager() {
+    return pimpl->decman;
 }
 
-void Kernel::addOutputDevices(OutputFactory fact, const std::list<OutputDeviceName>& avail) {
-    pimpl->addOutputDevices(fact, avail);
+Output::Manager& Kernel::getOutputManager() {
+    return pimpl->outman;
 }
 
-std::unique_ptr<Output::DeviceSink> Kernel::getOutputDevice(const std::string& devicename) {
-    return pimpl->getOutputDevice(devicename);
+Encoder::Manager& Kernel::getEncoderManager() {
+    return pimpl->encman;
 }
 
-std::list<OutputDeviceName> Kernel::getOutputDeviceNames() {
-    return pimpl->getOutputDeviceNames();
-}
-
-void Kernel::addInputExtension(Kernel::InputFactory fact, const std::string& extension) {
-    auto& inputFactories = pimpl->inputFactories;
-    auto bef = inputFactories.size();
-    auto pos = inputFactories.find(extension);
-    if(pos == inputFactories.end()) {
-        inputFactories.emplace(extension, fact);
-    }
-    else {
-        WARN_LOG(logject) << extension << ": already registered to a decoder factory";
-    }
-    assert(++bef == inputFactories.size());
+Plugin::Manager& Kernel::getPluginManager() {
+    return pimpl->plugman;
 }
 
 } // end namespace Melosic

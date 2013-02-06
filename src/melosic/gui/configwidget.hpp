@@ -29,25 +29,32 @@
 
 #include <boost/variant/static_visitor.hpp>
 
-#include <melosic/core/configuration.hpp>
-using Melosic::Configuration;
+namespace Melosic {
+namespace Config {
+class Manager;
+class Base;
+}
+}
 
 class ConfigWidget : public QWidget {
     Q_OBJECT
 public:
-    explicit ConfigWidget(QWidget* parent = nullptr);
+    ConfigWidget(Melosic::Config::Base&, Melosic::Config::Manager&, QWidget* parent = nullptr);
 
-    virtual void apply() = 0;
+    virtual void apply();
+protected:
+    Melosic::Config::Base& conf;
+private:
+    Melosic::Config::Manager& confman;
 };
 
 class GenericConfigWidget : public ConfigWidget {
     Q_OBJECT
 public:
-    GenericConfigWidget( Configuration& conf, QWidget* parent = nullptr);
+    GenericConfigWidget(Melosic::Config::Base&, Melosic::Config::Manager&, QWidget* parent = nullptr);
     virtual void apply();
 
 protected:
-    Configuration& conf;
     QVBoxLayout* layout;
 private:
     QGroupBox* gen;
@@ -58,14 +65,16 @@ enum class ConfigType {
     String,
     Bool,
     Int,
-    Float
+    Float,
+    Binary
 };
 
 struct ConfigVisitor : boost::static_visitor<QWidget*> {
-    QWidget* operator()(const std::string& val);
-    QWidget* operator()(bool val);
-    QWidget* operator()(int64_t val);
-    QWidget* operator()(double val);
+    QWidget* operator()(const std::string&);
+    QWidget* operator()(bool);
+    QWidget* operator()(int64_t);
+    QWidget* operator()(double);
+    QWidget* operator()(const std::vector<uint8_t>&);
 };
 
 #endif // MELOSIC_CONFIGWIDGET_HPP

@@ -28,7 +28,7 @@
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/kernel.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/file.hpp>
 
@@ -46,11 +46,11 @@ class PlaylistModel : public QAbstractListModel
 {
     Q_OBJECT
     std::shared_ptr<Melosic::Playlist> playlist;
-    std::shared_ptr<Melosic::Kernel> kernel;
+    Melosic::Kernel& kernel;
     Melosic::Logger::Logger logject;
 
 public:
-    PlaylistModel(std::shared_ptr<Melosic::Kernel> kernel,
+    PlaylistModel(Melosic::Kernel& kernel,
                   std::shared_ptr<Melosic::Playlist> playlist,
                   QObject* parent = 0);
     int rowCount(const QModelIndex& parent = QModelIndex()) const;
@@ -74,7 +74,7 @@ public:
         beginInsertRows(QModelIndex(), beg, beg + filenames.size());
         for(const auto& filename : filenames) {
             try {
-                playlist->emplace_back(kernel, filename);
+                playlist->emplace_back(kernel.getDecoderManager(), filename);
             }
             catch(Melosic::UnsupportedFileTypeException& e) {
                 if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))

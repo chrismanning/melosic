@@ -36,7 +36,7 @@ class ConfigurationDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit ConfigurationDialog(std::shared_ptr<Melosic::Kernel> kernel, QWidget* parent = 0);
+    explicit ConfigurationDialog(Melosic::Kernel& kernel, QWidget* parent = 0);
     ~ConfigurationDialog();
 
 public Q_SLOTS:
@@ -48,7 +48,7 @@ private Q_SLOTS:
 private:
     QStackedLayout* stackLayout;
     QTreeWidget* items;
-    std::shared_ptr<Melosic::Kernel> kernel;
+    Melosic::Kernel& kernel;
     QList<ConfigWidget*> visited;
 };
 

@@ -30,13 +30,13 @@
 using namespace boost::adaptors;
 
 #include <melosic/core/kernel.hpp>
-#include <melosic/core/configuration.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/config.hpp>
+#include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
 static Logger::Logger logject(boost::log::keywords::channel = "ConfigurationDialog");
 
-ConfigurationDialog::ConfigurationDialog(std::shared_ptr<Kernel> kernel, QWidget* parent) :
+ConfigurationDialog::ConfigurationDialog(Kernel& kernel, QWidget* parent) :
     QDialog(parent),
     stackLayout(new QStackedLayout),
     items(new QTreeWidget),
@@ -45,11 +45,11 @@ ConfigurationDialog::ConfigurationDialog(std::shared_ptr<Kernel> kernel, QWidget
     this->setWindowTitle("Configure");
     int i = 0;
     items->header()->hide();
-    auto& c = kernel->getConfig();
+    auto& c = kernel.getConfigManager().getConfigRoot();
 //    std::clog << "In ConfDialog\n" << c << std::endl;
-    for(Configuration& conf : c.getChildren() | map_values | indirected) {
+    for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
-        auto w = conf.createWidget();
+        auto w = conf.createWidget(kernel.getConfigManager());
         if(str.size() && w) {
             QStringList strs(str);
             QTreeWidgetItem* item = new QTreeWidgetItem(strs);

@@ -24,20 +24,18 @@
 #include <network/http/request.hpp>
 #include <network/http/response.hpp>
 
-#include <melosic/common/exports.hpp>
+#include <melosic/melin/exports.hpp>
 #include <melosic/core/kernel.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
-#include <melosic/core/logging.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
-#include <melosic/core/configuration.hpp>
+#include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
 #include "lastfm.hpp"
 #include "lastfmconfig.hpp"
-BOOST_SERIALIZATION_FACTORY_0(Melosic::LastFmConfig)//, std::string)
-BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::LastFmConfig)
+//BOOST_SERIALIZATION_FACTORY_0(Melosic::LastFmConfig)
+//BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::LastFmConfig)
 #include "scrobbler.hpp"
 #include "service.hpp"
 using namespace LastFM;
@@ -45,19 +43,17 @@ using namespace LastFM;
 static Logger::Logger logject(boost::log::keywords::channel = "LastFM");
 static LastFmConfig conf;
 
-static const Plugin::Info lastFmInfo{"LastFM",
+static constexpr Plugin::Info lastFmInfo("LastFM",
                                      Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
-                                     Plugin::generateVersion(1,0,0),
-                                     Plugin::expectedAPIVersion(),
-                                     ::time_when_compiled()
-                                    };
+                                     {1,0,0}
+                                    );
 
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
 static std::list<boost::signals2::scoped_connection> scrobConnections;
 static std::shared_ptr<Kernel> kernel;
 
-void refreshConfig(const std::string& key, const Configuration::VarType& value) {
+void refreshConfig(const std::string& key, const Config::Base::VarType& value) {
     if(key == "username") {
 //        lastfm::ws::Username = QString::fromStdString(boost::get<std::string>(value));
     }
@@ -97,29 +93,38 @@ void refreshConfig(const std::string& key, const Configuration::VarType& value) 
 
 static boost::signals2::scoped_connection varConnection;
 
-extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
+extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
+    funs << registerConfig;
+}
 
-    lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
-                               "64a3811653376876431daad679ce5b67"));
-//    lastfm::ws::ApiKey = "47ee6adfdb3c68daeea2786add5e242d";
-//    lastfm::ws::SharedSecret = "64a3811653376876431daad679ce5b67";
-
-    ::kernel = kernel->shared_from_this();
+extern "C" void registerConfig(Config::Manager* confman) {
     ::conf.putNode("username", std::string(""));
     ::conf.putNode("session key", std::string(""));
     ::conf.putNode("enable scrobbling", false);
-    auto& c = kernel->getConfig();
-    std::function<void(const std::string&,const Configuration::VarType&)> slot = refreshConfig;
-    if(!c.existsChild("lastfm")) {
-        varConnection = c.putChild("lastfm", ::conf).connectVariableUpdateSlot(slot);
-    }
-    else {
-        varConnection = c.getChild("lastfm").connectVariableUpdateSlot(slot);
-    }
-    refreshConfig("username", std::string("fat_chris"));
-    refreshConfig("enable scrobbling", true);
-    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
+    confman->getConfigRoot().putChild("lastfm", ::conf);
 }
+
+//    lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
+//                               "64a3811653376876431daad679ce5b67"));
+////    lastfm::ws::ApiKey = "47ee6adfdb3c68daeea2786add5e242d";
+////    lastfm::ws::SharedSecret = "64a3811653376876431daad679ce5b67";
+
+//    ::kernel = kernel->shared_from_this();
+//    ::conf.putNode("username", std::string(""));
+//    ::conf.putNode("session key", std::string(""));
+//    ::conf.putNode("enable scrobbling", false);
+//    auto& c = kernel->getConfig();
+//    std::function<void(const std::string&,const Configuration::VarType&)> slot = refreshConfig;
+//    if(!c.existsChild("lastfm")) {
+//        varConnection = c.putChild("lastfm", ::conf).connectVariableUpdateSlot(slot);
+//    }
+//    else {
+//        varConnection = c.getChild("lastfm").connectVariableUpdateSlot(slot);
+//    }
+//    refreshConfig("username", std::string("fat_chris"));
+//    refreshConfig("enable scrobbling", true);
+//    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
+//}
 
 extern "C" void destroyPlugin() {}

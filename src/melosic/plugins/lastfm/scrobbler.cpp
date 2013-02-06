@@ -17,9 +17,9 @@
 
 #include <melosic/core/track.hpp>
 #include <melosic/core/playlist.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/melin/output.hpp>
 using Melosic::Output::DeviceState;
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 
 #include "scrobbler.hpp"
 #include "service.hpp"

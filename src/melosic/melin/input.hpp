@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,27 +15,44 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#ifndef MELOSIC_INPUTMANAGER_HPP
+#define MELOSIC_INPUTMANAGER_HPP
 
 #include <memory>
-#include <string>
 
-namespace LastFM {
+#include <melosic/common/common.hpp>
+#include <melosic/common/stream.hpp>
 
-class User {
+namespace Melosic {
+struct AudioSpecs;
+namespace Input {
+
+class Manager {
 public:
-    User(const std::string& username);
-    User(const std::string& username, const std::string& sessionKey);
+    Manager();
+    ~Manager();
 
-    void authenticate();
-    const std::string& sessionKey();
+    Manager(Manager&&) = delete;
+    Manager(const Manager&&) = delete;
+    Manager& operator=(const Manager&) = delete;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-}//namespace LastFM
+class Playable : public IO::Source {
+public:
+    typedef char char_type;
+    virtual ~Playable() {}
+    virtual void seek(chrono::milliseconds dur) = 0;
+    virtual chrono::milliseconds tell() = 0;
+    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
+    virtual explicit operator bool() = 0;
+    virtual void reset() = 0;
+};
 
-#endif // USER_HPP
+} // namespace Input
+} // namespace Melosic
+
+#endif // MELOSIC_INPUTMANAGER_HPP

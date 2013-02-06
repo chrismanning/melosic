@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,27 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#include <thread>
+#include <boost/thread.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+using boost::shared_mutex;
 
-#include <memory>
-#include <string>
+#include "exports.hpp"
 
-namespace LastFM {
-
-class User {
-public:
-    User(const std::string& username);
-    User(const std::string& username, const std::string& sessionKey);
-
-    void authenticate();
-    const std::string& sessionKey();
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-}//namespace LastFM
-
-#endif // USER_HPP
+template class std::lock_guard<shared_mutex>;
+template class boost::shared_lock_guard<shared_mutex>;

@@ -22,7 +22,7 @@
 #include <melosic/core/track.hpp>
 #include <melosic/common/file.hpp>
 
-PlaylistModel::PlaylistModel(std::shared_ptr<Melosic::Kernel> kernel,
+PlaylistModel::PlaylistModel(Melosic::Kernel& kernel,
                              std::shared_ptr<Melosic::Playlist> playlist,
                              QObject* parent) :
     QAbstractListModel(parent),
@@ -123,7 +123,7 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     }
 
     for(const auto& filename : filenames) {
-        begin = emplace(begin, kernel, filename.toStdString());
+        begin = emplace(begin, kernel.getDecoderManager(), filename.toStdString());
     }
 
     return true;

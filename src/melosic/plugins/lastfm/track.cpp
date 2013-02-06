@@ -34,7 +34,7 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 using std::thread; using std::unique_lock; using std::lock_guard;
 
 #include <melosic/core/track.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 
 #include <opqit/opaque_iterator.hpp>
 

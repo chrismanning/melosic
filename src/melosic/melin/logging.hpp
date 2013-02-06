@@ -72,6 +72,8 @@ void init();
 }//end namespace Logger
 }//end namespace Melosic
 
+extern template class boost::log::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
+
 #define LOG(lg) BOOST_LOG(lg)
 #define ERROR_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::error)
 #define WARN_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::warning)

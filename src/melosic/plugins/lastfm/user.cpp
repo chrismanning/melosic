@@ -19,6 +19,8 @@
 
 #include "user.hpp"
 
+namespace LastFM {
+
 class User::impl {
 public:
     impl(const std::string& username) : username(username) {
@@ -42,3 +44,5 @@ User::User(const std::string& username, const std::string& sessionKey)
     : pimpl(new impl(username, sessionKey))
 {
 }
+
+}//namespace LastFM

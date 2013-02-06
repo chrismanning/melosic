@@ -20,33 +20,25 @@
 
 #include <QPushButton>
 
-#include <melosic/core/configuration.hpp>
+#include <melosic/melin/config.hpp>
 #include <melosic/gui/configwidget.hpp>
 
 namespace Melosic {
 
-class LastFmConfig : public Configuration {
+class LastFmConfig : public Config::Config<LastFmConfig> {
 public:
     LastFmConfig();
 
     virtual ~LastFmConfig();
 
-    ConfigWidget* createWidget() override;
+    ConfigWidget* createWidget(Melosic::Config::Manager&) override;
     QIcon* getIcon() const override;
-    LastFmConfig* clone() const override;
-
-private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/) {
-        ar & boost::serialization::base_object<Configuration>(*this);
-    }
 };
 
 class LastFmConfigWidget : public GenericConfigWidget {
     Q_OBJECT
 public:
-    LastFmConfigWidget(Configuration& conf, QWidget* parent = nullptr);
+    LastFmConfigWidget(Config::Base& conf, Melosic::Config::Manager& confman, QWidget* parent = nullptr);
     void apply();
 private Q_SLOTS:
     void authenticate();
@@ -56,7 +48,6 @@ private:
 
 } // end namespace Melosic
 
-#include <boost/serialization/export.hpp>
 BOOST_CLASS_EXPORT_KEY(Melosic::LastFmConfig)
 
 #endif // LASTFMCONFIG_HPP

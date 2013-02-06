@@ -22,23 +22,25 @@ using boost::factory;
 #include <boost/format.hpp>
 using boost::format;
 #include <boost/iostreams/read.hpp>
+#include <boost/iostreams/positioning.hpp>
 namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
 
-#include <melosic/common/common.hpp>
+#include <melosic/melin/exports.hpp>
+#include <melosic/melin/decoder.hpp>
 #include <melosic/common/stream.hpp>
+#include <melosic/common/error.hpp>
+#include <melosic/melin/logging.hpp>
+#include <melosic/common/audiospecs.hpp>
 using namespace Melosic;
 using Logger::Severity;
 
 static Logger::Logger logject(boost::log::keywords::channel = "FLAC");
 
-static const Plugin::Info flacInfo{"FLAC",
+static constexpr Plugin::Info flacInfo("FLAC",
                                    Plugin::Type::decode,
-                                   Plugin::generateVersion(1,0,0),
-                                   Plugin::expectedAPIVersion(),
-                                   ::time_when_compiled()
-                                  };
+                                   {1,0,0});
 
 #define FLAC_THROW_IF(Exc, cond, flacptr) if(!cond) {\
     auto str = flacptr->get_state().as_cstring();\
@@ -207,7 +209,7 @@ private:
     uint64_t lastSample;
 };
 
-class FlacDecoder : public Input::Source {
+class FlacDecoder : public Decoder::Playable {
 public:
     FlacDecoder(IO::SeekableSource& input) :
         pimpl(new FlacDecoderImpl(input, buf, as))
@@ -256,10 +258,14 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
+extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::flacInfo;
-    kernel->addInputExtension(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
+    funs << registerDecoder;
 }
 
-extern "C" void destroyPlugin() {
+extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
+    decman->addAudioFormat(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
+}
+
+extern "C" MELOSIC_EXPORT void destroyPlugin() {
 }

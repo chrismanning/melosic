@@ -25,20 +25,20 @@
 
 #include <melosic/common/string.hpp>
 #include <melosic/gui/configwidget.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 
 namespace Melosic {
 
 static Logger::Logger logject(boost::log::keywords::channel = "LastFMConfig");
 
 LastFmConfig::LastFmConfig() :
-    Configuration("LastFM")
+    Config::Config("LastFM")
 {}
 
 LastFmConfig::~LastFmConfig() {}
 
-LastFmConfigWidget::LastFmConfigWidget(Configuration& conf, QWidget* parent)
-    : GenericConfigWidget(conf, parent)
+LastFmConfigWidget::LastFmConfigWidget(Config::Base& conf, Melosic::Config::Manager& confman, QWidget* parent)
+    : GenericConfigWidget(conf, confman, parent)
 {
     authButton = new QPushButton("Authenticate");
     authButton->setToolTip("Only do this once per user!!\nIf \"Session Key\" is already present do NOT do this");
@@ -117,16 +117,14 @@ void LastFmConfigWidget::authenticate() {
 //    }
 }
 
-ConfigWidget* LastFmConfig::createWidget() {
-    return new LastFmConfigWidget(*this);
+ConfigWidget* LastFmConfig::createWidget(Melosic::Config::Manager& confman) {
+    return new LastFmConfigWidget(*this, confman);
 }
 
 QIcon* LastFmConfig::getIcon() const {
     return nullptr;
 }
 
-LastFmConfig* LastFmConfig::clone() const {
-    return new LastFmConfig(*this);
-}
-
 } //end namespace Melosic
+
+BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::LastFmConfig)

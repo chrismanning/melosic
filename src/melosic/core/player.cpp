@@ -25,13 +25,14 @@ namespace io = boost::iostreams;
 
 #include <opqit/opaque_iterator.hpp>
 
+#include <melosic/common/error.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
-#include <melosic/managers/input/pluginterface.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/output.hpp>
+#include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
+#include <melosic/common/audiospecs.hpp>
 
 namespace Melosic {
 
@@ -39,7 +40,7 @@ class Player::impl {
 public:
     impl() : impl(nullptr) {}
 
-    impl(std::unique_ptr<Output::DeviceSink> device) :
+    impl(std::unique_ptr<Output::PlayerSink> device) :
         device(std::move(device)),
         end_(false),
         playerThread(&impl::start, this),
@@ -118,7 +119,7 @@ public:
         }
     }
 
-    void changeOutput(std::unique_ptr<Output::DeviceSink> device) {
+    void changeOutput(std::unique_ptr<Output::PlayerSink> device) {
         unique_lock<Mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
@@ -267,7 +268,7 @@ private:
     }
 
     std::shared_ptr<Playlist> playlist;
-    std::unique_ptr<Output::DeviceSink> device;
+    std::unique_ptr<Output::PlayerSink> device;
     bool end_;
     thread playerThread;
     Logger::Logger logject;
@@ -280,7 +281,7 @@ private:
 
 Player::Player() : pimpl(new impl) {}
 
-Player::Player(std::unique_ptr<Output::DeviceSink> device)
+Player::Player(std::unique_ptr<Output::PlayerSink> device)
     : pimpl(new impl(std::move(device))) {}
 
 Player::~Player() {}
@@ -313,7 +314,7 @@ void Player::finish() {
     pimpl->finish();
 }
 
-void Player::changeOutput(std::unique_ptr<Output::DeviceSink> device) {
+void Player::changeOutput(std::unique_ptr<Output::PlayerSink> device) {
     pimpl->changeOutput(std::move(device));
 }
 

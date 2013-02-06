@@ -17,36 +17,41 @@
 
 #include <QLabel>
 
-#include <melosic/core/configuration.hpp>
+#include <melosic/melin/config.hpp>
 #include <melosic/common/string.hpp>
-using Melosic::toTitle;
+using namespace Melosic;
 
 #include "configwidget.hpp"
 
-ConfigWidget::ConfigWidget(QWidget *parent) :
-    QWidget(parent)
+ConfigWidget::ConfigWidget(Config::Base& conf, Config::Manager& confman, QWidget* parent) :
+    QWidget(parent), conf(conf), confman(confman)
 {}
 
-ConfigWidget* Melosic::Configuration::createWidget() {
+void ConfigWidget::apply() {
+    confman.saveConfig();
+}
+
+ConfigWidget* Config::Base::createWidget(Melosic::Config::Manager&) {
     return nullptr;
 }
 
-QIcon* Melosic::Configuration::getIcon() const {
+QIcon* Config::Base::getIcon() const {
     return nullptr;
 }
 
-GenericConfigWidget::GenericConfigWidget(Configuration& conf, QWidget* parent)
-    : ConfigWidget(parent),
-      conf(conf)
+GenericConfigWidget::GenericConfigWidget(Config::Base& conf, Config::Manager& confman, QWidget* parent)
+    : ConfigWidget(conf, confman, parent)
 {
     layout = new QVBoxLayout;
     gen = new QGroupBox("General");
     form = new QFormLayout;
 
     ConfigVisitor cv;
-    for(const auto& node : conf) {
+    for(const auto& node : conf.getNodes()) {
         auto label = new QLabel(QString(toTitle(node.first).c_str()));
         QWidget* w = node.second.apply_visitor(cv);
+        if(!w)
+            continue;
         w->setProperty("key", QString::fromStdString(node.first));
         form->addRow(label, w);
     }
@@ -60,7 +65,7 @@ void GenericConfigWidget::apply() {
     for(int i=0; i<form->rowCount(); ++i) {
         auto item = form->itemAt(i, QFormLayout::FieldRole);
         if(QWidget* w = item->widget()) {
-            Melosic::Configuration::VarType v;
+            Config::Base::VarType v;
             switch(ConfigType(w->property("type").toInt())) {
                 case ConfigType::String:
                     if(auto le = dynamic_cast<QLineEdit*>(w)) {
@@ -82,10 +87,13 @@ void GenericConfigWidget::apply() {
                         v = le->text().toDouble();
                     }
                     break;
+                case ConfigType::Binary:
+                    continue;
             }
             conf.putNode(w->property("key").toString().toStdString(), v);
         }
     }
+    ConfigWidget::apply();
 }
 
 QWidget* ConfigVisitor::operator()(const std::string& val) {
@@ -113,4 +121,8 @@ QWidget* ConfigVisitor::operator()(double val) {
     le->setValidator(new QDoubleValidator);
     le->setProperty("type", int(ConfigType::Float));
     return le;
+}
+
+QWidget* ConfigVisitor::operator()(const std::vector<uint8_t>&) {
+    return nullptr;
 }

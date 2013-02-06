@@ -14,3 +14,30 @@
 **  You should have received a copy of the GNU General Public License
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
+
+#ifndef MELOSIC_SIGSLOTMANAGER_HPP
+#define MELOSIC_SIGSLOTMANAGER_HPP
+
+#include <memory>
+
+#include <boost/signals2/connection.hpp>
+namespace signals = boost::signals2;
+
+#include <melosic/core/player.hpp>
+
+namespace Melosic {
+
+class SigSlotManager {
+public:
+    SigSlotManager();
+
+    signals::connection connect(Player::StateSignal::slot_type);
+
+private:
+    class impl;
+    std::unique_ptr<impl> pimpl;
+};
+
+} // namespace Melosic
+
+#endif // MELOSIC_SIGSLOTMANAGER_HPP

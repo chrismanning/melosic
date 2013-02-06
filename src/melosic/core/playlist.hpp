@@ -107,5 +107,6 @@ private:
 };
 
 }
+extern template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
 
 #endif // MELOSIC_PLAYLIST_HPP

@@ -28,9 +28,10 @@
 using namespace boost::adaptors;
 #include <boost/bind.hpp>
 
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
+#include <melosic/common/error.hpp>
 
 #include "service.hpp"
 #include "track.hpp"

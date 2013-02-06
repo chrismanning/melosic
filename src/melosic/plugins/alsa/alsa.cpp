@@ -22,28 +22,30 @@
 
 #include <boost/functional/factory.hpp>
 using boost::factory;
-#include <boost/format.hpp>
-using boost::format;
 #include <alsa/asoundlib.h>
 #include <string>
-#include <sstream>
-#include <array>
 #include <boost/thread.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+using boost::shared_mutex; using boost::shared_lock_guard;
+#include <thread>
+using std::unique_lock; using std::lock_guard;
 
 #include <melosic/common/error.hpp>
-#include <melosic/core/logging.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
+#include <melosic/common/audiospecs.hpp>
+#include <melosic/melin/exports.hpp>
+#include <melosic/melin/output.hpp>
 using namespace Melosic;
+
+extern template class std::lock_guard<shared_mutex>;
+extern template class boost::shared_lock_guard<shared_mutex>;
 
 static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
 
-static const Plugin::Info alsaInfo{"ALSA",
+static constexpr Plugin::Info alsaInfo("ALSA",
                                    Plugin::Type::outputDevice,
-                                   Plugin::generateVersion(1,0,0),
-                                   Plugin::expectedAPIVersion(),
-                                   ::time_when_compiled()
-                                  };
+                                   {1,0,0});
 
 #define ALSA_THROW_IF(Exc, ret) if(ret != 0) {\
     std::stringstream tmp;\
@@ -62,9 +64,9 @@ static const snd_pcm_format_t formats[] = {
 };
 static const uint8_t bpss[] = {8, 16, 24, 24, 32};
 
-class AlsaOutput : public Output::DeviceSink {
+class AlsaOutput : public Output::PlayerSink {
 public:
-    AlsaOutput(OutputDeviceName name)
+    AlsaOutput(Output::DeviceName name)
         : pdh(nullptr),
           params(nullptr),
           name(name.getName()),
@@ -81,7 +83,7 @@ public:
     }
 
     virtual void prepareSink(AudioSpecs& as) {
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
         if(pdh == nullptr) {
@@ -164,7 +166,7 @@ public:
     }
 
     virtual void play() {
-        boost::unique_lock<Mutex> l(mu);
+        unique_lock<Mutex> l(mu);
         if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
             l.unlock();
             prepareSink(current);
@@ -180,7 +182,7 @@ public:
     }
 
     virtual void pause() {
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         if(state_ == Output::DeviceState::Playing) {
             if(snd_pcm_hw_params_can_pause(params)) {
                 ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, true));
@@ -207,7 +209,7 @@ public:
     }
 
     virtual void stop() {
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
             ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
             ALSA_THROW_IF(DeviceException, snd_pcm_close(pdh));
@@ -217,12 +219,12 @@ public:
     }
 
     virtual Output::DeviceState state() {
-        boost::shared_lock<Mutex> l(mu);
+        shared_lock_guard<Mutex> l(mu);
         return state_;
     }
 
     virtual std::streamsize write(const char* s, std::streamsize n) {
-        boost::unique_lock<Mutex> l(mu);
+        unique_lock<Mutex> l(mu);
         if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
 //            l.unlock();
@@ -268,14 +270,17 @@ private:
     AudioSpecs current;
     std::string name;
     std::string desc;
-    boost::shared_mutex mu;
-    typedef decltype(mu) Mutex;
+    typedef shared_mutex Mutex;
+    Mutex mu;
     Output::DeviceState state_;
 };
 
-extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
+extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
+    funs << registerOutput;
+}
 
+extern "C" void registerOutput(Output::Manager* outman) {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -283,7 +288,7 @@ extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
 
     ALSA_THROW_IF(DeviceOpenException, snd_device_name_hint(-1, "pcm", &hints));
 
-    std::list<OutputDeviceName> names;
+    std::list<Output::DeviceName> names;
 
     n = hints;
     TRACE_LOG(logject) << "Enumerating output devices";
@@ -307,7 +312,7 @@ extern "C" void registerPlugin(Plugin::Info* info, Melosic::Kernel* kernel) {
     }
     snd_device_name_free_hint(hints);
 
-    kernel->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
+    outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
 extern "C" void destroyPlugin() {

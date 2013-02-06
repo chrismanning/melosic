@@ -19,21 +19,20 @@
 #define MELOSIC_TRACK_HPP
 
 #include <memory>
-#include <ios>
-#include <map>
-#include <boost/shared_ptr.hpp>
-#include <boost/chrono.hpp>
 
+#include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
-#include <melosic/managers/input/pluginterface.hpp>
+#include <melosic/melin/input.hpp>
 
 namespace Melosic {
 
-class Kernel;
+namespace Decoder {
+class Manager;
+}
 
-class Track : public Input::Source, public IO::Closable {
+class Track : public Input::Playable, public IO::Closable {
 public:
-    Track(std::shared_ptr<Melosic::Kernel> kernel,
+    Track(Melosic::Decoder::Manager& decman,
           const std::string& filename,
           chrono::milliseconds start = chrono::milliseconds(0),
           chrono::milliseconds end = chrono::milliseconds(0));

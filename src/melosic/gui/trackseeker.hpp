@@ -24,7 +24,7 @@
 namespace chrono = std::chrono;
 #include <boost/signals2.hpp>
 
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 
 namespace Melosic {
 namespace Output {

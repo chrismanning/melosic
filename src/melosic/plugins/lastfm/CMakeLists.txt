@@ -22,7 +22,7 @@ add_library(${LASTFM} SHARED ${SRC})
 
 qt5_use_modules(${LASTFM} Widgets)
 
-target_link_libraries(${LASTFM} melosiccore ${boost_LIBRARIES})
+target_link_libraries(${LASTFM} melin ${boost_LIBRARIES})
 target_link_libraries(${LASTFM} cppnetlib-uri cppnetlib-http-client cppnetlib-http-client-connections ssl crypto)
 set_target_properties(${LASTFM} PROPERTIES PREFIX "")
 set_target_properties(${LASTFM} PROPERTIES SUFFIX ".melin")

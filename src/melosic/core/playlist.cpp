@@ -18,7 +18,7 @@
 #include <algorithm>
 #include <numeric>
 #include <thread>
-using std::mutex; using std::unique_lock; using std::lock_guard;
+using std::lock_guard;
 #include <deque>
 
 #include <boost/thread/shared_mutex.hpp>
@@ -27,8 +27,13 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 #include <boost/container/stable_vector.hpp>
 
 #include <melosic/core/track.hpp>
-#include <melosic/core/logging.hpp>
+#include <melosic/melin/logging.hpp>
 #include "playlist.hpp"
+
+template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
+
+extern template class std::lock_guard<shared_mutex>;
+extern template class boost::shared_lock_guard<shared_mutex>;
 
 namespace Melosic {
 
@@ -130,38 +135,38 @@ public:
     }
 
     Playlist::iterator insert(Playlist::iterator pos, Playlist::value_type&& value) {
-        unique_lock<Mutex> l(mu);
+        mu.lock();
         auto r = tracks.insert(pos.cast_to<list_type::iterator>(), value);
-        l.unlock();
+        mu.unlock();
         if(size() == 1) {
-            l.lock();
+            mu.lock();
             current_track_ = r;
-            l.unlock();
+            mu.unlock();
             trackChanged(*currentTrack(), currentTrack() != end());
         }
         return r;
     }
 
     void insert(Playlist::iterator pos, Playlist::iterator first, iterator last) {
-        unique_lock<Mutex> l(mu);
+        mu.lock();
         tracks.insert(pos.cast_to<list_type::iterator>(), first, last);
-        l.unlock();
+        mu.unlock();
         if(size() == 1) {
-            l.lock();
+            mu.lock();
             current_track_ = begin();
-            l.unlock();
+            mu.unlock();
             trackChanged(*currentTrack(), true);
         }
     }
 
     void push_back(Playlist::value_type&& value) {
-        unique_lock<Mutex> l(mu);
+        mu.lock();
         tracks.push_back(std::move(value));
-        l.unlock();
+        mu.unlock();
         if(size() == 1) {
-            l.lock();
+            mu.lock();
             current_track_ = begin();
-            l.unlock();
+            mu.unlock();
             trackChanged(*currentTrack(), currentTrack() != end());
         }
     }
@@ -171,13 +176,13 @@ public:
     }
 
 private:
-    Logger::Logger logject;
-    Playlist::iterator current_track_;
-    typedef boost::container::stable_vector<Playlist::value_type> list_type;
-    list_type tracks;
-    Playlist::TrackChangedSignal trackChanged;
     typedef shared_mutex Mutex;
     Mutex mu;
+    typedef boost::container::stable_vector<Playlist::value_type> list_type;
+    list_type tracks;
+    Logger::Logger logject;
+    Playlist::iterator current_track_;
+    Playlist::TrackChangedSignal trackChanged;
     friend class Playlist;
 };
 

@@ -24,7 +24,6 @@ namespace io = boost::iostreams;
 #include <fstream>
 
 #include <melosic/common/common.hpp>
-#include <melosic/managers/output/pluginterface.hpp>
 
 namespace Melosic {
 namespace Output {

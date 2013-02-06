@@ -15,27 +15,17 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#include "sigslotmanager.hpp"
 
-#include <memory>
-#include <string>
+namespace Melosic {
 
-namespace LastFM {
+class SigSlotManager::impl {
 
-class User {
-public:
-    User(const std::string& username);
-    User(const std::string& username, const std::string& sessionKey);
-
-    void authenticate();
-    const std::string& sessionKey();
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
 };
 
-}//namespace LastFM
+SigSlotManager::SigSlotManager() : pimpl(new impl) {}
 
-#endif // USER_HPP
+signals::connection SigSlotManager::connect(Player::StateSignal::slot_type slot) {
+}
+
+} // namespace Melosic

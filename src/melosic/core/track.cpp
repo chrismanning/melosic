@@ -16,17 +16,22 @@
 **************************************************************************/
 
 #include <boost/thread.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+using boost::shared_mutex; using boost::shared_lock_guard;
 #include <thread>
-using std::thread; using std::mutex; using std::unique_lock; using std::lock_guard;
+using std::unique_lock; using std::lock_guard;
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
 
 #include "track.hpp"
 #include <melosic/common/stream.hpp>
-#include <melosic/managers/input/pluginterface.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
+#include <melosic/core/kernel.hpp>
+#include <melosic/melin/logging.hpp>
+#include <melosic/common/audiospecs.hpp>
+#include <melosic/melin/decoder.hpp>
 
 namespace Melosic {
 
@@ -35,12 +40,15 @@ static Logger::Logger logject(boost::log::keywords::channel = "Track");
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
-    impl(std::shared_ptr<Melosic::Kernel> kernel,
+    impl(Decoder::Manager& decman,
          boost::filesystem::path filepath,
          chrono::milliseconds start,
          chrono::milliseconds end)
-        : kernel(kernel),
-          input(new IO::File(filepath)), start(start), end(end), fileResolver(kernel, filepath)
+        : input(new IO::File(filepath)),
+          start(start),
+          end(end),
+          fileResolver(decman, filepath),
+          decman(decman)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);
         reloadDecoder();
@@ -75,7 +83,7 @@ public:
         }
         try {
             auto difference = (end > start) ? (end - tell()).count() : 0;
-            boost::lock_guard<Mutex> l(mu);
+            lock_guard<Mutex> l(mu);
             return decoder->read(s, (difference < n) ? n : difference);
         }
         catch(AudioDataInvalidException& e) {
@@ -88,7 +96,7 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        boost::lock_guard<Mutex> l(mu);
+        lock_guard<Mutex> l(mu);
         decoder->seek(dur + start);
     }
 
@@ -96,13 +104,13 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        boost::shared_lock<Mutex> l(mu);
+        shared_lock_guard<Mutex> l(mu);
         return decoder->tell() - start;
     }
 
     void reset() {
         if(isOpen()) {
-            boost::lock_guard<Mutex> l(mu);
+            lock_guard<Mutex> l(mu);
             decoder->reset();
         }
     }
@@ -158,7 +166,7 @@ public:
     }
 
     explicit operator bool() {
-        boost::shared_lock<Mutex> l(mu);
+        shared_lock_guard<Mutex> l(mu);
         if(decoder) {
             return bool(*decoder);
         }
@@ -170,38 +178,42 @@ public:
         return input->filename().string();
     }
 
+    impl* clone() {
+        return new impl(decman, input->filename(), start, end);
+    }
+
 private:
     friend class Track;
-    std::shared_ptr<Melosic::Kernel> kernel;
     std::unique_ptr<IO::File> input;
     chrono::milliseconds start, end;
-    Kernel::FileTypeResolver fileResolver;
-    std::unique_ptr<Input::Source> decoder;
+    Decoder::FileTypeResolver fileResolver;
+    std::unique_ptr<Decoder::Playable> decoder;
     std::unique_ptr<TagLib::File> taglibfile;
+    Decoder::Manager& decman;
     TagLib::PropertyMap tags;
     AudioSpecs as;
-    typedef boost::shared_mutex Mutex;
+    typedef shared_mutex Mutex;
     Mutex mu;
 };
 
-Track::Track(std::shared_ptr<Melosic::Kernel> kernel,
+Track::Track(Decoder::Manager& decman,
              const std::string& filename,
              chrono::milliseconds start,
              chrono::milliseconds end)
-    : pimpl(new impl(kernel, filename, start, end)) {}
+    : pimpl(new impl(decman, filename, start, end)) {}
 
 Track::~Track() {}
 
 Track::Track(const Track& b) {
     auto filename = b.sourceName();
     TRACE_LOG(logject) << "Copying " << filename;
-    pimpl.reset(new impl(b.pimpl->kernel, filename, b.pimpl->start, b.pimpl->end));
+    pimpl.reset(b.pimpl->clone());
 }
 
 Track& Track::operator=(const Track& b) {
     auto filename = b.sourceName();
     TRACE_LOG(logject) << "Assigning " << filename;
-    pimpl.reset(new impl(b.pimpl->kernel, filename, b.pimpl->start, b.pimpl->end));
+    pimpl.reset(b.pimpl->clone());
     return *this;
 }
 

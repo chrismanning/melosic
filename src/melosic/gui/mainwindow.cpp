@@ -33,14 +33,15 @@ namespace io = boost::iostreams;
 #include <melosic/core/track.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
+#include <melosic/melin/output.hpp>
 
-MainWindow::MainWindow(std::shared_ptr<Kernel> kernel, QWidget* parent) :
+MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     kernel(kernel),
     currentPlaylist(new Playlist),
     playlistModel(new PlaylistModel(kernel, currentPlaylist)),
-    player(kernel->getPlayer()),
+    player(kernel.getPlayer()),
     logject(boost::log::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
@@ -76,8 +77,7 @@ MainWindow::MainWindow(std::shared_ptr<Kernel> kernel, QWidget* parent) :
                                    )
                                );
 
-    std::list<OutputDeviceName> devs = std::move(kernel->getOutputDeviceNames());
-    for(const auto& dev : devs) {
+    for(const auto& dev : kernel.getOutputManager().getOutputDeviceNames()) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
                                       QString::fromStdString(dev.getName()));
     }
@@ -168,8 +168,8 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
             player.stop();
         }
 
-        player.changeOutput(kernel
-                            ->getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
+        player.changeOutput(kernel.getOutputManager()
+                            .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
 
         switch(state) {
             case DeviceState::Playing:

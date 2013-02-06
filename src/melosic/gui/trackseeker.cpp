@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/managers/output/pluginterface.hpp>
+#include <melosic/melin/output.hpp>
 #include "trackseeker.hpp"
 
 TrackSeeker::TrackSeeker(QWidget *parent) :

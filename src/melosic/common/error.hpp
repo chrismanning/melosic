@@ -63,6 +63,12 @@ struct DeviceParamException : virtual DeviceException {};
 struct DeviceBusyException : virtual DeviceOpenException {};
 struct DeviceReadException : virtual DeviceException, virtual ReadException {};
 struct DeviceWriteException : virtual DeviceException, virtual WriteException {};
+
+namespace ErrorTag {
+namespace Output {
+typedef boost::error_info<struct tagDeviceErrStr, std::string> DeviceErrStr;
+}
+}
 //decoder exceptions
 struct DecoderException : virtual Exception {};
 struct DecoderInitException : virtual DecoderException {};
@@ -70,6 +76,10 @@ struct UnsupportedTypeException : virtual DecoderException {};
 struct UnsupportedFileTypeException : virtual UnsupportedTypeException, virtual FileException {};
 struct AudioDataInvalidException : virtual DecoderException {};
 struct AudioDataUnsupported : virtual DecoderException {};
+namespace ErrorTag {
+typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
+typedef boost::error_info<struct tagDeviceName, std::string> DeviceName;
+}
 //metadata exceptions
 struct MetadataException : virtual Exception, virtual FileException {};
 struct MetadataNotFoundException : virtual MetadataException {};
@@ -82,6 +92,16 @@ struct PluginException : virtual Exception {};
 struct PluginInvalidException : virtual PluginException {};
 struct PluginSymbolNotFoundException : virtual PluginException {};
 struct PluginVersionMismatchException : virtual PluginException {};
+namespace Plugin {
+struct Info;
+}
+namespace ErrorTag {
+namespace Plugin {
+typedef boost::error_info<struct tagPluginSymbol, std::string> Symbol;
+typedef boost::error_info<struct tagPluginMsg, std::string> Msg;
+typedef boost::error_info<struct tagPluginInfo, Melosic::Plugin::Info> Info;
+}
+}
 //playlist exceptions
 
 //config exceptions
@@ -105,6 +125,12 @@ struct _HttpStatus {
 typedef boost::error_info<struct tagHttpStatus, _HttpStatus> HttpStatus;
 }
 
+namespace ErrorTag {
+typedef boost::error_info<struct tagBPS, uint8_t> BPS;
+typedef boost::error_info<struct tagChannels, uint8_t> Channels;
+typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
 }
+
+} // namespace Melosic
 
 #endif // MELOSIC_ERROR_HPP
