@@ -1,6 +1,9 @@
 project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8)
 
+SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
+
 add_subdirectory(extern)
 include_directories(extern/cpp-netlib/http/src/)
 include_directories(extern/cpp-netlib/uri/src/)
@@ -16,9 +19,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g")
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
-
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 

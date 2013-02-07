@@ -17,7 +17,7 @@ find_package(Boost COMPONENTS filesystem system log log_setup thread serializati
 
 include_directories(../.. ${Boost_INCLUDE_DIRS})
 
-add_library(melin STATIC ${SRC_LIST} ${HDR_LIST})
+add_library(melin SHARED ${SRC_LIST} ${HDR_LIST})
 target_link_libraries(melin ${Boost_LIBRARIES})
 
 #install(FILES ${HDR_LIST} DESTINATION include/${PROJECT_NAME})
