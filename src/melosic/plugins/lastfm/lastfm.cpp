@@ -54,22 +54,12 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
             if(slotman == nullptr)
                 return;
 
-//            scrobConnections.emplace_back(slotman->get<>());
-//                        kernel->getPlayer().connectNotifySlot(
-//                            Player::NotifySignal::slot_type(&Scrobbler::notifySlot,
-//                                                            scrobbler.get(),
-//                                                            _1,
-//                                                            _2).track_foreign(scrobbler)));
-//            scrobConnections.emplace_back(
-//                        kernel->getPlayer().connectStateSlot(
-//                            Player::StateSignal::slot_type(&Scrobbler::stateChangedSlot,
-//                                                           scrobbler.get(),
-//                                                           _1).track_foreign(scrobbler)));
-//            scrobConnections.emplace_back(
-//                        kernel->getPlayer().connectPlaylistChangeSlot(
-//                            Player::PlaylistChangeSignal::slot_type(&Scrobbler::playlistChangeSlot,
-//                                                                    scrobbler.get(),
-//                                                                    _1).track_foreign(scrobbler)));
+            scrobConnections.emplace_back(slotman->get<Signals::Player::NotifyPlayPos>()
+                                          .emplace_connect(&Scrobbler::notifySlot, scrobbler, ph::_1, ph::_2));
+            scrobConnections.emplace_back(slotman->get<Signals::Player::StateChanged>()
+                                          .emplace_connect(&Scrobbler::stateChangedSlot, scrobbler, ph::_1));
+            scrobConnections.emplace_back(slotman->get<Signals::Player::PlaylistChanged>()
+                                          .emplace_connect(&Scrobbler::playlistChangeSlot, scrobbler, ph::_1));
         }
         else {
             scrobConnections.clear();
