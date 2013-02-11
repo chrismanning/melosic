@@ -105,19 +105,20 @@ public:
 
     template <typename ...A>
     void operator()(A&& ...args) {
-        TRACE_LOG(logject) << "Calling signal.";
         unique_lock<Mutex> l(mu);
-        for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end(); std::advance(i, 1)) {
+        for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
                 i->second(std::forward<A>(args)...);
                 l.lock();
+                ++i;
             }
             catch(...) {
-                l.lock();
-                auto tmp = i;
-                std::advance(i, 1);
+                TRACE_LOG(logject) << "Removing expired slot.";
+                decltype(i) tmp = i;
+                ++i;
                 tmp->first.disconnect();
+                l.lock();
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.cbegin(), i)-1);
             }
