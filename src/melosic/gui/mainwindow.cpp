@@ -44,7 +44,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     currentPlaylist(new Playlist),
     playlistModel(new PlaylistModel(kernel, currentPlaylist)),
     player(kernel.getPlayer()),
-    logject(boost::log::keywords::channel = "MainWindow")
+    logject(logging::keywords::channel = "MainWindow")
 {
     ui->setupUi(this);
     ui->stopButton->setDefaultAction(ui->actionStop);

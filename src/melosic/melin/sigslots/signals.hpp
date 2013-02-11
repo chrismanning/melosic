@@ -28,8 +28,15 @@ namespace ph = std::placeholders;
 #include <type_traits>
 
 #include <melosic/melin/sigslots/connection.hpp>
+#include <melosic/melin/logging.hpp>
 
 namespace Melosic {
+namespace {
+static inline Logger::Logger& logject_() {
+    static Logger::Logger l(logging::keywords::channel = "Signal");
+    return l;
+}
+}
 namespace Signals {
 
 template <typename T>
@@ -55,11 +62,18 @@ class Signal<Ret (Args...)> {
 public:
     typedef std::function<Ret (Args...)> slot_type;
 
-    Signal() {}
+    Signal() : logject(logject_()) {}
 
-    Signal(const Signal& b) : funs(b.funs) {}
+    Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
+
+    ~Signal() {
+        while(funs.size()) {
+            funs.begin()->first.disconnect();
+        }
+    }
 
     Connection connect(const std::function<Ret(Args...)>& slot) {
+        TRACE_LOG(logject) << "Connecting slot to signal.";
         lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)),
                                            slot
@@ -69,6 +83,7 @@ public:
 
     template <typename Fun, typename Obj, typename ...A>
     Connection emplace_connect(Fun func, Obj obj, A... args) {
+        TRACE_LOG(logject) << "emplace_connect: obj type: " << typeid(typename AdaptIfSmartPtr<Obj>::type);
         lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)),
                                            slot_type(std::bind(func,
@@ -81,6 +96,7 @@ public:
     }
 
     void disconnect(const Connection& conn) {
+        TRACE_LOG(logject) << "Disconnecting slot from signal.";
         lock_guard<Mutex> l(mu);
         auto s = funs.size();
         funs.erase(conn);
@@ -89,6 +105,7 @@ public:
 
     template <typename ...A>
     void operator()(A&& ...args) {
+        TRACE_LOG(logject) << "Calling signal.";
         unique_lock<Mutex> l(mu);
         for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end(); std::advance(i, 1)) {
             try {
@@ -111,6 +128,7 @@ private:
     std::unordered_map<Connection, slot_type, ConnHash> funs;
     typedef mutex Mutex;
     Mutex mu;
+    Logger::Logger& logject;
 };
 
 template <typename T>

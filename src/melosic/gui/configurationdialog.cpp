@@ -34,7 +34,7 @@ using namespace boost::adaptors;
 #include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
-static Logger::Logger logject(boost::log::keywords::channel = "ConfigurationDialog");
+static Logger::Logger logject(logging::keywords::channel = "ConfigurationDialog");
 
 ConfigurationDialog::ConfigurationDialog(Kernel& kernel, QWidget* parent) :
     QDialog(parent),

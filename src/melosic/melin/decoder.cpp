@@ -33,7 +33,7 @@ namespace Decoder {
 
 class Manager::impl {
 public:
-    impl() : logject(boost::log::keywords::channel = "Decoder::Manager") {}
+    impl() : logject(logging::keywords::channel = "Decoder::Manager") {}
 
     void addAudioFormat(Factory fact, const std::string& extension) {
         auto bef = inputFactories.size();

@@ -41,7 +41,7 @@ using namespace Melosic;
 extern template class std::lock_guard<shared_mutex>;
 extern template class boost::shared_lock_guard<shared_mutex>;
 
-static Logger::Logger logject(boost::log::keywords::channel = "ALSA");
+static Logger::Logger logject(logging::keywords::channel = "ALSA");
 
 static constexpr Plugin::Info alsaInfo("ALSA",
                                    Plugin::Type::outputDevice,

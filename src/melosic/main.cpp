@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetErrorMode(0x8000);
 #endif
-    Logger::Logger logject(boost::log::keywords::channel = "Main");
+    Logger::Logger logject(logging::keywords::channel = "Main");
 
     try {
         Logger::init();

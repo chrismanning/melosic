@@ -49,7 +49,7 @@ public:
           playlistChanged(slotman.get<Signals::Player::PlaylistChanged>()),
           end_(false),
           playerThread(&impl::start, this),
-          logject(boost::log::keywords::channel = "Player")
+          logject(logging::keywords::channel = "Player")
     {}
 
     ~impl() {

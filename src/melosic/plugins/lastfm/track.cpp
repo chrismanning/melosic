@@ -38,7 +38,7 @@ using std::thread; using std::unique_lock; using std::lock_guard;
 
 #include <opqit/opaque_iterator.hpp>
 
-static Melosic::Logger::Logger logject(boost::log::keywords::channel = "LastFM::Track");
+static Melosic::Logger::Logger logject(logging::keywords::channel = "LastFM::Track");
 
 namespace LastFM {
 

@@ -32,7 +32,7 @@ public:
 
 TrackSeeker::TrackSeeker(QWidget *parent) :
     QSlider(parent),
-    logject(boost::log::keywords::channel = "TrackSeeker"),
+    logject(logging::keywords::channel = "TrackSeeker"),
     pimpl(new impl)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);

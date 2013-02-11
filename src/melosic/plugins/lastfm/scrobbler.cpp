@@ -30,7 +30,7 @@ namespace LastFM {
 
 Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
     lastserv(lastserv),
-    logject(boost::log::keywords::channel = "LastFM::Scrobbler")
+    logject(logging::keywords::channel = "LastFM::Scrobbler")
 {}
 
 void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {

@@ -29,7 +29,7 @@
 
 namespace Melosic {
 
-static Logger::Logger logject(boost::log::keywords::channel = "LastFMConfig");
+static Logger::Logger logject(logging::keywords::channel = "LastFMConfig");
 
 LastFmConfig::LastFmConfig() :
     Config::Config("LastFM")

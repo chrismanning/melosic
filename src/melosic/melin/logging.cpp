@@ -24,7 +24,7 @@
 
 #include "logging.hpp"
 
-template class boost::log::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
+template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
 
 namespace Melosic {
 namespace Logger {

@@ -71,7 +71,7 @@ class Plugin {
 public:
     Plugin(const boost::filesystem::path& filename, Kernel& kernel)
         : pluginPath(absolute(filename)),
-          logject(boost::log::keywords::channel = "Plugin"),
+          logject(logging::keywords::channel = "Plugin"),
           kernel(kernel)
     {
         handle = DLOpen(pluginPath.c_str());
@@ -163,7 +163,7 @@ class Manager::impl {
 public:
     impl(Kernel& kernel)
         : kernel(kernel),
-          logject(boost::log::keywords::channel = "Plugin::Manager")
+          logject(logging::keywords::channel = "Plugin::Manager")
     {}
 
     void loadPlugin(const boost::filesystem::path& filepath) {

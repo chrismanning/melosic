@@ -28,7 +28,7 @@ PlaylistModel::PlaylistModel(Melosic::Kernel& kernel,
     QAbstractListModel(parent),
     playlist(playlist),
     kernel(kernel),
-    logject(boost::log::keywords::channel = "PlaylistModel") {}
+    logject(logging::keywords::channel = "PlaylistModel") {}
 
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
     return playlist->size();

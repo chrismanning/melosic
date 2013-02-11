@@ -36,7 +36,7 @@ namespace io = boost::iostreams;
 using namespace Melosic;
 using Logger::Severity;
 
-static Logger::Logger logject(boost::log::keywords::channel = "FLAC");
+static Logger::Logger logject(logging::keywords::channel = "FLAC");
 
 static constexpr Plugin::Info flacInfo("FLAC",
                                    Plugin::Type::decode,

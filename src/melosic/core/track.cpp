@@ -35,7 +35,7 @@ using std::unique_lock; using std::lock_guard;
 
 namespace Melosic {
 
-static Logger::Logger logject(boost::log::keywords::channel = "Track");
+static Logger::Logger logject(logging::keywords::channel = "Track");
 
 //TODO: tracks need a length to support multiple tracks per file
 class Track::impl {

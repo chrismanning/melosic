@@ -32,7 +32,7 @@
 #include "service.hpp"
 #include "track.hpp"
 
-static Melosic::Logger::Logger logject(boost::log::keywords::channel = "LastFM::Service");
+static Melosic::Logger::Logger logject(logging::keywords::channel = "LastFM::Service");
 
 namespace LastFM {
 

@@ -30,7 +30,7 @@ using namespace Melosic;
 #include "service.hpp"
 using namespace LastFM;
 
-static Logger::Logger logject(boost::log::keywords::channel = "LastFM");
+static Logger::Logger logject(logging::keywords::channel = "LastFM");
 static LastFmConfig conf;
 
 static constexpr Plugin::Info lastFmInfo("LastFM",

@@ -41,7 +41,7 @@ namespace Melosic {
 
 class Playlist::impl {
 public:
-    impl() : logject(boost::log::keywords::channel = "Playlist"), current_track_(begin()) {}
+    impl() : logject(logging::keywords::channel = "Playlist"), current_track_(begin()) {}
 
     //IO
     std::streamsize read(char* s, std::streamsize n) {
