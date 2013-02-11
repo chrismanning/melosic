@@ -65,7 +65,7 @@ void GenericConfigWidget::apply() {
     for(int i=0; i<form->rowCount(); ++i) {
         auto item = form->itemAt(i, QFormLayout::FieldRole);
         if(QWidget* w = item->widget()) {
-            Config::Base::VarType v;
+            Config::VarType v;
             switch(ConfigType(w->property("type").toInt())) {
                 case ConfigType::String:
                     if(auto le = dynamic_cast<QLineEdit*>(w)) {

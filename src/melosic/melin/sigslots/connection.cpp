@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,17 +15,44 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "sigslotmanager.hpp"
+#include "connection.hpp"
 
 namespace Melosic {
+namespace Signals {
 
-class SigSlotManager::impl {
-
-};
-
-SigSlotManager::SigSlotManager() : pimpl(new impl) {}
-
-signals::connection SigSlotManager::connect(Player::StateSignal::slot_type slot) {
+size_t ConnHash::operator()(const Connection& conn) const {
+    return std::hash<std::shared_ptr<ConnErasure>>()(conn.pimpl);
 }
 
-} // namespace Melosic
+bool Connection::operator==(const Connection& b) const {
+    return pimpl == b.pimpl;
+}
+
+void Connection::disconnect() const {
+    pimpl->disconnect(*this);
+}
+
+bool Connection::isConnected() const {
+    return pimpl->isConnected();
+}
+
+ScopedConnection::~ScopedConnection() {
+    if(pimpl)
+        disconnect();
+}
+
+ScopedConnection::ScopedConnection(const Connection& conn) {
+    pimpl = conn.pimpl;
+}
+
+ScopedConnection::ScopedConnection(Connection&& conn) : Connection(conn) {}
+
+ScopedConnection& ScopedConnection::operator=(Connection&& conn) {
+    pimpl = conn.pimpl;
+    conn.pimpl.reset();
+
+    return *this;
+}
+
+}
+}

@@ -42,9 +42,13 @@ int main(int argc, char* argv[]) {
         plugman.loadPlugin("../lib/flac.melin");
         plugman.loadPlugin("../lib/alsa.melin");
         plugman.loadPlugin("../lib/lastfm.melin");
+
         kernel.getConfigManager().loadConfig();
 
+        plugman.initialise();
+
         MainWindow win(kernel);
+
         win.show();
 
         return app.exec();
@@ -78,5 +82,4 @@ int main(int argc, char* argv[]) {
         ERROR_LOG(logject) << e.what();
         return -1;
     }
-
 }

@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,23 +15,29 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_UTILITIES_HPP
-#define LASTFM_UTILITIES_HPP
-
-#include <boost/property_tree/ptree.hpp>
-#include <boost/thread/locks.hpp>
+#ifndef MELOSIC_DELEGATE_HPP
+#define MELOSIC_DELEGATE_HPP
 
 #include <functional>
-namespace ph = std::placeholders;
 
-namespace LastFM {
+template <typename T>
+class Delegate;
 
-struct NoAttributes {
-    bool operator()(const boost::property_tree::ptree::value_type& val) const {
-        return !(val.first == "<xmlattr>");
+template <typename Ret, typename ...Args>
+class Delegate<Ret(Args...)> {
+public:
+    template <typename Obj>
+    Delegate(const std::function<Ret, Args...>& de, Obj) {
+
     }
+
+    Ret operator()(Args... args) {
+        return fun(std::forward<Args>(args...));
+    }
+
+private:
+    std::function<Ret(Args...)> fun;
+    bool member = false;
 };
 
-}//namespace LastFM
-
-#endif // LASTFM_UTILITIES_HPP
+#endif // MELOSIC_DELEGATE_HPP

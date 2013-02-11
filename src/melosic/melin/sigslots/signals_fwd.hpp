@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,53 +15,46 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_PLAYER_HPP
-#define MELOSIC_PLAYER_HPP
+#ifndef MELOSIC_SIGNALS_FWD_HPP
+#define MELOSIC_SIGNALS_FWD_HPP
 
 #include <memory>
-#include <chrono>
-namespace chrono = std::chrono;
+#include <string>
+
+#include <melosic/common/common.hpp>
+#include <melosic/melin/configvar.hpp>
 
 namespace Melosic {
+class Playlist;
+class Track;
+
 namespace Output {
-class PlayerSink;
 enum class DeviceState;
 }
+namespace Signals {
 
-namespace Slots {
-class Manager;
+template <typename Ret, typename ...Args>
+class Signal;
+
+namespace Config {
+typedef Signal<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdate;
 }
 
-using Output::DeviceState;
-
-class Playlist;
-
-class Player {
-public:
-    Player(Slots::Manager& slotman);
-    ~Player();
-
-    Player(const Player&) = delete;
-    Player(Player&&) = delete;
-    Player& operator=(const Player&) = delete;
-
-    void play();
-    void pause();
-    void stop();
-    DeviceState state();
-    void seek(chrono::milliseconds dur);
-    chrono::milliseconds tell();
-    void finish();
-    void changeOutput(std::unique_ptr<Output::PlayerSink> device);
-    explicit operator bool();
-    void openPlaylist(std::shared_ptr<Playlist> playlist);
-    std::shared_ptr<Playlist> currentPlaylist();
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
+namespace Player {
+typedef Signal<void(Output::DeviceState)> StateChanged;
+typedef Signal<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
+typedef Signal<void(std::shared_ptr<Melosic::Playlist>)> PlaylistChanged;
 }
 
-#endif // MELOSIC_PLAYER_HPP
+namespace Playlist {
+typedef Signal<void(const Track&, bool)> TrackChanged;
+}
+
+namespace TrackSeeker {
+typedef Signal<void(chrono::milliseconds)> Seek;
+}
+
+} // namespace Signals
+} // namespace Melosic
+
+#endif // MELOSIC_SIGNALS_FWD_HPP

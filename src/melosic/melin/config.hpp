@@ -25,7 +25,6 @@ class QIcon;
 #include <type_traits>
 #include <array>
 
-#include <boost/signals2.hpp>
 #include <boost/variant.hpp>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/base_object.hpp>
@@ -35,10 +34,9 @@ namespace fs = boost::filesystem;
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
+#include "configvar.hpp"
 
 class ConfigWidget;
-
-extern template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
 
 namespace Melosic {
 namespace Config {
@@ -71,9 +69,6 @@ private:
 
 class Base {
 public:
-    typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> > VarType;
-    typedef boost::signals2::signal<void(const std::string&, const VarType&)> VarUpdateSignal;
-
     Base(const std::string& name);
     virtual ~Base() {}
 
@@ -85,7 +80,6 @@ public:
     const Base& getChild(const std::string& key) const;
     Base& putChild(const std::string& key, const Base& child);
     const VarType& putNode(const std::string& key, const VarType& value);
-    boost::signals2::connection connectVariableUpdateSlot(const VarUpdateSignal::slot_type& slot);
     ForwardRange<Base* const> getChildren();
     ForwardRange<const Base* const> getChildren() const;
     ForwardRange<std::pair<const std::string, VarType> > getNodes();
@@ -103,12 +97,15 @@ protected:
     Base(const Base& b);
     Base& operator=(const Base& b);
     class impl;
-    boost::shared_ptr<impl> pimpl;
-    VarUpdateSignal variableUpdated;
+    std::shared_ptr<impl> pimpl;
 
     friend class boost::serialization::access;
     template<class Archive>
     void serialize(Archive& ar, const unsigned int /*version*/);
+
+public:
+    template <typename T>
+    T& get();
 };
 
 Base* new_clone(const Base& conf);

@@ -32,6 +32,8 @@ using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
 #include "config.hpp"
 
 template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
@@ -44,6 +46,8 @@ public:
     Configuration() : Config("root") {}
 };
 
+static const boost::filesystem::path ConfFile("melosic.conf");
+
 class Manager::impl {
     impl() {
         wordexp_t exp_result;
@@ -52,13 +56,13 @@ class Manager::impl {
     }
 
     int chooseDir() {
-        if(fs::exists(dirs[CurrentDir] / "melosic.conf")) {
+        if(fs::exists(dirs[CurrentDir] / ConfFile)) {
             return CurrentDir;
         }
-        if(fs::exists(fs::absolute(dirs[UserDir]) / "melosic.conf")) {
+        if(fs::exists(fs::absolute(dirs[UserDir]) / ConfFile)) {
             return UserDir;
         }
-        if(fs::exists(dirs[SystemDir] / "melosic.conf")) {
+        if(fs::exists(dirs[SystemDir] / ConfFile)) {
             return SystemDir;
         }
         if(!fs::exists(dirs[UserDir]))
@@ -70,13 +74,13 @@ class Manager::impl {
         if(confPath.empty()) {
             switch(chooseDir()) {
                 case CurrentDir:
-                    confPath = dirs[CurrentDir] / "melosic.conf";
+                    confPath = dirs[CurrentDir] / ConfFile;
                     break;
                 case UserDir:
-                    confPath = dirs[UserDir] / "melosic.conf";
+                    confPath = dirs[UserDir] / ConfFile;
                     break;
                 case SystemDir:
-                    confPath = dirs[SystemDir] / "melosic.conf";
+                    confPath = dirs[SystemDir] / ConfFile;
                     break;
             }
         }
@@ -127,13 +131,18 @@ Base& Manager::getConfigRoot() {
 class Base::impl {
 public:
     typedef boost::ptr_map<std::string, Base> ChildMap;
-    typedef std::map<std::string, Base::VarType> NodeMap;
+    typedef std::map<std::string, VarType> NodeMap;
 
     impl() {}
     impl(const std::string& name) : name(name) {}
 
     impl* clone() {
         return new impl(*this);
+    }
+
+    const VarType& putNode(const std::string& key, const VarType& value) {
+        variableUpdated(key, value);
+        return nodes[key] = value;
     }
 
 private:
@@ -148,6 +157,7 @@ private:
         ar & nodes;
         ar & name;
     }
+    Signals::Config::VariableUpdate variableUpdated;
 };
 
 Base::Base(const std::string& name) : pimpl(new impl(name)) {}
@@ -186,7 +196,7 @@ bool Base::existsChild(const std::string& key) const {
     }
 }
 
-const Base::VarType& Base::getNode(const std::string& key) const {
+const VarType& Base::getNode(const std::string& key) const {
     auto it = pimpl->nodes.find(key);
     if(it != pimpl->nodes.end()) {
         return it->second;
@@ -224,13 +234,8 @@ Base& Base::putChild(const std::string& key, const Base& child) {
     return *pimpl->children.insert(tmp, new_clone(child)).first->second;
 }
 
-const Base::VarType& Base::putNode(const std::string& key, const VarType& value) {
-    variableUpdated(key, value);
-    return pimpl->nodes[key] = value;
-}
-
-boost::signals2::connection Base::connectVariableUpdateSlot(const VarUpdateSignal::slot_type &slot) {
-    return variableUpdated.connect(slot);
+const VarType& Base::putNode(const std::string& key, const VarType& value) {
+    return pimpl->putNode(key, value);
 }
 
 ForwardRange<Base* const> Base::getChildren() {
@@ -251,7 +256,7 @@ ForwardRange<const Base::impl::NodeMap::value_type> Base::getNodes() const {
 
 template<class Archive>
 void Base::serialize(Archive& ar, const unsigned int /*version*/) {
-    ar & pimpl;
+    ar & *pimpl;
 }
 
 template void Base::serialize<boost::archive::binary_iarchive>(
@@ -266,6 +271,13 @@ template void Base::serialize<boost::archive::binary_oarchive>(
 Base* new_clone(const Base& conf) {
     return conf.clone();
 }
+
+template <>
+Signals::Config::VariableUpdate& Base::get<Signals::Config::VariableUpdate>() {
+    return pimpl->variableUpdated;
+}
+
+template Signals::Config::VariableUpdate& Base::get<Signals::Config::VariableUpdate>();
 
 } // namespace Config
 } // namespace Melosic

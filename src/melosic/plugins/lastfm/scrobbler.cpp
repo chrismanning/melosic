@@ -20,6 +20,7 @@
 #include <melosic/melin/output.hpp>
 using Melosic::Output::DeviceState;
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
 
 #include "scrobbler.hpp"
 #include "service.hpp"
@@ -53,10 +54,10 @@ void Scrobbler::stateChangedSlot(DeviceState state) {
 }
 
 void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
-    playlistConn = playlist->connectTrackChangedSlot(
-                Melosic::Playlist::TrackChangedSignal::slot_type(&Scrobbler::trackChangedSlot,
-                                                                 shared_from_this(),
-                                                                 _1, _2));
+//    playlistConn = playlist->get<Melosic::Playlist::Signals::TrackChanged>()
+//            .emplace_connect(&Scrobbler::trackChangedSlot,
+//                             shared_from_this(),
+//                             ph::_1, ph::_2);
     if(playlist->currentTrack() != playlist->end())
         trackChangedSlot(*playlist->currentTrack(), true);
 }

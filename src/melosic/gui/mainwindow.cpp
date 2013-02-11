@@ -15,18 +15,11 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "mainwindow.hpp"
-#include "ui_mainwindow.h"
-#include "trackseeker.hpp"
-#include "playlistmodel.hpp"
-#include "configurationdialog.hpp"
-#include <QFileDialog>
-#include <boost/iostreams/copy.hpp>
-namespace io = boost::iostreams;
-#include <QDesktopServices>
+#include <list>
+
 #include <QStandardPaths>
 #include <QMessageBox>
-#include <list>
+#include <QFileDialog>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -34,6 +27,15 @@ namespace io = boost::iostreams;
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/output.hpp>
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
+
+#include "mainwindow.hpp"
+#include "ui_mainwindow.h"
+#include "trackseeker.hpp"
+#include "playlistmodel.hpp"
+#include "configurationdialog.hpp"
 
 MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     QMainWindow(parent),
@@ -50,32 +52,16 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     ui->nextButton->setDefaultAction(ui->actionNext);
     ui->playlistView->setModel(playlistModel);
 
-    ssConnections.emplace_back(player.connectStateSlot(
-                                   Player::StateSignal::slot_type(
-                                       &MainWindow::onStateChangeSlot, this, _1
-                                       )
-                                   )
-                               );
-    ssConnections.emplace_back(ui->trackSeeker->connectSeek(
-                                   TrackSeeker::SeekSignal::slot_type(
-                                       &Player::seek, &player, _1
-                                       )
-                                   )
-                               );
-    ssConnections.emplace_back(player.connectStateSlot(
-                                   Player::StateSignal::slot_type(
-                                       &TrackSeeker::onStateChangeSlot,
-                                       ui->trackSeeker, _1
-                                       )
-                                   )
-                               );
-    ssConnections.emplace_back(player.connectNotifySlot(
-                                   Player::NotifySignal::slot_type(
-                                       &TrackSeeker::onNotifySlot,
-                                       ui->trackSeeker, _1, _2
-                                       )
-                                   )
-                               );
+    Slots::Manager& slotman = kernel.getSlotManager();
+
+    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
+                               .connect(std::bind(&MainWindow::onStateChangeSlot, this, ph::_1)));
+    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
+                               .emplace_connect(&TrackSeeker::onStateChangeSlot, ui->trackSeeker, ph::_1));
+    scopedSigConns.emplace_back(slotman.get<Signals::Player::NotifyPlayPos>()
+                               .emplace_connect(&TrackSeeker::onNotifySlot, ui->trackSeeker, ph::_1, ph::_2));
+    scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
+                               .emplace_connect(&Player::seek, &player, ph::_1));
 
     for(const auto& dev : kernel.getOutputManager().getOutputDeviceNames()) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),

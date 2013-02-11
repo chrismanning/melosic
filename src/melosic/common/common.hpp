@@ -18,8 +18,7 @@
 #ifndef MELOSIC_COMMON_HPP
 #define MELOSIC_COMMON_HPP
 
-#include <boost/cstdint.hpp>
-using boost::int64_t; using boost::uint64_t;
+#include <cstdint>
 #include <chrono>
 namespace chrono = std::chrono;
 

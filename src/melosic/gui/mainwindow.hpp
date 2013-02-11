@@ -23,14 +23,14 @@
 #include <QApplication>
 #include <QList>
 #include <memory>
-#include <boost/signals2.hpp>
 
-#include <melosic/core/player.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/connection.hpp>
 
 namespace Melosic {
 class Kernel;
 class Playlist;
+class Player;
 namespace Output {
 enum class DeviceState;
 }
@@ -67,7 +67,7 @@ private:
     PlaylistModel* playlistModel;
     Player& player;
     Logger::Logger logject;
-    std::list<boost::signals2::scoped_connection> ssConnections;
+    std::list<Signals::ScopedConnection> scopedSigConns;
     int oldDeviceIndex;
 };
 

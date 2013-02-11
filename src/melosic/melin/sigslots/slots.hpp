@@ -15,23 +15,28 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_UTILITIES_HPP
-#define LASTFM_UTILITIES_HPP
+#ifndef MELOSIC_SLOTS_HPP
+#define MELOSIC_SLOTS_HPP
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/thread/locks.hpp>
+#include <memory>
 
-#include <functional>
-namespace ph = std::placeholders;
+namespace Melosic {
+namespace Slots {
 
-namespace LastFM {
+class Manager {
+public:
+    Manager();
+    ~Manager();
 
-struct NoAttributes {
-    bool operator()(const boost::property_tree::ptree::value_type& val) const {
-        return !(val.first == "<xmlattr>");
-    }
+    template <typename T>
+    T& get();
+
+private:
+    class impl;
+    std::unique_ptr<impl> pimpl;
 };
 
-}//namespace LastFM
+} // namespace Slots
+} // namespace Melosic
 
-#endif // LASTFM_UTILITIES_HPP
+#endif // MELOSIC_SLOTS_HPP

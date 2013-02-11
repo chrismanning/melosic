@@ -15,19 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <string>
-#include <functional>
-#include <map>
-
-#include <boost/filesystem.hpp>
-using boost::filesystem::path;
-
-#include <melosic/common/error.hpp>
-#include <melosic/common/file.hpp>
-#include <melosic/core/kernel.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/core/track.hpp>
-#include <melosic/core/taglibfile.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/plugin.hpp>
@@ -35,20 +23,22 @@ using boost::filesystem::path;
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/encoder.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
+
+#include "kernel.hpp"
 
 namespace Melosic {
 
-static Logger::Logger logject(boost::log::keywords::channel = "Kernel");
-
 class Kernel::impl {
-    impl(Kernel& k) : plugman(k) {}
+    impl(Kernel& k) : plugman(k), player(slotman) {}
     Plugin::Manager plugman;
-    Player player;
     Input::Manager inman;
     Decoder::Manager decman;
     Output::Manager outman;
     Encoder::Manager encman;
     Config::Manager config;
+    Slots::Manager slotman;
+    Player player;
     friend class Kernel;
 };
 
@@ -82,6 +72,10 @@ Encoder::Manager& Kernel::getEncoderManager() {
 
 Plugin::Manager& Kernel::getPluginManager() {
     return pimpl->plugman;
+}
+
+Slots::Manager& Kernel::getSlotManager() {
+    return pimpl->slotman;
 }
 
 } // end namespace Melosic

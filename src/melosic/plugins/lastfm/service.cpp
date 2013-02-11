@@ -24,10 +24,6 @@
 #include <network/http/response.hpp>
 #include <network/uri/uri_builder.hpp>
 
-#include <boost/range/adaptor/map.hpp>
-using namespace boost::adaptors;
-#include <boost/bind.hpp>
-
 #include <melosic/melin/logging.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
@@ -134,10 +130,10 @@ std::string Service::postMethod(const Method& method) {
 }
 
 void Service::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
-    playlist->connectTrackChangedSlot(
-                Melosic::Playlist::TrackChangedSignal::slot_type(&Service::trackChangedSlot,
-                                                                 shared_from_this(),
-                                                                 _1, _2));
+//    playlist->connectTrackChangedSlot(
+//                Melosic::Playlist::TrackChangedSignal::slot_type(&Service::trackChangedSlot,
+//                                                                 shared_from_this(),
+//                                                                 _1, _2));
     trackChangedSlot(*playlist->currentTrack(), true);
 }
 

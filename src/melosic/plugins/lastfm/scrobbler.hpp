@@ -21,9 +21,9 @@
 #include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
-#include <boost/signals2/connection.hpp>
 
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/connection.hpp>
 
 namespace Melosic {
 class Track;
@@ -60,7 +60,7 @@ private:
     Melosic::Logger::Logger logject;
     std::shared_ptr<Method> currentTrackData;
     std::shared_ptr<Track> currentTrack_;
-    boost::signals2::scoped_connection playlistConn;
+    Melosic::Signals::Connection playlistConn;
 };
 
 }

@@ -15,27 +15,17 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/signals2/connection.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-
-#include <network/uri.hpp>
-#include <network/http/client.hpp>
-#include <network/http/request.hpp>
-#include <network/http/response.hpp>
-
 #include <melosic/melin/exports.hpp>
-#include <melosic/core/kernel.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
-#include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/sigslots/connection.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
 using namespace Melosic;
 
 #include "lastfm.hpp"
 #include "lastfmconfig.hpp"
-//BOOST_SERIALIZATION_FACTORY_0(Melosic::LastFmConfig)
-//BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::LastFmConfig)
 #include "scrobbler.hpp"
 #include "service.hpp"
 using namespace LastFM;
@@ -44,41 +34,42 @@ static Logger::Logger logject(boost::log::keywords::channel = "LastFM");
 static LastFmConfig conf;
 
 static constexpr Plugin::Info lastFmInfo("LastFM",
-                                     Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
-                                     {1,0,0}
-                                    );
+                                         Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
+                                         Plugin::Version(1,0,0)
+                                        );
 
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
-static std::list<boost::signals2::scoped_connection> scrobConnections;
-static std::shared_ptr<Kernel> kernel;
+static Slots::Manager* slotman = nullptr;
+static std::list<Signals::ScopedConnection> scrobConnections;
 
-void refreshConfig(const std::string& key, const Config::Base::VarType& value) {
+void refreshConfig(const std::string& key, const Config::VarType& value) {
     if(key == "username") {
 //        lastfm::ws::Username = QString::fromStdString(boost::get<std::string>(value));
     }
     else if(key == "enable scrobbling") {
         if(boost::get<bool>(value)) {
-            scrobbler.reset(new Scrobbler(lastserv));
-
             scrobConnections.clear();
+            scrobbler.reset(new Scrobbler(lastserv));
+            if(slotman == nullptr)
+                return;
 
-            scrobConnections.emplace_back(
-                        kernel->getPlayer().connectNotifySlot(
-                            Player::NotifySignal::slot_type(&Scrobbler::notifySlot,
-                                                            scrobbler.get(),
-                                                            _1,
-                                                            _2).track_foreign(scrobbler)));
-            scrobConnections.emplace_back(
-                        kernel->getPlayer().connectStateSlot(
-                            Player::StateSignal::slot_type(&Scrobbler::stateChangedSlot,
-                                                           scrobbler.get(),
-                                                           _1).track_foreign(scrobbler)));
-            scrobConnections.emplace_back(
-                        kernel->getPlayer().connectPlaylistChangeSlot(
-                            Player::PlaylistChangeSignal::slot_type(&Scrobbler::playlistChangeSlot,
-                                                                    scrobbler.get(),
-                                                                    _1).track_foreign(scrobbler)));
+//            scrobConnections.emplace_back(slotman->get<>());
+//                        kernel->getPlayer().connectNotifySlot(
+//                            Player::NotifySignal::slot_type(&Scrobbler::notifySlot,
+//                                                            scrobbler.get(),
+//                                                            _1,
+//                                                            _2).track_foreign(scrobbler)));
+//            scrobConnections.emplace_back(
+//                        kernel->getPlayer().connectStateSlot(
+//                            Player::StateSignal::slot_type(&Scrobbler::stateChangedSlot,
+//                                                           scrobbler.get(),
+//                                                           _1).track_foreign(scrobbler)));
+//            scrobConnections.emplace_back(
+//                        kernel->getPlayer().connectPlaylistChangeSlot(
+//                            Player::PlaylistChangeSignal::slot_type(&Scrobbler::playlistChangeSlot,
+//                                                                    scrobbler.get(),
+//                                                                    _1).track_foreign(scrobbler)));
         }
         else {
             scrobConnections.clear();
@@ -91,40 +82,39 @@ void refreshConfig(const std::string& key, const Config::Base::VarType& value) {
     TRACE_LOG(logject) << "Updated variable: " << key;
 }
 
-static boost::signals2::scoped_connection varConnection;
+static Signals::Connection varConnection;
 
 extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
-    funs << registerConfig;
+    funs << registerConfig << registerSlots;
 }
 
 extern "C" void registerConfig(Config::Manager* confman) {
     ::conf.putNode("username", std::string(""));
     ::conf.putNode("session key", std::string(""));
     ::conf.putNode("enable scrobbling", false);
-    confman->getConfigRoot().putChild("lastfm", ::conf);
+    auto& c = confman->getConfigRoot();
+    if(!c.existsChild("lastfm")) {
+        varConnection = c.putChild("lastfm", ::conf)
+                .get<Signals::Config::VariableUpdate>()
+                    .connect(refreshConfig);
+    }
+    else {
+        varConnection = c.getChild("lastfm")
+                .get<Signals::Config::VariableUpdate>()
+                    .connect(refreshConfig);
+    }
+
+    lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
+                               "64a3811653376876431daad679ce5b67"));
 }
 
-//    lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
-//                               "64a3811653376876431daad679ce5b67"));
-////    lastfm::ws::ApiKey = "47ee6adfdb3c68daeea2786add5e242d";
-////    lastfm::ws::SharedSecret = "64a3811653376876431daad679ce5b67";
+extern "C" void registerSlots(Slots::Manager* slotman) {
+    ::slotman = slotman;
+}
 
-//    ::kernel = kernel->shared_from_this();
-//    ::conf.putNode("username", std::string(""));
-//    ::conf.putNode("session key", std::string(""));
-//    ::conf.putNode("enable scrobbling", false);
-//    auto& c = kernel->getConfig();
-//    std::function<void(const std::string&,const Configuration::VarType&)> slot = refreshConfig;
-//    if(!c.existsChild("lastfm")) {
-//        varConnection = c.putChild("lastfm", ::conf).connectVariableUpdateSlot(slot);
-//    }
-//    else {
-//        varConnection = c.getChild("lastfm").connectVariableUpdateSlot(slot);
-//    }
 //    refreshConfig("username", std::string("fat_chris"));
 //    refreshConfig("enable scrobbling", true);
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
-//}
 
 extern "C" void destroyPlugin() {}

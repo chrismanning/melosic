@@ -22,7 +22,7 @@
 #include <QHBoxLayout>
 #include <chrono>
 namespace chrono = std::chrono;
-#include <boost/signals2.hpp>
+#include <memory>
 
 #include <melosic/melin/logging.hpp>
 
@@ -36,6 +36,9 @@ using Output::DeviceState;
 
 class TrackSeeker : public QSlider {
     Q_OBJECT
+    class impl;
+    Logger::Logger logject;
+    std::shared_ptr<impl> pimpl;
 public:
     explicit TrackSeeker(QWidget *parent = 0);
     ~TrackSeeker();
@@ -43,21 +46,12 @@ public:
     void onStateChangeSlot(DeviceState state);
     void onNotifySlot(chrono::milliseconds current, chrono::milliseconds total);
 
-    typedef boost::signals2::signal<void(chrono::milliseconds)> SeekSignal;
-    boost::signals2::connection connectSeek(const SeekSignal::slot_type& slot) {
-        return seek.connect(slot);
-    }
+    template <typename T>
+    T& get();
 
 private Q_SLOTS:
-    void updateSeekTo(int s) { seekTo = s >= this->maximum() ? this->maximum() - 1 : s;}
-    void onRelease() {
-        seek(chrono::milliseconds(seekTo));
-    }
-
-private:
-    Logger::Logger logject;
-    int seekTo;
-    SeekSignal seek;
+    void updateSeekTo(int s);
+    void onRelease();
 };
 
 #endif // MELOSIC_TRACKSEEKER_HPP

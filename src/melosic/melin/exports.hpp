@@ -52,31 +52,40 @@ class Manager;
 namespace Config {
 class Manager;
 }
-class SigSlotManager;
+namespace Slots {
+class Manager;
+}
 struct RegisterFuncsInserter;
 }
 
 extern "C" MELOSIC_EXPORT void registerPlugin(Melosic::Plugin::Info*, Melosic::RegisterFuncsInserter);
 typedef decltype(registerPlugin) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
+
 extern "C" MELOSIC_EXPORT void registerInput(Melosic::Input::Manager*);
 typedef decltype(registerInput) registerInput_F;
 typedef std::function<registerInput_F> registerInput_T;
+
 extern "C" MELOSIC_EXPORT void registerDecoder(Melosic::Decoder::Manager*);
 typedef decltype(registerDecoder) registerDecoder_F;
 typedef std::function<registerDecoder_F> registerDecoder_T;
+
 extern "C" MELOSIC_EXPORT void registerOutput(Melosic::Output::Manager*);
 typedef decltype(registerOutput) registerOutput_F;
 typedef std::function<registerOutput_F> registerOutput_T;
+
 extern "C" MELOSIC_EXPORT void registerEncoder(Melosic::Encoder::Manager*);
 typedef decltype(registerEncoder) registerEncoder_F;
 typedef std::function<registerEncoder_F> registerEncoder_T;
-extern "C" MELOSIC_EXPORT void registerSlot(Melosic::SigSlotManager*);
-typedef decltype(registerSlot) registerSlot_F;
-typedef std::function<registerSlot_F> registerSlot_T;
+
+extern "C" MELOSIC_EXPORT void registerSlots(Melosic::Slots::Manager*);
+typedef decltype(registerSlots) registerSlots_F;
+typedef std::function<registerSlots_F> registerSlots_T;
+
 extern "C" MELOSIC_EXPORT void registerConfig(Melosic::Config::Manager*);
 typedef decltype(registerConfig) registerConfig_F;
 typedef std::function<registerConfig_F> registerConfig_T;
+
 extern "C" MELOSIC_EXPORT void destroyPlugin();
 typedef decltype(destroyPlugin) destroyPlugin_F;
 typedef std::function<destroyPlugin_F> destroyPlugin_T;
@@ -134,12 +143,12 @@ struct Info {
     time_t built;
 };
 inline std::ostream& operator<<(std::ostream& out, const Info& info) {
-    std::vector<char> str(40);
-    std::strftime(str.data(), str.size(), "%x %X %Z", std::localtime(&info.built));
+    char str[40];
+    std::strftime(str, sizeof str, "%x %X %Z", std::localtime(&info.built));
     return out << info.name
                << " " << info.version
                << " compiled for Melosic API " << info.APIVersion
-               << " on " << str.data();
+               << " on " << str;
 }
 
 } // end namespace Plugin
@@ -167,7 +176,7 @@ struct RegisterFuncsInserter {
     RegisterFuncsInserter& operator<<(const registerDecoder_T&);
     RegisterFuncsInserter& operator<<(const registerOutput_T&);
     RegisterFuncsInserter& operator<<(const registerEncoder_T&);
-    RegisterFuncsInserter& operator<<(const registerSlot_T&);
+    RegisterFuncsInserter& operator<<(const registerSlots_T&);
     RegisterFuncsInserter& operator<<(const registerConfig_T&);
 private:
     Kernel& k;

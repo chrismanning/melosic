@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,29 +15,20 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SIGSLOTMANAGER_HPP
-#define MELOSIC_SIGSLOTMANAGER_HPP
+#ifndef MELOSIC_CONFIGVAR_HPP
+#define MELOSIC_CONFIGVAR_HPP
 
-#include <memory>
+#include <cstdint>
+#include <vector>
 
-#include <boost/signals2/connection.hpp>
-namespace signals = boost::signals2;
-
-#include <melosic/core/player.hpp>
+#include <boost/variant.hpp>
 
 namespace Melosic {
+namespace Config {
+typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> > VarType;
+}
+}
 
-class SigSlotManager {
-public:
-    SigSlotManager();
+extern template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
 
-    signals::connection connect(Player::StateSignal::slot_type);
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-} // namespace Melosic
-
-#endif // MELOSIC_SIGSLOTMANAGER_HPP
+#endif // MELOSIC_CONFIGVAR_HPP

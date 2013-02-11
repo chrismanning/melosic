@@ -89,10 +89,6 @@ public:
                                   ErrorTag::Plugin::Info(info));
         }
         destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
-        //TODO: async startup
-        for(auto& fun : regFuns) {
-            fun();
-        }
         LOG(logject) << "Plugin loaded: " << info;
     }
 
@@ -102,6 +98,7 @@ public:
     Plugin(Plugin&& b)
         : pluginPath(b.pluginPath),
           destroyPlugin_(b.destroyPlugin_),
+          regFuns(b.regFuns),
           handle(b.handle),
           logject(b.logject),
           kernel(b.kernel),
@@ -112,6 +109,7 @@ public:
 
     ~Plugin() {
         if(handle) {
+            regFuns.clear();
             if(destroyPlugin_) {
                 destroyPlugin_();
             }
@@ -121,6 +119,13 @@ public:
 
     const Info& getInfo() const {
         return info;
+    }
+
+    void init() {
+        //TODO: async startup
+        for(auto& fun : regFuns) {
+            fun();
+        }
     }
 
 private:
@@ -180,6 +185,12 @@ public:
         loadedPlugins.emplace(filename, Plugin(filepath, kernel));
     }
 
+    void initialise() {
+        for(Plugin& plugin : loadedPlugins | map_values) {
+            plugin.init();
+        }
+    }
+
 private:
     Kernel& kernel;
     std::map<std::string, Plugin> loadedPlugins;
@@ -201,6 +212,10 @@ ForwardRange<const Info> Manager::getPlugins() const {
     return pimpl->loadedPlugins | map_values | transformed(fun);
 }
 
+void Manager::initialise() {
+    pimpl->initialise();
+}
+
 } // namespace Plugin
 
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& fun) {
@@ -217,7 +232,8 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T&
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& fun) {
     return *this;
 }
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlot_T& fun) {
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlots_T& fun) {
+    e->push(std::bind(fun, &k.getSlotManager()));
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T& fun) {

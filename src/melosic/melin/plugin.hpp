@@ -22,11 +22,8 @@
 
 #include <boost/filesystem.hpp>
 using boost::filesystem::absolute;
-#include <boost/signals2/connection.hpp>
-namespace signals = boost::signals2;
 
 #include <melosic/melin/exports.hpp>
-#include <melosic/melin/sigslotmanager.hpp>
 #include <melosic/common/range.hpp>
 
 namespace Melosic {
@@ -45,14 +42,9 @@ public:
     void loadPlugin(const boost::filesystem::path& filepath);
     void loadPlugins();
 
+    void initialise();
+
     ForwardRange<const Info> getPlugins() const;
-
-    SigSlotManager& getSignalSlotManager();
-
-    template <typename Signal>
-    signals::connection connectSlot(const typename Signal::slot_type& slot) {
-        return getSignalSlotManager().connect(slot);
-    }
 
 private:
     Manager(Kernel& kernel);

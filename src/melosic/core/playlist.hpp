@@ -19,10 +19,10 @@
 #define MELOSIC_PLAYLIST_HPP
 
 #include <memory>
-#include <boost/iostreams/concepts.hpp>
-#include <boost/signals2.hpp>
 #include <chrono>
 namespace chrono = std::chrono;
+
+#include <boost/iostreams/concepts.hpp>
 #include <boost/range/iterator_range.hpp>
 
 #include <opqit/opaque_iterator.hpp>
@@ -97,16 +97,12 @@ public:
 //    void clear();
     void swap(Playlist& b);
 
-    //signals
-    typedef boost::signals2::signal<void(const Track&, bool)> TrackChangedSignal;
-    boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot);
-
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-}
+} // namespace Melosic
 extern template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
 
 #endif // MELOSIC_PLAYLIST_HPP

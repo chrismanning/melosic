@@ -16,11 +16,24 @@
 **************************************************************************/
 
 #include <melosic/melin/output.hpp>
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
+
 #include "trackseeker.hpp"
+
+class TrackSeeker::impl {
+public:
+    void onRelease() {
+        seek(chrono::milliseconds(seekTo));
+    }
+    int seekTo;
+    Signals::TrackSeeker::Seek seek;
+};
 
 TrackSeeker::TrackSeeker(QWidget *parent) :
     QSlider(parent),
-    logject(boost::log::keywords::channel = "TrackSeeker")
+    logject(boost::log::keywords::channel = "TrackSeeker"),
+    pimpl(new impl)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 //    setGeometry(0,0,500,20);
@@ -70,3 +83,18 @@ void TrackSeeker::onNotifySlot(chrono::milliseconds current, chrono::millisecond
         setValue(current.count());
     }
 }
+
+void TrackSeeker::updateSeekTo(int s) {
+    pimpl->seekTo = s >= this->maximum() ? this->maximum() - 1 : s;
+}
+
+void TrackSeeker::onRelease() {
+    pimpl->onRelease();
+}
+
+template <>
+Signals::TrackSeeker::Seek& TrackSeeker::get<Signals::TrackSeeker::Seek>() {
+    return pimpl->seek;
+}
+
+template Signals::TrackSeeker::Seek& TrackSeeker::get<Signals::TrackSeeker::Seek>();

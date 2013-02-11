@@ -1,5 +1,4 @@
 SET(SRC_LIST)
-set(SRC_LIST ${SRC_LIST} sigslotmanager.cpp)
 set(SRC_LIST ${SRC_LIST} decoder.cpp)
 set(SRC_LIST ${SRC_LIST} encoder.cpp)
 set(SRC_LIST ${SRC_LIST} input.cpp)
@@ -8,10 +7,12 @@ set(SRC_LIST ${SRC_LIST} plugin.cpp)
 set(SRC_LIST ${SRC_LIST} logging.cpp)
 set(SRC_LIST ${SRC_LIST} exports.cpp)
 SET(SRC_LIST ${SRC_LIST} config.cpp)
+set(SRC_LIST ${SRC_LIST} sigslots/slots.cpp)
+set(SRC_LIST ${SRC_LIST} sigslots/signals.cpp)
+set(SRC_LIST ${SRC_LIST} sigslots/connection.cpp)
 
 set(HDR_LIST)
-set(HDR_LIST ${HDR_LIST} exports.hpp)
-set(HDR_LIST ${HDR_LIST} plugin.hpp)
+set(HDR_LIST ${HDR_LIST} sigslots/signals_fwd.hpp)
 
 find_package(Boost COMPONENTS filesystem system log log_setup thread serialization REQUIRED)
 

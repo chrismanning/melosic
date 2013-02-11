@@ -28,6 +28,8 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
 #include "playlist.hpp"
 
 template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
@@ -171,10 +173,6 @@ public:
         }
     }
 
-    boost::signals2::connection connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
-        return trackChanged.connect(slot);
-    }
-
 private:
     typedef shared_mutex Mutex;
     Mutex mu;
@@ -182,7 +180,7 @@ private:
     list_type tracks;
     Logger::Logger logject;
     Playlist::iterator current_track_;
-    Playlist::TrackChangedSignal trackChanged;
+    Signals::Playlist::TrackChanged trackChanged;
     friend class Playlist;
 };
 
@@ -285,10 +283,6 @@ void Playlist::insert(iterator pos, iterator first, iterator last) {
 
 void Playlist::push_back(Playlist::value_type&& value) {
     pimpl->push_back(std::move(value));
-}
-
-boost::signals2::connection Playlist::connectTrackChangedSlot(const TrackChangedSignal::slot_type& slot) {
-    return pimpl->connectTrackChangedSlot(slot);
 }
 
 void Playlist::swap(Playlist& b)  {

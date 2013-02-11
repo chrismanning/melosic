@@ -42,6 +42,9 @@ class Manager;
 namespace Config {
 class Manager;
 }
+namespace Slots {
+class Manager;
+}
 
 class Kernel {
 public:
@@ -61,6 +64,7 @@ public:
     Decoder::Manager& getDecoderManager();
     Output::Manager& getOutputManager();
     Encoder::Manager& getEncoderManager();
+    Slots::Manager& getSlotManager();
 
 private:
     class impl;

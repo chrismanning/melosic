@@ -19,6 +19,7 @@
 #include <thread>
 namespace this_thread = std::this_thread;
 using std::thread; using std::mutex; using std::unique_lock; using std::lock_guard;
+
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
@@ -26,25 +27,29 @@ namespace io = boost::iostreams;
 #include <opqit/opaque_iterator.hpp>
 
 #include <melosic/common/error.hpp>
-#include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/audiospecs.hpp>
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
+#include "player.hpp"
 
 namespace Melosic {
 
 class Player::impl {
 public:
-    impl() : impl(nullptr) {}
-
-    impl(std::unique_ptr<Output::PlayerSink> device) :
-        device(std::move(device)),
-        end_(false),
-        playerThread(&impl::start, this),
-        logject(boost::log::keywords::channel = "Player")
+    impl(Slots::Manager& slotman)
+        : slotman(slotman),
+          stateChanged(slotman.get<Signals::Player::StateChanged>()),
+          notifyPlayPosition(slotman.get<Signals::Player::NotifyPlayPos>()),
+          playlistChanged(slotman.get<Signals::Player::PlaylistChanged>()),
+          end_(false),
+          playerThread(&impl::start, this),
+          logject(boost::log::keywords::channel = "Player")
     {}
 
     ~impl() {
@@ -67,7 +72,7 @@ public:
                 }
             }
             device->play();
-            stateChangedSig(DeviceState::Playing);
+            stateChanged(DeviceState::Playing);
         }
     }
 
@@ -75,7 +80,7 @@ public:
         TRACE_LOG(logject) << "Pause...";
         if(device) {
             device->pause();
-            stateChangedSig(DeviceState::Paused);
+            stateChanged(DeviceState::Paused);
         }
     }
 
@@ -83,7 +88,7 @@ public:
         TRACE_LOG(logject) << "Stop...";
         if(device) {
             device->stop();
-            stateChangedSig(DeviceState::Stopped);
+            stateChanged(DeviceState::Stopped);
         }
         if(playlist && *playlist) {
             playlist->currentTrack()->reset();
@@ -132,7 +137,7 @@ public:
         if(tmp) {
             if(tmp->state() == DeviceState::Playing) {
                 this->device->play();
-                stateChangedSig(DeviceState::Playing);
+                stateChanged(DeviceState::Playing);
             }
             delete tmp;
         }
@@ -149,8 +154,9 @@ public:
                 this->playlist->currentTrack()->close();
             }
             this->playlist = playlist;
-            playlist->connectTrackChangedSlot(boost::bind(&impl::onTrackChangeSlot, this));
-            playlistChangedSig(playlist);
+            slotman.get<Signals::Playlist::TrackChanged>()
+                    .emplace_connect(&impl::onTrackChangeSlot, this, ph::_1, ph::_2);
+            playlistChanged(playlist);
         }
     }
 
@@ -159,20 +165,8 @@ public:
         return playlist;
     }
 
-    boost::signals2::connection connectStateSlot(const StateSignal::slot_type& slot) {
-        return stateChangedSig.connect(slot);
-    }
-
-    boost::signals2::connection connectNotifySlot(const NotifySignal::slot_type& slot) {
-        return notifySig.connect(slot);
-    }
-
-    boost::signals2::connection connectPlaylistChangeSlot(const PlaylistChangeSignal::slot_type& slot) {
-        return playlistChangedSig.connect(slot);
-    }
-
 private:
-    void onTrackChangeSlot() {
+    void onTrackChangeSlot(const Track&, bool) {
         if(playlist && *playlist) {
             if(device->currentSpecs() != currentPlaylist()->currentTrack()->getAudioSpecs()) {
                 stop();
@@ -190,7 +184,7 @@ private:
 
     void start() {
         TRACE_LOG(logject) << "Thread starting";
-        std::array<unsigned char,16384> s;
+        std::array<uint8_t,16384> s;
         std::streamsize n = 0;
         while(!end()) {
             try {
@@ -199,9 +193,9 @@ private:
                         case DeviceState::Playing: {
 //                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
                             if(n < 1024) {
-                                auto a = io::read(*playlist, (char*)&s[0], s.size());
+                                auto a = io::read(*playlist, (char*)s.data(), s.size());
                                 if(bool(*playlist)) {
-                                    notifySig(playlist->currentTrack()->tell(), playlist->currentTrack()->duration());
+                                    notifyPlayPosition(playlist->currentTrack()->tell(), playlist->currentTrack()->duration());
                                 }
                                 if(a == -1) {
                                     if(n == 0) {
@@ -214,7 +208,7 @@ private:
                                     n += a;
                                 }
                             }
-                            n -= io::write(*device, (char*)&s[s.size()-n], n);
+                            n -= io::write(*device, (char*)s.data()+s.size()-n, n);
                             break;
                         }
                         case DeviceState::Error:
@@ -267,6 +261,10 @@ private:
         TRACE_LOG(logject) << "Thread ending";
     }
 
+    Slots::Manager& slotman;
+    Signals::Player::StateChanged& stateChanged;
+    Signals::Player::NotifyPlayPos& notifyPlayPosition;
+    Signals::Player::PlaylistChanged& playlistChanged;
     std::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::PlayerSink> device;
     bool end_;
@@ -274,15 +272,10 @@ private:
     Logger::Logger logject;
     typedef mutex Mutex;
     Mutex m;
-    StateSignal stateChangedSig;
-    NotifySignal notifySig;
-    PlaylistChangeSignal playlistChangedSig;
+    friend class Player;
 };
 
-Player::Player() : pimpl(new impl) {}
-
-Player::Player(std::unique_ptr<Output::PlayerSink> device)
-    : pimpl(new impl(std::move(device))) {}
+Player::Player(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
 
 Player::~Player() {}
 
@@ -328,18 +321,6 @@ void Player::openPlaylist(std::shared_ptr<Playlist> playlist) {
 
 std::shared_ptr<Playlist> Player::currentPlaylist() {
     return pimpl->currentPlaylist();
-}
-
-boost::signals2::connection Player::connectStateSlot(const StateSignal::slot_type& slot) {
-    return pimpl->connectStateSlot(slot);
-}
-
-boost::signals2::connection Player::connectNotifySlot(const NotifySignal::slot_type& slot) {
-    return pimpl->connectNotifySlot(slot);
-}
-
-boost::signals2::connection Player::connectPlaylistChangeSlot(const PlaylistChangeSignal::slot_type& slot) {
-    return pimpl->connectPlaylistChangeSlot(slot);
 }
 
 }//end namespace Melosic
