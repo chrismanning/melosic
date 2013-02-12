@@ -189,6 +189,6 @@ void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
 }
 
 void MainWindow::on_actionOptions_triggered() {
-    ConfigurationDialog c(kernel);
+    ConfigurationDialog c(kernel.getConfigManager());
     c.exec();
 }

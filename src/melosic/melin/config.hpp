@@ -85,12 +85,18 @@ public:
     ForwardRange<std::pair<const std::string, VarType> > getNodes();
     ForwardRange<const std::pair<const std::string, VarType> > getNodes() const;
 
+    void addDefaultFunc(std::function<Base&()>);
+    void resetToDefault();
+
     virtual ConfigWidget* createWidget(Manager&);
     virtual QIcon* getIcon() const;
 
     virtual Base* clone() const {
         return new Base(*this);
     }
+
+    template <typename T>
+    T& get();
 
 protected:
     Base();
@@ -102,10 +108,6 @@ protected:
     friend class boost::serialization::access;
     template<class Archive>
     void serialize(Archive& ar, const unsigned int /*version*/);
-
-public:
-    template <typename T>
-    T& get();
 };
 
 Base* new_clone(const Base& conf);

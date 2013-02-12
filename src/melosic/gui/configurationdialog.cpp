@@ -22,7 +22,6 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QHeaderView>
-#include <QDialogButtonBox>
 #include <QPushButton>
 
 #include <boost/range/adaptor/map.hpp>
@@ -36,20 +35,20 @@ using namespace Melosic;
 
 static Logger::Logger logject(logging::keywords::channel = "ConfigurationDialog");
 
-ConfigurationDialog::ConfigurationDialog(Kernel& kernel, QWidget* parent) :
+ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* parent) :
     QDialog(parent),
     stackLayout(new QStackedLayout),
     items(new QTreeWidget),
-    kernel(kernel)
+    confman(confman)
 {
     this->setWindowTitle("Configure");
     int i = 0;
     items->header()->hide();
-    auto& c = kernel.getConfigManager().getConfigRoot();
+    auto& c = confman.getConfigRoot();
 //    std::clog << "In ConfDialog\n" << c << std::endl;
     for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
-        auto w = conf.createWidget(kernel.getConfigManager());
+        auto w = conf.createWidget(confman);
         if(str.size() && w) {
             QStringList strs(str);
             QTreeWidgetItem* item = new QTreeWidgetItem(strs);
@@ -61,13 +60,14 @@ ConfigurationDialog::ConfigurationDialog(Kernel& kernel, QWidget* parent) :
     }
     stackLayout->setMargin(0);
 
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok |
+    buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok |
                                                        QDialogButtonBox::Apply |
                                                        QDialogButtonBox::Cancel |
-//                                                       QDialogButtonBox::RestoreDefaults |
+                                                       QDialogButtonBox::RestoreDefaults |
                                                        QDialogButtonBox::Reset);
     buttonBox->button(QDialogButtonBox::Ok)->setDefault(true);
     connect(buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ConfigurationDialog::apply);
+    connect(buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &ConfigurationDialog::defaults);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &ConfigurationDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &ConfigurationDialog::reject);
 
@@ -88,6 +88,7 @@ void ConfigurationDialog::changeConfigWidget(QTreeWidgetItem* item) {
     stackLayout->setCurrentIndex(item->data(0, Qt::UserRole).toInt());
     if(auto w = static_cast<ConfigWidget*>(stackLayout->currentWidget())) {
         visited.push_back(w);
+        connect(buttonBox->button(QDialogButtonBox::Reset), &QPushButton::clicked, w, &ConfigWidget::setup);
     }
 }
 
@@ -96,5 +97,11 @@ void ConfigurationDialog::apply() {
     for(auto& w : visited) {
         w->apply();
     }
-//    Kernel::getInstance().saveConfig();
+    confman.saveConfig();
+}
+
+void ConfigurationDialog::defaults() {
+    TRACE_LOG(logject) << "Restoring default config";
+    assert(!visited.empty());
+    visited.back()->restoreDefaults();
 }

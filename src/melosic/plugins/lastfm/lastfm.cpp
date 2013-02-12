@@ -41,38 +41,35 @@ static constexpr Plugin::Info lastFmInfo("LastFM",
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
 static Slots::Manager* slotman = nullptr;
-static std::list<Signals::ScopedConnection> scrobConnections;
 
 void refreshConfig(const std::string& key, const Config::VarType& value) {
-    if(key == "username") {
-//        lastfm::ws::Username = QString::fromStdString(boost::get<std::string>(value));
-    }
-    else if(key == "enable scrobbling") {
-        if(boost::get<bool>(value)) {
-            scrobConnections.clear();
-            scrobbler.reset(new Scrobbler(lastserv));
-            if(slotman == nullptr)
-                return;
-
-            scrobConnections.emplace_back(slotman->get<Signals::Player::NotifyPlayPos>()
-                                          .emplace_connect(&Scrobbler::notifySlot, scrobbler, ph::_1, ph::_2));
-            scrobConnections.emplace_back(slotman->get<Signals::Player::StateChanged>()
-                                          .emplace_connect(&Scrobbler::stateChangedSlot, scrobbler, ph::_1));
-            scrobConnections.emplace_back(slotman->get<Signals::Player::PlaylistChanged>()
-                                          .emplace_connect(&Scrobbler::playlistChangeSlot, scrobbler, ph::_1));
+    try {
+        if(key == "username") {
+//            lastfm::ws::Username = QString::fromStdString(boost::get<std::string>(value));
         }
-        else {
-            scrobConnections.clear();
-            scrobbler.reset();
+        else if(key == "enable scrobbling") {
+            if(boost::get<bool>(value)) {
+                if(slotman == nullptr)
+                    return;
+                scrobbler.reset(new Scrobbler(lastserv, slotman));
+            }
+            else {
+                scrobbler.reset();
+            }
         }
+        else if(key == "session key") {
+//            lastfm::ws::SessionKey = QString::fromStdString(boost::get<std::string>(value));
+        }
+        else
+            assert(false);
+        TRACE_LOG(logject) << "Updated variable: " << key;
     }
-    else if(key == "session key") {
-//        lastfm::ws::SessionKey = QString::fromStdString(boost::get<std::string>(value));
+    catch(boost::bad_get& e) {
+        ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
     }
-    TRACE_LOG(logject) << "Updated variable: " << key;
 }
 
-static Signals::Connection varConnection;
+static Signals::ScopedConnection varConnection;
 
 extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
@@ -83,17 +80,15 @@ extern "C" void registerConfig(Config::Manager* confman) {
     ::conf.putNode("username", std::string(""));
     ::conf.putNode("session key", std::string(""));
     ::conf.putNode("enable scrobbling", false);
+
     auto& c = confman->getConfigRoot();
-    if(!c.existsChild("lastfm")) {
-        varConnection = c.putChild("lastfm", ::conf)
-                .get<Signals::Config::VariableUpdate>()
-                    .connect(refreshConfig);
-    }
-    else {
-        varConnection = c.getChild("lastfm")
-                .get<Signals::Config::VariableUpdate>()
-                    .connect(refreshConfig);
-    }
+
+    auto& lconf = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
+
+    lconf.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+
+    varConnection = lconf.get<Signals::Config::VariableUpdate>()
+                         .connect(refreshConfig);
 
     lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
                                "64a3811653376876431daad679ce5b67"));

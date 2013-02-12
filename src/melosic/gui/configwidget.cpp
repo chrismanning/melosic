@@ -19,16 +19,20 @@
 
 #include <melosic/melin/config.hpp>
 #include <melosic/common/string.hpp>
+#include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
 #include "configwidget.hpp"
+
+Logger::Logger logject(logging::keywords::channel = "ConfigWidget");
 
 ConfigWidget::ConfigWidget(Config::Base& conf, Config::Manager& confman, QWidget* parent) :
     QWidget(parent), conf(conf), confman(confman)
 {}
 
-void ConfigWidget::apply() {
-    confman.saveConfig();
+void ConfigWidget::restoreDefaults() {
+    conf.resetToDefault();
+    setup();
 }
 
 ConfigWidget* Config::Base::createWidget(Melosic::Config::Manager&) {
@@ -43,21 +47,7 @@ GenericConfigWidget::GenericConfigWidget(Config::Base& conf, Config::Manager& co
     : ConfigWidget(conf, confman, parent)
 {
     layout = new QVBoxLayout;
-    gen = new QGroupBox("General");
-    form = new QFormLayout;
-
-    ConfigVisitor cv;
-    for(const auto& node : conf.getNodes()) {
-        auto label = new QLabel(QString(toTitle(node.first).c_str()));
-        QWidget* w = node.second.apply_visitor(cv);
-        if(!w)
-            continue;
-        w->setProperty("key", QString::fromStdString(node.first));
-        form->addRow(label, w);
-    }
-    gen->setLayout(form);
-
-    layout->addWidget(gen);
+    setup();
     this->setLayout(layout);
 }
 
@@ -93,7 +83,27 @@ void GenericConfigWidget::apply() {
             conf.putNode(w->property("key").toString().toStdString(), v);
         }
     }
-    ConfigWidget::apply();
+}
+
+void GenericConfigWidget::setup() {
+    ConfigVisitor cv;
+    if(layout->count()) {
+        layout->removeWidget(gen);
+        gen->deleteLater();
+        form->deleteLater();
+    }
+    gen = new QGroupBox("General");
+    form = new QFormLayout;
+    for(const auto& node : conf.getNodes()) {
+        auto label = new QLabel(QString(toTitle(node.first).c_str()));
+        QWidget* w = node.second.apply_visitor(cv);
+        if(!w)
+            continue;
+        w->setProperty("key", QString::fromStdString(node.first));
+        form->addRow(label, w);
+    }
+    gen->setLayout(form);
+    layout->insertWidget(0, gen);
 }
 
 QWidget* ConfigVisitor::operator()(const std::string& val) {

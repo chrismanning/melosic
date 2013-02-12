@@ -21,6 +21,7 @@
 #include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
+#include <list>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/connection.hpp>
@@ -30,6 +31,9 @@ class Track;
 class Playlist;
 namespace Output {
 enum class DeviceState;
+}
+namespace Slots{
+class Manager;
 }
 }
 
@@ -41,7 +45,7 @@ struct Track;
 
 class Scrobbler : public std::enable_shared_from_this<Scrobbler> {
 public:
-    Scrobbler(std::shared_ptr<Service> lastserv);
+    Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager* slotman);
 
     std::shared_ptr<Track> currentTrack();
     void updateNowPlaying(const Track& track);
@@ -60,7 +64,8 @@ private:
     Melosic::Logger::Logger logject;
     std::shared_ptr<Method> currentTrackData;
     std::shared_ptr<Track> currentTrack_;
-    Melosic::Signals::Connection playlistConn;
+    Melosic::Signals::ScopedConnection playlistConn;
+    std::list<Melosic::Signals::ScopedConnection> connections;
 };
 
 }

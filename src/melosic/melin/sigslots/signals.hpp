@@ -65,11 +65,23 @@ public:
     Signal() : logject(logject_()) {}
 
     Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
+    Signal& operator=(const Signal& b) {
+        funs = b.funs;
+        return *this;
+    }
 
     ~Signal() {
-        while(funs.size()) {
+        while(auto s = funs.size()) {
             funs.begin()->first.disconnect();
+            if(funs.size() != s-1) {
+                funs.clear();
+                break;
+            }
         }
+    }
+
+    void clear() {
+        funs.clear();
     }
 
     Connection connect(const std::function<Ret(Args...)>& slot) {

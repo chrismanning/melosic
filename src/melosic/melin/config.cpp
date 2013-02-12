@@ -158,6 +158,7 @@ private:
         ar & name;
     }
     Signals::Config::VariableUpdate variableUpdated;
+    std::function<Base&()> resetDefault;
 };
 
 Base::Base(const std::string& name) : pimpl(new impl(name)) {}
@@ -252,6 +253,20 @@ ForwardRange<Base::impl::NodeMap::value_type> Base::getNodes() {
 
 ForwardRange<const Base::impl::NodeMap::value_type> Base::getNodes() const {
     return pimpl->nodes;
+}
+
+void Base::addDefaultFunc(std::function<Base&()> func) {
+    pimpl->resetDefault = func;
+}
+
+void Base::resetToDefault() {
+    if(pimpl->resetDefault) {
+        auto tmp_sig = std::move(pimpl->variableUpdated);
+        auto tmp_fun = pimpl->resetDefault;
+        *this = pimpl->resetDefault();
+        pimpl->variableUpdated = std::move(tmp_sig);
+        pimpl->resetDefault = std::move(tmp_fun);
+    }
 }
 
 template<class Archive>

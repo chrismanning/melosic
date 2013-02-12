@@ -20,6 +20,7 @@
 #include <melosic/melin/output.hpp>
 using Melosic::Output::DeviceState;
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
 
 #include "scrobbler.hpp"
@@ -28,10 +29,17 @@ using Melosic::Output::DeviceState;
 
 namespace LastFM {
 
-Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
+Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager* slotman) :
     lastserv(lastserv),
     logject(logging::keywords::channel = "LastFM::Scrobbler")
-{}
+{
+    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
+                                  .emplace_connect(&Scrobbler::notifySlot, this, ph::_1, ph::_2));
+    connections.emplace_back(slotman->get<Melosic::Signals::Player::StateChanged>()
+                                  .emplace_connect(&Scrobbler::stateChangedSlot, this, ph::_1));
+    connections.emplace_back(slotman->get<Melosic::Signals::Player::PlaylistChanged>()
+                                  .emplace_connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
+}
 
 void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     static std::weak_ptr<Method> prev;

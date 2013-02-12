@@ -41,7 +41,9 @@ class ConfigWidget : public QWidget {
 public:
     ConfigWidget(Melosic::Config::Base&, Melosic::Config::Manager&, QWidget* parent = nullptr);
 
-    virtual void apply();
+    virtual void apply() = 0;
+    virtual void restoreDefaults();
+    virtual void setup() = 0;
 protected:
     Melosic::Config::Base& conf;
 private:
@@ -52,7 +54,9 @@ class GenericConfigWidget : public ConfigWidget {
     Q_OBJECT
 public:
     GenericConfigWidget(Melosic::Config::Base&, Melosic::Config::Manager&, QWidget* parent = nullptr);
-    virtual void apply();
+
+    virtual void apply() override;
+    virtual void setup() override;
 
 protected:
     QVBoxLayout* layout;

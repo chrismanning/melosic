@@ -22,11 +22,14 @@
 #include <QStackedLayout>
 #include <QTreeWidget>
 #include <QList>
+#include <QDialogButtonBox>
 
 #include <memory>
 
 namespace Melosic {
-class Kernel;
+namespace Config {
+class Manager;
+}
 }
 
 class ConfigWidget;
@@ -36,11 +39,12 @@ class ConfigurationDialog : public QDialog
     Q_OBJECT
     
 public:
-    explicit ConfigurationDialog(Melosic::Kernel& kernel, QWidget* parent = 0);
+    explicit ConfigurationDialog(Melosic::Config::Manager& confman, QWidget* parent = 0);
     ~ConfigurationDialog();
 
 public Q_SLOTS:
     void apply();
+    void defaults();
 
 private Q_SLOTS:
     void changeConfigWidget(QTreeWidgetItem* item);
@@ -48,8 +52,9 @@ private Q_SLOTS:
 private:
     QStackedLayout* stackLayout;
     QTreeWidget* items;
-    Melosic::Kernel& kernel;
+    Melosic::Config::Manager& confman;
     QList<ConfigWidget*> visited;
+    QDialogButtonBox* buttonBox;
 };
 
 #endif // CONFIGURATIONDIALOG_HPP
