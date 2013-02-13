@@ -56,12 +56,9 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
 
     scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
                                .connect(std::bind(&MainWindow::onStateChangeSlot, this, ph::_1)));
-    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
-                               .emplace_connect(&TrackSeeker::onStateChangeSlot, ui->trackSeeker, ph::_1));
-    scopedSigConns.emplace_back(slotman.get<Signals::Player::NotifyPlayPos>()
-                               .emplace_connect(&TrackSeeker::onNotifySlot, ui->trackSeeker, ph::_1, ph::_2));
     scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
                                .emplace_connect(&Player::seek, &player, ph::_1));
+    ui->trackSeeker->connectSlots(&slotman);
 
     for(const auto& dev : kernel.getOutputManager().getOutputDeviceNames()) {
         ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),

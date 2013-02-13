@@ -30,6 +30,10 @@ namespace Melosic {
 namespace Output {
 enum class DeviceState;
 }
+
+namespace Slots {
+class Manager;
+}
 }
 using namespace Melosic;
 using Output::DeviceState;
@@ -45,6 +49,8 @@ public:
 
     void onStateChangeSlot(DeviceState state);
     void onNotifySlot(chrono::milliseconds current, chrono::milliseconds total);
+
+    void connectSlots(Slots::Manager*);
 
     template <typename T>
     T& get();

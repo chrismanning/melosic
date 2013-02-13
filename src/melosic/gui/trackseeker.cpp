@@ -16,6 +16,7 @@
 **************************************************************************/
 
 #include <melosic/melin/output.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
 
@@ -28,6 +29,7 @@ public:
     }
     int seekTo;
     Signals::TrackSeeker::Seek seek;
+    std::list<Signals::ScopedConnection> scopedSigConns;
 };
 
 TrackSeeker::TrackSeeker(QWidget *parent) :
@@ -82,6 +84,13 @@ void TrackSeeker::onNotifySlot(chrono::milliseconds current, chrono::millisecond
 //        std::clog << "; Value: " << value() << std::endl;
         setValue(current.count());
     }
+}
+
+void TrackSeeker::connectSlots(Slots::Manager* slotman) {
+    pimpl->scopedSigConns.emplace_back(slotman->get<Signals::Player::StateChanged>()
+                                       .emplace_connect(&TrackSeeker::onStateChangeSlot, this, ph::_1));
+    pimpl->scopedSigConns.emplace_back(slotman->get<Signals::Player::NotifyPlayPos>()
+                                       .emplace_connect(&TrackSeeker::onNotifySlot, this, ph::_1, ph::_2));
 }
 
 void TrackSeeker::updateSeekTo(int s) {
