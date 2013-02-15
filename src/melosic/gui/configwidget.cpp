@@ -38,7 +38,7 @@ void ConfigWidget::restoreDefaults() {
 }
 
 ConfigWidget* Config::Base::createWidget() {
-    return nullptr;
+    return new GenericConfigWidget(*this);
 }
 
 QIcon* Config::Base::getIcon() const {

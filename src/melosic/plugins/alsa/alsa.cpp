@@ -36,6 +36,9 @@ using std::unique_lock; using std::lock_guard;
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/output.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/config.hpp>
 using namespace Melosic;
 
 extern template class std::lock_guard<shared_mutex>;
@@ -44,8 +47,8 @@ extern template class boost::shared_lock_guard<shared_mutex>;
 static Logger::Logger logject(logging::keywords::channel = "ALSA");
 
 static constexpr Plugin::Info alsaInfo("ALSA",
-                                   Plugin::Type::outputDevice,
-                                   {1,0,0});
+                                       Plugin::Type::outputDevice,
+                                       Plugin::Version(1,0,0));
 
 #define ALSA_THROW_IF(Exc, ret) if(ret != 0) {\
     std::stringstream tmp;\
@@ -277,7 +280,7 @@ private:
 
 extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
-    funs << registerOutput;
+    funs << registerOutput << registerSlots;
 }
 
 extern "C" void registerOutput(Output::Manager* outman) {
@@ -313,6 +316,24 @@ extern "C" void registerOutput(Output::Manager* outman) {
     snd_device_name_free_hint(hints);
 
     outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
+}
+
+extern "C" void registerConfig(Config::Manager* confman) {
+}
+
+class ALSAConf : public Config::Config<ALSAConf> {
+public:
+    ALSAConf() : Config("ALSA") {}
+};
+
+extern "C" void registerSlots(Slots::Manager* slotman) {
+    slotman->get<Signals::Config::Loaded>().connect([](Config::Base& base) {
+        auto& c = base.existsChild("Output")
+                ? base.getChild("Output").existsChild("ALSA")
+                  ? base.getChild("Output").getChild("ALSA")
+                  : base.getChild("Output").putChild("ALSA", ALSAConf())
+                  : base.putChild("Output", Output::Conf()).putChild("ALSA", ALSAConf());
+    });
 }
 
 extern "C" void destroyPlugin() {

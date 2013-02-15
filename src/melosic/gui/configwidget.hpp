@@ -39,7 +39,7 @@ class Base;
 class ConfigWidget : public QWidget {
     Q_OBJECT
 public:
-    ConfigWidget(Melosic::Config::Base&, QWidget* parent = nullptr);
+    explicit ConfigWidget(Melosic::Config::Base&, QWidget* parent = nullptr);
 
     virtual void apply() = 0;
     virtual void restoreDefaults();
@@ -51,7 +51,7 @@ protected:
 class GenericConfigWidget : public ConfigWidget {
     Q_OBJECT
 public:
-    GenericConfigWidget(Melosic::Config::Base&, QWidget* parent = nullptr);
+    explicit GenericConfigWidget(Melosic::Config::Base&, QWidget* parent = nullptr);
 
     virtual void apply() override;
     virtual void setup() override;

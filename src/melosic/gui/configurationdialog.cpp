@@ -24,7 +24,6 @@
 #include <QHeaderView>
 #include <QPushButton>
 
-#include <boost/range/adaptor/map.hpp>
 #include <boost/range/adaptor/indirected.hpp>
 using namespace boost::adaptors;
 
@@ -35,6 +34,26 @@ using namespace Melosic;
 
 static Logger::Logger logject(logging::keywords::channel = "ConfigurationDialog");
 
+void addChildren(QStackedLayout* stack, QTreeWidgetItem* item, ForwardRange<Config::Base* const> b) {
+    if(b.empty()) {
+        return;
+    }
+    for(Config::Base& conf : b | indirected) {
+        QString str = QString::fromStdString(conf.getName());
+        auto w = conf.createWidget();
+        if(str.size() && w) {
+            TRACE_LOG(logject) << "Adding config page: " << conf.getName();
+            QStringList strs(str);
+            QTreeWidgetItem* ci = new QTreeWidgetItem(strs);
+            const int t = stack->addWidget(w);
+            TRACE_LOG(logject) << "Widget index: " << t;
+            item->addChild(ci);
+            ci->setData(0, Qt::UserRole, t);
+            addChildren(stack, ci, conf.getChildren());
+        }
+    }
+}
+
 ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* parent) :
     QDialog(parent),
     stackLayout(new QStackedLayout),
@@ -42,20 +61,20 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
     confman(confman)
 {
     this->setWindowTitle("Configure");
-    int i = 0;
     items->header()->hide();
     auto& c = confman.getConfigRoot();
-//    std::clog << "In ConfDialog\n" << c << std::endl;
     for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
         auto w = conf.createWidget();
         if(str.size() && w) {
+            TRACE_LOG(logject) << "Adding config page: " << conf.getName();
             QStringList strs(str);
             QTreeWidgetItem* item = new QTreeWidgetItem(strs);
-            item->setData(0, Qt::UserRole, i);
-            items->insertTopLevelItem(i, item);
-            stackLayout->addWidget(w);
-            ++i;
+            const int t = stackLayout->addWidget(w);
+            TRACE_LOG(logject) << "Widget index: " << t;
+            item->setData(0, Qt::UserRole, t);
+            items->addTopLevelItem(item);
+            addChildren(stackLayout, item, conf.getChildren());
         }
     }
     stackLayout->setMargin(0);
