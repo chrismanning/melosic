@@ -37,8 +37,8 @@ LastFmConfig::LastFmConfig() :
 
 LastFmConfig::~LastFmConfig() {}
 
-LastFmConfigWidget::LastFmConfigWidget(Config::Base& conf, Melosic::Config::Manager& confman, QWidget* parent)
-    : GenericConfigWidget(conf, confman, parent)
+LastFmConfigWidget::LastFmConfigWidget(Config::Base& conf, QWidget* parent)
+    : GenericConfigWidget(conf, parent)
 {
     authButton = new QPushButton("Authenticate");
     authButton->setToolTip("Only do this once per user!!\nIf \"Session Key\" is already present do NOT do this");
@@ -117,8 +117,8 @@ void LastFmConfigWidget::authenticate() {
 //    }
 }
 
-ConfigWidget* LastFmConfig::createWidget(Melosic::Config::Manager& confman) {
-    return new LastFmConfigWidget(*this, confman);
+ConfigWidget* LastFmConfig::createWidget() {
+    return new LastFmConfigWidget(*this);
 }
 
 QIcon* LastFmConfig::getIcon() const {

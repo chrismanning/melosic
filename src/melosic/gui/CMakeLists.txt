@@ -6,6 +6,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 find_package(Boost REQUIRED)
 
 SET(qt-gui_SOURCES mainwindow.cpp trackseeker.cpp playlistmodel.cpp configwidget.cpp configurationdialog.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} outputconfwidget.cpp)
 SET(qt-gui_HEADERS mainwindow.hpp trackseeker.hpp playlistmodel.hpp)
 SET(qt-gui_FORMS mainwindow.ui)
 

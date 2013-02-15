@@ -26,6 +26,7 @@ namespace Melosic {
 namespace Output {
 class PlayerSink;
 enum class DeviceState;
+class Manager;
 }
 
 namespace Slots {
@@ -38,7 +39,7 @@ class Playlist;
 
 class Player {
 public:
-    Player(Slots::Manager& slotman);
+    Player(Slots::Manager&, Output::Manager&);
     ~Player();
 
     Player(const Player&) = delete;

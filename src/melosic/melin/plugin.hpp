@@ -19,6 +19,7 @@
 #define MELOSIC_PLUGIN_HPP
 
 #include <memory>
+#include <condition_variable>
 
 #include <boost/filesystem.hpp>
 using boost::filesystem::absolute;
@@ -43,6 +44,7 @@ public:
     void loadPlugins();
 
     void initialise();
+    bool initialised() const;
 
     ForwardRange<const Info> getPlugins() const;
 

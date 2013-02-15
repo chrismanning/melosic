@@ -25,11 +25,15 @@ namespace LastFM {
 
 class User {
 public:
-    User(const std::string& username);
+    explicit User(const std::string& username);
     User(const std::string& username, const std::string& sessionKey);
 
+    User(const User&);
+    User(User&&);
+
     void authenticate();
-    const std::string& sessionKey();
+    const std::string& getSessionKey();
+    void setSessionKey(const std::string&);
 
 private:
     class impl;

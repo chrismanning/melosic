@@ -31,6 +31,9 @@ class Manager::impl {
     Signals::Player::PlaylistChanged playlistChanged;
     Signals::Playlist::TrackChanged trackChanged;
     Signals::TrackSeeker::Seek seek;
+    Signals::Output::PlayerSinkChanged playerSinkChanged;
+    Signals::Output::ReqSinkChange requestSinkChange;
+    Signals::Config::Loaded loaded;
 
     friend class Manager;
 };
@@ -68,6 +71,24 @@ Signals::TrackSeeker::Seek& Manager::get<Signals::TrackSeeker::Seek>() {
     return pimpl->seek;
 }
 template Signals::TrackSeeker::Seek& Manager::get<Signals::TrackSeeker::Seek>();
+
+template <>
+Signals::Output::PlayerSinkChanged& Manager::get<Signals::Output::PlayerSinkChanged>() {
+    return pimpl->playerSinkChanged;
+}
+template Signals::Output::PlayerSinkChanged& Manager::get<Signals::Output::PlayerSinkChanged>();
+
+template <>
+Signals::Output::ReqSinkChange& Manager::get<Signals::Output::ReqSinkChange>() {
+    return pimpl->requestSinkChange;
+}
+template Signals::Output::ReqSinkChange& Manager::get<Signals::Output::ReqSinkChange>();
+
+template <>
+Signals::Config::Loaded& Manager::get<Signals::Config::Loaded>() {
+    return pimpl->loaded;
+}
+template Signals::Config::Loaded& Manager::get<Signals::Config::Loaded>();
 
 } // namespace Slots
 } // namespace Melosic

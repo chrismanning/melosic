@@ -121,11 +121,11 @@ public:
         for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
-                i->second(std::forward<A>(args)...);
+                i->second(std::forward<A&&>(args)...);
                 l.lock();
                 ++i;
             }
-            catch(...) {
+            catch(std::bad_weak_ptr& e) {
                 TRACE_LOG(logject) << "Removing expired slot.";
                 decltype(i) tmp = i;
                 ++i;
@@ -133,6 +133,11 @@ public:
                 l.lock();
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.cbegin(), i)-1);
+            }
+            catch(...) {
+                ERROR_LOG(logject) << "Exception caught in signal";
+                l.lock();
+                ++i;
             }
         }
     }

@@ -57,7 +57,6 @@ private Q_SLOTS:
     void on_actionPlay_triggered();
     void on_actionStop_triggered();
     void on_actionNext_triggered();
-    void on_outputDevicesCBX_currentIndexChanged(int index);
     void on_actionOptions_triggered();
 
 private:

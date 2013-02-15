@@ -59,12 +59,6 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
                                .emplace_connect(&Player::seek, &player, ph::_1));
     ui->trackSeeker->connectSlots(&slotman);
-
-    for(const auto& dev : kernel.getOutputManager().getOutputDeviceNames()) {
-        ui->outputDevicesCBX->addItem(QString::fromStdString(dev.getDesc()),
-                                      QString::fromStdString(dev.getName()));
-    }
-    oldDeviceIndex = ui->outputDevicesCBX->currentIndex();
 }
 
 MainWindow::~MainWindow() {
@@ -137,51 +131,6 @@ void MainWindow::on_actionStop_triggered() {
 void MainWindow::on_actionNext_triggered() {
     if(bool(player)) {
         currentPlaylist->next();
-    }
-}
-
-void MainWindow::on_outputDevicesCBX_currentIndexChanged(int index) {
-    try {
-        LOG(logject) << "Changing output device to: " << ui->outputDevicesCBX->itemText(index).toStdString();
-
-        chrono::milliseconds time(0);
-        auto state = player.state();
-        if(state != Output::DeviceState::Stopped) {
-            time = player.tell();
-            player.stop();
-        }
-
-        player.changeOutput(kernel.getOutputManager()
-                            .getOutputDevice(ui->outputDevicesCBX->itemData(index).value<QString>().toStdString()));
-
-        switch(state) {
-            case DeviceState::Playing:
-                player.play();
-                player.seek(time);
-                break;
-            case DeviceState::Paused:
-                player.play();
-                player.seek(time);
-                player.pause();
-                break;
-            case DeviceState::Error:
-            case DeviceState::Stopped:
-            case DeviceState::Ready:
-            default:
-                break;
-        }
-        oldDeviceIndex = index;
-    }
-    catch(std::exception& e) {
-        LOG(logject) << "Exception caught: " << e.what();
-
-        player.stop();
-
-        QMessageBox error;
-        error.setText("Exception");
-        error.setDetailedText(e.what());
-        error.exec();
-        ui->outputDevicesCBX->setCurrentIndex(oldDeviceIndex);
     }
 }
 

@@ -43,9 +43,9 @@ int main(int argc, char* argv[]) {
         plugman.loadPlugin("../lib/alsa.melin");
         plugman.loadPlugin("../lib/lastfm.melin");
 
-        kernel.getConfigManager().loadConfig();
-
         plugman.initialise();
+
+        kernel.getConfigManager().loadConfig();
 
         MainWindow win(kernel);
 

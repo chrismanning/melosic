@@ -34,6 +34,7 @@ using namespace boost::adaptors;
 
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
 #include "config.hpp"
 
 template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
@@ -49,7 +50,7 @@ public:
 static const boost::filesystem::path ConfFile("melosic.conf");
 
 class Manager::impl {
-    impl() {
+    impl(Slots::Manager& slotman) : loaded(slotman.get<Signals::Config::Loaded>()) {
         wordexp_t exp_result;
         wordexp(dirs[UserDir].c_str(), &exp_result, 0);
         dirs[UserDir] = exp_result.we_wordv[0];
@@ -85,13 +86,16 @@ class Manager::impl {
             }
         }
         assert(!confPath.empty());
-        if(!fs::exists(confPath))
+        if(!fs::exists(confPath)) {
+            loaded(std::ref(conf));
             return;
+        }
 
         fs::ifstream ifs(confPath);
         assert(ifs.good());
         boost::archive::binary_iarchive ia(ifs);
         ia >> conf;
+        loaded(std::ref(conf));
     }
 
     void saveConfig() {
@@ -105,10 +109,11 @@ class Manager::impl {
 
     fs::path confPath;
     Configuration conf;
+    Signals::Config::Loaded& loaded;
     friend class Manager;
 };
 
-Manager::Manager() : pimpl(new impl) {}
+Manager::Manager(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
 
 Manager::~Manager() {}
 
@@ -157,7 +162,7 @@ private:
         ar & nodes;
         ar & name;
     }
-    Signals::Config::VariableUpdate variableUpdated;
+    Signals::Config::VariableUpdated variableUpdated;
     std::function<Base&()> resetDefault;
 };
 
@@ -288,11 +293,11 @@ Base* new_clone(const Base& conf) {
 }
 
 template <>
-Signals::Config::VariableUpdate& Base::get<Signals::Config::VariableUpdate>() {
+Signals::Config::VariableUpdated& Base::get<Signals::Config::VariableUpdated>() {
     return pimpl->variableUpdated;
 }
 
-template Signals::Config::VariableUpdate& Base::get<Signals::Config::VariableUpdate>();
+template Signals::Config::VariableUpdated& Base::get<Signals::Config::VariableUpdated>();
 
 } // namespace Config
 } // namespace Melosic

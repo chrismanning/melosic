@@ -15,7 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/melin/logging.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/plugin.hpp>
@@ -30,14 +29,20 @@
 namespace Melosic {
 
 class Kernel::impl {
-    impl(Kernel& k) : plugman(k), player(slotman) {}
+    impl(Kernel& k)
+        : plugman(k),
+          confman(slotman),
+          outman(confman, slotman, plugman),
+          player(slotman, outman)
+    {}
+
     Plugin::Manager plugman;
+    Slots::Manager slotman;
+    Config::Manager confman;
     Input::Manager inman;
     Decoder::Manager decman;
     Output::Manager outman;
     Encoder::Manager encman;
-    Config::Manager config;
-    Slots::Manager slotman;
     Player player;
     friend class Kernel;
 };
@@ -51,7 +56,7 @@ Player& Kernel::getPlayer() {
 }
 
 Config::Manager& Kernel::getConfigManager() {
-    return pimpl->config;
+    return pimpl->confman;
 }
 
 Input::Manager& Kernel::getInputManager() {

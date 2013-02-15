@@ -28,6 +28,9 @@ namespace Melosic {
 class Playlist;
 class Track;
 
+namespace Config {
+class Base;
+}
 namespace Output {
 enum class DeviceState;
 }
@@ -37,13 +40,19 @@ template <typename Ret, typename ...Args>
 class Signal;
 
 namespace Config {
-typedef Signal<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdate;
+typedef Signal<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
+typedef Signal<void(Melosic::Config::Base&)> Loaded;
 }
 
 namespace Player {
 typedef Signal<void(Output::DeviceState)> StateChanged;
 typedef Signal<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
 typedef Signal<void(std::shared_ptr<Melosic::Playlist>)> PlaylistChanged;
+}
+
+namespace Output {
+typedef Signal<void(const std::string&)> ReqSinkChange;
+typedef Signal<void()> PlayerSinkChanged;
 }
 
 namespace Playlist {

@@ -52,6 +52,12 @@ inline const char * DLError() {
 #include <string>
 #include <list>
 #include <functional>
+#include <thread>
+using std::mutex; using std::unique_lock; using std::lock_guard;
+namespace this_thread = std::this_thread;
+#include <future>
+#include <chrono>
+namespace chrono = std::chrono;
 
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
@@ -122,10 +128,14 @@ public:
     }
 
     void init() {
-        //TODO: async startup
         for(auto& fun : regFuns) {
             fun();
         }
+        init_ = true;
+    }
+
+    bool initialised() const {
+        return init_;
     }
 
 private:
@@ -150,6 +160,7 @@ private:
         return reinterpret_cast<T*>(sym);
     }
 
+    bool init_ = false;
     boost::filesystem::path pluginPath;
     destroyPlugin_T destroyPlugin_;
     std::list<std::function<void()> > regFuns;
@@ -177,6 +188,7 @@ public:
 
         auto filename = filepath.filename().string();
 
+        unique_lock<Mutex> l(mu);
         if(loadedPlugins.find(filename) != loadedPlugins.end()) {
             ERROR_LOG(logject) << "Plugin already loaded: " << filepath;
             return;
@@ -185,16 +197,32 @@ public:
         loadedPlugins.emplace(filename, Plugin(filepath, kernel));
     }
 
+    ForwardRange<const Info> getPlugins() {
+        std::function<Info(Plugin&)> fun([](Plugin& p) {return p.getInfo();});
+        return loadedPlugins | map_values | transformed(fun);
+    }
+
     void initialise() {
         for(Plugin& plugin : loadedPlugins | map_values) {
+            TRACE_LOG(logject) << "Initialising plugin " << plugin.getInfo().name;
             plugin.init();
         }
+        lock_guard<Mutex> l(mu);
+        initialised_ = true;
+    }
+
+    bool initialised() {
+        lock_guard<Mutex> l(mu);
+        return initialised_;
     }
 
 private:
     Kernel& kernel;
     std::map<std::string, Plugin> loadedPlugins;
     Logger::Logger logject;
+    typedef mutex Mutex;
+    Mutex mu;
+    bool initialised_ = false;
     friend class Manager;
     friend struct RegisterFuncsInserter;
 };
@@ -208,12 +236,15 @@ void Manager::loadPlugin(const boost::filesystem::path& filepath) {
 }
 
 ForwardRange<const Info> Manager::getPlugins() const {
-    std::function<Info(Plugin&)> fun([](Plugin& p) {return p.getInfo();});
-    return pimpl->loadedPlugins | map_values | transformed(fun);
+    return pimpl->getPlugins();
 }
 
 void Manager::initialise() {
     pimpl->initialise();
+}
+
+bool Manager::initialised() const {
+    return pimpl->initialised();
 }
 
 } // namespace Plugin

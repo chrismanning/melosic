@@ -42,7 +42,7 @@ namespace Melosic {
 
 class Player::impl {
 public:
-    impl(Slots::Manager& slotman)
+    impl(Slots::Manager& slotman, Output::Manager& outman)
         : slotman(slotman),
           stateChanged(slotman.get<Signals::Player::StateChanged>()),
           notifyPlayPosition(slotman.get<Signals::Player::NotifyPlayPos>()),
@@ -50,7 +50,42 @@ public:
           end_(false),
           playerThread(&impl::start, this),
           logject(logging::keywords::channel = "Player")
-    {}
+    {
+        slotman.get<Signals::Output::PlayerSinkChanged>().connect([this,&outman]() {
+            try {
+                chrono::milliseconds time(0);
+                auto state_ = state();
+                if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error) {
+                    time = tell();
+                    stop();
+                }
+
+                changeOutput(outman.getPlayerSink());
+
+                switch(state_) {
+                    case DeviceState::Playing:
+                        play();
+                        seek(time);
+                        break;
+                    case DeviceState::Paused:
+                        play();
+                        seek(time);
+                        pause();
+                        break;
+                    case DeviceState::Error:
+                    case DeviceState::Stopped:
+                    case DeviceState::Ready:
+                    default:
+                        break;
+                }
+            }
+            catch(std::exception& e) {
+                LOG(logject) << "Exception caught: " << e.what();
+
+                stop();
+            }
+        });
+    }
 
     ~impl() {
         if(!end()) {
@@ -125,17 +160,21 @@ public:
     }
 
     void changeOutput(std::unique_ptr<Output::PlayerSink> device) {
+        TRACE_LOG(logject) << "Attempting to change output device";
         unique_lock<Mutex> l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
         l.unlock();
         if(playlist && *playlist) {
+            TRACE_LOG(logject) << "Initiallising new output device";
             this->device->prepareSink(playlist->currentTrack()->getAudioSpecs());
         }
 
         if(tmp) {
+            TRACE_LOG(logject) << "Removing old output device";
             if(tmp->state() == DeviceState::Playing) {
+                TRACE_LOG(logject) << "Resuming playback on new output device";
                 this->device->play();
                 stateChanged(DeviceState::Playing);
             }
@@ -195,7 +234,8 @@ private:
                             if(n < 1024) {
                                 auto a = io::read(*playlist, (char*)s.data(), s.size());
                                 if(bool(*playlist)) {
-                                    notifyPlayPosition(playlist->currentTrack()->tell(), playlist->currentTrack()->duration());
+                                    notifyPlayPosition(playlist->currentTrack()->tell(),
+                                                       playlist->currentTrack()->duration());
                                 }
                                 if(a == -1) {
                                     if(n == 0) {
@@ -275,7 +315,7 @@ private:
     friend class Player;
 };
 
-Player::Player(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
+Player::Player(Slots::Manager& slotman, Output::Manager& outman) : pimpl(new impl(slotman, outman)) {}
 
 Player::~Player() {}
 

@@ -17,17 +17,19 @@
 
 #include <QLabel>
 
+#include <melosic/common/stream.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/string.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/output.hpp>
 using namespace Melosic;
 
 #include "configwidget.hpp"
 
 Logger::Logger logject(logging::keywords::channel = "ConfigWidget");
 
-ConfigWidget::ConfigWidget(Config::Base& conf, Config::Manager& confman, QWidget* parent) :
-    QWidget(parent), conf(conf), confman(confman)
+ConfigWidget::ConfigWidget(Config::Base& conf, QWidget* parent) :
+    QWidget(parent), conf(conf)
 {}
 
 void ConfigWidget::restoreDefaults() {
@@ -35,7 +37,7 @@ void ConfigWidget::restoreDefaults() {
     setup();
 }
 
-ConfigWidget* Config::Base::createWidget(Melosic::Config::Manager&) {
+ConfigWidget* Config::Base::createWidget() {
     return nullptr;
 }
 
@@ -43,8 +45,8 @@ QIcon* Config::Base::getIcon() const {
     return nullptr;
 }
 
-GenericConfigWidget::GenericConfigWidget(Config::Base& conf, Config::Manager& confman, QWidget* parent)
-    : ConfigWidget(conf, confman, parent)
+GenericConfigWidget::GenericConfigWidget(Config::Base& conf, QWidget* parent)
+    : ConfigWidget(conf, parent)
 {
     layout = new QVBoxLayout;
     setup();

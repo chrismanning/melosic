@@ -41,6 +41,7 @@ static constexpr Plugin::Info lastFmInfo("LastFM",
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
 static Slots::Manager* slotman = nullptr;
+static Config::Manager* confman = nullptr;
 
 void refreshConfig(const std::string& key, const Config::VarType& value) {
     try {
@@ -64,7 +65,7 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
             assert(false);
         TRACE_LOG(logject) << "Updated variable: " << key;
     }
-    catch(boost::bad_get& e) {
+    catch(boost::bad_get&) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
     }
 }
@@ -74,28 +75,34 @@ static Signals::ScopedConnection varConnection;
 extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
     funs << registerConfig << registerSlots;
-}
-
-extern "C" void registerConfig(Config::Manager* confman) {
-    ::conf.putNode("username", std::string(""));
-    ::conf.putNode("session key", std::string(""));
-    ::conf.putNode("enable scrobbling", false);
-
-    auto& c = confman->getConfigRoot();
-
-    auto& lconf = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
-
-    lconf.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
-
-    varConnection = lconf.get<Signals::Config::VariableUpdate>()
-                         .connect(refreshConfig);
 
     lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
                                "64a3811653376876431daad679ce5b67"));
 }
 
+extern "C" void registerConfig(Config::Manager* confman) {
+    ::confman = confman;
+
+    ::conf.putNode("username", std::string(""));
+    ::conf.putNode("session key", std::string(""));
+    ::conf.putNode("enable scrobbling", false);
+}
+
 extern "C" void registerSlots(Slots::Manager* slotman) {
     ::slotman = slotman;
+
+    slotman->get<Signals::Config::Loaded>().connect([&](Config::Base& c) {
+        auto& lc = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
+
+        lc.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+
+        varConnection = lc.get<Signals::Config::VariableUpdated>()
+                .connect(refreshConfig);
+
+        for(auto& node : lc.getNodes()) {
+            refreshConfig(node.first, node.second);
+        }
+    });
 }
 
 //    refreshConfig("username", std::string("fat_chris"));

@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,39 +15,40 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFMCONFIG_HPP
-#define LASTFMCONFIG_HPP
+#ifndef OUTPUTCONFWIDGET_HPP
+#define OUTPUTCONFWIDGET_HPP
 
-#include <QPushButton>
+#include <QComboBox>
 
-#include <melosic/melin/config.hpp>
-#include <melosic/gui/configwidget.hpp>
+#include <boost/serialization/export.hpp>
+
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+
+#include "configwidget.hpp"
 
 namespace Melosic {
+namespace Output {
+class Conf;
+}
+namespace Slots {
+class Manager;
+}
+}
 
-class LastFmConfig : public Config::Config<LastFmConfig> {
-public:
-    LastFmConfig();
-
-    virtual ~LastFmConfig();
-
-    ConfigWidget* createWidget() override;
-    QIcon* getIcon() const override;
-};
-
-class LastFmConfigWidget : public GenericConfigWidget {
+class OutputConfWidget : public ConfigWidget
+{
     Q_OBJECT
 public:
-    LastFmConfigWidget(Config::Base& conf, QWidget* parent = nullptr);
-    void apply();
-private Q_SLOTS:
-    void authenticate();
+    OutputConfWidget(Melosic::Output::Conf&, QWidget* parent = nullptr);
+
+    void apply() override;
+    void setup() override;
+
 private:
-    QPushButton* authButton;
+    QVBoxLayout* layout;
+    QGroupBox* gen;
+    QFormLayout* form;
+    QComboBox* cbx;
 };
 
-} // end namespace Melosic
-
-BOOST_CLASS_EXPORT_KEY(Melosic::LastFmConfig)
-
-#endif // LASTFMCONFIG_HPP
+#endif // OUTPUTCONFWIDGET_HPP

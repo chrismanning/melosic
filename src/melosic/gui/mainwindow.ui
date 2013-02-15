@@ -72,16 +72,6 @@
      <enum>Qt::Horizontal</enum>
     </property>
    </widget>
-   <widget class="QComboBox" name="outputDevicesCBX">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>500</y>
-      <width>331</width>
-      <height>41</height>
-     </rect>
-    </property>
-   </widget>
    <widget class="QListView" name="playlistView">
     <property name="geometry">
      <rect>

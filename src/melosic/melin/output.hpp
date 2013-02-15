@@ -25,20 +25,30 @@
 #include <melosic/common/stream.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/common/range.hpp>
+#include <melosic/melin/config.hpp>
 
 namespace Melosic {
 namespace Output {
 struct DeviceName;
 class PlayerSink;
+class Conf;
+}
+namespace Slots {
+class Manager;
+}
+namespace Plugin {
+class Manager;
 }
 }
+
 extern template class std::function<std::unique_ptr<Melosic::Output::PlayerSink>(const Melosic::Output::DeviceName&)>;
+
 namespace Melosic {
 namespace Output {
 typedef std::function<std::unique_ptr<PlayerSink>(const DeviceName&)> Factory;
 class Manager {
 public:
-    Manager();
+    Manager(Config::Manager&, Slots::Manager&, Plugin::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -52,12 +62,21 @@ public:
             addOutputDevice(fact, device);
         }
     }
-    std::unique_ptr<PlayerSink> getOutputDevice(const std::string& devicename);
-    ForwardRange<const DeviceName> getOutputDeviceNames();
+
+    std::unique_ptr<PlayerSink> getPlayerSink();
+    void setPlayerSink(const std::string& sinkname);
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
+    friend class Conf;
+};
+
+class Conf : public Config::Config<Conf> {
+public:
+    Conf();
+    ConfigWidget* createWidget() override;
+    std::map<DeviceName, Factory> const* outputFactories = nullptr;
 };
 
 class Sink : public IO::Sink {
@@ -109,5 +128,7 @@ inline std::ostream& operator<<(std::ostream& out, const DeviceName& b) {
 
 } // namespace Output
 } // namespace Melosic
+
+BOOST_CLASS_EXPORT_KEY(Melosic::Output::Conf)
 
 #endif // MELOSIC_OUTPUTMANAGER_HPP

@@ -48,7 +48,7 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
 //    std::clog << "In ConfDialog\n" << c << std::endl;
     for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
-        auto w = conf.createWidget(confman);
+        auto w = conf.createWidget();
         if(str.size() && w) {
             QStringList strs(str);
             QTreeWidgetItem* item = new QTreeWidgetItem(strs);

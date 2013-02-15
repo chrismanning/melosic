@@ -37,6 +37,7 @@ enum class DeviceState;
 
 namespace LastFM {
 
+struct User;
 struct Method;
 struct Track;
 typedef std::map<std::string, std::string> StringStringMap;
@@ -48,7 +49,9 @@ public:
     ~Service();
 
 //    Scrobbler scrobbler();
-//    User user();
+    User& getUser();
+    void setUser(const User& u);
+    void setUser(User&& u);
 
     const std::string& apiKey();
     const std::string& sharedSecret();

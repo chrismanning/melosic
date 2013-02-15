@@ -39,6 +39,9 @@ namespace fs = boost::filesystem;
 class ConfigWidget;
 
 namespace Melosic {
+namespace Slots {
+class Manager;
+}
 namespace Config {
 
 class Base;
@@ -53,7 +56,7 @@ static std::array<fs::path,3> dirs{{".", "~/.config/melosic/", "/etc/melosic/"}}
 
 class Manager {
 public:
-    Manager();
+    Manager(Slots::Manager&);
     ~Manager();
 
     void loadConfig();
@@ -88,7 +91,7 @@ public:
     void addDefaultFunc(std::function<Base&()>);
     void resetToDefault();
 
-    virtual ConfigWidget* createWidget(Manager&);
+    virtual ConfigWidget* createWidget();
     virtual QIcon* getIcon() const;
 
     virtual Base* clone() const {
