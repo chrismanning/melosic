@@ -52,18 +52,20 @@ public:
             c.addDefaultFunc([=]() -> Config::Base& { return *conf.clone(); });
             auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
             varUpdate.connect([this](const std::string& key, const Config::VarType& val) {
-                TRACE_LOG(logject) << "Output conf variable updated: " << key;
+                TRACE_LOG(logject) << "Config: variable updated: " << key;
                 try {
                     if(key == "output device") {
                         requestSinkChange(boost::get<std::string>(val));
                     }
+                    else
+                        ERROR_LOG(logject) << "Config: Unknown key: " << key;
                 }
                 catch(boost::bad_get&) {
                     ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
                 }
             });
             for(const auto& node : c.getNodes()) {
-                TRACE_LOG(logject) << "Output conf variable loaded: " << node.first;
+                TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
                 varUpdate(node.first, node.second);
             }
         });
@@ -80,19 +82,19 @@ public:
     }
 
     std::unique_ptr<PlayerSink> getPlayerSink() {
-        if(fact) {
-            struct A {
-                A(decltype(fact)& f) : f(f) {}
-                ~A() {
-                    f = decltype(fact)();
-                }
-                decltype(impl::fact)& f;
-            };
-            A a(fact);
-
-            return fact();
+        if(!fact) {
+            return nullptr;
         }
-        return nullptr;
+        struct A {
+            A(decltype(fact)& f) : f(f) {}
+            ~A() {
+                f = decltype(fact)();
+            }
+            decltype(impl::fact)& f;
+        };
+        A a(fact);
+
+        return fact();
     }
 
     void setPlayerSink(const std::string& sinkname) {

@@ -45,22 +45,22 @@ public:
 
     //IO
     std::streamsize read(char* s, std::streamsize n) {
-        if(currentTrack() != end()) {
-            auto r = currentTrack()->read(s, n);
-            if(r < n) {
-                if(r < 0)
-                    r = 0;
-                currentTrack()->close();
-                next();
-                if(currentTrack() != end()) {
-                    currentTrack()->reOpen();
-                    currentTrack()->reset();
-                    r += currentTrack()->read(s + r, n - r);
-                }
-            }
-            return r;
+        if(currentTrack() == end()) {
+            return -1;
         }
-        return -1;
+        auto r = currentTrack()->read(s, n);
+        if(r < n) {
+            if(r < 0)
+                r = 0;
+            currentTrack()->close();
+            next();
+            if(currentTrack() != end()) {
+                currentTrack()->reOpen();
+                currentTrack()->reset();
+                r += currentTrack()->read(s + r, n - r);
+            }
+        }
+        return r;
     }
 
     void seek(chrono::milliseconds dur) {

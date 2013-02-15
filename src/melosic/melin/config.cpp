@@ -245,11 +245,11 @@ const VarType& Base::putNode(const std::string& key, const VarType& value) {
 }
 
 ForwardRange<Base* const> Base::getChildren() {
-    return pimpl->children | map_values;// | indirected;
+    return pimpl->children | map_values;
 }
 
 ForwardRange<const Base* const> Base::getChildren() const {
-    return pimpl->children | map_values;// | indirected);
+    return pimpl->children | map_values;
 }
 
 ForwardRange<Base::impl::NodeMap::value_type> Base::getNodes() {

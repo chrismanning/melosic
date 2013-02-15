@@ -63,7 +63,7 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
         }
         else
             assert(false);
-        TRACE_LOG(logject) << "Updated variable: " << key;
+        TRACE_LOG(logject) << "Config: Updated variable: " << key;
     }
     catch(boost::bad_get&) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
@@ -105,8 +105,6 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
     });
 }
 
-//    refreshConfig("username", std::string("fat_chris"));
-//    refreshConfig("enable scrobbling", true);
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
 
 extern "C" void destroyPlugin() {}
