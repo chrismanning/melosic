@@ -339,7 +339,8 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
                   : base.getChild("Output").putChild("ALSA", ALSAConf())
                   : base.putChild("Output", Output::Conf()).putChild("ALSA", ALSAConf());
         c.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
-        c.get<Signals::Config::VariableUpdated>().connect([&](const std::string& k, const Config::VarType& v) {
+        auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
+        varUpdate.connect([&](const std::string& k, const Config::VarType& v) {
             try {
                 if(k == "frames")
                     ::frames = boost::get<int64_t>(v);
@@ -350,6 +351,10 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
         });
         if(!c.existsNode("frames"))
             c.resetToDefault();
+        for(const auto& node : c.getNodes()) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
+            varUpdate(node.first, node.second);
+        }
     });
 }
 

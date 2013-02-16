@@ -49,8 +49,8 @@ LastFmConfigWidget::LastFmConfigWidget(Config::Base& conf, QWidget* parent)
 void LastFmConfigWidget::apply() {
     GenericConfigWidget::apply();
 
-    if(boost::get<std::string>(conf.getNode("session key")) == "" &&
-            boost::get<std::string>(conf.getNode("username")) != "")
+    if(boost::get<std::string>(conf.getNode("session key")).empty() &&
+            boost::get<std::string>(conf.getNode("username")).empty())
     {
         authenticate();
     }
