@@ -87,6 +87,7 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
     buttonBox->button(QDialogButtonBox::Ok)->setDefault(true);
     connect(buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ConfigurationDialog::apply);
     connect(buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &ConfigurationDialog::defaults);
+    connect(buttonBox, &QDialogButtonBox::accepted, this, &ConfigurationDialog::apply);
     connect(buttonBox, &QDialogButtonBox::accepted, this, &ConfigurationDialog::accept);
     connect(buttonBox, &QDialogButtonBox::rejected, this, &ConfigurationDialog::reject);
 
