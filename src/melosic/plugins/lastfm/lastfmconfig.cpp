@@ -50,7 +50,7 @@ void LastFmConfigWidget::apply() {
     GenericConfigWidget::apply();
 
     if(boost::get<std::string>(conf.getNode("session key")).empty() &&
-            boost::get<std::string>(conf.getNode("username")).empty())
+            !boost::get<std::string>(conf.getNode("username")).empty())
     {
         authenticate();
     }
