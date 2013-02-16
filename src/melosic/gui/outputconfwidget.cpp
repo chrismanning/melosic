@@ -19,6 +19,9 @@
 #include <QLabel>
 #include <QStyledItemDelegate>
 
+#include <boost/algorithm/string.hpp>
+namespace algo = boost::algorithm;
+
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
@@ -52,18 +55,13 @@ void OutputConfWidget::setup() {
     form = new QFormLayout;
 
     cbx = new QComboBox;
-    cbx->setMinimumHeight(32);
     cbx->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLength);
-    cbx->setItemDelegate(new QStyledItemDelegate);
-    cbx->setStyleSheet("QComboBox QAbstractItemView::item {"
-                       "min-height : 32px;"
-                       "}");
     auto ptr = static_cast<Melosic::Output::Conf*>(&conf);
     assert(ptr && ptr->outputFactories);
     std::string cur = ptr->existsNode("output device") ? boost::get<std::string>(ptr->getNode("output device")) : "";
     int idx = 0;
     for(const auto& dev : *ptr->outputFactories) {
-        cbx->addItem(QString::fromStdString(dev.first.getDesc()),
+        cbx->addItem(QString::fromStdString(algo::replace_all_copy(dev.first.getDesc(), "\n", ": ")),
                      QString::fromStdString(dev.first.getName()));
         if(dev.first.getName() == cur)
             cbx->setCurrentIndex(idx);
@@ -71,7 +69,7 @@ void OutputConfWidget::setup() {
             idx++;
     }
 
-    form->addRow(new QLabel("Output Devices"), cbx);
+    form->addRow("Output Devices", cbx);
     gen->setLayout(form);
 
     layout->addWidget(gen);

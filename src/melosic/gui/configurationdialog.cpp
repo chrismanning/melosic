@@ -80,10 +80,10 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
     stackLayout->setMargin(0);
 
     buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok |
-                                                       QDialogButtonBox::Apply |
-                                                       QDialogButtonBox::Cancel |
-                                                       QDialogButtonBox::RestoreDefaults |
-                                                       QDialogButtonBox::Reset);
+                                     QDialogButtonBox::Apply |
+                                     QDialogButtonBox::Cancel |
+                                     QDialogButtonBox::RestoreDefaults |
+                                     QDialogButtonBox::Reset);
     buttonBox->button(QDialogButtonBox::Ok)->setDefault(true);
     connect(buttonBox->button(QDialogButtonBox::Apply), &QPushButton::clicked, this, &ConfigurationDialog::apply);
     connect(buttonBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, this, &ConfigurationDialog::defaults);
@@ -96,7 +96,8 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
     gridlayout->addWidget(items, 0, 0, 2, 1);
     gridlayout->addLayout(stackLayout, 0, 1, 1, 1);
     gridlayout->addWidget(buttonBox, 1, 1, 1, 2);
-    gridlayout->setColumnStretch(1, 4);
+    gridlayout->setColumnStretch(0, 1);
+    gridlayout->setColumnStretch(1, 3);
 
     this->setLayout(gridlayout);
 }

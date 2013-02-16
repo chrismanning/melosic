@@ -349,7 +349,7 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
             }
         });
         if(!c.existsNode("frames"))
-            c.putNode("frames", static_cast<int64_t>(1024));
+            c.resetToDefault();
     });
 }
 

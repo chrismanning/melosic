@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <QLabel>
-
 #include <melosic/common/stream.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/string.hpp>
@@ -97,12 +95,11 @@ void GenericConfigWidget::setup() {
     gen = new QGroupBox("General");
     form = new QFormLayout;
     for(const auto& node : conf.getNodes()) {
-        auto label = new QLabel(QString(toTitle(node.first).c_str()));
         QWidget* w = node.second.apply_visitor(cv);
         if(!w)
             continue;
         w->setProperty("key", QString::fromStdString(node.first));
-        form->addRow(label, w);
+        form->addRow(QString::fromStdString(toTitle(node.first)), w);
     }
     gen->setLayout(form);
     layout->insertWidget(0, gen);
