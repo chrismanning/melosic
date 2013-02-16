@@ -58,14 +58,23 @@ static constexpr Plugin::Info alsaInfo("ALSA",
     tmp.str(), logject);\
 }
 
-static const snd_pcm_format_t formats[] = {
+static constexpr snd_pcm_format_t formats[] = {
     SND_PCM_FORMAT_S8,
     SND_PCM_FORMAT_S16_LE,
     SND_PCM_FORMAT_S24_3LE,
     SND_PCM_FORMAT_S24_LE,
     SND_PCM_FORMAT_S32_LE
 };
-static const uint8_t bpss[] = {8, 16, 24, 24, 32};
+static constexpr uint8_t bpss[] = {8, 16, 24, 24, 32};
+
+class ALSAConf : public Config::Config<ALSAConf> {
+public:
+    ALSAConf() : Config("ALSA") {}
+};
+BOOST_CLASS_EXPORT(ALSAConf)
+
+ALSAConf conf;
+int64_t frames = 0;
 
 class AlsaOutput : public Output::PlayerSink {
 public:
@@ -110,9 +119,9 @@ public:
             as.target_sample_rate = rate;
         }
 
-        int frames = 1024;
+        const int frames = ::frames;
         snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
-        int buf = frames * 8;
+        const int buf = frames * 8;
         snd_pcm_hw_params_set_buffer_size_near(pdh, params, (snd_pcm_uframes_t*)&buf);
 
         snd_pcm_format_t fmt;
@@ -280,7 +289,7 @@ private:
 
 extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
-    funs << registerOutput << registerSlots;
+    funs << registerOutput << registerConfig << registerSlots;
 }
 
 extern "C" void registerOutput(Output::Manager* outman) {
@@ -318,13 +327,9 @@ extern "C" void registerOutput(Output::Manager* outman) {
     outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
-extern "C" void registerConfig(Config::Manager* confman) {
+extern "C" void registerConfig(Config::Manager*) {
+    ::conf.putNode("frames", static_cast<int64_t>(1024));
 }
-
-class ALSAConf : public Config::Config<ALSAConf> {
-public:
-    ALSAConf() : Config("ALSA") {}
-};
 
 extern "C" void registerSlots(Slots::Manager* slotman) {
     slotman->get<Signals::Config::Loaded>().connect([](Config::Base& base) {
@@ -333,6 +338,18 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
                   ? base.getChild("Output").getChild("ALSA")
                   : base.getChild("Output").putChild("ALSA", ALSAConf())
                   : base.putChild("Output", Output::Conf()).putChild("ALSA", ALSAConf());
+        c.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+        c.get<Signals::Config::VariableUpdated>().connect([&](const std::string& k, const Config::VarType& v) {
+            try {
+                if(k == "frames")
+                    ::frames = boost::get<int64_t>(v);
+            }
+            catch(boost::bad_get&) {
+                ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << k;
+            }
+        });
+        if(!c.existsNode("frames"))
+            c.putNode("frames", static_cast<int64_t>(1024));
     });
 }
 
