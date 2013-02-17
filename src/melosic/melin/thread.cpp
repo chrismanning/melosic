@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,31 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SLOTS_HPP
-#define MELOSIC_SLOTS_HPP
-
-#include <memory>
+#include "thread.hpp"
 
 namespace Melosic {
 namespace Thread {
-class Manager;
-}
-namespace Slots {
 
-class Manager {
-public:
-    Manager(Thread::Manager&);
-    ~Manager();
-
-    template <typename T>
-    T& get();
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-} // namespace Slots
+} // namespace Thread
 } // namespace Melosic
-
-#endif // MELOSIC_SLOTS_HPP

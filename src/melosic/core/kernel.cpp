@@ -23,6 +23,7 @@
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/encoder.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/melin/thread.hpp>
 
 #include "kernel.hpp"
 
@@ -31,12 +32,14 @@ namespace Melosic {
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
+          slotman(tman),
           confman(slotman),
           outman(confman, slotman, plugman),
           player(slotman, outman)
     {}
 
     Plugin::Manager plugman;
+    Thread::Manager tman;
     Slots::Manager slotman;
     Config::Manager confman;
     Input::Manager inman;
@@ -81,6 +84,10 @@ Plugin::Manager& Kernel::getPluginManager() {
 
 Slots::Manager& Kernel::getSlotManager() {
     return pimpl->slotman;
+}
+
+Thread::Manager& Kernel::getThreadManager() {
+    return pimpl->tman;
 }
 
 } // end namespace Melosic

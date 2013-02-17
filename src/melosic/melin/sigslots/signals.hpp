@@ -29,6 +29,7 @@ namespace ph = std::placeholders;
 
 #include <melosic/melin/sigslots/connection.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/melin/thread.hpp>
 
 namespace Melosic {
 namespace {
@@ -62,7 +63,9 @@ class Signal<Ret (Args...)> {
 public:
     typedef std::function<Ret (Args...)> slot_type;
 
-    Signal() : logject(logject_()) {}
+    Signal() : Signal(nullptr) {}
+
+    Signal(Thread::Manager* tman) : tman(tman), logject(logject_()) {}
 
     Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
     Signal& operator=(const Signal& b) {
@@ -121,7 +124,10 @@ public:
         for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
-                i->second(std::forward<A&&>(args)...);
+                if(tman)
+                    tman->enqueue(i->second, std::forward<A&&>(args)...);
+                else
+                    i->second(std::forward<A&&>(args)...);
                 l.lock();
                 ++i;
             }
@@ -146,6 +152,7 @@ private:
     std::unordered_map<Connection, slot_type, ConnHash> funs;
     typedef mutex Mutex;
     Mutex mu;
+    Thread::Manager* tman;
     Logger::Logger& logject;
 };
 

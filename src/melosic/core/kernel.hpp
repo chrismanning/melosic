@@ -45,6 +45,9 @@ class Manager;
 namespace Slots {
 class Manager;
 }
+namespace Thread {
+class Manager;
+}
 
 class Kernel {
 public:
@@ -65,6 +68,7 @@ public:
     Output::Manager& getOutputManager();
     Encoder::Manager& getEncoderManager();
     Slots::Manager& getSlotManager();
+    Thread::Manager& getThreadManager();
 
 private:
     class impl;

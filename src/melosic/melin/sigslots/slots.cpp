@@ -18,6 +18,7 @@
 #include <list>
 
 #include <melosic/core/track.hpp>
+#include <melosic/melin/thread.hpp>
 
 #include "signals.hpp"
 #include "slots.hpp"
@@ -26,6 +27,18 @@ namespace Melosic {
 namespace Slots {
 
 class Manager::impl {
+public:
+    impl(Thread::Manager& tman)
+        : stateChanged(&tman),
+          notifyPos(&tman),
+          playlistChanged(&tman),
+          trackChanged(&tman),
+          seek(&tman),
+          playerSinkChanged(&tman),
+          requestSinkChange(&tman),
+          loaded(&tman)
+    {}
+
     Signals::Player::StateChanged stateChanged;
     Signals::Player::NotifyPlayPos notifyPos;
     Signals::Player::PlaylistChanged playlistChanged;
@@ -34,11 +47,9 @@ class Manager::impl {
     Signals::Output::PlayerSinkChanged playerSinkChanged;
     Signals::Output::ReqSinkChange requestSinkChange;
     Signals::Config::Loaded loaded;
-
-    friend class Manager;
 };
 
-Manager::Manager() : pimpl(new impl) {}
+Manager::Manager(Thread::Manager& tman) : pimpl(new impl(tman)) {}
 
 Manager::~Manager() {}
 
