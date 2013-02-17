@@ -43,7 +43,6 @@ private:
     struct impl : impl_base {
         typedef typename std::result_of<Func()>::type Result;
         impl(std::promise<Result>& p, Func&& f) : p(p), f(std::move(f)) {}
-        impl(std::promise<Result>& p, const Func& f) : p(p), f(f) {}
 
         void call() {
             try {
@@ -69,7 +68,7 @@ private:
     impl_base* pimpl = nullptr;
 
 public:
-    Task() {}
+    Task() = default;
 
     void operator()() {
         if(pimpl)
@@ -92,30 +91,14 @@ public:
 
 class Manager {
 public:
-    Manager() : tasks(100), done(false), logject(logging::keywords::channel = "Thread::Manager") {
-        const unsigned n = std::thread::hardware_concurrency() * 2;
-        for(unsigned i=0; i<n; i++)
-            threads.emplace_back([this]() {
-                while(!done) {
-                    Task t;
-                    if(tasks.pop(t)) {
-                        t();
-                        t.destroy();
-                    }
-                    else {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                        std::this_thread::yield();
-                    }
-                }
-            });
-        LOG(logject) << threads.size() << " threads started in thread pool";
-    }
+    Manager();
 
-    ~Manager() {
-        done = true;
-        for(auto& t : threads)
-            t.join();
-    }
+    Manager(const Manager&) = delete;
+    Manager& operator=(const Manager&) = delete;
+    Manager(Manager&&) = delete;
+    Manager& operator=(Manager&&) = delete;
+
+    ~Manager();
 
     template <typename Func, typename ...Args>
     std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
@@ -124,20 +107,6 @@ public:
         TRACE_LOG(logject) << "Adding task to thread pool with type: " << typeid(f);
 
         Task t(p, std::move(f), std::forward<Args>(args)...);
-        if(!tasks.push(t)) {
-            BOOST_THROW_EXCEPTION(Exception());
-        }
-
-        return p.get_future();
-    }
-
-    template <typename Func, typename ...Args>
-    std::future<typename std::result_of<Func(Args...)>::type> enqueue(const Func& f, Args&&... args) {
-        std::promise<typename std::result_of<Func(Args...)>::type> p;
-
-        TRACE_LOG(logject) << "Adding task to thread pool with type: " << typeid(f);
-
-        Task t(p, f, std::forward<Args>(args)...);
         if(!tasks.push(t)) {
             BOOST_THROW_EXCEPTION(Exception());
         }
