@@ -107,7 +107,7 @@ public:
         TRACE_LOG(logject) << "Adding task to thread pool with type: " << typeid(f);
 
         Task t(p, std::move(f), std::forward<Args>(args)...);
-        if(!tasks.push(t)) {
+        if(!tasks.bounded_push(t)) {
             BOOST_THROW_EXCEPTION(Exception());
         }
 
