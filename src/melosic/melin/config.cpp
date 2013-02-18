@@ -54,6 +54,7 @@ class Manager::impl {
         wordexp_t exp_result;
         wordexp(dirs[UserDir].c_str(), &exp_result, 0);
         dirs[UserDir] = exp_result.we_wordv[0];
+        wordfree(&exp_result);
     }
 
     int chooseDir() {

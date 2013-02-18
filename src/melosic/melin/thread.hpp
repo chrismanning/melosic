@@ -42,7 +42,7 @@ private:
     template <typename Func>
     struct impl : impl_base {
         typedef typename std::result_of<Func()>::type Result;
-        impl(std::promise<Result>& p, Func&& f) : p(p), f(std::move(f)) {}
+        impl(std::promise<Result>&& p, Func&& f) : p(std::move(p)), f(std::move(f)) {}
 
         void call() {
             try {
@@ -61,7 +61,7 @@ private:
             p.set_value(f());
         }
 
-        std::promise<Result>& p;
+        std::promise<Result> p;
         Func f;
     };
 
@@ -76,9 +76,10 @@ public:
     }
 
     template <typename Func, typename ...Args>
-    Task(std::promise<typename std::result_of<Func(Args...)>::type>& p, Func&& f, Args&&... args) {
-        typedef decltype(std::bind(f, std::forward<Args>(args)...)) FT;
-        pimpl = new impl<FT>(p, std::bind(f, std::forward<Args>(args)...));
+    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, Func&& f, Args&&... args) {
+        typedef std::promise<typename std::result_of<Func(Args...)>::type> PromiseType;
+        auto fun = std::bind(std::forward<Func>(f), std::forward<Args>(args)...);
+        pimpl = new impl<decltype(fun)>(std::move(p), std::move(fun));
     }
 
     void destroy() {
@@ -106,12 +107,14 @@ public:
 
         TRACE_LOG(logject) << "Adding task to thread pool with type: " << typeid(f);
 
-        Task t(p, std::move(f), std::forward<Args>(args)...);
+        auto fut = p.get_future();
+
+        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
         if(!tasks.bounded_push(t)) {
             BOOST_THROW_EXCEPTION(Exception());
         }
 
-        return p.get_future();
+        return std::move(fut);
     }
 
 private:

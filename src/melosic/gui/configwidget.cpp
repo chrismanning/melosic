@@ -120,14 +120,14 @@ QWidget* ConfigVisitor::operator()(bool val) {
 
 QWidget* ConfigVisitor::operator()(int64_t val) {
     auto le = new QLineEdit(QString::number(val));
-    le->setValidator(new QIntValidator);
+    le->setValidator(new QIntValidator(le));
     le->setProperty("type", int(ConfigType::Int));
     return le;
 }
 
 QWidget* ConfigVisitor::operator()(double val) {
     auto le = new QLineEdit(QString::number(val));
-    le->setValidator(new QDoubleValidator);
+    le->setValidator(new QDoubleValidator(le));
     le->setProperty("type", int(ConfigType::Float));
     return le;
 }

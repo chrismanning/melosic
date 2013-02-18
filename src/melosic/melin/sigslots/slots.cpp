@@ -15,9 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <list>
-
-#include <melosic/core/track.hpp>
 #include <melosic/melin/thread.hpp>
 
 #include "signals.hpp"
