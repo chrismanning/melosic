@@ -51,7 +51,10 @@ Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager*
 void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     static std::weak_ptr<Track> prev;
     std::unique_lock<Mutex> l(mu);
-    if(total > chrono::seconds(15) && current > (total / 2) && bool(currentTrack_) && currentTrack_ != prev.lock()) {
+    if(total > chrono::seconds(15) && current > (total / 2)
+            && static_cast<bool>(currentTrack_)
+            && currentTrack_ != prev.lock())
+    {
         l.unlock();
         cacheTrack(currentTrack_);
         l.lock();

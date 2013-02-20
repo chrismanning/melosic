@@ -38,12 +38,12 @@ void BiographyWidget::refresh() {
     std::shared_ptr<Service> ptr(lastserv.lock());
     if(ptr && ptr->currentTrack()) {
         Melosic::Thread::Manager* tman = ptr->getThreadManager();
-        tman->enqueue([this, &ptr]() {
+        tman->enqueue([this](std::shared_ptr<Service> ptr) {
             if(ptr->currentTrack()->fetchInfo().get()) {
                 text->setText(ptr->currentTrack()->getUrl().string().c_str());
                 update();
             }
-        });
+        }, ptr);
     }
 }
 
