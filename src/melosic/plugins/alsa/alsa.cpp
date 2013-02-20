@@ -287,12 +287,12 @@ private:
     Output::DeviceState state_;
 };
 
-extern "C" void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
     funs << registerOutput << registerConfig << registerSlots;
 }
 
-extern "C" void registerOutput(Output::Manager* outman) {
+extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -327,11 +327,11 @@ extern "C" void registerOutput(Output::Manager* outman) {
     outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
-extern "C" void registerConfig(Config::Manager*) {
+extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager*) {
     ::conf.putNode("frames", static_cast<int64_t>(1024));
 }
 
-extern "C" void registerSlots(Slots::Manager* slotman) {
+extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
     slotman->get<Signals::Config::Loaded>().connect([](Config::Base& base) {
         auto& c = base.existsChild("Output")
                 ? base.getChild("Output").existsChild("ALSA")
@@ -358,5 +358,5 @@ extern "C" void registerSlots(Slots::Manager* slotman) {
     });
 }
 
-extern "C" void destroyPlugin() {
+extern "C" MELOSIC_EXPORT void destroyPlugin() {
 }

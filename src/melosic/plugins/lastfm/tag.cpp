@@ -29,12 +29,4 @@ Tag& Tag::operator=(const std::string& tag) {
     return *this;
 }
 
-boost::iterator_range<opqit::opaque_iterator<Tag, opqit::forward>> Tag::getSimilar(std::shared_ptr<Service> lastserv) {
-    static std::list<Tag> similar;
-    if(!similar.empty())
-        return boost::make_iterator_range(similar);
-
-    return boost::make_iterator_range(similar);
-}
-
 }

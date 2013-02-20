@@ -22,17 +22,19 @@
 #include <chrono>
 namespace chrono = std::chrono;
 #include <list>
+#include <thread>
+using std::mutex; using std::lock_guard; using std::unique_lock;
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/connection.hpp>
+#include <melosic/melin/output.hpp>
+
+#include "track.hpp"
 
 namespace Melosic {
 class Track;
 class Playlist;
-namespace Output {
-enum class DeviceState;
-}
-namespace Slots{
+namespace Slots {
 class Manager;
 }
 }
@@ -41,31 +43,32 @@ namespace LastFM {
 
 class Service;
 struct Method;
-struct Track;
 
 class Scrobbler : public std::enable_shared_from_this<Scrobbler> {
 public:
     Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager* slotman);
 
     std::shared_ptr<Track> currentTrack();
-    void updateNowPlaying(const Track& track);
-    void updateNowPlaying(std::shared_ptr<Method> track);
-    void cacheTrack(const Melosic::Track& track);
-    void cacheTrack(std::shared_ptr<Method> track);
-    void cacheCurrentTrack();
+    void updateNowPlaying(std::shared_ptr<Track> track);
+    void cacheTrack(std::shared_ptr<Track> track);
     void submitCache();
     void notifySlot(chrono::milliseconds current, chrono::milliseconds total);
-    void stateChangedSlot(Melosic::Output::DeviceState state);
+    void stateChangedSlot(Melosic::Output::DeviceState);
     void playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist);
-    void trackChangedSlot(const Melosic::Track& newTrack, bool alive);
+    void trackChangedSlot(const Melosic::Track& newTrack);
 
 private:
     std::shared_ptr<Service> lastserv;
+    Melosic::Slots::Manager* slotman;
     Melosic::Logger::Logger logject;
-    std::shared_ptr<Method> currentTrackData;
     std::shared_ptr<Track> currentTrack_;
+    std::list<std::shared_ptr<Track>> cache;
     Melosic::Signals::ScopedConnection playlistConn;
     std::list<Melosic::Signals::ScopedConnection> connections;
+    Melosic::Output::DeviceState state = DeviceState::Stopped;
+
+    typedef mutex Mutex;
+    Mutex mu;
 };
 
 }

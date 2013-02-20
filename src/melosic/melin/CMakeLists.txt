@@ -17,10 +17,12 @@ set(HDR_LIST ${HDR_LIST} sigslots/signals_fwd.hpp configvar.hpp)
 
 find_package(Boost COMPONENTS filesystem system log log_setup thread serialization REQUIRED)
 
-include_directories(../.. ${Boost_INCLUDE_DIRS})
+find_package(OpenSSL REQUIRED)
+
+include_directories(../.. ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 
 add_library(melin SHARED ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(melin ${Boost_LIBRARIES})
+target_link_libraries(melin ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
 
 #install(FILES ${HDR_LIST} DESTINATION include/${PROJECT_NAME})
 #install(TARGETS melin LIBRARY DESTINATION lib)

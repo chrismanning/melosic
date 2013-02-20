@@ -17,6 +17,19 @@
 
 #include <sstream>
 #include <memory>
+#include <thread>
+using std::mutex; using std::lock_guard;
+
+#include <boost/thread/shared_mutex.hpp>
+using boost::shared_mutex;
+#include <boost/thread/shared_lock_guard.hpp>
+using boost::shared_lock_guard;
+#include <boost/range/algorithm/sort.hpp>
+using namespace boost::range;
+#include <boost/range/adaptors.hpp>
+using namespace boost::adaptors;
+
+#include <openssl/md5.h>
 
 #include <network/uri.hpp>
 #include <network/http/client.hpp>
@@ -28,9 +41,11 @@
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/common/error.hpp>
+#include <melosic/melin/thread.hpp>
 
 #include "service.hpp"
 #include "track.hpp"
+#include "user.hpp"
 
 static Melosic::Logger::Logger logject(logging::keywords::channel = "LastFM::Service");
 
@@ -38,9 +53,10 @@ namespace LastFM {
 
 class Service::impl {
 public:
-    impl(const std::string& apiKey, const std::string& sharedSecret)
+    impl(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*& tman)
         : apiKey(apiKey),
-          sharedSecret(sharedSecret)
+          sharedSecret(sharedSecret),
+          tman(tman)
     {}
 
     Method prepareMethodCall(const std::string& methodName) {
@@ -99,19 +115,37 @@ public:
         return str;
     }
 
+    User& setUser(User u) {
+        lock_guard<Mutex> l(mu);
+        return user = std::move(u);
+    }
+
+    User& getUser() {
+        shared_lock_guard<Mutex> l(mu);
+        return user;
+    }
+
 private:
     network::http::client client;
     network::http::request request;
     const std::string apiKey;
     const std::string sharedSecret;
+    Melosic::Thread::Manager*& tman;
+    User user;
     std::shared_ptr<Track> currentTrack_;
+    typedef shared_mutex Mutex;
+    Mutex mu;
     friend class Service;
 };
 
-Service::Service(const std::string& apiKey, const std::string& sharedSecret)
-    : pimpl(new impl(apiKey, sharedSecret)) {}
+Service::Service(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*& tman)
+    : pimpl(new impl(apiKey, sharedSecret, tman)) {}
 
 Service::~Service() {}
+
+Melosic::Thread::Manager* Service::getThreadManager() {
+    return pimpl->tman;
+}
 
 const std::string& Service::apiKey() {
     return pimpl->apiKey;
@@ -125,27 +159,60 @@ Method Service::prepareMethodCall(const std::string& methodName) {
     return std::move(pimpl->prepareMethodCall(methodName));
 }
 
+Method Service::sign(Method method) {
+    TRACE_LOG(logject) << "Signing method call";
+    method.getParameters().front().addMember("sk", getUser().getSessionKey());
+    std::deque<Member> members(method.getParameters().front().getMembers().begin(),
+                               method.getParameters().front().getMembers().end());
+    members.emplace_back("method", method.methodName);
+    sort(members, [](const Member& a, const Member& b) {
+        return b.first > a.first;
+    });
+    std::string sig;
+    for(auto& mem : members) {
+        sig += mem.first + mem.second;
+    }
+    sig += sharedSecret();
+    TRACE_LOG(logject) << "sig: " << sig;
+
+    unsigned char sigp[MD5_DIGEST_LENGTH];
+    MD5(reinterpret_cast<const unsigned char*>(sig.c_str()), sig.length(), sigp);
+    sig.clear();
+
+    char sig_[MD5_DIGEST_LENGTH*2];
+    for(int i = 0; i < MD5_DIGEST_LENGTH; i++)
+        sprintf(sig_+(i*2), "%02x", sigp[i]);
+    sig = sig_;
+    TRACE_LOG(logject) << "MD5 sig: " << sig;
+
+    method.getParameters().front().addMember("api_sig", sig);
+
+    return std::move(method);
+}
+
 std::string Service::postMethod(const Method& method) {
     return std::move(pimpl->postMethod(method));
 }
 
 void Service::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
-//    playlist->connectTrackChangedSlot(
-//                Melosic::Playlist::TrackChangedSignal::slot_type(&Service::trackChangedSlot,
-//                                                                 shared_from_this(),
-//                                                                 _1, _2));
-    trackChangedSlot(*playlist->currentTrack(), true);
+    if(playlist && *playlist)
+        trackChangedSlot(*playlist->currentTrack());
 }
 
-void Service::trackChangedSlot(const Melosic::Track& newTrack, bool alive) {
-    if(!alive) {
-        return;
-    }
+void Service::trackChangedSlot(const Melosic::Track& newTrack) {
     pimpl->currentTrack_ = std::make_shared<Track>(shared_from_this(), newTrack);
 }
 
 std::shared_ptr<Track> Service::currentTrack() {
     return pimpl->currentTrack_;
+}
+
+User& Service::setUser(User u) {
+    return pimpl->setUser(std::move(u));
+}
+
+User& Service::getUser() {
+    return pimpl->getUser();
 }
 
 }

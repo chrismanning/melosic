@@ -24,7 +24,6 @@
 #include <map>
 
 #include <boost/range/iterator_range.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
 
 namespace Melosic {
@@ -33,6 +32,12 @@ class Playlist;
 namespace Output {
 enum class DeviceState;
 }
+namespace Slots {
+class Manager;
+}
+namespace Thread {
+class Manager;
+}
 }
 
 namespace LastFM {
@@ -40,28 +45,28 @@ namespace LastFM {
 struct User;
 struct Method;
 struct Track;
-typedef std::map<std::string, std::string> StringStringMap;
 
 class Service : public std::enable_shared_from_this<Service> {
 public:
-    Service(const std::string& apiKey, const std::string& sharedSecret);
+    Service(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*&);
 
     ~Service();
 
+    Melosic::Thread::Manager* getThreadManager();
+
 //    Scrobbler scrobbler();
     User& getUser();
-    void setUser(const User& u);
-    void setUser(User&& u);
+    User& setUser(User u);
 
     const std::string& apiKey();
     const std::string& sharedSecret();
-    const std::string& signature();
 
     std::shared_ptr<Track> currentTrack();
-    void trackChangedSlot(const Melosic::Track& newTrack, bool alive);
+    void trackChangedSlot(const Melosic::Track& newTrack);
     void playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist);
 
     Method prepareMethodCall(const std::string& methodName);
+    Method sign(Method method);
     std::string postMethod(const Method& method);
 
 private:
@@ -69,6 +74,8 @@ private:
     std::unique_ptr<impl> pimpl;
 };
 
+typedef std::map<std::string, std::string> StringStringMap;
+typedef std::pair<std::string, std::string> Member;
 struct Parameter {
     Parameter() = default;
     Parameter(Parameter&&) = delete;
@@ -95,7 +102,9 @@ typedef std::list<Parameter> ParameterList;
 struct Method {
     Method(const std::string& methodName) : methodName(methodName) {}
     Method(Method&&) = default;
+
     Method(const Method&) = delete;
+    Method& operator=(const Method&) = delete;
 
     Parameter& addParameter() {
         params.emplace_back();

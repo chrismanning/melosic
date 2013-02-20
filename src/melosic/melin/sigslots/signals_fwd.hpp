@@ -56,7 +56,7 @@ typedef Signal<void()> PlayerSinkChanged;
 }
 
 namespace Playlist {
-typedef Signal<void(const Track&, bool)> TrackChanged;
+typedef Signal<void(const Track&)> TrackChanged;
 }
 
 namespace TrackSeeker {

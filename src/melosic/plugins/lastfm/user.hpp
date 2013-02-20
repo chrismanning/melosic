@@ -21,22 +21,34 @@
 #include <memory>
 #include <string>
 
+#include <network/uri.hpp>
+
 namespace LastFM {
+class Service;
 
-class User {
+struct User {
 public:
-    explicit User(const std::string& username);
-    User(const std::string& username, const std::string& sessionKey);
+    User();
+    User(std::weak_ptr<Service> lastserv, const std::string& username);
+    User(std::weak_ptr<Service> lastserv, const std::string& username, const std::string& sessionKey);
 
-    User(const User&);
+    User(const User&) = delete;
+    User& operator=(const User&) = delete;
     User(User&&);
+    User& operator=(User&&);
+
+    ~User();
+
+    std::future<bool> getInfo();
 
     void authenticate();
-    const std::string& getSessionKey();
+    const std::string& getSessionKey() const;
     void setSessionKey(const std::string&);
 
+    explicit operator bool();
+
 private:
-    class impl;
+    struct impl;
     std::unique_ptr<impl> pimpl;
 };
 

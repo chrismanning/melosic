@@ -271,5 +271,9 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T&
     e->push(std::bind(fun, &k.getConfigManager()));
     return *this;
 }
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerTasks_T& fun) {
+    e->push(std::bind(fun, &k.getThreadManager()));
+    return *this;
+}
 
 } // namespace Melosic

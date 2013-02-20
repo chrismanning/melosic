@@ -55,6 +55,9 @@ class Manager;
 namespace Slots {
 class Manager;
 }
+namespace Thread {
+class Manager;
+}
 struct RegisterFuncsInserter;
 }
 
@@ -85,6 +88,10 @@ typedef std::function<registerSlots_F> registerSlots_T;
 extern "C" MELOSIC_EXPORT void registerConfig(Melosic::Config::Manager*);
 typedef decltype(registerConfig) registerConfig_F;
 typedef std::function<registerConfig_F> registerConfig_T;
+
+extern "C" MELOSIC_EXPORT void registerTasks(Melosic::Thread::Manager*);
+typedef decltype(registerTasks) registerTasks_F;
+typedef std::function<registerTasks_F> registerTasks_T;
 
 extern "C" MELOSIC_EXPORT void destroyPlugin();
 typedef decltype(destroyPlugin) destroyPlugin_F;
@@ -178,6 +185,7 @@ struct RegisterFuncsInserter {
     RegisterFuncsInserter& operator<<(const registerEncoder_T&);
     RegisterFuncsInserter& operator<<(const registerSlots_T&);
     RegisterFuncsInserter& operator<<(const registerConfig_T&);
+    RegisterFuncsInserter& operator<<(const registerTasks_T&);
 private:
     Kernel& k;
     std::shared_ptr<Eraser> e;

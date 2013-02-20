@@ -194,7 +194,7 @@ public:
             }
             this->playlist = playlist;
             slotman.get<Signals::Playlist::TrackChanged>()
-                    .emplace_connect(&impl::onTrackChangeSlot, this, ph::_1, ph::_2);
+                    .emplace_connect(&impl::onTrackChangeSlot, this, ph::_1);
             playlistChanged(playlist);
         }
     }
@@ -205,7 +205,7 @@ public:
     }
 
 private:
-    void onTrackChangeSlot(const Track&, bool) {
+    void onTrackChangeSlot(const Track&) {
         if(playlist && *playlist) {
             if(device->currentSpecs() != currentPlaylist()->currentTrack()->getAudioSpecs()) {
                 stop();

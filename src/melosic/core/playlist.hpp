@@ -31,7 +31,11 @@ namespace Melosic {
 
 class Track;
 
-class Playlist {
+namespace Slots {
+class Manager;
+}
+
+class Playlist : public std::enable_shared_from_this<Playlist> {
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
@@ -45,7 +49,7 @@ public:
     typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
-    Playlist();
+    Playlist(Slots::Manager&);
     ~Playlist();
 
     std::streamsize read(char* s, std::streamsize n);

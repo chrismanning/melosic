@@ -20,10 +20,7 @@
 
 #include <string>
 
-#include <opqit/opaque_iterator_fwd.hpp>
 #include <network/uri.hpp>
-
-#include "utilities.hpp"
 
 namespace LastFM {
 
@@ -32,7 +29,6 @@ class Service;
 struct Tag {
     Tag(const std::string& tag, const std::string& url) : name(tag), url(url) {}
     Tag& operator=(const std::string& tag);
-    boost::iterator_range<opqit::opaque_iterator<Tag, opqit::forward>> getSimilar(std::shared_ptr<Service> lastserv);
 
     std::string name;
     network::uri url;

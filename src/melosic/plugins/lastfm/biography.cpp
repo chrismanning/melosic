@@ -15,11 +15,11 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <melosic/melin/thread.hpp>
+
 #include "biography.hpp"
 #include "service.hpp"
 #include "track.hpp"
-
-#include <functional>
 
 namespace LastFM {
 
@@ -31,12 +31,20 @@ BiographyWidget::BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *paren
     layout = new QVBoxLayout;
     layout->addWidget(text);
     this->setLayout(layout);
+    refresh();
+}
+
+void BiographyWidget::refresh() {
     std::shared_ptr<Service> ptr(lastserv.lock());
-    if(ptr)
-        ptr->currentTrack()->getInfo([&](Track& t) {
-            this->text->setText(t.getUrl().string().c_str());
-            this->update();
+    if(ptr && ptr->currentTrack()) {
+        Melosic::Thread::Manager* tman = ptr->getThreadManager();
+        tman->enqueue([this, &ptr]() {
+            if(ptr->currentTrack()->fetchInfo().get()) {
+                text->setText(ptr->currentTrack()->getUrl().string().c_str());
+                update();
+            }
         });
+    }
 }
 
 }//namespace LastFM

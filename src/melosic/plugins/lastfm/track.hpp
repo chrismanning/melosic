@@ -18,15 +18,16 @@
 #ifndef LASTFM_TRACK_HPP
 #define LASTFM_TRACK_HPP
 
-#include "tag.hpp"
-
-#include <boost/optional/optional_fwd.hpp>
-#include <boost/range/iterator_range.hpp>
-
-#include <opqit/opaque_iterator_fwd.hpp>
-
 #include <memory>
 #include <list>
+#include <future>
+
+#include <melosic/common/range.hpp>
+using Melosic::ForwardRange;
+
+#include <network/uri.hpp>
+
+#include "tag.hpp"
 
 namespace Melosic {
 class Track;
@@ -38,30 +39,37 @@ struct Artist;
 struct Album;
 
 struct Track {
-    Track(std::shared_ptr<Service> lastserv,
+    Track(std::weak_ptr<Service>,
           const std::string& name,
           const std::string& artist,
           const std::string& url);
-    Track(std::shared_ptr<Service> lastserv, const Melosic::Track&);
+    Track(std::weak_ptr<Service>, const Melosic::Track&);
 
-    void getInfo(std::function<void(Track&)> callback = [](Track&){}, bool autocorrect = false);
-    void scrobble();
-//    boost::iterator_range<opqit::opaque_iterator<Track, opqit::forward> >
-//    getSimilar(std::shared_ptr<Service> lastserv, unsigned limit = 20);
-    boost::iterator_range<opqit::opaque_iterator<Tag, opqit::forward> > topTags();
+    ~Track();
+
+    //field accessors
+    ForwardRange<Tag> topTags() const;
     const std::string& getName() const;
     const Artist& getArtist() const;
     const network::uri& getUrl() const;
     const std::string& getWiki() const;
 
-    template <typename CharT, typename TraitsT>
-    friend std::basic_ostream<CharT, TraitsT>&
-    operator<<(std::basic_ostream<CharT, TraitsT>& out, const LastFM::Track& track);
+    //network accessors
+    std::future<bool> fetchInfo(bool autocorrect = false);
+    std::future<bool> scrobble();
+    std::future<bool> updateNowPlaying();
 
 private:
     struct impl;
-    std::shared_ptr<impl> pimpl;
+    std::unique_ptr<impl> pimpl;
 };
+
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>&
+operator<<(std::basic_ostream<CharT, TraitsT>& out, const LastFM::Track& track) {
+    return out << track.getArtist() << " - " << track.getName() << " : " << track.getUrl();
+}
 
 }
 

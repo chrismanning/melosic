@@ -33,9 +33,7 @@ class BiographyWidget : public QWidget {
 public:
     BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent = 0);
 
-Q_SIGNALS:
-
-public Q_SLOTS:
+    void refresh();
 
 private:
     std::weak_ptr<Service> lastserv;

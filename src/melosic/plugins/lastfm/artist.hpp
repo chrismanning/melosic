@@ -18,30 +18,34 @@
 #ifndef LASTFM_ARTIST_HPP
 #define LASTFM_ARTIST_HPP
 
-#include <list>
 #include <memory>
+#include <future>
 
-#include "utilities.hpp"
-#include "tag.hpp"
+#include <network/uri.hpp>
 
 namespace LastFM {
 class Service;
 
 struct Artist {
-    Artist() = default;
-    Artist(const std::string& artist) : name(artist) {}
-    Artist(const std::string& artist, const std::string& url) : name(artist), url(url) {}
-    Artist& operator=(const Artist& artist);
+    Artist(std::weak_ptr<Service> lastserv);
+    Artist(std::weak_ptr<Service> lastserv, const std::string& artist);
+
+    Artist(Artist&&) = default;
+    Artist& operator=(Artist&&);
     Artist& operator=(const std::string& artist);
 
-    void getInfo(std::shared_ptr<Service> lastserv, bool autocorrect = false);
-    boost::iterator_range<opqit::opaque_iterator<Artist, opqit::forward>> getSimilar(std::shared_ptr<Service> lastserv);
+    explicit operator bool();
 
-    std::string name;
-    network::uri url;
-    std::string biographySummary, biography;
-    bool streamable;
-    std::list<Tag> tags;
+    //field accessors
+    const std::string& getName() const;
+    const network::uri& getUrl() const;
+
+    //network accessors
+    std::future<bool> fetchInfo(bool autocorrect = false);
+
+private:
+    struct impl;
+    std::shared_ptr<impl> pimpl;
 };
 
 }//namespace LastFM

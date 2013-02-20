@@ -30,6 +30,8 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/melin/sigslots/slots.hpp>
+
 #include "playlist.hpp"
 
 template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
@@ -41,7 +43,11 @@ namespace Melosic {
 
 class Playlist::impl {
 public:
-    impl() : logject(logging::keywords::channel = "Playlist"), current_track_(begin()) {}
+    impl(Slots::Manager& slotman)
+        : current_track_(begin()),
+          trackChanged(slotman.get<Signals::Playlist::TrackChanged>()),
+          logject(logging::keywords::channel = "Playlist")
+    {}
 
     //IO
     std::streamsize read(char* s, std::streamsize n) {
@@ -83,7 +89,7 @@ public:
             lock_guard<Mutex> l(mu);
             --current_track_;
         }
-        trackChanged(*currentTrack(), true);
+        trackChanged(*currentTrack());
     }
 
     void next() {
@@ -91,7 +97,8 @@ public:
             lock_guard<Mutex> l(mu);
             ++current_track_;
         }
-        trackChanged(*currentTrack(), currentTrack() != end());
+        if(currentTrack() != end())
+            trackChanged(*currentTrack());
     }
 
     Playlist::iterator& currentTrack() {
@@ -144,7 +151,7 @@ public:
             mu.lock();
             current_track_ = r;
             mu.unlock();
-            trackChanged(*currentTrack(), currentTrack() != end());
+            trackChanged(*currentTrack());
         }
         return r;
     }
@@ -157,7 +164,7 @@ public:
             mu.lock();
             current_track_ = begin();
             mu.unlock();
-            trackChanged(*currentTrack(), true);
+            trackChanged(*currentTrack());
         }
     }
 
@@ -169,7 +176,7 @@ public:
             mu.lock();
             current_track_ = begin();
             mu.unlock();
-            trackChanged(*currentTrack(), currentTrack() != end());
+            trackChanged(*currentTrack());
         }
     }
 
@@ -178,13 +185,13 @@ private:
     Mutex mu;
     typedef boost::container::stable_vector<Playlist::value_type> list_type;
     list_type tracks;
-    Logger::Logger logject;
     Playlist::iterator current_track_;
-    Signals::Playlist::TrackChanged trackChanged;
+    Signals::Playlist::TrackChanged& trackChanged;
+    Logger::Logger logject;
     friend class Playlist;
 };
 
-Playlist::Playlist() : pimpl(new impl) {}
+Playlist::Playlist(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
 
 Playlist::~Playlist() {}
 

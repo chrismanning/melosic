@@ -105,8 +105,6 @@ public:
     std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
         std::promise<typename std::result_of<Func(Args...)>::type> p;
 
-        TRACE_LOG(logject) << "Adding task to thread pool with type: " << typeid(f);
-
         auto fut = p.get_future();
 
         Task t(std::move(p), std::move(f), std::forward<Args>(args)...);

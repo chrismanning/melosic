@@ -41,7 +41,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
     kernel(kernel),
-    currentPlaylist(new Playlist),
+    currentPlaylist(std::move(std::make_shared<Playlist>(kernel.getSlotManager()))),
     playlistModel(new PlaylistModel(kernel, currentPlaylist)),
     player(kernel.getPlayer()),
     logject(logging::keywords::channel = "MainWindow")
