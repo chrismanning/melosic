@@ -50,20 +50,26 @@ Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager*
 
 void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     static std::weak_ptr<Track> prev;
+    std::unique_lock<Mutex> l(mu);
     if(total > chrono::seconds(15) && current > (total / 2) && bool(currentTrack_) && currentTrack_ != prev.lock()) {
+        l.unlock();
         cacheTrack(currentTrack_);
-        std::lock_guard<Mutex> l(mu);
+        l.lock();
         prev = currentTrack_;
     }
 }
 
 void Scrobbler::stateChangedSlot(DeviceState newstate) {
+    unique_lock<Mutex> l(mu);
     state = newstate;
     if(newstate == DeviceState::Stopped) {
+        l.unlock();
         submitCache();
+        l.lock();
         currentTrack_.reset();
     }
-    else if(newstate == DeviceState::Playing && bool(currentTrack_)) {
+    else if(newstate == DeviceState::Playing && static_cast<bool>(currentTrack_)) {
+        l.unlock();
         updateNowPlaying(currentTrack_);
     }
 }
@@ -75,10 +81,6 @@ void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) 
 
 void Scrobbler::trackChangedSlot(const Melosic::Track& newTrack) {
     TRACE_LOG(logject) << "Track changed";
-    if(!lastserv) {
-        ERROR_LOG(logject) << "Last.FM service not running";
-        return;
-    }
     submitCache();
     std::unique_lock<Mutex> l(mu);
     currentTrack_ = std::make_shared<Track>(lastserv, newTrack);
@@ -94,14 +96,14 @@ void Scrobbler::submitCache() {
     auto i = cache.begin();
     while(i != cache.end()) {
         auto ptr = *i;
+        i = cache.erase(i);
         l.unlock();
         auto f = std::move(ptr->scrobble());
         l.lock();
         if(f.get()) {
-            i = cache.erase(i);
         }
         else {
-            i++;
+            i = ++cache.insert(i, ptr);
         }
     }
 }

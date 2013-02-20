@@ -34,9 +34,7 @@ struct AudioSpecs {
     bool operator==(const AudioSpecs& b) const {
         return channels == b.channels &&
                bps == b.bps &&
-               sample_rate == b.sample_rate &&
-               target_bps == b.target_bps &&
-               target_sample_rate == b.target_sample_rate;
+               sample_rate == b.sample_rate;
     }
     bool operator!=(const AudioSpecs& b) const {
         return !((*this) == b);

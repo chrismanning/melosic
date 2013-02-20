@@ -206,12 +206,12 @@ public:
 
 private:
     void onTrackChangeSlot(const Track&) {
-        if(playlist && *playlist) {
+        if(playlist && *playlist && device) {
             if(device->currentSpecs() != currentPlaylist()->currentTrack()->getAudioSpecs()) {
-                stop();
+                device->stop();
                 this_thread::sleep_for(chrono::milliseconds(10));
                 device->prepareSink(currentPlaylist()->currentTrack()->getAudioSpecs());
-                play();
+                device->play();
             }
         }
     }
