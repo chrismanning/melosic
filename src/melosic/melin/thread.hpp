@@ -46,7 +46,7 @@ private:
 
         void call() {
             try {
-                call_impl(typename std::is_same<typename std::result_of<Func()>::type, void>::type());
+                call_impl<typename std::result_of<Func()>::type>::call(*this);
             }
             catch(...) {
                 p.set_exception(std::current_exception());
@@ -54,12 +54,20 @@ private:
         }
 
     private:
-        void call_impl(std::true_type&&) {
-            f();
-        }
-        void call_impl(std::false_type&&) {
-            p.set_value(f());
-        }
+        template <typename T, typename D = void>
+        struct call_impl {
+            static void call(impl<Func>& i) {
+                i.p.set_value(i.f());
+            }
+        };
+
+        template <typename D>
+        struct call_impl<void, D> {
+            static void call(impl<Func>& i) {
+                i.f();
+                i.p.set_value();
+            }
+        };
 
         std::promise<Result> p;
         Func f;

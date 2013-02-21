@@ -17,7 +17,9 @@
 
 #include <map>
 #include <thread>
-using std::mutex; using std::unique_lock;
+using std::mutex;
+using unique_lock = std::unique_lock<mutex>;
+using lock_guard = std::lock_guard<mutex>;
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
@@ -55,7 +57,11 @@ public:
                 TRACE_LOG(logject) << "Config: variable updated: " << key;
                 try {
                     if(key == "output device") {
-                        requestSinkChange(boost::get<std::string>(val));
+                        const auto& sn = boost::get<std::string>(val);
+                        if(sinkName == sn)
+                            LOG(logject) << "Chosen output same as current. Not reinitialising.";
+                        else
+                            requestSinkChange(sn);
                     }
                     else
                         ERROR_LOG(logject) << "Config: Unknown key: " << key;
@@ -104,6 +110,7 @@ public:
         if(it == outputFactories.end()) {
             BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(sinkname));
         }
+        sinkName = sinkname;
         fact = std::bind(it->second, it->first);
         playerSinkChanged();
     }
@@ -111,6 +118,7 @@ public:
 private:
     typedef mutex Mutex;
     Mutex mu;
+    std::string sinkName;
     std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
     std::map<DeviceName, Factory> outputFactories;
     Conf conf;

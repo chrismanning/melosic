@@ -104,7 +104,7 @@ extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
     slotman->get<Signals::Config::Loaded>().connect([&](Config::Base& c) {
         auto& lc = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
 
-        lc.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+        lc.addDefaultFunc([=]() -> Config::Base& { return *::conf.clone(); });
 
         varConnection = lc.get<Signals::Config::VariableUpdated>()
                 .connect(refreshConfig);

@@ -19,7 +19,6 @@
 #define MELOSIC_CONNECTION_HPP
 
 #include <thread>
-using std::mutex; using std::unique_lock; using std::lock_guard;
 
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 
@@ -42,7 +41,7 @@ struct ConnImpl : ConnErasure {
     {}
 
     void disconnect(const Connection& conn) {
-        unique_lock<Mutex> l(mu);
+        std::unique_lock<Mutex> l(mu);
         if(connected) {
             connected = false;
             l.unlock();
@@ -51,7 +50,7 @@ struct ConnImpl : ConnErasure {
     }
 
     bool isConnected() {
-        lock_guard<Mutex> l(mu);
+        std::lock_guard<Mutex> l(mu);
         return connected;
     }
 
@@ -59,7 +58,7 @@ private:
     bool connected = true;
     SigType& sig;
     std::shared_ptr<void> ka;
-    typedef mutex Mutex;
+    typedef std::mutex Mutex;
     Mutex mu;
 };
 }

@@ -27,6 +27,8 @@ namespace chrono = std::chrono;
 namespace ph = std::placeholders;
 #include <type_traits>
 
+#include <boost/utility/result_of.hpp>
+
 #include <melosic/melin/sigslots/connection.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/thread.hpp>
@@ -89,7 +91,7 @@ public:
 
     Connection connect(const std::function<Ret(Args...)>& slot) {
         TRACE_LOG(logject) << "Connecting slot to signal.";
-        lock_guard<Mutex> l(mu);
+        std::lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)),
                                            slot
                                           )
@@ -97,9 +99,14 @@ public:
     }
 
     template <typename Fun, typename Obj, typename ...A>
-    Connection emplace_connect(Fun func, Obj obj, A... args) {
+    Connection emplace_connect(Fun func, Obj obj, A&&... args) {
+        static_assert(std::is_member_function_pointer<Fun>::value, "emplace_connect is for member functions");
+        static_assert(std::is_same<typename boost::result_of<Fun(typename std::pointer_traits<Obj>::pointer,
+                                                                 A&&...)>::type, Ret>::value,
+                      "Slot must return correct type");
+        TRACE_LOG(logject) << "Connecting slot to signal.";
         TRACE_LOG(logject) << "emplace_connect: obj type: " << typeid(typename AdaptIfSmartPtr<Obj>::type);
-        lock_guard<Mutex> l(mu);
+        std::lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)),
                                            slot_type(std::bind(func,
                                                                static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj),
@@ -112,7 +119,7 @@ public:
 
     void disconnect(const Connection& conn) {
         TRACE_LOG(logject) << "Disconnecting slot from signal.";
-        lock_guard<Mutex> l(mu);
+        std::lock_guard<Mutex> l(mu);
         auto s = funs.size();
         funs.erase(conn);
         assert(funs.size() == s-1);
@@ -120,18 +127,20 @@ public:
 
     template <typename ...A>
     void operator()(A&& ...args) {
-        unique_lock<Mutex> l(mu);
+        std::unique_lock<Mutex> l(mu);
+        std::list<std::pair<std::future<Ret>, Connection>> fs;
         for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
-                if(tman)
-                    tman->enqueue(i->second, std::forward<A&&>(args)...);
+                if(tman) {
+                    fs.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
+                }
                 else
-                    i->second(std::forward<A&&>(args)...);
+                    i->second(std::forward<A>(args)...);
                 l.lock();
                 ++i;
             }
-            catch(std::bad_weak_ptr& e) {
+            catch(std::bad_weak_ptr&) {
                 TRACE_LOG(logject) << "Removing expired slot.";
                 decltype(i) tmp = i;
                 ++i;
@@ -140,17 +149,41 @@ public:
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.cbegin(), i)-1);
             }
+            catch(boost::exception& e) {
+                ERROR_LOG(logject) << boost::diagnostic_information(e);
+                l.lock();
+            }
             catch(...) {
                 ERROR_LOG(logject) << "Exception caught in signal";
                 l.lock();
                 ++i;
             }
         }
+        for(typename decltype(fs)::reference f : fs) {
+            try {
+                l.unlock();
+                f.first.get();
+                l.lock();
+            }
+            catch(std::bad_weak_ptr&) {
+                TRACE_LOG(logject) << "Removing expired slot.";
+                l.lock();
+                funs.erase(f.second);
+            }
+            catch(boost::exception& e) {
+                ERROR_LOG(logject) << boost::diagnostic_information(e);
+                l.lock();
+            }
+            catch(std::exception& e) {
+                ERROR_LOG(logject) << "Exception caught in signal: " << e.what();
+                l.lock();
+            }
+        }
     }
 
 private:
     std::unordered_map<Connection, slot_type, ConnHash> funs;
-    typedef mutex Mutex;
+    typedef std::mutex Mutex;
     Mutex mu;
     Thread::Manager* tman;
     Logger::Logger& logject;

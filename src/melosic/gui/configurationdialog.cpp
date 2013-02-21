@@ -15,15 +15,13 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "configurationdialog.hpp"
-#include "configwidget.hpp"
-
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QLabel>
 #include <QHeaderView>
 #include <QPushButton>
 
+#include <boost/range/size.hpp>
 #include <boost/range/adaptor/indirected.hpp>
 using namespace boost::adaptors;
 
@@ -32,9 +30,13 @@ using namespace boost::adaptors;
 #include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
+#include "configurationdialog.hpp"
+#include "configwidget.hpp"
+
 static Logger::Logger logject(logging::keywords::channel = "ConfigurationDialog");
 
-void addChildren(QStackedLayout* stack, QTreeWidgetItem* item, ForwardRange<Config::Base* const> b) {
+template <typename T>
+void addChildren(QStackedLayout* stack, QTreeWidgetItem* item, ForwardRange<T> b) {
     if(b.empty()) {
         return;
     }
@@ -63,6 +65,8 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
     this->setWindowTitle("Configure");
     items->header()->hide();
     auto& c = confman.getConfigRoot();
+    TRACE_LOG(logject) << "no. confs: "
+                       << boost::distance(c.getChildren());
     for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
         auto w = conf.createWidget();

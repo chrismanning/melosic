@@ -18,7 +18,9 @@
 #include <array>
 #include <thread>
 namespace this_thread = std::this_thread;
-using std::thread; using std::mutex; using std::unique_lock; using std::lock_guard;
+using std::thread; using std::mutex;
+using unique_lock = std::unique_lock<mutex>;
+using lock_guard = std::lock_guard<mutex>;
 
 #include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
@@ -89,7 +91,7 @@ public:
 
     ~impl() {
         if(!end()) {
-            lock_guard<Mutex> l(m);
+            lock_guard l(m);
             end_ = true;
         }
         if(playerThread.joinable()) {
@@ -161,7 +163,7 @@ public:
 
     void changeOutput(std::unique_ptr<Output::PlayerSink> device) {
         TRACE_LOG(logject) << "Attempting to change output device";
-        unique_lock<Mutex> l(m);
+        unique_lock l(m);
         auto tmp = this->device.release();
         this->device = std::move(device);
 
@@ -187,7 +189,7 @@ public:
     }
 
     void openPlaylist(std::shared_ptr<Playlist> playlist) {
-        lock_guard<Mutex> l(m);
+        lock_guard l(m);
         if(this->playlist != playlist) {
             if(this->playlist && *(this->playlist)) {
                 this->playlist->currentTrack()->close();
@@ -200,7 +202,7 @@ public:
     }
 
     std::shared_ptr<Playlist> currentPlaylist() {
-        lock_guard<Mutex> l(m);
+        lock_guard l(m);
         return playlist;
     }
 
@@ -217,7 +219,7 @@ private:
     }
 
     bool end() {
-        lock_guard<Mutex> l(m);
+        lock_guard l(m);
         return end_;
     }
 

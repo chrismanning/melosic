@@ -62,7 +62,7 @@ private:
 
         boost::property_tree::ptree ptree;
         std::stringstream ss(reply);
-        boost::property_tree::xml_parser::read_xml(ss, ptree, trim_whitespace);
+        read_xml(ss, ptree, trim_whitespace);
 
         if(ptree.get<std::string>("lfm.<xmlattr>.status", "failed") != "ok") {
             //TODO: handle error

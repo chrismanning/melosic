@@ -18,12 +18,14 @@
 #include <algorithm>
 #include <numeric>
 #include <thread>
-using std::lock_guard;
 #include <deque>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex; using boost::shared_lock_guard;
+using boost::shared_mutex;
+using Mutex = shared_mutex;
+using lock_guard = std::lock_guard<Mutex>;
+using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/container/stable_vector.hpp>
 
 #include <melosic/core/track.hpp>
@@ -86,7 +88,7 @@ public:
             seek(chrono::milliseconds(0));
         }
         else if(size() >= 1) {
-            lock_guard<Mutex> l(mu);
+            lock_guard l(mu);
             --current_track_;
         }
         trackChanged(*currentTrack());
@@ -94,7 +96,7 @@ public:
 
     void next() {
         if(currentTrack() != end()) {
-            lock_guard<Mutex> l(mu);
+            lock_guard l(mu);
             ++current_track_;
         }
         if(currentTrack() != end())
@@ -102,40 +104,40 @@ public:
     }
 
     Playlist::iterator& currentTrack() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return current_track_;
     }
 
     //element access
     Playlist::reference front() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return tracks.front();
     }
 
     Playlist::reference back() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return tracks.back();
     }
 
     //iterators
     Playlist::iterator begin() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return tracks.begin();
     }
 
     Playlist::iterator end() {
-        shared_lock_guard<Mutex>l(mu);
+        shared_lock_guard l(mu);
         return tracks.end();
     }
 
     //capacity
     bool empty() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return tracks.empty();
     }
 
     Playlist::size_type size() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock_guard l(mu);
         return tracks.size();
     }
 
@@ -181,7 +183,6 @@ public:
     }
 
 private:
-    typedef shared_mutex Mutex;
     Mutex mu;
     typedef boost::container::stable_vector<Playlist::value_type> list_type;
     list_type tracks;

@@ -18,9 +18,11 @@
 #include <wordexp.h>
 
 #include <map>
+#include <thread>
+typedef std::mutex Mutex;
+using lock_guard = std::lock_guard<Mutex>;
+using unique_lock = std::unique_lock<Mutex>;
 
-#include <boost/ptr_container/ptr_map.hpp>
-#include <boost/ptr_container/serialize_ptr_map.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/vector.hpp>
@@ -35,11 +37,14 @@ using namespace boost::adaptors;
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/melin/logging.hpp>
+
 #include "config.hpp"
 
 template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
 
 namespace Melosic {
+static Logger::Logger logject(logging::keywords::channel = "Config");
 namespace Config {
 
 class Configuration : public Config<Configuration> {
@@ -50,7 +55,7 @@ public:
 static const boost::filesystem::path ConfFile("melosic.conf");
 
 class Manager::impl {
-    impl(Slots::Manager& slotman) : loaded(slotman.get<Signals::Config::Loaded>()) {
+    impl(Slots::Manager& slotman) : conf("root"), loaded(slotman.get<Signals::Config::Loaded>()) {
         wordexp_t exp_result;
         wordexp(dirs[UserDir].c_str(), &exp_result, 0);
         dirs[UserDir] = exp_result.we_wordv[0];
@@ -109,7 +114,7 @@ class Manager::impl {
     }
 
     fs::path confPath;
-    Configuration conf;
+    Base conf;
     Signals::Config::Loaded& loaded;
     friend class Manager;
 };
@@ -136,25 +141,40 @@ Base& Manager::getConfigRoot() {
 
 class Base::impl {
 public:
-    typedef boost::ptr_map<std::string, Base> ChildMap;
+    typedef std::map<std::string, std::shared_ptr<Base>> ChildMap;
     typedef std::map<std::string, VarType> NodeMap;
 
     impl() {}
+    impl(const impl& b)
+        : children(b.children),
+          nodes(b.nodes),
+          name(b.name),
+          resetDefault(b.resetDefault)
+    {}
     impl(const std::string& name) : name(name) {}
 
     impl* clone() {
+        TRACE_LOG(logject) << "Cloning...";
+        lock_guard l(mu);
         return new impl(*this);
     }
 
     const VarType& putNode(const std::string& key, const VarType& value) {
         variableUpdated(key, value);
+        lock_guard l(mu);
         return nodes[key] = value;
+    }
+
+    std::shared_ptr<Base> putChild(const std::string& key, const Base& child) {
+        lock_guard l(mu);
+        return children[key] = std::move(std::shared_ptr<Base>(child.clone()));
     }
 
 private:
     ChildMap children;
     NodeMap nodes;
     std::string name;
+    Mutex mu;
     friend class Base;
     friend class boost::serialization::access;
     template<class Archive>
@@ -171,7 +191,11 @@ Base::Base(const std::string& name) : pimpl(new impl(name)) {}
 
 Base::Base() : pimpl(new impl) {}
 
-Base::Base(const Base& b) : pimpl(b.pimpl->clone()) {}
+Base::~Base() {}
+
+Base::Base(const Base& b) : pimpl(b.pimpl->clone()) {
+    TRACE_LOG(logject) << "Copying...";
+}
 
 Base& Base::operator=(const Base& b) {
     pimpl.reset(b.pimpl->clone());
@@ -234,22 +258,18 @@ const Base& Base::getChild(const std::string& key) const {
 }
 
 Base& Base::putChild(const std::string& key, const Base& child) {
-    impl::ChildMap::iterator it(pimpl->children.find(key));
-    if(it != pimpl->children.end())
-        pimpl->children.erase(it);
-    std::string tmp(key);
-    return *pimpl->children.insert(tmp, new_clone(child)).first->second;
+    return *pimpl->putChild(key, child);
 }
 
 const VarType& Base::putNode(const std::string& key, const VarType& value) {
     return pimpl->putNode(key, value);
 }
 
-ForwardRange<Base* const> Base::getChildren() {
+ForwardRange<std::shared_ptr<Base>> Base::getChildren() {
     return pimpl->children | map_values;
 }
 
-ForwardRange<const Base* const> Base::getChildren() const {
+ForwardRange<const std::shared_ptr<Base>> Base::getChildren() const {
     return pimpl->children | map_values;
 }
 
