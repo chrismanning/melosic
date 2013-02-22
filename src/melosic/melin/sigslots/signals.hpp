@@ -67,7 +67,7 @@ public:
 
     Signal() : Signal(nullptr) {}
 
-    Signal(Thread::Manager* tman) : tman(tman), logject(logject_()) {}
+    Signal(Thread::Manager* tman) : tman(tman), threadId(std::this_thread::get_id()), logject(logject_()) {}
 
     Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
     Signal& operator=(const Signal& b) {
@@ -132,9 +132,8 @@ public:
         for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
-                if(tman) {
-                    fs.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
-                }
+                if(tman && std::this_thread::get_id() != threadId)
+                    fs.emplace_back(std::move(tman->enqueueSlot(i->second, std::forward<A>(args)...)), i->first);
                 else
                     i->second(std::forward<A>(args)...);
                 l.lock();
@@ -152,6 +151,7 @@ public:
             catch(boost::exception& e) {
                 ERROR_LOG(logject) << boost::diagnostic_information(e);
                 l.lock();
+                ++i;
             }
             catch(...) {
                 ERROR_LOG(logject) << "Exception caught in signal";
@@ -186,6 +186,7 @@ private:
     typedef std::mutex Mutex;
     Mutex mu;
     Thread::Manager* tman;
+    std::thread::id threadId;
     Logger::Logger& logject;
 };
 

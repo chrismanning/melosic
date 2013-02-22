@@ -20,22 +20,29 @@
 namespace Melosic {
 namespace Thread {
 
-Manager::Manager() : tasks(10), done(false), logject(logging::keywords::channel = "Thread::Manager") {
-    const unsigned n = std::thread::hardware_concurrency() * 2;
-    for(unsigned i=0; i<n; i++)
-        threads.emplace_back([this]() {
-            while(!done) {
-                Task t;
-                if(tasks.pop(t)) {
-                    t();
-                    t.destroy();
-                }
-                else {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    std::this_thread::yield();
-                }
+Manager::Manager(const unsigned n)
+    : slots(10),
+      tasks(10),
+      done(false),
+      logject(logging::keywords::channel = "Thread::Manager")
+{
+    assert(n > 0);
+    auto f = [&](boost::lockfree::queue<Task>& tasks) {
+        while(!done) {
+            Task t;
+            if(tasks.pop(t)) {
+                t();
+                t.destroy();
             }
-        });
+            else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::yield();
+            }
+        }
+    };
+    signalThread = std::move(std::thread(f, std::ref(slots)));
+    for(unsigned i=0; i<n; i++)
+        threads.emplace_back(f, std::ref(tasks));
     LOG(logject) << threads.size() << " threads started in thread pool";
 }
 
@@ -43,6 +50,7 @@ Manager::~Manager() {
     done = true;
     for(auto& t : threads)
         t.join();
+    signalThread.join();
 }
 
 } // namespace Thread

@@ -100,7 +100,7 @@ public:
 
 class Manager {
 public:
-    Manager();
+    Manager(const unsigned n = std::thread::hardware_concurrency() + 1);
 
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
@@ -123,8 +123,28 @@ public:
         return std::move(fut);
     }
 
+    template <typename Func, typename ...Args>
+    std::future<typename std::result_of<Func(Args...)>::type> enqueueSlot(Func&& f, Args&&... args) {
+        std::promise<typename std::result_of<Func(Args...)>::type> p;
+
+        auto fut = p.get_future();
+
+        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
+        if(!slots.bounded_push(t)) {
+            BOOST_THROW_EXCEPTION(Exception());
+        }
+
+        return std::move(fut);
+    }
+
+    std::thread::id signalThreadId() {
+        return signalThread.get_id();
+    }
+
 private:
     std::vector<std::thread> threads;
+    std::thread signalThread;
+    boost::lockfree::queue<Task> slots;
     boost::lockfree::queue<Task> tasks;
     std::atomic<bool> done;
     Logger::Logger logject;
