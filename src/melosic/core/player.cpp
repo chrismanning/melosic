@@ -31,6 +31,7 @@ namespace io = boost::iostreams;
 #include <melosic/common/error.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
+#include <melosic/common/range.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
@@ -152,7 +153,7 @@ public:
         if(playlist && *playlist) {
             return playlist->currentTrack()->tell();
         }
-        return chrono::milliseconds(0);
+        return chrono::seconds(0);
     }
 
     void finish() {
@@ -211,8 +212,9 @@ private:
         if(playlist && *playlist && device) {
             if(device->currentSpecs() != currentPlaylist()->currentTrack()->getAudioSpecs()) {
                 device->stop();
-                this_thread::sleep_for(chrono::milliseconds(10));
+                this_thread::sleep_for(chrono::milliseconds(100));
                 device->prepareSink(currentPlaylist()->currentTrack()->getAudioSpecs());
+                this_thread::sleep_for(chrono::milliseconds(100));
                 device->play();
             }
         }

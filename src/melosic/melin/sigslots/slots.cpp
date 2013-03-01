@@ -40,7 +40,7 @@ public:
     Signals::Player::NotifyPlayPos notifyPos;
     Signals::Player::PlaylistChanged playlistChanged;
     Signals::Playlist::TrackChanged trackChanged;
-    Signals::TrackSeeker::Seek seek;
+    Signals::Player::Seek seek;
     Signals::Output::PlayerSinkChanged playerSinkChanged;
     Signals::Output::ReqSinkChange requestSinkChange;
     Signals::Config::Loaded loaded;
@@ -75,10 +75,10 @@ Signals::Playlist::TrackChanged& Manager::get<Signals::Playlist::TrackChanged>()
 template Signals::Playlist::TrackChanged& Manager::get<Signals::Playlist::TrackChanged>();
 
 template <>
-Signals::TrackSeeker::Seek& Manager::get<Signals::TrackSeeker::Seek>() {
+Signals::Player::Seek& Manager::get<Signals::Player::Seek>() {
     return pimpl->seek;
 }
-template Signals::TrackSeeker::Seek& Manager::get<Signals::TrackSeeker::Seek>();
+template Signals::Player::Seek& Manager::get<Signals::Player::Seek>();
 
 template <>
 Signals::Output::PlayerSinkChanged& Manager::get<Signals::Output::PlayerSinkChanged>() {

@@ -81,8 +81,8 @@ public:
     const VarType& putNode(const std::string& key, const VarType& value);
     ForwardRange<std::shared_ptr<Base>> getChildren();
     ForwardRange<const std::shared_ptr<Melosic::Config::Base>> getChildren() const;
-    ForwardRange<std::pair<const std::string, VarType> > getNodes();
-    ForwardRange<const std::pair<const std::string, VarType> > getNodes() const;
+    ForwardRange<std::pair<const std::string, VarType>> getNodes();
+    ForwardRange<const std::pair<const std::string, VarType>> getNodes() const;
 
     void addDefaultFunc(std::function<Base&()>);
     void resetToDefault();

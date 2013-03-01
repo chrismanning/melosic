@@ -18,10 +18,14 @@
 #ifndef PLAYLISTMODEL_HPP
 #define PLAYLISTMODEL_HPP
 
+#include <memory>
+#include <initializer_list>
+
 #include <QAbstractListModel>
 #include <QStringList>
+#include <kcategorydrawer.h>
 
-#include <memory>
+#include <boost/filesystem/path.hpp>
 
 #include <opqit/opaque_iterator.hpp>
 
@@ -31,19 +35,27 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/file.hpp>
+#include <melosic/common/range.hpp>
 
 namespace Melosic {
-struct DataRoles {
+struct TrackRoles {
     enum {
-        SourceName = 33,
-        Track
+        SourceName = Qt::UserRole + 1,
+        Category,
+        Title,
+        Artist,
+        Album,
+        AlbumArtist,
+        TrackNumber,
+        Genre,
+        Date,
+        Length
     };
 };
 class Kernel;
 }
 
-class PlaylistModel : public QAbstractListModel
-{
+class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     std::shared_ptr<Melosic::Playlist> playlist;
     Melosic::Kernel& kernel;
@@ -53,51 +65,43 @@ public:
     PlaylistModel(Melosic::Kernel& kernel,
                   std::shared_ptr<Melosic::Playlist> playlist,
                   QObject* parent = 0);
-    int rowCount(const QModelIndex& parent = QModelIndex()) const;
-    QVariant data(const QModelIndex& index, int role) const;
-    Qt::ItemFlags flags(const QModelIndex &index) const;
-    QStringList mimeTypes() const;
-    QMimeData* mimeData(const QModelIndexList& indexes) const;
+    int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+    virtual bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+    QVariant data(const QModelIndex& index, int role) const override;
+    Qt::ItemFlags flags(const QModelIndex& index) const override;
+    QStringList mimeTypes() const override;
+    QMimeData* mimeData(const QModelIndexList& indexes) const override;
+    bool dropMimeData(const QMimeData* data,
+                      Qt::DropAction action,
+                      int row, int column,
+                      const QModelIndex& parent) override;
+    QHash<int, QByteArray> roleNames() const override;
 
-    template <typename Iterator>
-    void appendTracks(Iterator first, Iterator last) {
-        auto beg = playlist->end() - playlist->begin();
-        beginInsertRows(QModelIndex(), beg, beg + std::distance(first, last));
-        playlist->insert(playlist->end(), first, last);
-        endInsertRows();
-    }
-
-    template <class StringList>
-    QStringList appendFiles(const StringList& filenames) {
-        auto beg = playlist->end() - playlist->begin();
-        QStringList failList;
-        beginInsertRows(QModelIndex(), beg, beg + filenames.size());
-        for(const auto& filename : filenames) {
-            try {
-                playlist->emplace_back(kernel.getDecoderManager(), filename);
-            }
-            catch(Melosic::UnsupportedFileTypeException& e) {
-                if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
-                    failList << QString::fromStdString(path->string()) + ": file type not supported";
-            }
-            catch(Melosic::DecoderException& e) {
-                if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
-                    failList << QString::fromStdString(path->string()) + ": file could not be decoded";
-            }
-        }
-        endInsertRows();
-        return failList;
+    void appendTracks(const Melosic::ForwardRange<Melosic::Track>& tracks);
+    QStringList appendFiles(const Melosic::ForwardRange<const boost::filesystem::path>&);
+    QStringList appendFiles(std::initializer_list<const boost::filesystem::path> filenames) {
+        return appendFiles(Melosic::ForwardRange<const boost::filesystem::path>(filenames));
     }
 
     template<typename ... Args>
     Melosic::Playlist::iterator emplace(Melosic::Playlist::iterator pos, Args&& ... args) {
         auto beg = pos-playlist->begin();
         beginInsertRows(QModelIndex(), beg, beg + 1);
-        auto ret = playlist->emplace(pos, std::forward<Args>(args)...);
+        auto ret = playlist->insert(pos, Melosic::Track(std::forward<Args>(args)...));
         endInsertRows();
         return ret;
     }
-    bool dropMimeData(const QMimeData *data, Qt::DropAction action, int row, int column, const QModelIndex &parent);
+};
+
+class CategoryDrawer : public KCategoryDrawerV3 {
+public:
+    CategoryDrawer(KCategorizedView*);
+    virtual ~CategoryDrawer() {}
+
+    virtual void drawCategory(const QModelIndex& index,
+                              int sortRole,
+                              const QStyleOption& option,
+                              QPainter* painter) const override;
 };
 
 #endif // PLAYLISTMODEL_HPP

@@ -131,7 +131,8 @@ public:
     }
 
     std::string getTag(const std::string& key) const {
-        auto val = tags.find(key);
+        TagLib::String key_(key.c_str());
+        auto val = tags.find(key_);
 
         if(val != tags.end()) {
             return val->second.front().to8Bit(true);
@@ -142,7 +143,7 @@ public:
 
     void reloadDecoder() {
         try {
-            boost::lock_guard<Mutex> l(mu);
+            lock_guard<Mutex> l(mu);
             decoder = fileResolver.getDecoder(*input);
             as = decoder->getAudioSpecs();
         }
@@ -197,7 +198,7 @@ private:
 };
 
 Track::Track(Decoder::Manager& decman,
-             const std::string& filename,
+             const boost::filesystem::path& filename,
              chrono::milliseconds start,
              chrono::milliseconds end)
     : pimpl(new impl(decman, filename, start, end)) {}
@@ -215,6 +216,10 @@ Track& Track::operator=(const Track& b) {
     TRACE_LOG(logject) << "Assigning " << filename;
     pimpl.reset(b.pimpl->clone());
     return *this;
+}
+
+bool Track::operator==(const Track& b) {
+    return pimpl == b.pimpl;
 }
 
 std::streamsize Track::read(char * s, std::streamsize n) {

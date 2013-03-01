@@ -18,11 +18,12 @@
 #ifndef MELOSIC_MAINWINDOW_H
 #define MELOSIC_MAINWINDOW_H
 
+#include <memory>
+
 #include <QDebug>
 #include <QMainWindow>
 #include <QApplication>
 #include <QList>
-#include <memory>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/connection.hpp>
@@ -39,18 +40,21 @@ using namespace Melosic;
 using Output::DeviceState;
 
 class PlaylistModel;
-
-namespace Ui {
-class MainWindow;
-}
+class KCategorizedView;
+class QListView;
+class QHBoxLayout;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(Kernel& kernel, QWidget * parent = 0);
+    explicit MainWindow(Kernel& kernel, QWidget* parent = 0);
     ~MainWindow();
     void onStateChangeSlot(DeviceState state);
+    Q_INVOKABLE void play();
+    Q_INVOKABLE void stop();
+    Q_INVOKABLE void previous();
+    Q_INVOKABLE void next();
 
 private Q_SLOTS:
     void on_actionOpen_triggered();
@@ -60,14 +64,26 @@ private Q_SLOTS:
     void on_actionOptions_triggered();
 
 private:
-    Ui::MainWindow* ui;
     Kernel& kernel;
     std::shared_ptr<Playlist> currentPlaylist;
-    PlaylistModel* playlistModel;
+    PlaylistModel* playlistModel = nullptr;
     Player& player;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
-    int oldDeviceIndex;
+    QAction* actionOpen;
+    QAction* actionPlay;
+    QAction* actionExit;
+    QAction* actionStop;
+    QAction* actionPrevious;
+    QAction* actionNext;
+    QAction* actionOptions;
+    QMenuBar* menubar;
+    QMenu* menuFile;
+    QMenu* menuPlayback;
+    QMenu* menuTools;
+    QStatusBar* statusbar;
+
+    KCategorizedView* playlistView;
 };
 
 #endif // MELOSIC_MAINWINDOW_H

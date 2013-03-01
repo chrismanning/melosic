@@ -15,12 +15,19 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "playlistmodel.hpp"
 #include <QStringList>
 #include <QMimeData>
+#include <QPainter>
+#include <kcategorizedsortfilterproxymodel.h>
+#include <kcategorydrawer.h>
+#include <kcategorizedview.h>
+
+#include <boost/lexical_cast.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/common/file.hpp>
+
+#include "playlistmodel.hpp"
 
 PlaylistModel::PlaylistModel(Melosic::Kernel& kernel,
                              std::shared_ptr<Melosic::Playlist> playlist,
@@ -34,23 +41,58 @@ int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
     return playlist->size();
 }
 
+bool PlaylistModel::insertRows(int /*row*/, int /*count*/, const QModelIndex& /*parent*/) {
+    TRACE_LOG(logject) << "Inserting rows...";
+    return false;
+}
+
 QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
     if(!index.isValid())
         return QVariant();
 
+    assert(playlist);
     if(index.row() >= playlist->size())
         return QVariant();
 
-    if(role == Qt::DisplayRole || role == Qt::EditRole) {
+    try {
         const auto& track = (*playlist)[index.row()];
-        return QString::fromStdString(track.sourceName() + " " + track.getTag("artist"));
+        switch(role) {
+            case Qt::DisplayRole:
+                return data(index, Melosic::TrackRoles::SourceName);
+            case Melosic::TrackRoles::SourceName:
+                return QString::fromStdString(track.sourceName());
+            case Melosic::TrackRoles::Category:
+            case KCategorizedSortFilterProxyModel::CategoryDisplayRole:
+            case KCategorizedSortFilterProxyModel::CategorySortRole:
+                return data(index, Melosic::TrackRoles::AlbumArtist).toString() + " - "
+                        + data(index, Melosic::TrackRoles::Album).toString() + " - "
+                        + data(index, Melosic::TrackRoles::Date).toString();
+            case Melosic::TrackRoles::Title:
+                return QString::fromStdString(track.getTag("title"));
+            case Melosic::TrackRoles::Artist:
+                return QString::fromStdString(track.getTag("artist"));
+            case Melosic::TrackRoles::Album:
+                return QString::fromStdString(track.getTag("album"));
+            case Melosic::TrackRoles::AlbumArtist: {
+                std::string aa("albumartist");
+                std::string a = track.getTag(aa);
+                return QString::fromStdString(a == "?" ? track.getTag("artist") : a);
+            }
+            case Melosic::TrackRoles::TrackNumber:
+                return QString::fromStdString(track.getTag("tracknumber"));
+            case Melosic::TrackRoles::Genre:
+                return QString::fromStdString(track.getTag("genre"));
+            case Melosic::TrackRoles::Date:
+                return QString::fromStdString(track.getTag("date"));
+            case Melosic::TrackRoles::Length:
+                return QString::fromStdString(track.getTag("length"));
+            default:
+                return QVariant();
+        }
     }
-    else if(role == (int)Melosic::DataRoles::SourceName) {
-        const auto& track = (*playlist)[index.row()];
-        return QString::fromStdString(track.sourceName() + " " + track.getTag("artist"));
-    }
-    else
+    catch(...) {
         return QVariant();
+    }
 }
 
 Qt::ItemFlags PlaylistModel::flags(const QModelIndex& index) const {
@@ -76,13 +118,57 @@ QMimeData* PlaylistModel::mimeData(const QModelIndexList& indexes) const {
 
     for(const QModelIndex& index : indexes) {
         if(index.isValid()) {
-            auto text = data(index, (int)Melosic::DataRoles::SourceName).toString();
+            auto text = data(index, (int)Melosic::TrackRoles::SourceName).toString();
             stream << text;
         }
     }
 
     mimeData->setData("application/vnd.text.list", encodedData);
     return mimeData;
+}
+
+QHash<int, QByteArray> PlaylistModel::roleNames() const {
+    QHash<int, QByteArray> roles;
+    roles[Melosic::TrackRoles::SourceName] = "source";
+    roles[Melosic::TrackRoles::Category] = "category";
+    roles[Melosic::TrackRoles::Title] = "title";
+    roles[Melosic::TrackRoles::Artist] = "artist";
+    roles[Melosic::TrackRoles::Album] = "album";
+    roles[Melosic::TrackRoles::TrackNumber] = "tracknumber";
+    roles[Melosic::TrackRoles::Genre] = "genre";
+    roles[Melosic::TrackRoles::Date] = "year";
+    roles[Melosic::TrackRoles::Length] = "length";
+    return roles.unite(QAbstractListModel::roleNames());
+}
+
+void PlaylistModel::appendTracks(const Melosic::ForwardRange<Melosic::Track>& tracks) {
+    auto beg = playlist->size();
+    beginInsertRows(QModelIndex(), beg, beg + boost::distance(tracks) -1);
+    playlist->insert(playlist->end(), tracks);
+    endInsertRows();
+    TRACE_LOG(logject) << "Inserted " << boost::distance(tracks) << " tracks.";
+}
+
+QStringList PlaylistModel::appendFiles(const Melosic::ForwardRange<const boost::filesystem::path>& filenames) {
+    auto beg = playlist->size();
+    QStringList failList;
+    beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
+    for(const auto& filename : filenames) {
+        try {
+            playlist->push_back({kernel.getDecoderManager(), filename});
+        }
+        catch(Melosic::UnsupportedFileTypeException& e) {
+            if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
+                failList << QString::fromStdString(path->string()) + ": file type not supported";
+        }
+        catch(Melosic::DecoderException& e) {
+            if(auto* path = boost::get_error_info<Melosic::ErrorTag::FilePath>(e))
+                failList << QString::fromStdString(path->string()) + ": file could not be decoded";
+        }
+    }
+    endInsertRows();
+    LOG(logject) << "Inserted " << playlist->size() - beg << " files as tracks.";
+    return failList;
 }
 
 bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
@@ -127,4 +213,16 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     }
 
     return true;
+}
+
+CategoryDrawer::CategoryDrawer(KCategorizedView* view) : KCategoryDrawerV3(view) {}
+
+void CategoryDrawer::drawCategory(const QModelIndex& index,
+                                  int /*sortRole*/,
+                                  const QStyleOption& option,
+                                  QPainter* painter) const
+{
+    KCategorizedView* sm = view();
+
+    painter->drawText(option.rect, sm->model()->data(index, KCategorizedSortFilterProxyModel::CategoryDisplayRole).toString());
 }

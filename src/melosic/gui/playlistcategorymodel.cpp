@@ -15,14 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/melin/output.hpp>
+#include <melosic/gui/playlistmodel.hpp>
 
-#include "signals_fwd.hpp"
-#include "signals.hpp"
-#include "slots.hpp"
+#include "playlistcategorymodel.hpp"
 
-namespace Melosic {
-namespace Signals {
+PlaylistCategoryModel::PlaylistCategoryModel(QObject* parent)
+    : KCategorizedSortFilterProxyModel(parent)
+{}
 
-} // namespace Signals
-} // namespace Melosic
+bool PlaylistCategoryModel::subSortLessThan(const QModelIndex& left, const QModelIndex& right) const {
+    return left.data(Melosic::TrackRoles::TrackNumber).toString() <
+            right.data(Melosic::TrackRoles::TrackNumber).toString();
+}

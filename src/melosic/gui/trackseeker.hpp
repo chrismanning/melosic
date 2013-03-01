@@ -44,7 +44,7 @@ class TrackSeeker : public QSlider {
     Logger::Logger logject;
     std::shared_ptr<impl> pimpl;
 public:
-    explicit TrackSeeker(QWidget *parent = 0);
+    explicit TrackSeeker(QWidget* parent = 0);
     ~TrackSeeker();
 
     void onStateChangeSlot(DeviceState state);

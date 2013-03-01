@@ -27,6 +27,8 @@ using Mutex = shared_mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/container/stable_vector.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/range/algorithm/find.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
@@ -103,6 +105,14 @@ public:
             trackChanged(*currentTrack());
     }
 
+    void jumpTo(size_type pos) {
+        {
+            lock_guard l(mu);
+            current_track_ = tracks.begin() + pos;
+        }
+        trackChanged(*currentTrack());
+    }
+
     Playlist::iterator& currentTrack() {
         shared_lock_guard l(mu);
         return current_track_;
@@ -117,6 +127,11 @@ public:
     Playlist::reference back() {
         shared_lock_guard l(mu);
         return tracks.back();
+    }
+
+    Playlist::reference get(size_type pos) {
+        shared_lock_guard l(mu);
+        return tracks[pos];
     }
 
     //iterators
@@ -145,9 +160,9 @@ public:
         return std::numeric_limits<Playlist::size_type>::max();
     }
 
-    Playlist::iterator insert(Playlist::iterator pos, Playlist::value_type&& value) {
+    Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
         mu.lock();
-        auto r = tracks.insert(pos.cast_to<list_type::iterator>(), value);
+        auto r = tracks.insert(pos.cast_to<list_type::const_iterator>(), value);
         mu.unlock();
         if(size() == 1) {
             mu.lock();
@@ -158,15 +173,25 @@ public:
         return r;
     }
 
-    void insert(Playlist::iterator pos, Playlist::iterator first, iterator last) {
+    void insert(Playlist::const_iterator pos, Playlist::iterator first, Playlist::iterator last) {
         mu.lock();
-        tracks.insert(pos.cast_to<list_type::iterator>(), first, last);
+        auto r = tracks.insert(pos.cast_to<list_type::const_iterator>(), first, last);
         mu.unlock();
         if(size() == 1) {
             mu.lock();
-            current_track_ = begin();
+            current_track_ = r;
             mu.unlock();
             trackChanged(*currentTrack());
+        }
+    }
+
+    void insert(Playlist::const_iterator pos, Playlist::range values) {
+        insert(pos, values.begin(), values.end());
+    }
+
+    void insert(Playlist::const_iterator pos, Playlist::forward_range values) {
+        for(auto&& v : values) {
+            insert(pos++, std::move(v));
         }
     }
 
@@ -176,10 +201,24 @@ public:
         mu.unlock();
         if(size() == 1) {
             mu.lock();
-            current_track_ = begin();
+            current_track_ = tracks.begin();
             mu.unlock();
             trackChanged(*currentTrack());
         }
+    }
+
+    Playlist::iterator erase(Playlist::const_iterator pos) {
+        return tracks.erase(pos.cast_to<list_type::const_iterator>());
+    }
+
+    void erase(Playlist::forward_range values) {
+        auto i = boost::range::find(tracks, values.front());
+        boost::erase(tracks, boost::make_iterator_range(i, std::next(i, boost::distance(values))));
+    }
+
+    void clear() {
+        lock_guard l(mu);
+        tracks.clear();
     }
 
 private:
@@ -189,7 +228,6 @@ private:
     Playlist::iterator current_track_;
     Signals::Playlist::TrackChanged& trackChanged;
     Logger::Logger logject;
-    friend class Playlist;
 };
 
 Playlist::Playlist(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
@@ -218,6 +256,10 @@ void Playlist::next() {
     pimpl->next();
 }
 
+void Playlist::jumpTo(Playlist::size_type pos) {
+    pimpl->jumpTo(pos);
+}
+
 Playlist::iterator& Playlist::currentTrack() {
     return pimpl->currentTrack();
 }
@@ -227,11 +269,11 @@ Playlist::const_iterator Playlist::currentTrack() const {
 }
 
 Playlist::reference Playlist::operator[](size_type pos) {
-    return pimpl->tracks[pos];
+    return pimpl->get(pos);
 }
 
 Playlist::const_reference Playlist::operator[](size_type pos) const {
-    return pimpl->tracks[pos];
+    return pimpl->get(pos);
 }
 
 //element access
@@ -281,20 +323,36 @@ Playlist::size_type Playlist::max_size() const {
     return std::numeric_limits<size_type>::max();
 }
 
-Playlist::iterator Playlist::insert(Playlist::iterator pos, Playlist::value_type&& value) {
+Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
     return pimpl->insert(pos, std::move(value));
 }
 
-void Playlist::insert(iterator pos, iterator first, iterator last) {
-    pimpl->insert(pos, first, last);
+void Playlist::insert(Playlist::const_iterator pos, range values) {
+    pimpl->insert(pos, std::move(values));
+}
+
+void Playlist::insert(Playlist::const_iterator pos, forward_range values) {
+    pimpl->insert(pos, std::move(values));
 }
 
 void Playlist::push_back(Playlist::value_type&& value) {
     pimpl->push_back(std::move(value));
 }
 
+Playlist::iterator Playlist::erase(const_iterator pos) {
+    return pimpl->erase(pos);
+}
+
+void Playlist::erase(forward_range values) {
+    pimpl->erase(std::move(values));
+}
+
+void Playlist::clear() {
+    pimpl->clear();
+}
+
 void Playlist::swap(Playlist& b)  {
-    std::swap(pimpl->tracks, b.pimpl->tracks);
+    std::swap(pimpl, b.pimpl);
 }
 
 }//end namespace Melosic

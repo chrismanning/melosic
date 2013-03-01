@@ -27,8 +27,8 @@ public:
     void onRelease() {
         seek(chrono::milliseconds(seekTo));
     }
-    int seekTo;
-    Signals::TrackSeeker::Seek seek;
+    Signals::Player::Seek seek;
+    int seekTo = 0;
     std::list<Signals::ScopedConnection> scopedSigConns;
 };
 
@@ -37,8 +37,8 @@ TrackSeeker::TrackSeeker(QWidget *parent) :
     logject(logging::keywords::channel = "TrackSeeker"),
     pimpl(new impl)
 {
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-//    setGeometry(0,0,500,20);
+    setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed);
+    setMinimumWidth(50);
     setEnabled(false);
     setMinimum(0);
     setMaximum(0);
@@ -78,15 +78,12 @@ void TrackSeeker::onStateChangeSlot(DeviceState state) {
 void TrackSeeker::onNotifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     if(!isSliderDown()) {
         setRange(0, total.count());
-//        std::clog << "Total: " << total.count();
-//        std::clog << "; Maximum: " << maximum();
-//        std::clog << "; Current: " << current.count();
-//        std::clog << "; Value: " << value() << std::endl;
         setValue(current.count());
     }
 }
 
 void TrackSeeker::connectSlots(Slots::Manager* slotman) {
+    slotman->get<Signals::Player::Seek>().connect(pimpl->seek);
     pimpl->scopedSigConns.emplace_back(slotman->get<Signals::Player::StateChanged>()
                                        .emplace_connect(&TrackSeeker::onStateChangeSlot, this, ph::_1));
     pimpl->scopedSigConns.emplace_back(slotman->get<Signals::Player::NotifyPlayPos>()
@@ -102,8 +99,8 @@ void TrackSeeker::onRelease() {
 }
 
 template <>
-Signals::TrackSeeker::Seek& TrackSeeker::get<Signals::TrackSeeker::Seek>() {
+Signals::Player::Seek& TrackSeeker::get<Signals::Player::Seek>() {
     return pimpl->seek;
 }
 
-template Signals::TrackSeeker::Seek& TrackSeeker::get<Signals::TrackSeeker::Seek>();
+template Signals::Player::Seek& TrackSeeker::get<Signals::Player::Seek>();

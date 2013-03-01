@@ -1,15 +1,4 @@
-project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8)
-
-SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
-
-add_subdirectory(extern)
-include_directories(extern/cpp-netlib/http/src/)
-include_directories(extern/cpp-netlib/uri/src/)
-include_directories(extern/cpp-netlib/message/src/)
-include_directories(extern/opqit/include)
-include_directories(extern/kcategorizedview)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -fno-omit-frame-pointer")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++11 -pthread -stdlib=libc++")
@@ -21,8 +10,20 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -g -O1 -fsanitize=address")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -Os")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Os")
 
-ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
+FIND_PACKAGE(Qt5Widgets REQUIRED)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_subdirectory(src/melosic)
+set(SRC kcategorizedview.cpp kcategorydrawer.cpp kcategorizedsortfilterproxymodel.cpp
+kcategorizedsortfilterproxymodel.h
+kcategorizedsortfilterproxymodel_p.h
+kcategorizedview.h
+kcategorizedview_p.h
+kcategorydrawer.h
+alphanum.hpp)
+
+add_definitions(-DKDEUI_DEPRECATED=)
+add_library(kcategorizedview SHARED ${SRC})
+qt5_use_modules(kcategorizedview Widgets)
+TARGET_LINK_LIBRARIES(kcategorizedview ${QT5Widgets_LIBRARIES})

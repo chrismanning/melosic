@@ -48,6 +48,10 @@ namespace Player {
 typedef Signal<void(Output::DeviceState)> StateChanged;
 typedef Signal<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
 typedef Signal<void(std::shared_ptr<Melosic::Playlist>)> PlaylistChanged;
+typedef Signal<void()> Play;
+typedef Signal<void()> Pause;
+typedef Signal<void()> Stop;
+typedef Signal<void(chrono::milliseconds)> Seek;
 }
 
 namespace Output {
@@ -57,10 +61,8 @@ typedef Signal<void()> PlayerSinkChanged;
 
 namespace Playlist {
 typedef Signal<void(const Track&)> TrackChanged;
-}
-
-namespace TrackSeeker {
-typedef Signal<void(chrono::milliseconds)> Seek;
+typedef Signal<void()> Next;
+typedef Signal<void()> Previous;
 }
 
 } // namespace Signals

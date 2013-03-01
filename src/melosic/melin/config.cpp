@@ -41,7 +41,7 @@ using namespace boost::adaptors;
 
 #include "config.hpp"
 
-template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t> >;
+template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>>;
 
 namespace Melosic {
 static Logger::Logger logject(logging::keywords::channel = "Config");

@@ -20,6 +20,8 @@
 
 #include <memory>
 
+#include <boost/filesystem/path.hpp>
+
 #include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
 #include <melosic/melin/input.hpp>
@@ -33,13 +35,15 @@ class Manager;
 class Track : public Input::Playable, public IO::Closable {
 public:
     Track(Melosic::Decoder::Manager& decman,
-          const std::string& filename,
+          const boost::filesystem::path& filename,
           chrono::milliseconds start = chrono::milliseconds(0),
           chrono::milliseconds end = chrono::milliseconds(0));
 
     virtual ~Track();
     Track(const Track&);
     Track& operator=(const Track&);
+
+    bool operator==(const Track&);
 
     virtual void reset();
     virtual void seek(chrono::milliseconds dur);

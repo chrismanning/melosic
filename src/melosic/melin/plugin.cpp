@@ -163,7 +163,7 @@ private:
     bool init_ = false;
     boost::filesystem::path pluginPath;
     destroyPlugin_T destroyPlugin_;
-    std::list<std::function<void()> > regFuns;
+    std::list<std::function<void()>> regFuns;
     DLHandle handle;
     Logger::Logger logject;
     Kernel& kernel;

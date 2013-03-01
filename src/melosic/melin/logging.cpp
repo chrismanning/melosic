@@ -28,17 +28,21 @@ template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Sev
 
 namespace Melosic {
 namespace Logger {
+struct nullstream : std::ostream {
+    nullstream() : std::ios(0), std::ostream(0) {}
+};
 void init() {
     typedef sinks::synchronous_sink<sinks::text_ostream_backend > text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
 
     boost::shared_ptr<std::ostream> stream(&std::clog, logging::empty_deleter());
+//    boost::shared_ptr<std::ostream> stream(boost::make_shared<nullstream>());
     sink->locked_backend()->add_stream(stream);
 
     logging::core::get()->add_sink(sink);
     sink->set_formatter
             (
-            expr::format("%1% [%2%] "/*%|32T |*/ "<%3%> %4%")
+            expr::format("%1% [%2%] <%3%> %4%")
                         % expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%d/%m/%y %H:%M:%S")
                         % expr::attr<std::string>("Channel")
                         % expr::attr<Severity>("Severity")

@@ -15,14 +15,32 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/melin/output.hpp>
+#ifndef MELOSIC_GUI_MANAGER_HPP
+#define MELOSIC_GUI_MANAGER_HPP
 
-#include "signals_fwd.hpp"
-#include "signals.hpp"
-#include "slots.hpp"
+#include <memory>
+#include <functional>
+
+class QWidget;
 
 namespace Melosic {
-namespace Signals {
+namespace GUI {
 
-} // namespace Signals
+typedef std::function<QWidget*(QWidget*)> WidgetFactory;
+
+class Manager {
+public:
+    Manager();
+    ~Manager();
+
+    void addWidgetFactory(const std::string&, WidgetFactory&&);
+
+private:
+    class impl;
+    std::unique_ptr<impl> pimpl;
+};
+
+} // namespace GUI
 } // namespace Melosic
+
+#endif // MELOSIC_GUI_MANAGER_HPP

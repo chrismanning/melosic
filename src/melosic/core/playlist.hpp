@@ -23,9 +23,10 @@
 namespace chrono = std::chrono;
 
 #include <boost/iostreams/concepts.hpp>
-#include <boost/range/iterator_range.hpp>
 
 #include <opqit/opaque_iterator.hpp>
+
+#include <melosic/common/range.hpp>
 
 namespace Melosic {
 
@@ -43,10 +44,12 @@ public:
     typedef Track value_type;
     typedef value_type& reference;
     typedef const value_type& const_reference;
+    typedef RandomRange<value_type> range;
+    typedef RandomRange<const value_type> const_range;
+    typedef ForwardRange<value_type> forward_range;
+    typedef ForwardRange<const value_type> const_forward_range;
     typedef opqit::opaque_iterator<value_type, opqit::random> iterator;
     typedef opqit::opaque_iterator<const value_type, opqit::random> const_iterator;
-    typedef boost::iterator_range<iterator> range;
-    typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
     Playlist(Slots::Manager&);
@@ -57,6 +60,7 @@ public:
     chrono::milliseconds duration() const;
     void previous();
     void next();
+    void jumpTo(size_type pos);
     iterator& currentTrack();
     const_iterator currentTrack() const;
 
@@ -79,26 +83,15 @@ public:
         return currentTrack() != end();
     }
 
-    iterator insert(iterator pos, value_type&& value);
-    void insert(iterator pos, iterator first, iterator last);
+    iterator insert(const_iterator pos, value_type&& value);
+    void insert(const_iterator pos, range values);
+    void insert(const_iterator pos, forward_range values);
 
     void push_back(value_type&& value);
-    template <typename ... Args>
-    void emplace_back(Args&& ... args) {
-        emplace(end(), std::forward<Args>(args)...);
-    }
 
-    template <typename ... Args>
-    iterator emplace(iterator pos, Args&& ... args) {
-        return insert(pos, std::move(value_type(std::forward<Args>(args)...)));
-    }
-
-//    template <typename It>
-//    iterator insert(const_iterator pos, It first, It last);
-//    template<class ... Args>
-//    iterator erase(const_iterator pos);
-//    iterator erase(const_iterator first, const_iterator last);
-//    void clear();
+    iterator erase(const_iterator pos);
+    void erase(forward_range values);
+    void clear();
     void swap(Playlist& b);
 
 private:

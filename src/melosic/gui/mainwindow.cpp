@@ -20,6 +20,13 @@
 #include <QStandardPaths>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QAction>
+#include <QStatusBar>
+#include <QMenuBar>
+#include <QMenu>
+#include <QListView>
+#include <kcategorizedview.h>
+#include <kcategorizedsortfilterproxymodel.h>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -32,60 +39,122 @@
 #include <melosic/melin/sigslots/slots.hpp>
 
 #include "mainwindow.hpp"
-#include "ui_mainwindow.h"
 #include "trackseeker.hpp"
 #include "playlistmodel.hpp"
+#include "playlistcategorymodel.hpp"
 #include "configurationdialog.hpp"
 
 MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow),
     kernel(kernel),
     currentPlaylist(std::move(std::make_shared<Playlist>(kernel.getSlotManager()))),
     playlistModel(new PlaylistModel(kernel, currentPlaylist)),
     player(kernel.getPlayer()),
     logject(logging::keywords::channel = "MainWindow")
 {
-    ui->setupUi(this);
-    ui->stopButton->setDefaultAction(ui->actionStop);
-    ui->playButton->setDefaultAction(ui->actionPlay);
-    ui->nextButton->setDefaultAction(ui->actionNext);
-    ui->playlistView->setModel(playlistModel);
-
     Slots::Manager& slotman = kernel.getSlotManager();
 
     scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
                                .connect(std::bind(&MainWindow::onStateChangeSlot, this, ph::_1)));
-    scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
-                               .emplace_connect(&Player::seek, &player, ph::_1));
-    ui->trackSeeker->connectSlots(&slotman);
+//    scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
+//                               .emplace_connect(&Player::seek, &player, ph::_1));
+//    ui->trackSeeker->connectSlots(&slotman);
+
+    actionOpen = new QAction("Open", this);
+    actionOpen->setShortcut({"ctrl+o"});
+    connect(actionOpen, &QAction::triggered, this, &MainWindow::on_actionOpen_triggered);
+    actionPlay = new QAction("Play", this);
+    actionPlay->setShortcut({"ctrl+p"});
+    connect(actionPlay, &QAction::triggered, this, &MainWindow::on_actionPlay_triggered);
+    actionExit = new QAction("Quit", this);
+    actionExit->setShortcut({"ctrl+q"});
+    connect(actionExit, &QAction::triggered, this, &MainWindow::close);
+    actionStop = new QAction("Stop", this);
+    connect(actionStop, &QAction::triggered, this, &MainWindow::on_actionStop_triggered);
+    actionPrevious = new QAction("Previous", this);
+    actionPrevious->setShortcut({"ctrl+b"});
+    actionNext = new QAction("Next", this);
+    connect(actionNext, &QAction::triggered, this, &MainWindow::on_actionNext_triggered);
+    actionNext->setShortcut({"ctrl+n"});
+    actionOptions = new QAction("Options", this);
+    connect(actionOptions, &QAction::triggered, this, &MainWindow::on_actionOptions_triggered);
+    menubar = new QMenuBar;
+    menuFile = new QMenu("File", menubar);
+    menuPlayback = new QMenu("Playback", menubar);
+    menuTools = new QMenu("Tools", menubar);
+    setMenuBar(menubar);
+    statusbar = new QStatusBar;
+    setStatusBar(statusbar);
+
+    setMinimumSize(600, 400);
+
+    playlistView = new KCategorizedView;
+    auto categoryModel = new PlaylistCategoryModel;
+    categoryModel->setSourceModel(playlistModel);
+    categoryModel->setCategorizedModel(true);
+    categoryModel->setDynamicSortFilter(false);
+    playlistView->setModel(categoryModel);
+    playlistView->setCategoryDrawer(new CategoryDrawer(playlistView));
+    playlistView->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    playlistView->setCollapsibleBlocks(true);
+    setCentralWidget(playlistView);
+
+    connect(playlistView, &KCategorizedView::doubleClicked, [this](const QModelIndex& i) {
+        if(i.isValid()) {
+            currentPlaylist->jumpTo(i.row());
+            play();
+        }
+    });
+
+    menubar->addMenu(menuFile);
+    menubar->addMenu(menuPlayback);
+    menubar->addMenu(menuTools);
+    menuFile->addAction(actionOpen);
+    menuFile->addAction(actionExit);
+    menuPlayback->addAction(actionPlay);
+    menuPlayback->addAction(actionStop);
+    menuPlayback->addAction(actionPrevious);
+    menuPlayback->addAction(actionNext);
+    menuTools->addAction(actionOptions);
 }
 
 MainWindow::~MainWindow() {
     TRACE_LOG(logject) << "Destroying main window";
-    delete ui;
     delete playlistModel;
 }
 
-void MainWindow::onStateChangeSlot(DeviceState state) {
-    switch(state) {
-        case DeviceState::Playing:
-            ui->playButton->setText("Pause");
-            break;
-        case DeviceState::Error:
-            ui->playButton->setText("Play");
-            break;
-        case DeviceState::Stopped:
-            ui->playButton->setText("Play");
-            break;
-        case DeviceState::Paused:
-            ui->playButton->setText("Resume");
-            break;
-        case DeviceState::Ready:
-            ui->playButton->setText("Play");
-        default:
-            break;
-    }
+void MainWindow::onStateChangeSlot(DeviceState /*state*/) {
+//    switch(state) {
+//        case DeviceState::Playing:
+//            ui->playButton->setText("Pause");
+//            break;
+//        case DeviceState::Error:
+//        case DeviceState::Stopped:
+//        case DeviceState::Ready:
+//            ui->playButton->setText("Play");
+//            break;
+//        case DeviceState::Paused:
+//            ui->playButton->setText("Resume");
+//            break;
+//        default:
+//            break;
+//    }
+}
+
+void MainWindow::play() {
+    actionPlay->trigger();
+}
+
+void MainWindow::stop() {
+    actionStop->trigger();
+}
+
+void MainWindow::previous() {
+    actionPrevious->trigger();
+}
+
+void MainWindow::next() {
+    actionNext->trigger();
 }
 
 void MainWindow::on_actionOpen_triggered() {
@@ -93,10 +162,10 @@ void MainWindow::on_actionOpen_triggered() {
                                                    QStandardPaths::writableLocation(QStandardPaths::MusicLocation),
                                                    tr("Audio Files (*.flac)"), 0,
                                                    QFileDialog::ReadOnly);
-    std::list<std::string> names;
-    for(const auto& filename : filenames) {
-        names.push_back(filename.toStdString());
-    }
+    std::list<boost::filesystem::path> names;
+    for(const auto& filename : filenames)
+        names.emplace_back(filename.toStdString());
+
     QStringList fails = playlistModel->appendFiles(names);
     if(fails.size()) {
         QMessageBox failmsg(QMessageBox::Warning, "Failed to add tracks", "", QMessageBox::Ok, this);
@@ -107,31 +176,26 @@ void MainWindow::on_actionOpen_triggered() {
 }
 
 void MainWindow::on_actionPlay_triggered() {
-    if(currentPlaylist->size()) {
-        if(!player.currentPlaylist()) {
+    if(!currentPlaylist->empty()) {
+        if(!player.currentPlaylist())
             player.openPlaylist(currentPlaylist);
-        }
-        if(bool(player)) {
-            if(player.state() == Output::DeviceState::Playing) {
+        if(player) {
+            if(player.state() == Output::DeviceState::Playing)
                 player.pause();
-            }
-            else if(player.state() != Output::DeviceState::Playing) {
-                player.play();
-            }
+            else if(player.state() != Output::DeviceState::Playing)
+                kernel.getThreadManager().enqueue(&Player::play, &player);
         }
     }
 }
 
 void MainWindow::on_actionStop_triggered() {
-    if(bool(player)) {
+    if(player)
         player.stop();
-    }
 }
 
 void MainWindow::on_actionNext_triggered() {
-    if(bool(player)) {
+    if(player)
         currentPlaylist->next();
-    }
 }
 
 void MainWindow::on_actionOptions_triggered() {

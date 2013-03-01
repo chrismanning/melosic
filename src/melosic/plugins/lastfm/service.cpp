@@ -28,6 +28,8 @@ using boost::shared_lock_guard;
 using namespace boost::range;
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
+#include <boost/algorithm/hex.hpp>
+using boost::algorithm::hex;
 
 #include <openssl/md5.h>
 
@@ -175,14 +177,11 @@ Method Service::sign(Method method) {
     sig += sharedSecret();
     TRACE_LOG(logject) << "sig: " << sig;
 
-    unsigned char sigp[MD5_DIGEST_LENGTH];
-    MD5(reinterpret_cast<const unsigned char*>(sig.c_str()), sig.length(), sigp);
+    std::array<uint8_t, MD5_DIGEST_LENGTH> sigp;
+    MD5(reinterpret_cast<const uint8_t*>(sig.c_str()), sig.length(), sigp.data());
     sig.clear();
 
-    char sig_[MD5_DIGEST_LENGTH*2];
-    for(int i = 0; i < MD5_DIGEST_LENGTH; i++)
-        sprintf(sig_+(i*2), "%02x", sigp[i]);
-    sig = sig_;
+    hex(sigp, std::back_inserter(sig));
     TRACE_LOG(logject) << "MD5 sig: " << sig;
 
     method.getParameters().front().addMember("api_sig", sig);
