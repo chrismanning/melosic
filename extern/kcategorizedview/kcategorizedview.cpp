@@ -29,9 +29,6 @@
   * design.
   */
 
-#include <iostream>
-#include <functional>
-
 #include "kcategorizedview.h"
 #include "kcategorizedview_p.h"
 

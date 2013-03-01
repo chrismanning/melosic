@@ -21,9 +21,7 @@
 #ifndef KCATEGORYDRAWER_H
 #define KCATEGORYDRAWER_H
 
-#include <kdeui_export.h>
-
-#include <QtCore/QObject>
+#include <QObject>
 #include <QMouseEvent>
 
 class QPainter;
@@ -40,7 +38,7 @@ class KCategorizedView;
   *
   * @warning Please use KCategoryDrawerV3 instead
   */
-class KDEUI_EXPORT KCategoryDrawer
+class KCategoryDrawer
 {
 public:
     KDEUI_DEPRECATED KCategoryDrawer();
@@ -110,7 +108,7 @@ private:
   *
   * @warning Please use KCategoryDrawerV3 instead
   */
-class KDEUI_EXPORT KCategoryDrawerV2
+class KCategoryDrawerV2
     : public QObject
     , public KCategoryDrawer
 {
@@ -147,7 +145,7 @@ Q_SIGNALS:
 /**
   * @since 4.5
   */
-class KDEUI_EXPORT KCategoryDrawerV3
+class KCategoryDrawerV3
     : public KCategoryDrawerV2
 {
     friend class KCategorizedView;
