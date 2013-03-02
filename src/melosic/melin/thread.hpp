@@ -97,7 +97,22 @@ public:
         }
     }
 };
+namespace {
+using TaskQueue = boost::lockfree::queue<Task>;
+template <typename Func, typename ...Args>
+std::future<typename std::result_of<Func(Args...)>::type> enqueue_impl(TaskQueue& tq, Func&& f, Args&&... args) {
+    std::promise<typename std::result_of<Func(Args...)>::type> p;
 
+    auto fut = p.get_future();
+
+    Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
+    if(!tq.bounded_push(t)) {
+        BOOST_THROW_EXCEPTION(Exception());
+    }
+
+    return std::move(fut);
+}
+}
 class Manager {
 public:
     Manager(const unsigned n = std::thread::hardware_concurrency() + 1);
@@ -111,30 +126,12 @@ public:
 
     template <typename Func, typename ...Args>
     std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
-        std::promise<typename std::result_of<Func(Args...)>::type> p;
-
-        auto fut = p.get_future();
-
-        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
-        if(!tasks.bounded_push(t)) {
-            BOOST_THROW_EXCEPTION(Exception());
-        }
-
-        return std::move(fut);
+        return enqueue_impl(tasks, std::forward<Func>(f), std::forward<Args>(args)...);
     }
 
     template <typename Func, typename ...Args>
     std::future<typename std::result_of<Func(Args...)>::type> enqueueSlot(Func&& f, Args&&... args) {
-        std::promise<typename std::result_of<Func(Args...)>::type> p;
-
-        auto fut = p.get_future();
-
-        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
-        if(!slots.bounded_push(t)) {
-            BOOST_THROW_EXCEPTION(Exception());
-        }
-
-        return std::move(fut);
+        return enqueue_impl(slots, std::forward<Func>(f), std::forward<Args>(args)...);
     }
 
     std::thread::id signalThreadId() {
@@ -144,8 +141,8 @@ public:
 private:
     std::vector<std::thread> threads;
     std::thread signalThread;
-    boost::lockfree::queue<Task> slots;
-    boost::lockfree::queue<Task> tasks;
+    TaskQueue slots;
+    TaskQueue tasks;
     std::atomic<bool> done;
     Logger::Logger logject;
 };
