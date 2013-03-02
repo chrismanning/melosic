@@ -150,8 +150,10 @@ void PlaylistModel::appendTracks(const Melosic::ForwardRange<Melosic::Track>& tr
 }
 
 QStringList PlaylistModel::appendFiles(const Melosic::ForwardRange<const boost::filesystem::path>& filenames) {
-    auto beg = playlist->size();
     QStringList failList;
+    if(filenames.empty())
+        return failList;
+    auto beg = playlist->size();
     beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
     for(const auto& filename : filenames) {
         try {

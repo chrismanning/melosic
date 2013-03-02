@@ -91,6 +91,7 @@ public:
         }
         else if(size() >= 1) {
             lock_guard l(mu);
+            current_track_->reset();
             --current_track_;
         }
         trackChanged(*currentTrack());
@@ -99,6 +100,7 @@ public:
     void next() {
         if(currentTrack() != end()) {
             lock_guard l(mu);
+            current_track_->reset();
             ++current_track_;
         }
         if(currentTrack() != end())
@@ -108,6 +110,8 @@ public:
     void jumpTo(size_type pos) {
         {
             lock_guard l(mu);
+            if(current_track_ != tracks.end())
+                current_track_->reset();
             current_track_ = tracks.begin() + pos;
         }
         trackChanged(*currentTrack());
