@@ -25,6 +25,8 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QListView>
+#include <QScrollBar>
+
 #include <kcategorizedview.h>
 #include <kcategorizedsortfilterproxymodel.h>
 
@@ -92,11 +94,11 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     auto categoryModel = new PlaylistCategoryModel;
     categoryModel->setSourceModel(playlistModel);
     categoryModel->setCategorizedModel(true);
-    categoryModel->setDynamicSortFilter(false);
     playlistView->setModel(categoryModel);
     playlistView->setCategoryDrawer(new CategoryDrawer(playlistView));
     playlistView->setSelectionMode(QAbstractItemView::ExtendedSelection);
     playlistView->setCollapsibleBlocks(true);
+    playlistView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setCentralWidget(playlistView);
 
     connect(playlistView, &KCategorizedView::doubleClicked, [this](const QModelIndex& i) {

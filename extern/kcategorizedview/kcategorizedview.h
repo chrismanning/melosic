@@ -140,6 +140,8 @@ public:
       */
     void setCategoryDrawer(KCategoryDrawer *categoryDrawer);
 
+    void collapseOrExpandBlock(const QModelIndex&);
+
     /**
       * @return Category spacing. The spacing between categories.
       *
@@ -195,6 +197,8 @@ public:
       * @since 4.5
       */
     QModelIndexList block(const QModelIndex &representative);
+
+    void selectBlock(const QModelIndex& representative);
 
     /**
       * Reimplemented from QAbstractItemView.

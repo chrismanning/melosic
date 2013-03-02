@@ -36,6 +36,7 @@
 #include <QScrollBar>
 #include <QPaintEvent>
 #include <QDebug>
+#include <QApplication>
 
 #include "kcategorydrawer.h"
 #include "kcategorizedsortfilterproxymodel.h"
@@ -56,16 +57,50 @@ struct KCategorizedView::Private::Item
 
 struct KCategorizedView::Private::Block
 {
-    Block()
+    struct ClickArea : public QWidget {
+        ClickArea(KCategorizedView::Private::Block* b, KCategorizedView* parent) : QWidget(parent), b(b), q(parent) {
+            setPalette(Qt::transparent);
+        }
+        virtual void mouseDoubleClickEvent(QMouseEvent* event) override {
+            if(!q) {
+                event->ignore();
+                return;
+            }
+            b->collapsed = !b->collapsed;
+            QWidget* viewport = q->viewport();
+            viewport->update();
+            b->quarantineStart = b->firstIndex;
+            q->updateGeometries();
+
+            event->accept();
+        }
+        virtual void mouseReleaseEvent(QMouseEvent* event) override {
+            if(!q) {
+                event->ignore();
+                return;
+            }
+            q->selectBlock(b->firstIndex);
+
+            event->accept();
+        }
+        KCategorizedView::Private::Block* b;
+        KCategorizedView* q;
+    };
+    Block(KCategorizedView* parent = nullptr)
         : topLeft(QPoint())
         , height(-1)
         , firstIndex(QModelIndex())
         , quarantineStart(QModelIndex())
         , items(QList<Item>())
+        , clickArea(new ClickArea(this, parent))
         , outOfQuarantine(false)
         , alternate(false)
         , collapsed(false)
-    {
+    {}
+    ~Block() {
+        clickArea->hide();
+//        delete clickArea;
+//        clickArea = nullptr;
     }
 
     bool operator!=(const Block &rhs) const
@@ -98,6 +133,8 @@ struct KCategorizedView::Private::Block
     QPersistentModelIndex quarantineStart;
     QList<Item> items;
 
+    QWidget* clickArea;
+
     // this affects the whole block, not items separately. items contain the topLeft point relative
     // to the block. Because of insertions or removals a whole block can be moved, so the whole block
     // will enter in quarantine, what is faster than moving all items in absolute terms.
@@ -117,7 +154,7 @@ KCategorizedView::Private::Private(KCategorizedView *q)
     , categorySpacing(5)
     , alternatingBlockColors(false)
     , collapsibleBlocks(false)
-    , hoveredBlock(new Block())
+    , hoveredBlock(new Block(q))
     , hoveredIndex(QModelIndex())
     , pressedPosition(QPoint())
     , rubberBandRect(QRect())
@@ -176,7 +213,6 @@ QPair<QModelIndex, QModelIndex> KCategorizedView::Private::intersectingIndexesWi
     }
 
     const QModelIndex bottomIndex = proxyModel->index(bottom, q->modelColumn(), q->rootIndex());
-
 
     // binary search to find out the bottom border
     bottom = 0;
@@ -401,7 +437,7 @@ QSharedPointer<KCategorizedView::Private::Block> KCategorizedView::Private::bloc
         }
     }
 
-    QSharedPointer<Block> empty(new Block);
+    QSharedPointer<Block> empty(new Block(q));
     empty->firstIndex = categoryIndex;
     auto s = blocks.size();
     auto b = *blocks.insert(category, empty);
@@ -676,6 +712,14 @@ void KCategorizedView::setCategoryDrawer(KCategoryDrawer *categoryDrawer)
     }
 }
 
+void KCategorizedView::collapseOrExpandBlock(const QModelIndex& index) {
+    auto& c = d->blockForIndex(index)->collapsed;
+    if(c)
+        c = false;
+    else
+        c = true;
+}
+
 int KCategorizedView::categorySpacing() const
 {
     return d->categorySpacing;
@@ -730,6 +774,20 @@ QModelIndexList KCategorizedView::block(const QModelIndex& representative)
         current = d->proxyModel->index(first + i, modelColumn(), rootIndex());
     }
     return res;
+}
+
+void KCategorizedView::selectBlock(const QModelIndex& representative) {
+    QItemSelectionModel::SelectionFlags flags = QItemSelectionModel::ClearAndSelect;
+    auto b = block(representative);
+    QItemSelection s(selectionModel()->selection());
+    if(QApplication::keyboardModifiers() & Qt::ControlModifier)
+        flags = QItemSelectionModel::ToggleCurrent;
+    else if(QApplication::keyboardModifiers() & Qt::ShiftModifier)
+        flags = QItemSelectionModel::SelectCurrent;
+    else
+        s.clear();
+    s.merge({b.front(), b.back()}, flags);
+    selectionModel()->select(s, flags);
 }
 
 QModelIndex KCategorizedView::indexAt(const QPoint &point) const
@@ -794,7 +852,8 @@ void KCategorizedView::paintEvent(QPaintEvent *event)
         return;
     }
 
-    const QPair<QModelIndex, QModelIndex> intersecting = d->intersectingIndexesWithRect(viewport()->rect().intersected(event->rect()));
+    const QPair<QModelIndex, QModelIndex> intersecting =
+            d->intersectingIndexesWithRect(viewport()->rect().intersected(event->rect()));
 
     QPainter p(viewport());
     p.save();
@@ -816,10 +875,15 @@ void KCategorizedView::paintEvent(QPaintEvent *event)
         option.rect.setWidth(d->viewportWidth() + d->categoryDrawer->leftMargin() + d->categoryDrawer->rightMargin());
         option.rect.setHeight(height + d->blockHeight(block));
         option.rect = d->mapToViewport(option.rect);
+        auto r = option.rect;
+        r.setHeight(height);
         if (!option.rect.intersects(viewport()->rect())) {
+            block->clickArea->setVisible(false);
             continue;
         }
-        d->categoryDrawer->drawCategory(categoryIndex, d->proxyModel->sortRole(), option, &p);
+        block->clickArea->setGeometry(r);
+        block->clickArea->setVisible(true);
+        d->categoryDrawer->drawCategory(categoryIndex, 0, option, &p);
     }
     //END: draw categories
 
@@ -993,7 +1057,7 @@ void KCategorizedView::mouseMoveEvent(QMouseEvent *event)
         const QModelIndex categoryIndex = d->proxyModel->index(d->hoveredBlock->firstIndex.row(), d->proxyModel->sortColumn(), rootIndex());
         const QStyleOptionViewItemV4 option = d->blockRect(categoryIndex);
         d->categoryDrawerV3->mouseLeft(categoryIndex, option.rect);
-        *d->hoveredBlock = Private::Block();
+        *d->hoveredBlock = Private::Block(this);
         d->hoveredCategory = QString();
         viewport()->update(option.rect);
     }
@@ -1075,7 +1139,7 @@ void KCategorizedView::leaveEvent(QEvent *event)
         const QModelIndex categoryIndex = d->proxyModel->index(d->hoveredBlock->firstIndex.row(), d->proxyModel->sortColumn(), rootIndex());
         const QStyleOptionViewItemV4 option = d->blockRect(categoryIndex);
         d->categoryDrawerV3->mouseLeft(categoryIndex, option.rect);
-        *d->hoveredBlock = Private::Block();
+        *d->hoveredBlock = Private::Block(this);
         d->hoveredCategory = QString();
         viewport()->update(option.rect);
     }
@@ -1235,7 +1299,7 @@ void KCategorizedView::rowsAboutToBeRemoved(const QModelIndex &parent,
         return;
     }
 
-    *d->hoveredBlock = Private::Block();
+    *d->hoveredBlock = Private::Block(this);
     d->hoveredCategory = QString();
 
     if (end - start + 1 == d->proxyModel->rowCount()) {
@@ -1390,6 +1454,19 @@ void KCategorizedView::updateGeometries()
     const QModelIndex lastIndex = d->proxyModel->index(rowCount - 1, modelColumn(), rootIndex());
     Q_ASSERT(lastIndex.isValid());
     QRect lastItemRect = visualRect(lastIndex);
+    qDebug() << lastItemRect;
+    qDebug() << "lastItemRect.bottomRight(): " << lastItemRect.bottomRight();
+    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height();
+    qDebug() << "Max before: " << verticalScrollBar()->maximum();
+    verticalScrollBar()->setRange(0, bottomRange/10);
+    qDebug() << "Max after: " << verticalScrollBar()->maximum();
+    verticalScrollBar()->setSingleStep(lastItemRect.height());
+    verticalScrollBar()->setValue(oldVerticalOffset);
+    return;
+
+//    const QModelIndex lastIndex = d->proxyModel->index(rowCount - 1, modelColumn(), rootIndex());
+    Q_ASSERT(lastIndex.isValid());
+//    QRect lastItemRect = visualRect(lastIndex);
 
     if (d->hasGrid()) {
         lastItemRect.setSize(lastItemRect.size().expandedTo(gridSize()));
@@ -1405,7 +1482,7 @@ void KCategorizedView::updateGeometries()
         }
     }
 
-    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height();
+//    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height() - 150;
 
     if (verticalScrollMode() == ScrollPerItem) {
         verticalScrollBar()->setSingleStep(lastItemRect.height());
@@ -1452,7 +1529,7 @@ void KCategorizedView::dataChanged(const QModelIndex &topLeft,
         return;
     }
 
-    *d->hoveredBlock = Private::Block();
+    *d->hoveredBlock = Private::Block(this);
     d->hoveredCategory = QString();
 
     //BEGIN: since the model changed data, we need to reconsider item sizes
@@ -1485,7 +1562,7 @@ void KCategorizedView::rowsInserted(const QModelIndex &parent,
         return;
     }
 
-    *d->hoveredBlock = Private::Block();
+    *d->hoveredBlock = Private::Block(this);
     d->hoveredCategory = QString();
     d->rowsInserted(parent, start, end);
 }
@@ -1497,7 +1574,7 @@ void KCategorizedView::slotLayoutChanged()
     }
 
     d->blocks.clear();
-    *d->hoveredBlock = Private::Block();
+    *d->hoveredBlock = Private::Block(this);
     d->hoveredCategory = QString();
     if (d->proxyModel->rowCount()) {
         d->rowsInserted(rootIndex(), 0, d->proxyModel->rowCount() - 1);
