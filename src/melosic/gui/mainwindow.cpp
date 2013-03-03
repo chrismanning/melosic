@@ -100,6 +100,7 @@ MainWindow::MainWindow(Kernel& kernel, QWidget* parent) :
     playlistView->setCollapsibleBlocks(true);
     playlistView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     setCentralWidget(playlistView);
+    playlistView->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     connect(playlistView, &KCategorizedView::doubleClicked, [this](const QModelIndex& i) {
         if(i.isValid()) {

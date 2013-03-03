@@ -1454,19 +1454,6 @@ void KCategorizedView::updateGeometries()
     const QModelIndex lastIndex = d->proxyModel->index(rowCount - 1, modelColumn(), rootIndex());
     Q_ASSERT(lastIndex.isValid());
     QRect lastItemRect = visualRect(lastIndex);
-    qDebug() << lastItemRect;
-    qDebug() << "lastItemRect.bottomRight(): " << lastItemRect.bottomRight();
-    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height();
-    qDebug() << "Max before: " << verticalScrollBar()->maximum();
-    verticalScrollBar()->setRange(0, bottomRange/10);
-    qDebug() << "Max after: " << verticalScrollBar()->maximum();
-    verticalScrollBar()->setSingleStep(lastItemRect.height());
-    verticalScrollBar()->setValue(oldVerticalOffset);
-    return;
-
-//    const QModelIndex lastIndex = d->proxyModel->index(rowCount - 1, modelColumn(), rootIndex());
-    Q_ASSERT(lastIndex.isValid());
-//    QRect lastItemRect = visualRect(lastIndex);
 
     if (d->hasGrid()) {
         lastItemRect.setSize(lastItemRect.size().expandedTo(gridSize()));
@@ -1482,7 +1469,7 @@ void KCategorizedView::updateGeometries()
         }
     }
 
-//    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height() - 150;
+    const int bottomRange = lastItemRect.bottomRight().y() + verticalOffset() - viewport()->height();
 
     if (verticalScrollMode() == ScrollPerItem) {
         verticalScrollBar()->setSingleStep(lastItemRect.height());
