@@ -17,7 +17,9 @@
 
 #include <QComboBox>
 #include <QLabel>
-#include <QStyledItemDelegate>
+#include <QVBoxLayout>
+#include <QFormLayout>
+#include <QGroupBox>
 
 #include <boost/algorithm/string.hpp>
 namespace algo = boost::algorithm;
@@ -28,11 +30,14 @@ namespace algo = boost::algorithm;
 
 #include "outputconfwidget.hpp"
 
-ConfigWidget* Melosic::Output::Conf::createWidget() {
-    return new OutputConfWidget(*this);
+namespace Melosic {
+namespace Output {
+
+ConfigWidget* Conf::createWidget(QWidget* parent) {
+    return new ConfWidget(*this, parent);
 }
 
-OutputConfWidget::OutputConfWidget(Melosic::Output::Conf& conf, QWidget* parent)
+ConfWidget::ConfWidget(Output::Conf& conf, QWidget* parent)
     : ConfigWidget(conf, parent)
 {
     layout = new QVBoxLayout;
@@ -40,11 +45,18 @@ OutputConfWidget::OutputConfWidget(Melosic::Output::Conf& conf, QWidget* parent)
     this->setLayout(layout);
 }
 
-void OutputConfWidget::apply() {
+ConfWidget::~ConfWidget() {
+    cbx->deleteLater();
+    form->deleteLater();
+    gen->deleteLater();
+    layout->deleteLater();
+}
+
+void ConfWidget::apply() {
     conf.putNode("output device", cbx->itemData(cbx->currentIndex()).toString().toStdString());
 }
 
-void OutputConfWidget::setup() {
+void ConfWidget::setup() {
     if(layout->count()) {
         layout->removeWidget(gen);
         gen->deleteLater();
@@ -74,3 +86,6 @@ void OutputConfWidget::setup() {
 
     layout->addWidget(gen);
 }
+
+} // namespace Output
+} // namespace Melosic

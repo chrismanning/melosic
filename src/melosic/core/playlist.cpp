@@ -18,38 +18,43 @@
 #include <algorithm>
 #include <numeric>
 #include <thread>
-#include <deque>
+#include <list>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex;
 using Mutex = shared_mutex;
 using lock_guard = std::lock_guard<Mutex>;
+using unique_lock = std::unique_lock<Mutex>;
 using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/container/stable_vector.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/range/algorithm_ext/insert.hpp>
 #include <boost/range/algorithm/find.hpp>
+#include <boost/range/adaptor/sliced.hpp>
+using namespace boost::adaptors;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/melin/decoder.hpp>
 
 #include "playlist.hpp"
 
-template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
-
-extern template class std::lock_guard<shared_mutex>;
-extern template class boost::shared_lock_guard<shared_mutex>;
+template class opqit::opaque_iterator<Melosic::Core::Track, opqit::random>;
 
 namespace Melosic {
+namespace Core {
 
 class Playlist::impl {
 public:
-    impl(Slots::Manager& slotman)
+    impl(const std::string& name, Slots::Manager& slotman, Decoder::Manager& decman)
         : current_track_(begin()),
+          name(name),
           trackChanged(slotman.get<Signals::Playlist::TrackChanged>()),
+          decman(decman),
           logject(logging::keywords::channel = "Playlist")
     {}
 
@@ -189,14 +194,56 @@ public:
         }
     }
 
-    void insert(Playlist::const_iterator pos, Playlist::range values) {
-        insert(pos, values.begin(), values.end());
+    void insert(Playlist::const_iterator pos, Playlist::forward_range values) {
+        mu.lock();
+        boost::range::insert(tracks, pos.cast_to<list_type::iterator>(), values);
+        mu.unlock();
+        if(size() == 1) {
+            mu.lock();
+            current_track_ = tracks.begin();
+            mu.unlock();
+            trackChanged(*currentTrack());
+        }
     }
 
-    void insert(Playlist::const_iterator pos, Playlist::forward_range values) {
-        for(auto&& v : values) {
-            insert(pos++, std::move(v));
+    Playlist::iterator emplace(Playlist::const_iterator pos,
+                               const boost::filesystem::path& filename,
+                               chrono::milliseconds start,
+                               chrono::milliseconds end)
+    {
+        unique_lock l(mu);
+
+        auto r = tracks.emplace(pos.cast_to<list_type::iterator>(), decman, filename, start, end);
+        l.unlock();
+
+        if(size() == 1) {
+            l.lock();
+            current_track_ = tracks.begin();
+            l.unlock();
+            trackChanged(*currentTrack());
         }
+
+        return r;
+    }
+
+    Playlist::iterator emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
+        unique_lock l(mu);
+        if(values.empty())
+            return pos.cast_to<list_type::iterator>();
+
+        auto r = std::next(pos).cast_to<list_type::iterator>();
+        for(auto& path : values) {
+            pos = tracks.emplace(pos.cast_to<list_type::iterator>(), decman, path);
+        }
+        l.unlock();
+        if(size() == 1) {
+            l.lock();
+            current_track_ = tracks.begin();
+            l.unlock();
+            trackChanged(*currentTrack());
+        }
+
+        return r;
     }
 
     void push_back(Playlist::value_type&& value) {
@@ -211,11 +258,34 @@ public:
         }
     }
 
+    void emplace_back(const boost::filesystem::path& filename,
+                      chrono::milliseconds start,
+                      chrono::milliseconds end)
+    {
+        unique_lock l(mu);
+        tracks.emplace_back(decman, filename, start, end);
+        l.unlock();
+        if(size() == 1) {
+            l.lock();
+            current_track_ = tracks.begin();
+            l.unlock();
+            trackChanged(*currentTrack());
+        }
+    }
+
     Playlist::iterator erase(Playlist::const_iterator pos) {
+        lock_guard l(mu);
         return tracks.erase(pos.cast_to<list_type::const_iterator>());
     }
 
+    Playlist::iterator erase(Playlist::size_type start, Playlist::size_type end) {
+        lock_guard l(mu);
+        boost::range::erase(tracks, tracks | sliced(start, end));
+        return std::next(tracks.begin(), start);
+    }
+
     void erase(Playlist::forward_range values) {
+        lock_guard l(mu);
         auto i = boost::range::find(tracks, values.front());
         boost::erase(tracks, boost::make_iterator_range(i, std::next(i, boost::distance(values))));
     }
@@ -225,16 +295,32 @@ public:
         tracks.clear();
     }
 
+    const std::string& getName() {
+        shared_lock_guard l(mu);
+        return name;
+    }
+
+    void setName(const std::string& name) {
+        lock_guard l(mu);
+        this->name = name;
+    }
+
 private:
     Mutex mu;
+    friend struct Block;
     typedef boost::container::stable_vector<Playlist::value_type> list_type;
     list_type tracks;
     Playlist::iterator current_track_;
+    std::string name;
     Signals::Playlist::TrackChanged& trackChanged;
+    Decoder::Manager& decman;
     Logger::Logger logject;
 };
 
-Playlist::Playlist(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
+//Logger::Logger Playlist::impl::logject(logging::keywords::channel = "Playlist");
+
+Playlist::Playlist(const std::string& name, Slots::Manager& slotman, Decoder::Manager& decman)
+    : pimpl(new impl(name, slotman, decman)) {}
 
 Playlist::~Playlist() {}
 
@@ -331,24 +417,43 @@ Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::valu
     return pimpl->insert(pos, std::move(value));
 }
 
-void Playlist::insert(Playlist::const_iterator pos, range values) {
-    pimpl->insert(pos, std::move(values));
+void Playlist::insert(Playlist::const_iterator pos, forward_range values) {
+    pimpl->insert(pos, values);
 }
 
-void Playlist::insert(Playlist::const_iterator pos, forward_range values) {
-    pimpl->insert(pos, std::move(values));
+Playlist::iterator Playlist::emplace(Playlist::const_iterator pos,
+                                     const boost::filesystem::path& filename,
+                                     chrono::milliseconds start,
+                                     chrono::milliseconds end)
+{
+    return pimpl->emplace(pos, filename, start, end);
+}
+
+Playlist::iterator Playlist::emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
+    return pimpl->emplace(pos, values);
 }
 
 void Playlist::push_back(Playlist::value_type&& value) {
     pimpl->push_back(std::move(value));
 }
 
+void Playlist::emplace_back(const boost::filesystem::path& filename,
+                            chrono::milliseconds start,
+                            chrono::milliseconds end)
+{
+    pimpl->emplace_back(filename, start, end);
+}
+
 Playlist::iterator Playlist::erase(const_iterator pos) {
     return pimpl->erase(pos);
 }
 
+Playlist::iterator Playlist::erase(Playlist::size_type start, Playlist::size_type end) {
+    return pimpl->erase(start, end);
+}
+
 void Playlist::erase(forward_range values) {
-    pimpl->erase(std::move(values));
+    pimpl->erase(values);
 }
 
 void Playlist::clear() {
@@ -359,4 +464,13 @@ void Playlist::swap(Playlist& b)  {
     std::swap(pimpl, b.pimpl);
 }
 
-}//end namespace Melosic
+const std::string& Playlist::getName() const {
+    return pimpl->getName();
+}
+
+void Playlist::setName(const std::string& name) {
+    pimpl->setName(name);
+}
+
+} // namespace Core
+} // namespace Melosic

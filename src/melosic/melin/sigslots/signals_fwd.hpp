@@ -25,8 +25,10 @@
 #include <melosic/melin/configvar.hpp>
 
 namespace Melosic {
+namespace Core {
 class Playlist;
 class Track;
+}
 
 namespace Config {
 class Base;
@@ -47,7 +49,6 @@ typedef Signal<void(Melosic::Config::Base&)> Loaded;
 namespace Player {
 typedef Signal<void(Output::DeviceState)> StateChanged;
 typedef Signal<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
-typedef Signal<void(std::shared_ptr<Melosic::Playlist>)> PlaylistChanged;
 typedef Signal<void()> Play;
 typedef Signal<void()> Pause;
 typedef Signal<void()> Stop;
@@ -60,7 +61,8 @@ typedef Signal<void()> PlayerSinkChanged;
 }
 
 namespace Playlist {
-typedef Signal<void(const Track&)> TrackChanged;
+typedef Signal<void(std::shared_ptr<Melosic::Core::Playlist>)> PlaylistChanged;
+typedef Signal<void(const Core::Track&)> TrackChanged;
 typedef Signal<void()> Next;
 typedef Signal<void()> Previous;
 }

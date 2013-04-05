@@ -38,10 +38,8 @@ namespace Output {
 
 class Manager::impl {
 public:
-    impl(Config::Manager& confman, Slots::Manager& slotman, Plugin::Manager& plugman_)
-        : confman(confman),
-          plugman(plugman_),
-          requestSinkChange(slotman.get<Signals::Output::ReqSinkChange>()),
+    impl(Slots::Manager& slotman)
+        : requestSinkChange(slotman.get<Signals::Output::ReqSinkChange>()),
           playerSinkChanged(slotman.get<Signals::Output::PlayerSinkChanged>()),
           logject(logging::keywords::channel = "Output::Manager")
     {
@@ -122,8 +120,6 @@ private:
     std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
     std::map<DeviceName, Factory> outputFactories;
     Conf conf;
-    Config::Manager& confman;
-    Plugin::Manager& plugman;
     Signals::Output::ReqSinkChange& requestSinkChange;
     Signals::Output::PlayerSinkChanged& playerSinkChanged;
     Logger::Logger logject;
@@ -131,8 +127,8 @@ private:
     friend class Conf;
 };
 
-Manager::Manager(Config::Manager& confman, Slots::Manager& slotman, Plugin::Manager& plugman)
-    : pimpl(new impl(confman, slotman, plugman)) {}
+Manager::Manager(Slots::Manager& slotman)
+    : pimpl(new impl(slotman)) {}
 
 Manager::~Manager() {}
 

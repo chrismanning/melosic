@@ -75,7 +75,7 @@ namespace Plugin {
 
 class Plugin {
 public:
-    Plugin(const boost::filesystem::path& filename, Kernel& kernel)
+    Plugin(const boost::filesystem::path& filename, Core::Kernel& kernel)
         : pluginPath(absolute(filename)),
           logject(logging::keywords::channel = "Plugin"),
           kernel(kernel)
@@ -166,13 +166,13 @@ private:
     std::list<std::function<void()>> regFuns;
     DLHandle handle;
     Logger::Logger logject;
-    Kernel& kernel;
+    Core::Kernel& kernel;
     Info info;
 };
 
 class Manager::impl {
 public:
-    impl(Kernel& kernel)
+    impl(Core::Kernel& kernel)
         : kernel(kernel),
           logject(logging::keywords::channel = "Plugin::Manager")
     {}
@@ -217,7 +217,7 @@ public:
     }
 
 private:
-    Kernel& kernel;
+    Core::Kernel& kernel;
     std::map<std::string, Plugin> loadedPlugins;
     Logger::Logger logject;
     typedef mutex Mutex;
@@ -227,7 +227,7 @@ private:
     friend struct RegisterFuncsInserter;
 };
 
-Manager::Manager(Kernel& kernel) : pimpl(new impl(kernel)) {}
+Manager::Manager(Core::Kernel& kernel) : pimpl(new impl(kernel)) {}
 
 Manager::~Manager() {}
 
@@ -249,7 +249,7 @@ bool Manager::initialised() const {
 
 } // namespace Plugin
 
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& fun) {
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& /*fun*/) {
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerDecoder_T& fun) {
@@ -260,7 +260,7 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T&
     e->push(std::bind(fun, &k.getOutputManager()));
     return *this;
 }
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& fun) {
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& /*fun*/) {
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlots_T& fun) {

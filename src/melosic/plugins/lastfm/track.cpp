@@ -53,7 +53,7 @@ struct Track::impl {
           url(url)
     {}
 
-    impl(std::weak_ptr<Service> lastserv, const Melosic::Track& track)
+    impl(std::weak_ptr<Service> lastserv, const Melosic::Core::Track& track)
         : lastserv(lastserv), artist(lastserv)
     {
         {   auto artist = track.getTag("artist");
@@ -260,7 +260,7 @@ Track::Track(std::weak_ptr<Service> lastserv,
              const std::string& artist,
              const std::string& url)
     : pimpl(new impl(std::move(lastserv), name, artist, url)) {}
-Track::Track(std::weak_ptr<Service> lastserv, const Melosic::Track& track)
+Track::Track(std::weak_ptr<Service> lastserv, const Melosic::Core::Track& track)
     : pimpl(new impl(lastserv, track)) {}
 
 Track::~Track() {}

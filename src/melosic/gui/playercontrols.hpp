@@ -15,32 +15,36 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_GUI_MANAGER_HPP
-#define MELOSIC_GUI_MANAGER_HPP
+#ifndef MELOSIC_PLAYERCONTROLS_HPP
+#define MELOSIC_PLAYERCONTROLS_HPP
 
-#include <memory>
-#include <functional>
-
-class QWidget;
+#include <QObject>
 
 namespace Melosic {
-namespace GUI {
 
-typedef std::function<QWidget*(QWidget*)> WidgetFactory;
+namespace Core {
+class Player;
+}
 
-class Manager {
+class PlayerControls : public QObject {
+    Q_OBJECT
+    class PlayerControlsPrivate;
+    Q_DECLARE_PRIVATE(PlayerControls)
+    const QScopedPointer<PlayerControlsPrivate> d_ptr;
+
 public:
-    Manager();
-    ~Manager();
+    explicit PlayerControls(Core::Player& player, QObject* parent = 0);
 
-    void addWidgetFactory(const std::string&, WidgetFactory&&);
+    virtual ~PlayerControls();
 
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
+    Q_INVOKABLE void play();
+    Q_INVOKABLE void pause();
+    Q_INVOKABLE void stop();
+    Q_INVOKABLE void previous();
+    Q_INVOKABLE void next();
+    Q_INVOKABLE void seek();
 };
 
-} // namespace GUI
 } // namespace Melosic
 
-#endif // MELOSIC_GUI_MANAGER_HPP
+#endif // MELOSIC_PLAYERCONTROLS_HPP

@@ -42,6 +42,7 @@ namespace io = boost::iostreams;
 #include "player.hpp"
 
 namespace Melosic {
+namespace Core {
 
 class Player::impl {
 public:
@@ -49,7 +50,7 @@ public:
         : slotman(slotman),
           stateChanged(slotman.get<Signals::Player::StateChanged>()),
           notifyPlayPosition(slotman.get<Signals::Player::NotifyPlayPos>()),
-          playlistChanged(slotman.get<Signals::Player::PlaylistChanged>()),
+          playlistChanged(slotman.get<Signals::Playlist::PlaylistChanged>()),
           end_(false),
           playerThread(&impl::start, this),
           logject(logging::keywords::channel = "Player")
@@ -111,6 +112,14 @@ public:
             }
             device->play();
             stateChanged(DeviceState::Playing);
+        }
+        else {
+            std::stringstream str;
+            if(!device)
+                str << ": device not initialised";
+            if(!playlist)
+                str << ": playlist not initialised";
+            WARN_LOG(logject) << "Playback not possible" << str.str();
         }
     }
 
@@ -189,17 +198,17 @@ public:
         return bool(device);
     }
 
-    void openPlaylist(std::shared_ptr<Playlist> playlist) {
+    void openPlaylist(std::shared_ptr<Playlist> /*playlist*/) {
         lock_guard l(m);
-        if(this->playlist != playlist) {
-            if(this->playlist && *(this->playlist)) {
-                this->playlist->currentTrack()->close();
-            }
-            this->playlist = playlist;
-            slotman.get<Signals::Playlist::TrackChanged>()
-                    .emplace_connect(&impl::onTrackChangeSlot, this, ph::_1);
-            playlistChanged(playlist);
-        }
+//        if(this->playlist != playlist) {
+//            if(this->playlist && *(this->playlist)) {
+//                this->playlist->currentTrack()->close();
+//            }
+//            this->playlist = playlist;
+//            slotman.get<Signals::Playlist::TrackChanged>()
+//                    .emplace_connect(&impl::onTrackChangeSlot, this, ph::_1);
+//            playlistChanged(playlist);
+//        }
     }
 
     std::shared_ptr<Playlist> currentPlaylist() {
@@ -308,7 +317,7 @@ private:
     Slots::Manager& slotman;
     Signals::Player::StateChanged& stateChanged;
     Signals::Player::NotifyPlayPos& notifyPlayPosition;
-    Signals::Player::PlaylistChanged& playlistChanged;
+    Signals::Playlist::PlaylistChanged& playlistChanged;
     std::shared_ptr<Playlist> playlist;
     std::unique_ptr<Output::PlayerSink> device;
     bool end_;
@@ -367,5 +376,6 @@ std::shared_ptr<Playlist> Player::currentPlaylist() {
     return pimpl->currentPlaylist();
 }
 
-}//end namespace Melosic
+} // namespace Core
+} // namespace Melosic
 

@@ -22,6 +22,8 @@
 #include <vector>
 
 #include <boost/variant.hpp>
+#include <boost/serialization/split_free.hpp>
+#include <boost/serialization/vector.hpp>
 
 namespace Melosic {
 namespace Config {

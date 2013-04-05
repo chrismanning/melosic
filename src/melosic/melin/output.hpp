@@ -48,7 +48,7 @@ namespace Output {
 typedef std::function<std::unique_ptr<PlayerSink>(const DeviceName&)> Factory;
 class Manager {
 public:
-    Manager(Config::Manager&, Slots::Manager&, Plugin::Manager&);
+    Manager(Slots::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -75,7 +75,7 @@ private:
 class Conf : public Config::Config<Conf> {
 public:
     Conf();
-    ConfigWidget* createWidget() override;
+    ConfigWidget* createWidget(QWidget* = nullptr) override;
     std::map<DeviceName, Factory> const* outputFactories = nullptr;
 };
 

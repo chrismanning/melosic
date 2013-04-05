@@ -32,8 +32,12 @@ using std::mutex; using std::lock_guard; using std::unique_lock;
 #include "track.hpp"
 
 namespace Melosic {
+
+namespace Core {
 class Track;
 class Playlist;
+}
+
 namespace Slots {
 class Manager;
 }
@@ -54,8 +58,8 @@ public:
     void submitCache();
     void notifySlot(chrono::milliseconds current, chrono::milliseconds total);
     void stateChangedSlot(Melosic::Output::DeviceState);
-    void playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist);
-    void trackChangedSlot(const Melosic::Track& newTrack);
+    void playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist);
+    void trackChangedSlot(const Melosic::Core::Track& newTrack);
 
 private:
     std::shared_ptr<Service> lastserv;

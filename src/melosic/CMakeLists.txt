@@ -1,7 +1,5 @@
 FIND_PACKAGE(Qt5Widgets REQUIRED)
-ADD_DEFINITIONS(-DQT_SHARED)
-
-#abbrev
+FIND_PACKAGE(Qt5Qml REQUIRED)
 SET(PN ${PROJECT_NAME})
 
 find_package(Boost COMPONENTS filesystem iostreams system log log_setup thread REQUIRED)
@@ -17,18 +15,15 @@ add_subdirectory(plugins)
 add_subdirectory(gui)
 add_subdirectory(melin)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xlinker ")
-
 add_executable(${PN} ${SRC_LIST})
 
-qt5_use_modules(${PN} Widgets)
+qt5_use_modules(${PN} Widgets Qml)
+SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})
 
-include_directories(.. ${Boost_INCLUDE_DIRS} ${Qt5Widgets_INCLUDES})
+include_directories(.. ${Boost_INCLUDE_DIRS} ${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
 
 IF(${UNIX})
     SET(LINK_LIBS ${LINK_LIBS} dl /usr/local/lib64/libboost_log.a cxxrt)
 ENDIF(${UNIX})
 
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} melosiccore melin qt-gui ${LINK_LIBS})
-
-
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} melosiccore melin ${LINK_LIBS} qt-gui)

@@ -24,17 +24,20 @@
 #include <melosic/melin/encoder.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/thread.hpp>
+#include <melosic/melin/playlist.hpp>
 
 #include "kernel.hpp"
 
 namespace Melosic {
+namespace Core {
 
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
           slotman(tman),
           confman(slotman),
-          outman(confman, slotman, plugman),
+          outman(slotman),
+          playlistman(slotman, decman),
           player(slotman, outman)
     {}
 
@@ -46,6 +49,7 @@ class Kernel::impl {
     Decoder::Manager decman;
     Output::Manager outman;
     Encoder::Manager encman;
+    Melosic::Playlist::Manager playlistman;
     Player player;
     friend class Kernel;
 };
@@ -90,5 +94,10 @@ Thread::Manager& Kernel::getThreadManager() {
     return pimpl->tman;
 }
 
-} // end namespace Melosic
+Melosic::Playlist::Manager& Kernel::getPlaylistManager() {
+    return pimpl->playlistman;
+}
+
+} // namespace Core
+} // namespace Melosic
 

@@ -22,6 +22,8 @@
 
 #include "trackseeker.hpp"
 
+namespace Melosic {
+
 class TrackSeeker::impl {
 public:
     void onRelease() {
@@ -104,3 +106,5 @@ Signals::Player::Seek& TrackSeeker::get<Signals::Player::Seek>() {
 }
 
 template Signals::Player::Seek& TrackSeeker::get<Signals::Player::Seek>();
+
+} // namespace Melosic

@@ -23,6 +23,7 @@ typedef std::mutex Mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;
 
+#include "configvar.hpp"
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/vector.hpp>

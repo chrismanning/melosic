@@ -158,7 +158,7 @@ inline std::ostream& operator<<(std::ostream& out, const Info& info) {
                << " on " << str;
 }
 
-} // end namespace Plugin
+} // namespace Plugin
 
 struct Eraser {
     virtual void push(const std::function<void()>&) = 0;
@@ -174,10 +174,14 @@ struct FuncContainer : Eraser {
 private:
     Container& c;
 };
+
+namespace Core {
 class Kernel;
+}
+
 struct RegisterFuncsInserter {
     template <typename Container>
-    RegisterFuncsInserter(Kernel& k, Container& c) : k(k), e(new FuncContainer<Container>(c)) {}
+    RegisterFuncsInserter(Core::Kernel& k, Container& c) : k(k), e(new FuncContainer<Container>(c)) {}
 
     RegisterFuncsInserter& operator<<(const registerInput_T&);
     RegisterFuncsInserter& operator<<(const registerDecoder_T&);
@@ -187,11 +191,11 @@ struct RegisterFuncsInserter {
     RegisterFuncsInserter& operator<<(const registerConfig_T&);
     RegisterFuncsInserter& operator<<(const registerTasks_T&);
 private:
-    Kernel& k;
+    Core::Kernel& k;
     std::shared_ptr<Eraser> e;
 };
 
-} // end namespace Melosic
+} // namespace Melosic
 
 namespace {
 

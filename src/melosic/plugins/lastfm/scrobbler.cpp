@@ -40,7 +40,7 @@ Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager*
     connections.emplace_back(slotman->get<Melosic::Signals::Player::StateChanged>()
             .emplace_connect(&Scrobbler::stateChangedSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected state changed slot";
-    connections.emplace_back(slotman->get<Melosic::Signals::Player::PlaylistChanged>()
+    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::PlaylistChanged>()
             .emplace_connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected playlist changed slot";
     connections.emplace_back(slotman->get<Melosic::Signals::Playlist::TrackChanged>()
@@ -77,12 +77,12 @@ void Scrobbler::stateChangedSlot(DeviceState newstate) {
     }
 }
 
-void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
+void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
     if(playlist && *playlist)
         trackChangedSlot(*playlist->currentTrack());
 }
 
-void Scrobbler::trackChangedSlot(const Melosic::Track& newTrack) {
+void Scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {
     TRACE_LOG(logject) << "Track changed";
     submitCache();
     std::unique_lock<Mutex> l(mu);

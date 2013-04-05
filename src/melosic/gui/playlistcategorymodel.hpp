@@ -20,12 +20,16 @@
 
 #include <kcategorizedsortfilterproxymodel.h>
 
+namespace Melosic {
+
 class PlaylistCategoryModel : public KCategorizedSortFilterProxyModel {
 public:
     PlaylistCategoryModel(QObject* parent = nullptr);
     virtual ~PlaylistCategoryModel() {}
 
-    virtual bool subSortLessThan(const QModelIndex& left, const QModelIndex& right) const override;
+//    virtual bool subSortLessThan(const QModelIndex& left, const QModelIndex& right) const override;
 };
+
+} // namespace Melosic
 
 #endif // PLAYLISTCATEGORYMODEL_HPP

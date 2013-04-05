@@ -28,7 +28,10 @@ using boost::filesystem::absolute;
 #include <melosic/common/range.hpp>
 
 namespace Melosic {
+
+namespace Core {
 class Kernel;
+}
 
 namespace Plugin {
 
@@ -49,8 +52,8 @@ public:
     ForwardRange<const Info> getPlugins() const;
 
 private:
-    Manager(Kernel& kernel);
-    friend class Kernel;
+    Manager(Core::Kernel& kernel);
+    friend class Core::Kernel;
     class impl;
     std::unique_ptr<impl> pimpl;
 };

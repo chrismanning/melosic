@@ -34,6 +34,7 @@ using std::unique_lock; using std::lock_guard;
 #include <melosic/melin/decoder.hpp>
 
 namespace Melosic {
+namespace Core {
 
 static Logger::Logger logject(logging::keywords::channel = "Track");
 
@@ -281,4 +282,5 @@ void Track::reloadDecoder() {
     pimpl->reloadDecoder();
 }
 
-} //end namespace Melosic
+} // namespace Core
+} // namespace Melosic

@@ -35,6 +35,8 @@ class Manager;
 
 using Output::DeviceState;
 
+namespace Core {
+
 class Playlist;
 
 class Player {
@@ -63,6 +65,7 @@ private:
     std::unique_ptr<impl> pimpl;
 };
 
-}
+} // namespace Core
+} // namespace Melosic
 
 #endif // MELOSIC_PLAYER_HPP

@@ -19,13 +19,11 @@
 #define MELOSIC_CONFIGWIDGET_HPP
 
 #include <QWidget>
-#include <QLineEdit>
-#include <QCheckBox>
-#include <QDoubleValidator>
-#include <QIntValidator>
-#include <QVBoxLayout>
-#include <QGroupBox>
-#include <QFormLayout>
+
+class QBoxLayout;
+class QGroupBox;
+class QFormLayout;
+class QVariant;
 
 #include <boost/variant/static_visitor.hpp>
 
@@ -34,10 +32,8 @@ namespace Config {
 class Manager;
 class Base;
 }
-}
 
 class ConfigWidget : public QWidget {
-    Q_OBJECT
 public:
     explicit ConfigWidget(Melosic::Config::Base&, QWidget* parent = nullptr);
 
@@ -57,7 +53,7 @@ public:
     virtual void setup() override;
 
 protected:
-    QVBoxLayout* layout;
+    QBoxLayout* layout;
 private:
     QGroupBox* gen;
     QFormLayout* form;
@@ -71,6 +67,9 @@ enum class ConfigType {
     Binary
 };
 
+std::vector<uint8_t> toVector(const QVariant&);
+QVariant fromVector(const std::vector<uint8_t>&);
+
 struct ConfigVisitor : boost::static_visitor<QWidget*> {
     QWidget* operator()(const std::string&);
     QWidget* operator()(bool);
@@ -78,5 +77,7 @@ struct ConfigVisitor : boost::static_visitor<QWidget*> {
     QWidget* operator()(double);
     QWidget* operator()(const std::vector<uint8_t>&);
 };
+
+} // namespace Melosic
 
 #endif // MELOSIC_CONFIGWIDGET_HPP

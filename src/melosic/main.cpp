@@ -16,13 +16,16 @@
 **************************************************************************/
 
 #include <QApplication>
-#include <melosic/gui/mainwindow.hpp>
+#include <QQmlDebuggingEnabler>
+
 #include <melosic/core/kernel.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/config.hpp>
+#include <melosic/melin/logging.hpp>
+#include <melosic/gui/mainwindow.hpp>
 using namespace Melosic;
 
 int main(int argc, char* argv[]) {
@@ -36,7 +39,7 @@ int main(int argc, char* argv[]) {
 
         QApplication app(argc, argv);
 
-        Kernel kernel;
+        Core::Kernel kernel;
         Plugin::Manager& plugman = kernel.getPluginManager();
 
         plugman.loadPlugin("../lib/flac.melin");
@@ -47,9 +50,9 @@ int main(int argc, char* argv[]) {
 
         kernel.getConfigManager().loadConfig();
 
-        MainWindow win(kernel);
+        QQmlDebuggingEnabler enabler;
 
-        win.show();
+        MainWindow win(kernel);
 
         return app.exec();
     }

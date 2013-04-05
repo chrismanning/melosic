@@ -41,6 +41,24 @@ std::string toTitle(const std::string& str) {
     return join(list, " ");
 }
 
+inline namespace Literals {
+    std::basic_string<char> operator ""_str(char const* str, size_t len) {
+        return std::basic_string<char>(str, len);
+    }
+
+    std::basic_string<wchar_t> operator ""_str(wchar_t const* str, size_t len) {
+        return std::basic_string<wchar_t>(str, len);
+    }
+
+    std::basic_string<char16_t> operator ""_str(char16_t const* str, size_t len) {
+        return std::basic_string<char16_t>(str, len);
+    }
+
+    std::basic_string<char32_t> operator ""_str(char32_t const* str, size_t len) {
+        return std::basic_string<char32_t>(str, len);
+    }
+}
+
 }
 
 #endif // MELOSIC_STRING_HPP

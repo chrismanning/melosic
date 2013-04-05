@@ -22,6 +22,7 @@
 #include <QProgressDialog>
 #include <QDesktopServices>
 #include <QMessageBox>
+#include <QBoxLayout>
 
 #include <melosic/common/string.hpp>
 #include <melosic/gui/configwidget.hpp>
@@ -117,8 +118,8 @@ void LastFmConfigWidget::authenticate() {
 //    }
 }
 
-ConfigWidget* LastFmConfig::createWidget() {
-    return new LastFmConfigWidget(*this);
+ConfigWidget* LastFmConfig::createWidget(QWidget* parent) {
+    return new LastFmConfigWidget(*this, parent);
 }
 
 QIcon* LastFmConfig::getIcon() const {

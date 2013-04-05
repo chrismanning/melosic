@@ -30,7 +30,9 @@ using Melosic::ForwardRange;
 #include "tag.hpp"
 
 namespace Melosic {
+namespace Core {
 class Track;
+}
 }
 
 namespace LastFM {
@@ -43,7 +45,7 @@ struct Track {
           const std::string& name,
           const std::string& artist,
           const std::string& url);
-    Track(std::weak_ptr<Service>, const Melosic::Track&);
+    Track(std::weak_ptr<Service>, const Melosic::Core::Track&);
 
     ~Track();
 

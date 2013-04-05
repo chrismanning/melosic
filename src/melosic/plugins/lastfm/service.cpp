@@ -193,12 +193,12 @@ std::string Service::postMethod(const Method& method) {
     return std::move(pimpl->postMethod(method));
 }
 
-void Service::playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist) {
+void Service::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
     if(playlist && *playlist)
         trackChangedSlot(*playlist->currentTrack());
 }
 
-void Service::trackChangedSlot(const Melosic::Track& newTrack) {
+void Service::trackChangedSlot(const Melosic::Core::Track& newTrack) {
     pimpl->currentTrack_ = std::make_shared<Track>(shared_from_this(), newTrack);
 }
 

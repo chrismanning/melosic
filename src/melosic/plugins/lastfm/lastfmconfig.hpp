@@ -31,12 +31,11 @@ public:
 
     virtual ~LastFmConfig();
 
-    ConfigWidget* createWidget() override;
+    ConfigWidget* createWidget(QWidget* = nullptr) override;
     QIcon* getIcon() const override;
 };
 
 class LastFmConfigWidget : public GenericConfigWidget {
-    Q_OBJECT
 public:
     LastFmConfigWidget(Config::Base& conf, QWidget* parent = nullptr);
     void apply();

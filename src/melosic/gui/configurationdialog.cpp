@@ -28,10 +28,11 @@ using namespace boost::adaptors;
 #include <melosic/core/kernel.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/logging.hpp>
-using namespace Melosic;
 
 #include "configurationdialog.hpp"
 #include "configwidget.hpp"
+
+namespace Melosic {
 
 static Logger::Logger logject(logging::keywords::channel = "ConfigurationDialog");
 
@@ -69,7 +70,7 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
                        << boost::distance(c.getChildren());
     for(Config::Base& conf : c.getChildren() | indirected) {
         QString str = QString::fromStdString(conf.getName());
-        auto w = conf.createWidget();
+        auto w = conf.createWidget(items);
         if(str.size() && w) {
             TRACE_LOG(logject) << "Adding config page: " << conf.getName();
             QStringList strs(str);
@@ -82,6 +83,7 @@ ConfigurationDialog::ConfigurationDialog(Config::Manager& confman, QWidget* pare
         }
     }
     stackLayout->setMargin(0);
+    items->expandAll();
 
     buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok |
                                      QDialogButtonBox::Apply |
@@ -111,6 +113,9 @@ ConfigurationDialog::~ConfigurationDialog() {}
 
 void ConfigurationDialog::changeConfigWidget(QTreeWidgetItem* item) {
     stackLayout->setCurrentIndex(item->data(0, Qt::UserRole).toInt());
+    if(!visited.empty())
+        disconnect(buttonBox->button(QDialogButtonBox::Reset), &QPushButton::clicked,
+                   visited.back(), &ConfigWidget::setup);
     if(auto w = static_cast<ConfigWidget*>(stackLayout->currentWidget())) {
         visited.push_back(w);
         connect(buttonBox->button(QDialogButtonBox::Reset), &QPushButton::clicked, w, &ConfigWidget::setup);
@@ -130,3 +135,5 @@ void ConfigurationDialog::defaults() {
     assert(!visited.empty());
     visited.back()->restoreDefaults();
 }
+
+} // namespace Melosic

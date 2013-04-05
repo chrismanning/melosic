@@ -27,8 +27,12 @@
 #include <boost/optional.hpp>
 
 namespace Melosic {
+
+namespace Core {
 class Track;
 class Playlist;
+}
+
 namespace Output {
 enum class DeviceState;
 }
@@ -62,8 +66,8 @@ public:
     const std::string& sharedSecret();
 
     std::shared_ptr<Track> currentTrack();
-    void trackChangedSlot(const Melosic::Track& newTrack);
-    void playlistChangeSlot(std::shared_ptr<Melosic::Playlist> playlist);
+    void trackChangedSlot(const Melosic::Core::Track& newTrack);
+    void playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist);
 
     Method prepareMethodCall(const std::string& methodName);
     Method sign(Method method);

@@ -34,8 +34,6 @@ enum class DeviceState;
 namespace Slots {
 class Manager;
 }
-}
-using namespace Melosic;
 using Output::DeviceState;
 
 class TrackSeeker : public QSlider {
@@ -59,5 +57,7 @@ private Q_SLOTS:
     void updateSeekTo(int s);
     void onRelease();
 };
+
+} // namespace Melosic
 
 #endif // MELOSIC_TRACKSEEKER_HPP

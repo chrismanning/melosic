@@ -23,6 +23,7 @@
 namespace chrono = std::chrono;
 
 #include <boost/iostreams/concepts.hpp>
+#include <boost/filesystem/path.hpp>
 
 #include <opqit/opaque_iterator.hpp>
 
@@ -30,13 +31,19 @@ namespace chrono = std::chrono;
 
 namespace Melosic {
 
-class Track;
-
 namespace Slots {
 class Manager;
 }
 
-class Playlist : public std::enable_shared_from_this<Playlist> {
+namespace Decoder {
+class Manager;
+}
+
+namespace Core {
+
+class Track;
+
+class Playlist {
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
@@ -52,7 +59,7 @@ public:
     typedef opqit::opaque_iterator<const value_type, opqit::random> const_iterator;
     typedef int size_type;
 
-    Playlist(Slots::Manager&);
+    Playlist(const std::string&, Slots::Manager&, Decoder::Manager&);
     ~Playlist();
 
     std::streamsize read(char* s, std::streamsize n);
@@ -79,27 +86,39 @@ public:
     bool empty() const;
     size_type size() const;
     size_type max_size() const;
-    explicit operator bool() {
+    explicit operator bool() const {
         return currentTrack() != end();
     }
 
     iterator insert(const_iterator pos, value_type&& value);
-    void insert(const_iterator pos, range values);
     void insert(const_iterator pos, forward_range values);
+    iterator emplace(const_iterator pos,
+                     const boost::filesystem::path& filename,
+                     chrono::milliseconds start = chrono::milliseconds(0),
+                     chrono::milliseconds end = chrono::milliseconds(0));
+    iterator emplace(const_iterator pos, ForwardRange<const boost::filesystem::path> values);
 
     void push_back(value_type&& value);
+    void emplace_back(const boost::filesystem::path& filename,
+                      chrono::milliseconds start = chrono::milliseconds(0),
+                      chrono::milliseconds end = chrono::milliseconds(0));
 
     iterator erase(const_iterator pos);
+    iterator erase(size_type start, size_type end);
     void erase(forward_range values);
     void clear();
     void swap(Playlist& b);
+
+    const std::string& getName() const;
+    void setName(const std::string&);
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
+} // namespace Core
 } // namespace Melosic
-extern template class opqit::opaque_iterator<Melosic::Track, opqit::random>;
+extern template class opqit::opaque_iterator<Melosic::Core::Track, opqit::random>;
 
 #endif // MELOSIC_PLAYLIST_HPP

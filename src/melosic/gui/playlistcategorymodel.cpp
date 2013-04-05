@@ -19,11 +19,15 @@
 
 #include "playlistcategorymodel.hpp"
 
+namespace Melosic {
+
 PlaylistCategoryModel::PlaylistCategoryModel(QObject* parent)
     : KCategorizedSortFilterProxyModel(parent)
 {}
 
-bool PlaylistCategoryModel::subSortLessThan(const QModelIndex& left, const QModelIndex& right) const {
-    return left.data(Melosic::TrackRoles::TrackNumber).toString() <
-            right.data(Melosic::TrackRoles::TrackNumber).toString();
-}
+} // namespace Melosic
+
+//bool PlaylistCategoryModel::subSortLessThan(const QModelIndex& left, const QModelIndex& right) const {
+//    return left.data(Melosic::TrackRoles::TrackNumber).toString() <
+//            right.data(Melosic::TrackRoles::TrackNumber).toString();
+//}

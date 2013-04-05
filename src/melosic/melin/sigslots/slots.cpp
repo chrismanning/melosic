@@ -38,7 +38,7 @@ public:
 
     Signals::Player::StateChanged stateChanged;
     Signals::Player::NotifyPlayPos notifyPos;
-    Signals::Player::PlaylistChanged playlistChanged;
+    Signals::Playlist::PlaylistChanged playlistChanged;
     Signals::Playlist::TrackChanged trackChanged;
     Signals::Player::Seek seek;
     Signals::Output::PlayerSinkChanged playerSinkChanged;
@@ -63,10 +63,10 @@ Signals::Player::NotifyPlayPos& Manager::get<Signals::Player::NotifyPlayPos>() {
 template Signals::Player::NotifyPlayPos& Manager::get<Signals::Player::NotifyPlayPos>();
 
 template<>
-Signals::Player::PlaylistChanged& Manager::get<Signals::Player::PlaylistChanged>() {
+Signals::Playlist::PlaylistChanged& Manager::get<Signals::Playlist::PlaylistChanged>() {
     return pimpl->playlistChanged;
 }
-template Signals::Player::PlaylistChanged& Manager::get<Signals::Player::PlaylistChanged>();
+template Signals::Playlist::PlaylistChanged& Manager::get<Signals::Playlist::PlaylistChanged>();
 
 template <>
 Signals::Playlist::TrackChanged& Manager::get<Signals::Playlist::TrackChanged>() {

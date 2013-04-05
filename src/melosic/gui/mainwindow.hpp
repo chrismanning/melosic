@@ -18,72 +18,54 @@
 #ifndef MELOSIC_MAINWINDOW_H
 #define MELOSIC_MAINWINDOW_H
 
-#include <memory>
+#include <QScopedPointer>
 
-#include <QDebug>
-#include <QMainWindow>
-#include <QApplication>
-#include <QList>
+#include <list>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/connection.hpp>
 
+class QQmlEngine;
+class QQmlContext;
+class QQmlComponent;
+class QQuickWindow;
+
 namespace Melosic {
+
+namespace Core {
 class Kernel;
 class Playlist;
 class Player;
+}
+class PlayerControls;
+
 namespace Output {
 enum class DeviceState;
 }
-}
-using namespace Melosic;
+
 using Output::DeviceState;
 
-class PlaylistModel;
-class KCategorizedView;
-class QListView;
-class QHBoxLayout;
+class PlaylistManagerModel;
 
-class MainWindow : public QMainWindow {
-    Q_OBJECT
-
+class MainWindow {
 public:
-    explicit MainWindow(Kernel& kernel, QWidget* parent = 0);
+    explicit MainWindow(Core::Kernel& kernel);
     ~MainWindow();
     void onStateChangeSlot(DeviceState state);
-    Q_INVOKABLE void play();
-    Q_INVOKABLE void stop();
-    Q_INVOKABLE void previous();
-    Q_INVOKABLE void next();
-
-private Q_SLOTS:
-    void on_actionOpen_triggered();
-    void on_actionPlay_triggered();
-    void on_actionStop_triggered();
-    void on_actionNext_triggered();
-    void on_actionOptions_triggered();
 
 private:
-    Kernel& kernel;
-    std::shared_ptr<Playlist> currentPlaylist;
-    PlaylistModel* playlistModel = nullptr;
-    Player& player;
+    Core::Kernel& kernel;
+    Core::Player& player;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
-    QAction* actionOpen;
-    QAction* actionPlay;
-    QAction* actionExit;
-    QAction* actionStop;
-    QAction* actionPrevious;
-    QAction* actionNext;
-    QAction* actionOptions;
-    QMenuBar* menubar;
-    QMenu* menuFile;
-    QMenu* menuPlayback;
-    QMenu* menuTools;
-    QStatusBar* statusbar;
+    QScopedPointer<PlayerControls> playerControls;
 
-    KCategorizedView* playlistView;
+    QScopedPointer<QQmlEngine> engine;
+    QScopedPointer<QQmlComponent> component;
+    QScopedPointer<QQuickWindow> window;
+    PlaylistManagerModel* playlistManagerModel;
 };
+
+} // namespace Melosic
 
 #endif // MELOSIC_MAINWINDOW_H

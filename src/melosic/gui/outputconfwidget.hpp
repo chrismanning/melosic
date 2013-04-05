@@ -27,28 +27,29 @@
 #include "configwidget.hpp"
 
 namespace Melosic {
-namespace Output {
-class Conf;
-}
 namespace Slots {
 class Manager;
 }
-}
+namespace Output {
+class Conf;
 
-class OutputConfWidget : public ConfigWidget
-{
-    Q_OBJECT
+class ConfWidget : public ConfigWidget {
 public:
-    OutputConfWidget(Melosic::Output::Conf&, QWidget* parent = nullptr);
+    ConfWidget(Melosic::Output::Conf&, QWidget* parent = nullptr);
+
+    virtual ~ConfWidget();
 
     void apply() override;
     void setup() override;
 
 private:
-    QVBoxLayout* layout;
+    QBoxLayout* layout;
     QGroupBox* gen;
     QFormLayout* form;
     QComboBox* cbx;
 };
+
+} // namespace Output
+} // namespace Melosic
 
 #endif // OUTPUTCONFWIDGET_HPP

@@ -30,7 +30,6 @@ namespace Melosic {
 namespace Config {
 class Manager;
 }
-}
 
 class ConfigWidget;
 
@@ -56,5 +55,7 @@ private:
     QList<ConfigWidget*> visited;
     QDialogButtonBox* buttonBox;
 };
+
+} // namespace Melosic
 
 #endif // CONFIGURATIONDIALOG_HPP

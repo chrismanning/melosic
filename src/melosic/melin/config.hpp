@@ -31,13 +31,17 @@ namespace fs = boost::filesystem;
 #include <melosic/common/range.hpp>
 #include "configvar.hpp"
 
-class ConfigWidget;
 class QIcon;
+class QWidget;
 
 namespace Melosic {
+
+class ConfigWidget;
+
 namespace Slots {
 class Manager;
 }
+
 namespace Config {
 
 class Base;
@@ -87,7 +91,7 @@ public:
     void addDefaultFunc(std::function<Base&()>);
     void resetToDefault();
 
-    virtual ConfigWidget* createWidget();
+    virtual ConfigWidget* createWidget(QWidget* = nullptr);
     virtual QIcon* getIcon() const;
 
     virtual Base* clone() const {

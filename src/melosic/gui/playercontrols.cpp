@@ -15,43 +15,45 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <unordered_map>
-#include <type_traits>
+#include <melosic/core/player.hpp>
 
-#include <QWidget>
-#include <QString>
-
-#include "gui.hpp"
+#include "playercontrols.hpp"
 
 namespace Melosic {
-namespace GUI {
 
-class Manager::impl {
+class PlayerControls::PlayerControlsPrivate {
+    Q_DECLARE_PUBLIC(PlayerControls)
+    Core::Player& player;
+    PlayerControls* const q_ptr;
 public:
-    impl() {}
-
-    void addWidgetFactory(const std::string& type, WidgetFactory&& fact) {
-        factories.emplace(type, std::forward<WidgetFactory>(fact));
-    }
-
-    QWidget* createWidget(const std::string& type, QWidget* parent) {
-        auto i = factories.find(type);
-        if(i == factories.end())
-            return nullptr;
-        return i->second(parent);
-    }
-
-private:
-    std::unordered_map<std::string, WidgetFactory> factories;
+    PlayerControlsPrivate(Core::Player& player, PlayerControls* parent) : player(player), q_ptr(parent) {}
 };
 
-Manager::Manager() : pimpl(new impl) {}
+PlayerControls::PlayerControls(Core::Player& player, QObject *parent) :
+    QObject(parent), d_ptr(new PlayerControlsPrivate(player, this))
+{}
 
-Manager::~Manager() {}
+PlayerControls::~PlayerControls() {}
 
-void Manager::addWidgetFactory(const std::string& type, WidgetFactory&& fact) {
-    pimpl->addWidgetFactory(type, std::forward<WidgetFactory>(fact));
+void PlayerControls::play() {
+    d_func()->player.play();
 }
 
-} // namespace GUI
+void PlayerControls::pause() {
+    d_func()->player.pause();
+}
+
+void PlayerControls::stop() {
+    d_func()->player.stop();
+}
+
+void PlayerControls::previous() {
+}
+
+void PlayerControls::next() {
+}
+
+void PlayerControls::seek() {
+}
+
 } // namespace Melosic

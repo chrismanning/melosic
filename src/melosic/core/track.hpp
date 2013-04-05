@@ -32,6 +32,8 @@ namespace Decoder {
 class Manager;
 }
 
+namespace Core {
+
 class Track : public Input::Playable, public IO::Closable {
 public:
     Track(Melosic::Decoder::Manager& decman,
@@ -67,6 +69,7 @@ private:
     std::unique_ptr<impl> pimpl;
 };
 
-}
+} // namespace Core
+} // namespace Melosic
 
 #endif // MELOSIC_TRACK_HPP

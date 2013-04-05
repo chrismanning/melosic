@@ -22,8 +22,6 @@
 
 namespace Melosic {
 
-class Player;
-
 namespace Plugin {
 class Manager;
 }
@@ -48,14 +46,22 @@ class Manager;
 namespace Thread {
 class Manager;
 }
+namespace Playlist {
+class Manager;
+}
+
+namespace Core {
+
+class Player;
 
 class Kernel {
 public:
     Kernel();
 
     Kernel(const Kernel&) = delete;
-    Kernel(Kernel&&) = delete;
     Kernel& operator=(const Kernel&) = delete;
+    Kernel(Kernel&&) = delete;
+    Kernel& operator=(Kernel&&) = delete;
 
     ~Kernel();
 
@@ -69,12 +75,14 @@ public:
     Encoder::Manager& getEncoderManager();
     Slots::Manager& getSlotManager();
     Thread::Manager& getThreadManager();
+    Melosic::Playlist::Manager& getPlaylistManager();
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-}
+} // namespace Core
+} // namespace Melosic
 
 #endif // MELOSIC_CORE_KERNEL_HPP
