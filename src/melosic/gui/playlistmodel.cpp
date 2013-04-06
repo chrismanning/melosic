@@ -16,7 +16,7 @@
 **************************************************************************/
 
 #include <functional>
-#include <forward_list>
+#include <deque>
 
 #include <QStringList>
 #include <QMimeData>
@@ -146,9 +146,8 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
         TRACE_LOG(logject) << "inserting file: " << url.toLocalFile().toStdString();
         return url.toLocalFile().toStdString();
     });
-    for(const auto& f : filenames | transformed(fun)) {
-        TRACE_LOG(logject) << f;
-    }
+    TRACE_LOG(logject) << (filenames | transformed(fun));
+
     std::deque<boost::filesystem::path> tmp;
     boost::range::push_back(tmp, boost::range::sort(filenames) | reversed | transformed(fun));
     return insertTracks(row, tmp);
