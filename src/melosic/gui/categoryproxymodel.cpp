@@ -26,15 +26,15 @@ namespace Melosic {
 CategoryProxyModel::CategoryProxyModel(QObject* parent) : QIdentityProxyModel(parent) {}
 
 QSharedPointer<Block> CategoryProxyModel::blockForIndex_(const QModelIndex& index) {
+    if(!category)
+        return {};
     const QString category_(indexCategory(index));
     Q_ASSERT(index.isValid());
     for(QSharedPointer<Block> block : blocks.values(category_)) {
-        if(block->count() == 0) {
+        if(block->count() == 0 || !block->firstIndex.isValid()) {
             blocks.remove(category_, block);
             return blockForIndex_(index);
         }
-
-        Q_ASSERT(block->firstIndex.isValid());
 
         //search backwards
         if(block->firstIndex == index && index.row() > 0) {
@@ -113,22 +113,30 @@ QSharedPointer<Block> CategoryProxyModel::blockForIndex_(const QModelIndex& inde
 }
 
 bool CategoryProxyModel::isFirstInBlock(const QModelIndex& index) {
+    if(!category)
+        return false;
     Q_ASSERT(index.row() >= 0 && index.row() < rowCount());
     return blockForIndex_(index)->firstIndex == index;
 }
 
 bool CategoryProxyModel::blockIsCollapsed(const QModelIndex& index) {
+    if(!category)
+        return false;
     Q_ASSERT(index.row() >= 0 && index.row() < rowCount());
     return blockForIndex_(index)->collapsed();
 }
 
 void CategoryProxyModel::collapseBlockToggle(const QModelIndex& index) {
+    if(!category)
+        return;
     Q_ASSERT(index.row() >= 0 && index.row() < rowCount());
     auto b = blockForIndex_(index);
     b->setCollapsed(!b->collapsed());
 }
 
 int CategoryProxyModel::itemsInBlock(const QModelIndex& index) {
+    if(!category)
+        return 0;
     Q_ASSERT(index.row() >= 0 && index.row() < rowCount());
     return blockForIndex_(index)->count();
 }
