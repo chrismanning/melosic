@@ -76,34 +76,20 @@ ScrollView {
                 width: listView.width - (x*2)
                 property bool drawCategory: false
                 Binding on drawCategory {
-                    when: category && block
-                    value: category && block && block.firstRow() === index
+                    when: category !== null && block !== null
+                    value: block.firstRow === index
                 }
                 property int baseHeight: category && block && block.collapsed ? 0 : itemHeight
                 Binding on baseHeight {
-                    when: category && block
-                    value: (category && block && block.collapsed) ? 0 : itemHeight
+                    when: category !== null && block !== null
+                    value: block.collapsed ? 0 : itemHeight
                 }
                 height: baseHeight + categoryItem.height
 
                 property int rowIndex: model.index
                 property var itemModel: model
-                property Block block: categoryModel_.blockForIndex(delegateModel.modelIndex(index))
-                Component.onCompleted: {
-                    block = categoryModel_.blockForIndex(delegateModel.modelIndex(index))
-                }
-                Connections {
-                    target: block
-                    onCountChanged: {
-                        if(target === null || category === null)
-                            return
-                        if(target.count < (rowitem.rowIndex - target.firstRow())) {
-                            block = categoryModel_.blockForIndex(delegateModel.modelIndex(rowIndex))
-                        }
-                        drawCategory = target.firstRow() === rowIndex
-                        categoryDelegateLoader.itemCount = target.count
-                    }
-                }
+                property CategoryProxyModel categoryModel: categoryModel_
+                property Block block: CategoryProxyModel.block
 
                 Item {
                     id: itemitem
@@ -112,22 +98,9 @@ ScrollView {
                     width: parent.width
                     visible: true
                     Binding on visible {
-                        when: (category && block)
+                        when: category !== null && block !== null
                         value: !block.collapsed
                     }
-
-//                    Connections {
-//                        id: collapseConn
-//                        target: block
-//                        onCollapsedChanged: {
-//                            itemitem.collapseExpand(collapsed)
-//                        }
-//                    }
-//                    function collapseExpand(collapsed) {
-
-
-//                    }
-//                    Component.onCompleted: collapseExpand(block.collapsed)
 
                     MouseArea {
                         anchors.fill: parent
@@ -209,16 +182,6 @@ ScrollView {
                         property int rowIndex: rowitem.rowIndex
                         property color textColor: categorySelected ? palette.highlightedText : palette.text
                         property int itemCount: (category && block) ? block.count : 0
-//                        Connections {
-//                            id: blockCountConnection
-//                            target: block
-//                            onCountChanged: {}
-//                        }
-
-//                        Binding on height {
-//                            when: categoryDelegateLoader.item != undefined
-//                            value: categoryDelegateLoader.item.height
-//                        }
                     }
                     MouseArea {
                         anchors.fill: parent
