@@ -15,10 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <algorithm>
 #include <numeric>
 #include <thread>
-#include <list>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
@@ -27,7 +25,6 @@ using Mutex = shared_mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;
 using shared_lock_guard = boost::shared_lock_guard<Mutex>;
-#include <boost/container/stable_vector.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/range/algorithm_ext/insert.hpp>
 #include <boost/range/algorithm/find.hpp>
@@ -42,8 +39,6 @@ using namespace boost::adaptors;
 #include <melosic/melin/decoder.hpp>
 
 #include "playlist.hpp"
-
-template class opqit::opaque_iterator<Melosic::Core::Track, opqit::random>;
 
 namespace Melosic {
 namespace Core {
@@ -117,7 +112,7 @@ public:
             lock_guard l(mu);
             if(current_track_ != tracks.end())
                 current_track_->reset();
-            current_track_ = tracks.begin() + pos;
+            current_track_ = std::begin(tracks) + pos;
         }
         trackChanged(*currentTrack());
     }
@@ -146,12 +141,12 @@ public:
     //iterators
     Playlist::iterator begin() {
         shared_lock_guard l(mu);
-        return tracks.begin();
+        return std::begin(tracks);
     }
 
     Playlist::iterator end() {
         shared_lock_guard l(mu);
-        return tracks.end();
+        return std::end(tracks);
     }
 
     //capacity
@@ -171,7 +166,7 @@ public:
 
     Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
         mu.lock();
-        auto r = tracks.insert(pos.cast_to<list_type::const_iterator>(), value);
+        auto r = tracks.insert(pos, value);
         mu.unlock();
         if(size() == 1) {
             mu.lock();
@@ -184,23 +179,11 @@ public:
 
     void insert(Playlist::const_iterator pos, Playlist::iterator first, Playlist::iterator last) {
         mu.lock();
-        auto r = tracks.insert(pos.cast_to<list_type::const_iterator>(), first, last);
+        auto r = tracks.insert(pos, first, last);
         mu.unlock();
         if(size() == 1) {
             mu.lock();
             current_track_ = r;
-            mu.unlock();
-            trackChanged(*currentTrack());
-        }
-    }
-
-    void insert(Playlist::const_iterator pos, Playlist::forward_range values) {
-        mu.lock();
-        boost::range::insert(tracks, pos.cast_to<list_type::iterator>(), values);
-        mu.unlock();
-        if(size() == 1) {
-            mu.lock();
-            current_track_ = tracks.begin();
             mu.unlock();
             trackChanged(*currentTrack());
         }
@@ -213,12 +196,12 @@ public:
     {
         unique_lock l(mu);
 
-        auto r = tracks.emplace(pos.cast_to<list_type::iterator>(), decman, filename, start, end);
+        auto r = tracks.emplace(pos, decman, filename, start, end);
         l.unlock();
 
         if(size() == 1) {
             l.lock();
-            current_track_ = tracks.begin();
+            current_track_ = std::begin(tracks);
             l.unlock();
             trackChanged(*currentTrack());
         }
@@ -229,16 +212,16 @@ public:
     Playlist::iterator emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
         unique_lock l(mu);
         if(values.empty())
-            return pos.cast_to<list_type::iterator>();
+            return std::next(std::begin(tracks), pos - std::begin(tracks));
 
-        auto r = std::next(pos).cast_to<list_type::iterator>();
+        auto r = std::next(std::begin(tracks), pos - std::begin(tracks) + 1);
         for(auto& path : values) {
-            pos = tracks.emplace(pos.cast_to<list_type::iterator>(), decman, path);
+            pos = tracks.emplace(pos, decman, path);
         }
         l.unlock();
         if(size() == 1) {
             l.lock();
-            current_track_ = tracks.begin();
+            current_track_ = std::begin(tracks);
             l.unlock();
             trackChanged(*currentTrack());
         }
@@ -252,7 +235,7 @@ public:
         mu.unlock();
         if(size() == 1) {
             mu.lock();
-            current_track_ = tracks.begin();
+            current_track_ = std::begin(tracks);
             mu.unlock();
             trackChanged(*currentTrack());
         }
@@ -267,7 +250,7 @@ public:
         l.unlock();
         if(size() == 1) {
             l.lock();
-            current_track_ = tracks.begin();
+            current_track_ = std::begin(tracks);
             l.unlock();
             trackChanged(*currentTrack());
         }
@@ -275,19 +258,13 @@ public:
 
     Playlist::iterator erase(Playlist::const_iterator pos) {
         lock_guard l(mu);
-        return tracks.erase(pos.cast_to<list_type::const_iterator>());
+        return tracks.erase(pos);
     }
 
     Playlist::iterator erase(Playlist::size_type start, Playlist::size_type end) {
         lock_guard l(mu);
         boost::range::erase(tracks, tracks | sliced(start, end));
         return std::next(tracks.begin(), start);
-    }
-
-    void erase(Playlist::forward_range values) {
-        lock_guard l(mu);
-        auto i = boost::range::find(tracks, values.front());
-        boost::erase(tracks, boost::make_iterator_range(i, std::next(i, boost::distance(values))));
     }
 
     void clear() {
@@ -308,8 +285,7 @@ public:
 private:
     Mutex mu;
     friend struct Block;
-    typedef boost::container::stable_vector<Playlist::value_type> list_type;
-    list_type tracks;
+    Playlist::list_type tracks;
     Playlist::iterator current_track_;
     std::string name;
     Signals::Playlist::TrackChanged& trackChanged;
@@ -417,10 +393,6 @@ Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::valu
     return pimpl->insert(pos, std::move(value));
 }
 
-void Playlist::insert(Playlist::const_iterator pos, forward_range values) {
-    pimpl->insert(pos, values);
-}
-
 Playlist::iterator Playlist::emplace(Playlist::const_iterator pos,
                                      const boost::filesystem::path& filename,
                                      chrono::milliseconds start,
@@ -450,10 +422,6 @@ Playlist::iterator Playlist::erase(const_iterator pos) {
 
 Playlist::iterator Playlist::erase(Playlist::size_type start, Playlist::size_type end) {
     return pimpl->erase(start, end);
-}
-
-void Playlist::erase(forward_range values) {
-    pimpl->erase(values);
 }
 
 void Playlist::clear() {

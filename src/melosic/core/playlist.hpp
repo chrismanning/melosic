@@ -24,8 +24,7 @@ namespace chrono = std::chrono;
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
-
-#include <opqit/opaque_iterator.hpp>
+#include <boost/container/stable_vector.hpp>
 
 #include <melosic/common/range.hpp>
 
@@ -51,12 +50,9 @@ public:
     typedef Track value_type;
     typedef value_type& reference;
     typedef const value_type& const_reference;
-    typedef RandomRange<value_type> range;
-    typedef RandomRange<const value_type> const_range;
-    typedef ForwardRange<value_type> forward_range;
-    typedef ForwardRange<const value_type> const_forward_range;
-    typedef opqit::opaque_iterator<value_type, opqit::random> iterator;
-    typedef opqit::opaque_iterator<const value_type, opqit::random> const_iterator;
+    typedef boost::container::stable_vector<value_type> list_type;
+    typedef list_type::iterator iterator;
+    typedef list_type::const_iterator const_iterator;
     typedef int size_type;
 
     Playlist(const std::string&, Slots::Manager&, Decoder::Manager&);
@@ -91,7 +87,7 @@ public:
     }
 
     iterator insert(const_iterator pos, value_type&& value);
-    void insert(const_iterator pos, forward_range values);
+
     iterator emplace(const_iterator pos,
                      const boost::filesystem::path& filename,
                      chrono::milliseconds start = chrono::milliseconds(0),
@@ -105,7 +101,7 @@ public:
 
     iterator erase(const_iterator pos);
     iterator erase(size_type start, size_type end);
-    void erase(forward_range values);
+
     void clear();
     void swap(Playlist& b);
 
@@ -119,6 +115,5 @@ private:
 
 } // namespace Core
 } // namespace Melosic
-extern template class opqit::opaque_iterator<Melosic::Core::Track, opqit::random>;
 
 #endif // MELOSIC_PLAYLIST_HPP
