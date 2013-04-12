@@ -31,8 +31,11 @@ class CategoryProxyModelAttached;
 class CategoryProxyModel : public QIdentityProxyModel {
     Q_OBJECT
     QMultiHash<QString, QSharedPointer<Block>> blocks;
+
     QSharedPointer<Block> blockForIndex_(const QModelIndex&);
     bool hasBlock(const QModelIndex&);
+    QSharedPointer<Block> merge(QSharedPointer<Block> a, QSharedPointer<Block> b);
+
     Q_PROPERTY(Melosic::Category* category MEMBER category NOTIFY categoryChanged)
     Category* category = nullptr;
 
@@ -53,6 +56,7 @@ private Q_SLOTS:
     void onRowsInserted(const QModelIndex&, int start, int end);
     void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow);
     void onRowsRemoved(const QModelIndex&, int start, int end);
+    void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
 };
 
 class CategoryProxyModelAttached : public QObject {
@@ -60,6 +64,7 @@ class CategoryProxyModelAttached : public QObject {
     Q_PROPERTY(Melosic::Block* block READ block NOTIFY blockChanged)
     mutable QSharedPointer<Block> block_;
     CategoryProxyModel* model;
+    QList<QMetaObject::Connection> modelConns;
 
     void setBlock(QSharedPointer<Block> b);
     QPersistentModelIndex index;
@@ -83,13 +88,11 @@ class Block : public QObject {
     bool collapsed_ = false;
     int count_ = 0;
     QPersistentModelIndex firstIndex_ = QModelIndex();
+    QString category;
+    friend class CategoryProxyModel;
 
 public:
-    explicit Block(QObject* parent = nullptr) : QObject(parent) {
-        connect(this, &Block::firstIndexChanged, [this] (QPersistentModelIndex index) {
-            Q_EMIT firstRowChanged(index.row());
-        });
-    }
+    ~Block();
 
     bool operator==(const Block& b) const {
         return firstIndex_ == b.firstIndex_;
@@ -121,7 +124,11 @@ public:
 
     void setFirstIndex(QPersistentModelIndex index) {
         firstIndex_ = index;
+        if(category.size() == 0)
+            category = qobject_cast<CategoryProxyModel*>(const_cast<QAbstractItemModel*>(index.model()))->
+                    indexCategory(firstIndex_);
         Q_EMIT firstIndexChanged(firstIndex_);
+        Q_EMIT firstRowChanged(firstIndex_.row());
     }
 
     int firstRow() const {

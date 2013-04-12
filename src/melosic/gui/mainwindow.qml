@@ -36,6 +36,8 @@ ApplicationWindow {
             title: "Playlist"
             MenuItem { action: selectAllAction }
             MenuItem { action: clearSelectionAction }
+            MenuSeparator {}
+            MenuItem { action: removeTracksAction }
         }
     }
 
@@ -105,19 +107,45 @@ ApplicationWindow {
         text: "Clear Selection"
         onTriggered: playlist.clearSelection()
     }
+    Action {
+        id: removeTracksAction
+        text: "Remove Selected"
+        shortcut: "del"
+        onTriggered: {
+            var selected = playlist.selected
+            var pm = playlistManagerModel.playlist(playlistChooser.currentItem.myData.display)
+            var groups = new Array
+            if(pm !== null && selected.count > 0) {
+                groups.push(new Array)
+                for(var i = 0, j = 0; i < selected.count; i++) {
+                    if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex) {
+                        groups.push(new Array)
+                        ++j
+                    }
+                    groups[j].push(selected.get(i).itemsIndex)
+                }
+
+                groups = groups.reverse()
+                for(var i = 0; i < groups.length; i++) {
+                    if(groups[i].length > 0)
+                        pm.removeRows(groups[i][0], groups[i][groups[i].length-1] - groups[i][0] + 1)
+                }
+            }
+            else {
+                console.debug("Cannot remove tracks: invalid playlist")
+            }
+        }
+    }
 
     statusBar: StatusBar {
         id: status
-        property var playlistModel
-        Binding on playlistModel {
-            value: playlistManagerModel.playlist(playlistChooser.currentItem.myData.display)
-        }
 
         Row {
             anchors.verticalCenter: parent.verticalCenter
 
             Label {
-                text: "" + playlist.count + " tracks"
+                text: "" + (playlist.selected.count > 0 ? playlist.selected.count : playlist.count)
+                      + " tracks" + (playlist.selected.count > 0 ? " selected" : "")
             }
         }
     }

@@ -80,6 +80,9 @@ public:
     bool insertTracks(int row, std::initializer_list<const boost::filesystem::path> filenames) {
         return insertTracks(row, std::move(ForwardRange<const boost::filesystem::path>(filenames)));
     }
+
+//    bool moveRows(int sourceRow, int count, int destRow);
+    Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 };
 
 } // namespace Melosic

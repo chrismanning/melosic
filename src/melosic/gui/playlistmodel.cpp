@@ -271,4 +271,20 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     return true;
 }
 
+//bool PlaylistModel::moveRows(int sourceRow, int count, int destRow) {
+//}
+
+bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
+    if(row < 0 && (count + row) > rowCount())
+        return false;
+
+    auto s = playlist->size();
+    beginRemoveRows(QModelIndex(), row, row + count - 1);
+    playlist->erase(row, row + count);
+    endRemoveRows();
+    assert(playlist->size() == s - count);
+
+    return true;
+}
+
 } // namespace Melosic

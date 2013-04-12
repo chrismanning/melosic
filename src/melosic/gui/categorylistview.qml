@@ -20,6 +20,8 @@ ScrollView {
     property alias categoryModel: categoryModel_
     property int itemHeight: 14
 
+    property DelegateModelGroup selected: selectedGroup
+
     property alias category: categoryModel_.category
 
     Keys.onUpPressed: {
@@ -59,7 +61,7 @@ ScrollView {
 
         model: DelegateModel {
             id: delegateModel
-            groups: [ DelegateModelGroup { name: "selected" } ]
+            groups: [ DelegateModelGroup { id: selectedGroup; name: "selected" } ]
 
             model: CategoryProxyModel {
                 id: categoryModel_
@@ -74,17 +76,20 @@ ScrollView {
                 id: rowitem
                 x: 5
                 width: listView.width - (x*2)
-                property bool drawCategory: false
-                Binding on drawCategory {
-                    when: category !== null && block !== null
-                    value: block.firstRow === index
-                }
+                property bool drawCategory: category && block && block.firstRow === index
+
                 property int baseHeight: category && block && block.collapsed ? 0 : itemHeight
-                Binding on baseHeight {
-                    when: category !== null && block !== null
-                    value: block.collapsed ? 0 : itemHeight
+
+                height: baseHeight + categoryItemLoader.height
+                ListView.onRemove: {
+                    console.debug("ListView.onRemove: removing item")
+                    itemDelegateLoader.sourceComponent = null
+                    itemDelegateLoader.active = false
+                    categoryItemLoader.sourceComponent = null
+                    categoryItemLoader.active = false
+                    block = null
+                    baseHeight = 0
                 }
-                height: baseHeight + categoryItem.height
 
                 property int rowIndex: model.index
                 property var itemModel: model
@@ -93,14 +98,10 @@ ScrollView {
 
                 Item {
                     id: itemitem
-                    anchors.top: categoryItem.bottom
+                    anchors.top: categoryItemLoader.bottom
                     height: parent.baseHeight
                     width: parent.width
-                    visible: true
-                    Binding on visible {
-                        when: category !== null && block !== null
-                        value: !block.collapsed
-                    }
+                    visible: category && block ? !block.collapsed : true
 
                     MouseArea {
                         anchors.fill: parent
@@ -156,71 +157,84 @@ ScrollView {
                     }
                 }
 
-                Item {
-                    id: categoryItem
-                    x: -5
+                Loader {
+                    id: categoryItemLoader
+                    x: -parent.x
                     width: listView.width
-                    height: drawCategory ? categoryDelegateLoader.height : 0
+
                     z: -1
                     visible: drawCategory
+                    active: drawCategory
 
-                    StyleItem {
+                    sourceComponent: Item {
+                        id: categoryItem
                         anchors.fill: parent
-                        elementType: "itemrow"
-                        selected: categoryDelegateLoader.categorySelected
-                        active: root.activeFocus
-                    }
-                    Loader {
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        id: categoryDelegateLoader
-                        sourceComponent: drawCategory
-                                         ? category.delegate
-                                         : undefined
-                        property var model: itemModel
-                        property bool categorySelected: rowitem.DelegateModel.inSelected
-                        property int rowIndex: rowitem.rowIndex
-                        property color textColor: categorySelected ? palette.highlightedText : palette.text
-                        property int itemCount: (category && block) ? block.count : 0
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: {
-                            if(mouse.button == Qt.RightButton) {
-                                console.debug("right-click category")
-                            }
-
-                            if(mouse.modifiers & Qt.ControlModifier) {
-                                console.debug("ctrl+click category")
-                            }
-                            else if(mouse.modifiers & Qt.ShiftModifier) {
-                                console.debug("shift+click category")
-                                console.debug("model.index: ", model.index)
-                                var cur = listView.currentIndex
-                                console.debug("current: ", cur)
-                                if(model.index > cur) {
-                                    delegateModel.select(cur, model.index)
-                                }
-                                else if(cur >= model.index) {
-                                    delegateModel.select(model.index, cur)
-                                    rowitem.DelegateModel.inSelected = false
-                                }
-                            }
-                            else if(mouse.button == Qt.LeftButton) {
-                                clearSelection()
-                            }
-
-                            listView.currentIndex = model.index
-
-                            rowitem.DelegateModel.inSelected = !rowitem.DelegateModel.inSelected
-
-                            delegateModel.select(rowitem.DelegateModel.itemsIndex,
-                                                 rowitem.DelegateModel.itemsIndex +
-                                                 block.count)
+                        StyleItem {
+                            anchors.fill: parent
+                            elementType: "itemrow"
+                            selected: categoryDelegateLoader.categorySelected
+                            active: root.activeFocus
                         }
-                        onDoubleClicked: {
-                            console.debug("double-click category")
-                            block.collapsed = !block.collapsed
+                        Loader {
+                            id: categoryDelegateLoader
+                            active: categoryItemLoader.active
+                            sourceComponent: category.delegate
+                            Binding {
+                                target: categoryItemLoader
+                                property: "height"
+                                value: categoryDelegateLoader.height
+                            }
+
+                            Binding on height {
+                                when: !drawCategory
+                                value: 0
+                            }
+
+                            property var model: itemModel
+                            property bool categorySelected: rowitem.DelegateModel.inSelected
+                            property int rowIndex: rowitem.rowIndex
+                            property color textColor: categorySelected ? palette.highlightedText : palette.text
+                            property int itemCount: block ? block.count : 0
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if(mouse.button == Qt.RightButton) {
+                                    console.debug("right-click category")
+                                }
+
+                                if(mouse.modifiers & Qt.ControlModifier) {
+                                    console.debug("ctrl+click category")
+                                }
+                                else if(mouse.modifiers & Qt.ShiftModifier) {
+                                    console.debug("shift+click category")
+                                    console.debug("model.index: ", model.index)
+                                    var cur = listView.currentIndex
+                                    console.debug("current: ", cur)
+                                    if(model.index > cur) {
+                                        delegateModel.select(cur, model.index)
+                                    }
+                                    else if(cur >= model.index) {
+                                        delegateModel.select(model.index, cur)
+                                        rowitem.DelegateModel.inSelected = false
+                                    }
+                                }
+                                else if(mouse.button == Qt.LeftButton) {
+                                    clearSelection()
+                                }
+
+                                listView.currentIndex = model.index
+
+                                rowitem.DelegateModel.inSelected = !rowitem.DelegateModel.inSelected
+
+                                delegateModel.select(rowitem.DelegateModel.itemsIndex,
+                                                     rowitem.DelegateModel.itemsIndex +
+                                                     block.count)
+                            }
+                            onDoubleClicked: {
+                                console.debug("double-click category")
+                                block.collapsed = !block.collapsed
+                            }
                         }
                     }
                 }
@@ -236,7 +250,7 @@ ScrollView {
                 items.removeGroups(from, to-from, "selected")
             }
         }
-        
+
         SystemPalette {
             id: palette
             colorGroup: enabled ? SystemPalette.Active : SystemPalette.Disabled

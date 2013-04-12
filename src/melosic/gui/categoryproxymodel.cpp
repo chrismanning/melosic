@@ -27,6 +27,7 @@ CategoryProxyModel::CategoryProxyModel(QObject* parent) : QIdentityProxyModel(pa
     connect(this, &CategoryProxyModel::rowsInserted, this, &CategoryProxyModel::onRowsInserted);
     connect(this, &CategoryProxyModel::rowsMoved, this, &CategoryProxyModel::onRowsMoved);
     connect(this, &CategoryProxyModel::rowsRemoved, this, &CategoryProxyModel::onRowsRemoved);
+    connect(this, &CategoryProxyModel::rowsAboutToBeRemoved, this, &CategoryProxyModel::onRowsAboutToBeRemoved);
 }
 
 QSharedPointer<Block> CategoryProxyModel::blockForIndex_(const QModelIndex& index) {
@@ -73,6 +74,25 @@ bool CategoryProxyModel::hasBlock(const QModelIndex& index) {
     return false;
 }
 
+QSharedPointer<Block> CategoryProxyModel::merge(QSharedPointer<Block> big, QSharedPointer<Block> small) {
+    Q_ASSERT(big);
+    Q_ASSERT(small);
+    Q_ASSERT(big->adjacent(*small));
+    Q_ASSERT(big != small);
+    qDebug() << "Merging blocks";
+    if(big->count() < small->count())
+        big.swap(small);
+
+    if(small->firstIndex() < big->firstIndex())
+        big->setFirstIndex(small->firstIndex());
+    big->setCount(big->count() + small->count());
+    blocks.remove(indexCategory(big->firstIndex()), small);
+
+    Q_EMIT blocksNeedUpdating(big->firstRow(), big->firstRow() + big->count());
+
+    return big;
+}
+
 QString CategoryProxyModel::indexCategory(const QModelIndex& index) const {
     Q_ASSERT(index.isValid());
     if(!category)
@@ -81,10 +101,6 @@ QString CategoryProxyModel::indexCategory(const QModelIndex& index) const {
     for(Criteria* c : category->criteria_)
         cat += c->result(index);
     return cat;
-}
-
-CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* object) {
-    return new CategoryProxyModelAttached(object);
 }
 
 void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, int end) {
@@ -152,10 +168,60 @@ void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, in
 }
 
 void CategoryProxyModel::onRowsMoved(const QModelIndex&, int /*sourceStart*/,
-                                             int /*sourceEnd*/, const QModelIndex&, int /*destinationRow*/) {
+                                     int /*sourceEnd*/, const QModelIndex&, int /*destinationRow*/) {
 }
 
-void CategoryProxyModel::onRowsRemoved(const QModelIndex&, int /*start*/, int /*end*/) {
+void CategoryProxyModel::onRowsRemoved(const QModelIndex&, int start, int /*end*/) {
+    if(!category || rowCount() == 0)
+        return;
+
+    QSharedPointer<Block> a,b;
+    if(start > 0 && start < rowCount()) {
+        a = blockForIndex_(index(start - 1, 0));
+        b = blockForIndex_(index(start, 0));
+    }
+    else if(start < rowCount() - 1) {
+        a = blockForIndex_(index(start, 0));
+        b = blockForIndex_(index(start + 1, 0));
+    }
+    qDebug() << "a != b: " << (a != b);
+    if(a)
+        qDebug() << "indexCategory(a->firstIndex()): " << indexCategory(a->firstIndex());
+    if(b)
+        qDebug() << "indexCategory(b->firstIndex()): " << indexCategory(b->firstIndex());
+    if(a && b && a != b && indexCategory(a->firstIndex()) == indexCategory(b->firstIndex()))
+        merge(a, b);
+}
+
+void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end) {
+    if(!category)
+        return;
+    qDebug() << "Rows removed: " << start << " - " << end;
+
+    for(int i = start; i <= end; i++) {
+        auto cur = index(i, 0);
+        Q_ASSERT(cur.isValid());
+        auto b = blockForIndex_(cur);
+        if(b->count() <= 1) {
+            qDebug() << "removing empty block";
+            blocks.remove(indexCategory(cur), b);
+            b->setFirstIndex(QModelIndex());
+            b->setCount(0);
+            continue;
+        }
+        qDebug() << "decrementing block count";
+        b->setCount(b->count() - 1);
+        if(b->firstRow() == cur.row()) {
+            qDebug() << "moving block forward 1";
+            b->setFirstIndex(index(i+1, 0));
+        }
+    }
+
+    ++end;
+}
+
+CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* object) {
+    return new CategoryProxyModelAttached(object);
 }
 
 CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObject(parent) {
@@ -169,11 +235,17 @@ CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObjec
     model = qobject_cast<CategoryProxyModel*>(obj);
     if(!model)
         return;
-    connect(model, &CategoryProxyModel::blocksNeedUpdating, [this] (int start, int end) {
+    modelConns.push_back(connect(model, &CategoryProxyModel::rowsAboutToBeRemoved, [this] (const QModelIndex&, int start, int end) {
         if(index.row() >= start && index.row() <= end) {
+            setBlock({});
+        }
+    }));
+    modelConns.push_back(connect(model, &CategoryProxyModel::blocksNeedUpdating, [this] (int start, int end) {
+        if(index.row() >= start && index.row() <= end) {
+            qDebug() << "updating block; index: " << index.row();
             setBlock(model->blockForIndex_(index));
         }
-    });
+    }));
 
     v = parent->property("rowIndex");
     bool b;
@@ -186,7 +258,12 @@ CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObjec
         block_ = model->blockForIndex_(index);
 }
 
-CategoryProxyModelAttached::~CategoryProxyModelAttached() {}
+CategoryProxyModelAttached::~CategoryProxyModelAttached() {
+    setBlock({});
+    for(auto& c : modelConns)
+        disconnect(c);
+    qDebug() << "attached object being destroyed";
+}
 
 Block* CategoryProxyModelAttached::block() const {
     return block_.data();
@@ -199,6 +276,11 @@ void CategoryProxyModelAttached::setBlock(QSharedPointer<Block> b) {
 
 bool Block::adjacent(const Block& b) {
     return (firstRow() + count_ - b.firstRow() == 0) || (b.firstRow() + b.count() - firstRow() == 0);
+}
+
+Block::~Block() {
+    setFirstIndex(QModelIndex());
+    setCount(0);
 }
 
 } // namespace Melosic
