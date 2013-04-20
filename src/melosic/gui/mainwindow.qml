@@ -38,7 +38,6 @@ ApplicationWindow {
             MenuItem { action: clearSelectionAction }
             MenuSeparator {}
             MenuItem { action: removeTracksAction }
-            MenuItem { action: moveTracksUpAction }
         }
     }
 
