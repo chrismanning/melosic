@@ -94,7 +94,7 @@ public:
             current_track_->reset();
             --current_track_;
         }
-        trackChanged(*currentTrack());
+        trackChanged(std::cref(*currentTrack()));
     }
 
     void next() {
@@ -104,7 +104,7 @@ public:
             ++current_track_;
         }
         if(currentTrack() != end())
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
     }
 
     void jumpTo(size_type pos) {
@@ -114,7 +114,7 @@ public:
                 current_track_->reset();
             current_track_ = std::begin(tracks) + pos;
         }
-        trackChanged(*currentTrack());
+        trackChanged(std::cref(*currentTrack()));
     }
 
     Playlist::iterator& currentTrack() {
@@ -166,26 +166,26 @@ public:
 
     Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
         mu.lock();
-        auto r = tracks.insert(pos, value);
+        auto r = tracks.insert(pos, std::move(value));
         mu.unlock();
         if(size() == 1) {
             mu.lock();
             current_track_ = r;
             mu.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
         return r;
     }
 
     void insert(Playlist::const_iterator pos, Playlist::iterator first, Playlist::iterator last) {
         mu.lock();
-        auto r = tracks.insert(pos, first, last);
+        auto r = tracks.insert(pos, std::make_move_iterator(first), std::make_move_iterator(last));
         mu.unlock();
         if(size() == 1) {
             mu.lock();
             current_track_ = r;
             mu.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
     }
 
@@ -203,7 +203,7 @@ public:
             l.lock();
             current_track_ = std::begin(tracks);
             l.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
 
         return r;
@@ -223,7 +223,7 @@ public:
             l.lock();
             current_track_ = std::begin(tracks);
             l.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
 
         return r;
@@ -237,7 +237,7 @@ public:
             mu.lock();
             current_track_ = std::begin(tracks);
             mu.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
     }
 
@@ -252,7 +252,7 @@ public:
             l.lock();
             current_track_ = std::begin(tracks);
             l.unlock();
-            trackChanged(*currentTrack());
+            trackChanged(std::cref(*currentTrack()));
         }
     }
 
