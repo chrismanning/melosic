@@ -81,7 +81,9 @@ public:
         return insertTracks(row, std::move(ForwardRange<const boost::filesystem::path>(filenames)));
     }
 
-//    bool moveRows(int sourceRow, int count, int destRow);
+    Q_INVOKABLE bool moveRows(const QModelIndex&, int sourceRow, int count,
+                              const QModelIndex&, int destinationChild) override;
+    Q_INVOKABLE bool moveRows(int sourceRow, int count, int destinationChild);
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 };
 

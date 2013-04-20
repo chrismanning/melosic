@@ -38,6 +38,7 @@ ApplicationWindow {
             MenuItem { action: clearSelectionAction }
             MenuSeparator {}
             MenuItem { action: removeTracksAction }
+            MenuItem { action: moveTracksUpAction }
         }
     }
 
@@ -112,30 +113,14 @@ ApplicationWindow {
         text: "Remove Selected"
         shortcut: "del"
         onTriggered: {
-            var selected = playlist.selected
-            var pm = playlistManagerModel.playlist(playlistChooser.currentItem.myData.display)
-            var groups = new Array
-            if(pm !== null && selected.count > 0) {
-                groups.push(new Array)
-                for(var i = 0, j = 0; i < selected.count; i++) {
-                    if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex) {
-                        groups.push(new Array)
-                        ++j
-                    }
-                    groups[j].push(selected.get(i).itemsIndex)
-                }
-
-                groups = groups.reverse()
-                for(var i = 0; i < groups.length; i++) {
-                    if(groups[i].length > 0)
-                        pm.removeRows(groups[i][0], groups[i][groups[i].length-1] - groups[i][0] + 1)
-                }
-            }
-            else {
+            if(pm !== null)
+                playlist.removeSelected()
+            else
                 console.debug("Cannot remove tracks: invalid playlist")
-            }
         }
     }
+
+    property var pm
 
     statusBar: StatusBar {
         id: status
@@ -161,6 +146,7 @@ ApplicationWindow {
         if(!playlistManagerModel.rowCount())
             playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
         playlistChooser.currentIndex = 0
+        pm = playlistManagerModel.playlist(playlistChooser.currentItem.myData.display)
     }
 
     Column {
@@ -223,6 +209,8 @@ ApplicationWindow {
             focus: true
             spacing: 3
             height: parent.height - playlistChooser.height+1
+            removeCallback: function(from,count) { return pm.removeRows(from, count) }
+            moveCallback: function(from,count,to) { return pm.moveRows(from, count, to) }
 
             category: Category {
                 CategoryRole { role: "artist" }

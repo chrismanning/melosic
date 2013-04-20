@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <deque>
+#include <algorithm>
 
 #include <QStringList>
 #include <QMimeData>
@@ -271,20 +272,48 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     return true;
 }
 
-//bool PlaylistModel::moveRows(int sourceRow, int count, int destRow) {
-//}
+bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
+                             const QModelIndex&, int destinationChild)
+{
+    if(sourceRow == destinationChild)
+        return false;
+    if(destinationChild > rowCount())
+        destinationChild = rowCount();
+    auto beg = playlist->begin();
+    auto dest = std::next(beg, destinationChild);
+    const auto s = playlist->size();
+    beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild);
+    std::vector<Core::Playlist::value_type> tmp(std::make_move_iterator(std::next(beg, sourceRow)),
+                                                std::make_move_iterator(std::next(beg, sourceRow + count)));
+    playlist->erase(sourceRow, sourceRow + count);
+
+    std::move(tmp.begin(), tmp.end(), std::inserter(*playlist, dest));
+
+    endMoveRows();
+    for(auto&& t : *playlist)
+        TRACE_LOG(logject) << t.sourceName();
+    assert(playlist->size() == s);
+
+    return playlist->size() == s;
+}
+
+bool PlaylistModel::moveRows(int sourceRow, int count, int destinationChild) {
+    return moveRows(QModelIndex(), sourceRow, count, QModelIndex(), destinationChild);
+}
 
 bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     if(row < 0 && (count + row) > rowCount())
         return false;
 
-    auto s = playlist->size();
+    const auto s = playlist->size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
     playlist->erase(row, row + count);
     endRemoveRows();
     assert(playlist->size() == s - count);
+    for(auto&& t : *playlist)
+        TRACE_LOG(logject) << t.sourceName();
 
-    return true;
+    return playlist->size() == s - count;
 }
 
 } // namespace Melosic

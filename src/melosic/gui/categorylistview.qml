@@ -12,13 +12,14 @@ ScrollView {
     property var model
 
     property alias delegate: delegateModel.itemDelegate
-    property Component decoratorDelegate: nativeDelegate
     property alias currentItem: listView.currentItem
     property alias currentIndex: listView.currentIndex
     property alias count: listView.count
     property int spacing: 0
     property alias categoryModel: categoryModel_
     property int itemHeight: 14
+    property var removeItems
+    property var moveItems
 
     property DelegateModelGroup selected: selectedGroup
 
@@ -41,6 +42,56 @@ ScrollView {
         console.debug("selecting all")
         if(count)
             delegateModel.select(0, count)
+    }
+
+    property var removeCallback
+    function removeSelected() {
+        if(removeCallback === null || selected.count <= 0)
+            return
+
+        var groups = contiguousSelected().reverse()
+        for(var i = 0; i < groups.length; i++) {
+            var g = groups[i]
+            if(g.length <= 0)
+                continue
+            g.sort()
+            removeCallback(g[0], g[g.length-1] - g[0] + 1)
+        }
+    }
+
+    property var moveCallback
+    function moveSelected(to) {
+        if(moveCallback === null || selected.count <= 0)
+            return
+
+        var groups = contiguousSelected()
+        for(var i = 0; i < groups.length; i++) {
+            var g = groups[i]
+            if(g.length <= 0)
+                continue
+            g.sort()
+            if(i > 0)
+                to += g[0] - groups[i-1][0]
+
+            moveCallback(g[0], g[g.length-1] - g[0] + 1, to)
+        }
+    }
+
+    function contiguousSelected() {
+        var groups = new Array
+        if(selected.count <= 0)
+            return groups
+
+        groups.push(new Array)
+        for(var i = 0, j = 0; i < selected.count; i++) {
+            if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex && groups[j].length > 0) {
+                groups.push(new Array)
+                ++j
+            }
+            groups[j].push(selected.get(i).itemsIndex)
+        }
+
+        return groups
     }
 
     function modelIndex(index) {
@@ -103,46 +154,29 @@ ScrollView {
                     width: parent.width
                     visible: category && block ? !block.collapsed : true
 
-                    MouseArea {
-                        anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        onClicked: {
-                            if(mouse.button == Qt.RightButton) {
-                                console.debug("right-click")
-                            }
-
-                            if(mouse.modifiers & Qt.ControlModifier) {
-                                console.debug("ctrl+click")
-                            }
-                            else if(mouse.modifiers & Qt.ShiftModifier) {
-                                console.debug("shift+click")
-                                console.debug("model.index: ", model.index)
-                                var cur = listView.currentIndex
-                                console.debug("current: ", cur)
-                                if(model.index > cur) {
-                                    delegateModel.select(cur, model.index)
-                                }
-                                else if(cur >= model.index) {
-                                    delegateModel.select(model.index, cur)
-                                    rowitem.DelegateModel.inSelected = false
-                                }
-                            }
-                            else if(mouse.button == Qt.LeftButton) {
-                                clearSelection()
-                            }
-
-                            listView.currentIndex = model.index
-
-                            rowitem.DelegateModel.inSelected = !rowitem.DelegateModel.inSelected
-                        }
-                    }
-
                     Loader {
                         id: decoratorDelegateLoader
                         anchors.fill: parent
-                        sourceComponent: decoratorDelegate
-                        property bool itemSelected: rowitem.DelegateModel.inSelected
-                        property int itemWidth: width
+                        sourceComponent: Item {
+                            anchors.fill: parent
+                            StyleItem {
+                                anchors.fill: parent
+                                z: 1
+                                elementType: "itemrow"
+                                selected: rowitem.DelegateModel.inSelected
+                                hasFocus: rowitem.ListView.isCurrentItem
+                            }
+                            Rectangle {
+                                anchors.fill: parent
+                                anchors.leftMargin: -1
+                                anchors.rightMargin: -1
+                                z: 2
+                                visible: rowitem.ListView.isCurrentItem
+                                border.width: 1
+                                border.color: palette.mid
+                                color: "transparent"
+                            }
+                        }
                     }
 
                     Loader {
@@ -198,7 +232,7 @@ ScrollView {
                         }
                         MouseArea {
                             anchors.fill: parent
-                            onClicked: {
+                            onPressed: {
                                 if(mouse.button == Qt.RightButton) {
                                     console.debug("right-click category")
                                 }
@@ -220,7 +254,7 @@ ScrollView {
                                     }
                                 }
                                 else if(mouse.button == Qt.LeftButton) {
-                                    clearSelection()
+//                                    clearSelection()
                                 }
 
                                 listView.currentIndex = model.index
@@ -243,7 +277,6 @@ ScrollView {
             }
 
             function select(from, to) {
-                console.debug("selecting items ", from, " to ", to)
                 items.addGroups(from, to-from, "selected")
             }
             function deselect(from, to) {
@@ -262,18 +295,97 @@ ScrollView {
             color: palette.base
             z: -1
         }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: clearSelection()
-            z: -1
-        }
 
-        Component {
-            id: nativeDelegate
-            StyleItem {
-                elementType: "itemrow"
-                selected: itemSelected
-                active: root.activeFocus
+        MouseArea {
+            id: mouseDragArea
+            anchors.fill: parent
+            z: -1
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            propagateComposedEvents: true
+            property bool dragging: false
+            property int startDragY
+
+            onPressed: {
+                console.debug("mouse pressed")
+                startDragY = mouse.y
+
+                var cur = listView.currentIndex
+                listView.currentIndex = listView.indexAt(mouse.x, mouse.y)
+
+                if(listView.currentIndex === -1) {
+                    listView.currentIndex = cur
+                    return
+                }
+
+                var item = delegateModel.items.get(listView.currentIndex)
+
+                if(mouse.modifiers & Qt.ControlModifier) {
+                    console.debug("ctrl+click")
+
+                    item.inSelected = !item.inSelected
+                }
+                else if(mouse.modifiers & Qt.ShiftModifier) {
+                    console.debug("shift+click")
+                    console.debug("model.index: ", cur)
+                    console.debug("current: ", cur)
+                    if(listView.currentIndex > cur) {
+                        delegateModel.select(cur, listView.currentIndex+1)
+                    }
+                    else if(cur >= listView.currentIndex) {
+                        delegateModel.select(listView.currentIndex, cur+1)
+                    }
+                }
+                else if(mouse.button == Qt.LeftButton) {
+                    if(!item.inSelected) {
+                        clearSelection()
+                    }
+                    item.inSelected = true
+                }
+            }
+
+            onPositionChanged: {
+                if(+(mouse.y - startDragY) > 5 || +(startDragY - mouse.y) > 5)
+                    dragging = true
+                if(!dragging)
+                    return
+                if(mouse.y <= listView.contentY) {
+                    //scroll up
+                    return
+                }
+                if(mouse.y >= listView.contentY) {
+                    //scroll down
+                    return
+                }
+            }
+
+            onCanceled: dragging = false
+            onReleased: {
+                if(dragging) {
+                    console.debug("drag finished")
+                    var idx = listView.indexAt(mouse.x, mouse.y)
+                    if(mouse.y < 0) {
+                        mouse.accepted = false
+                        dragging = false
+                        return
+                    }
+
+                    moveSelected(idx === -1 ? listView.count : idx)
+                }
+                else if(listView.indexAt(mouse.x, mouse.y) === -1) {
+                    clearSelection()
+                }
+
+                dragging = false
+            }
+
+            onClicked: {
+                if(dragging || listView.indexAt(mouse.x, mouse.y) === -1) {
+                    return
+                }
+
+                if(mouse.button == Qt.RightButton) {
+                    console.debug("right-click")
+                }
             }
         }
     }

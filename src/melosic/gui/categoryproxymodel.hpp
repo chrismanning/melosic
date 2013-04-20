@@ -55,6 +55,8 @@ Q_SIGNALS:
 private Q_SLOTS:
     void onRowsInserted(const QModelIndex&, int start, int end);
     void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow);
+    void onRowsAboutToBeMoved(const QModelIndex&, int sourceStart, int sourceEnd,
+                              const QModelIndex&, int destinationRow);
     void onRowsRemoved(const QModelIndex&, int start, int end);
     void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
 };
