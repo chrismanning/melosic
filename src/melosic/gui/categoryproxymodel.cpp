@@ -112,8 +112,6 @@ void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, in
     QString prevCategory;
     QSharedPointer<Block> prevBlock;
     int end_ = end;
-    qDebug() << "start: " << start;
-    qDebug() << "end: " << end;
 
     if(start > 0) {
         prev = index(start-1, 0);
@@ -138,8 +136,6 @@ void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, in
         const QModelIndex cur(index(i, 0));
         Q_ASSERT(cur.isValid());
         const QString curCategory(indexCategory(cur));
-        qDebug() << "i: " << i;
-        qDebug() << "curCategory: " << curCategory;
 
         if(prevBlock && curCategory == prevCategory) {
             if(hasBlock(cur)) {
@@ -174,17 +170,11 @@ void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, in
 
 void CategoryProxyModel::onRowsMoved(const QModelIndex& parent, int sourceStart,
                                      int sourceEnd, const QModelIndex&, int destinationRow) {
-    //dont do this
-    qDebug() << "sourceStart: " << sourceStart;
-    qDebug() << "sourceEnd: " << sourceEnd;
-    qDebug() << "destinationRow: " << destinationRow;
     auto s = sourceEnd - sourceStart;
-    qDebug() << "s: " << s;
     auto dest = destinationRow < sourceStart ? destinationRow : destinationRow - (s + 1);
-    qDebug() << "dest: " << dest;
     if(dest == destinationRow) {
         onRowsInserted(parent, dest, dest + s);
-        onRowsRemoved(parent, sourceStart, sourceEnd);
+        onRowsRemoved(parent, sourceStart + s, sourceEnd);
     }
     else {
         onRowsRemoved(parent, sourceStart, sourceEnd);
@@ -202,19 +192,19 @@ void CategoryProxyModel::onRowsRemoved(const QModelIndex&, int start, int /*end*
         blocks.clear();
         return;
     }
-
     QSharedPointer<Block> a,b;
     if(start > 0 && start < rowCount()) {
         a = blockForIndex_(index(start - 1, 0));
         b = blockForIndex_(index(start, 0));
+        if(a && b && a != b && indexCategory(a->firstIndex()) == indexCategory(b->firstIndex()))
+            merge(a, b);
     }
-    else if(start < rowCount() - 1) {
+    if(start < rowCount() - 1) {
         a = blockForIndex_(index(start, 0));
         b = blockForIndex_(index(start + 1, 0));
+        if(a && b && a != b && indexCategory(a->firstIndex()) == indexCategory(b->firstIndex()))
+            merge(a, b);
     }
-
-    if(a && b && a != b && indexCategory(a->firstIndex()) == indexCategory(b->firstIndex()))
-        merge(a, b);
 }
 
 void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end) {

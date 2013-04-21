@@ -46,7 +46,6 @@ ApplicationWindow {
         text: "Open"
         shortcut: "ctrl+o"
         onTriggered: {
-//            playlistModel.appendFiles(["file://home/chris/Music/02 - Sorgmantel.flac"])
             fileDialog.visible = !fileDialog.visible
         }
     }

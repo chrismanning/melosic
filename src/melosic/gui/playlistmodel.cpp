@@ -282,7 +282,8 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
     auto beg = playlist->begin();
     auto dest = std::next(beg, destinationChild);
     const auto s = playlist->size();
-    beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild);
+    if(!beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild))
+        return false;
     std::vector<Core::Playlist::value_type> tmp(std::make_move_iterator(std::next(beg, sourceRow)),
                                                 std::make_move_iterator(std::next(beg, sourceRow + count)));
     playlist->erase(sourceRow, sourceRow + count);
