@@ -220,17 +220,20 @@ ApplicationWindow {
                     y: spacing
                     x: spacing
                     height: childrenRect.height + spacing*(children.length)
+                    width: playlist.width
                     Text {
                         text: model.artist + " - " + model.album
                         elide: Text.ElideRight
                         color: textColor
                         renderType: Text.NativeRendering
+                        width: parent.width
                     }
                     Text {
                         text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
                         elide: Text.ElideRight
                         color: textColor
                         renderType: Text.NativeRendering
+                        width: parent.width
                     }
                 }
             }
@@ -241,8 +244,9 @@ ApplicationWindow {
                 x: spacing
                 Row {
                     spacing: playlist.spacing
-                    width: itemWidth - duration.width - spacing*(track.children.length+1)
+                    width: itemWidth - duration.width - (spacing*3)
                     Text {
+                        id: trackno
                         renderType: Text.NativeRendering
                         elide: Text.ElideRight
                         color: textColor
@@ -250,10 +254,12 @@ ApplicationWindow {
                         width: 15
                     }
                     Text {
+                        x: spacing
                         renderType: Text.NativeRendering
                         elide: Text.ElideRight
                         color: textColor
                         text: model.title
+                        width: parent.width - trackno.width - spacing
                     }
                 }
                 Text {
