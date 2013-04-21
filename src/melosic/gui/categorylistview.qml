@@ -304,8 +304,10 @@ ScrollView {
             propagateComposedEvents: true
             property bool dragging: false
             property int startDragY
+            property int modifiers
 
             onPressed: {
+                modifiers = mouse.modifiers
                 console.debug("mouse pressed")
                 startDragY = mouse.y
 
@@ -374,7 +376,18 @@ ScrollView {
                 else if(listView.indexAt(mouse.x, mouse.y) === -1) {
                     clearSelection()
                 }
+                else {
+                    var i = listView.indexAt(mouse.x, mouse.y)
+                    var s = delegateModel.items.get(i).inSelected
+                    if(modifiers & Qt.ControlModifier || modifiers & Qt.ShiftModifier)
+                        return
+                    else
+                        clearSelection()
+                    if(s)
+                        delegateModel.select(i, i+1)
+                }
 
+                modifiers = Qt.NoModifier
                 dragging = false
             }
 
