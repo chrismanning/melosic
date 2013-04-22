@@ -171,9 +171,8 @@ ApplicationWindow {
 
                         Row {
                             anchors.fill: parent
-                            Text {
+                            Label {
                                 id: name
-                                renderType: Text.NativeRendering
                                 elide: Text.ElideRight
                                 text: display
                                 color: parent.parent.ListView.isCurrentItem ? pal.highlightedText : pal.text
@@ -226,18 +225,16 @@ ApplicationWindow {
                     x: spacing
                     height: childrenRect.height + spacing*(children.length)
                     width: playlist.width
-                    Text {
+                    Label {
                         text: model.artist + " - " + model.album
                         elide: Text.ElideRight
                         color: textColor
-                        renderType: Text.NativeRendering
                         width: parent.width
                     }
-                    Text {
+                    Label {
                         text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
                         elide: Text.ElideRight
                         color: textColor
-                        renderType: Text.NativeRendering
                         width: parent.width
                     }
                 }
@@ -250,26 +247,23 @@ ApplicationWindow {
                 Row {
                     spacing: playlist.spacing
                     width: itemWidth - duration.width - (spacing*3)
-                    Text {
+                    Label {
                         id: trackno
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                         color: textColor
                         text: model.tracknumber
                         width: 15
                     }
-                    Text {
+                    Label {
                         x: spacing
-                        renderType: Text.NativeRendering
                         elide: Text.ElideRight
                         color: textColor
                         text: model.title
                         width: parent.width - trackno.width - spacing
                     }
                 }
-                Text {
+                Label {
                     id: duration
-                    renderType: Text.NativeRendering
                     width: contentWidth
 
                     color: textColor
