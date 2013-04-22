@@ -127,8 +127,13 @@ ApplicationWindow {
             anchors.verticalCenter: parent.verticalCenter
 
             Label {
-                text: "" + (playlist.selected.count > 0 ? playlist.selected.count : playlist.count)
-                      + " tracks" + (playlist.selected.count > 0 ? " selected" : "")
+                property bool selected: playlist.selected.count > 0
+                property int count: playlist.count
+                onSelectedChanged: {
+                    count = selected ? playlist.selected.count : playlist.count
+                }
+
+                text: count + " tracks" + (selected ? " selected" : "")
             }
         }
     }
