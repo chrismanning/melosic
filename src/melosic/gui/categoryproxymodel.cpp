@@ -231,8 +231,6 @@ void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex&, int start, i
             b->setFirstIndex(index(i+n, 0));
         }
     }
-
-    ++end;
 }
 
 CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* object) {

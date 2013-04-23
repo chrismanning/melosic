@@ -27,12 +27,13 @@ using namespace boost::adaptors;
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/common/string.hpp>
 
 #include "playlist.hpp"
 
 namespace Melosic {
 namespace Playlist {
+
+static const std::string prefix("Playlist ");
 
 class Manager::impl {
 public:
@@ -49,9 +50,9 @@ public:
     Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
         if(count_ == 0)
             return pos;
-        std::function<PlaylistType(int)> fun = [this] (int c) {
-            return std::make_shared<Core::Playlist>("Playlist "_str + to_string(c), slotman, decman);
-        };
+        auto fun([this] (int c) {
+            return std::make_shared<Core::Playlist>(prefix + std::to_string(c), slotman, decman);
+        });
         boost::range::insert(playlists, pos, boost::irange(count(), count()+count_) | transformed(fun));
         return ++pos;
     }

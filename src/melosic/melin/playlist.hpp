@@ -40,7 +40,6 @@ namespace Playlist {
 typedef std::shared_ptr<Core::Playlist> PlaylistType;
 
 class Manager {
-    const std::string prefix = "Playlist";
 public:
     typedef boost::container::stable_vector<PlaylistType> list;
     typedef list::iterator iterator;

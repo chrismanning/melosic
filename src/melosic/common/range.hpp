@@ -42,7 +42,7 @@ using RandomRange = boost::any_range<T,
 template <typename T>
 std::ostream& operator<<(std::ostream& out, ForwardRange<T> range) {
     for(const T& v : range) {
-        out << v << '\n';
+        out << v << std::endl;
     }
     return out;
 }

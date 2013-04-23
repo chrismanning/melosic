@@ -198,7 +198,7 @@ public:
     }
 
     ForwardRange<const Info> getPlugins() {
-        std::function<Info(Plugin&)> fun([](Plugin& p) {return p.getInfo();});
+        auto fun([](Plugin& p) {return p.getInfo();});
         return loadedPlugins | map_values | transformed(fun);
     }
 

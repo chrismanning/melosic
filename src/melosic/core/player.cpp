@@ -55,7 +55,7 @@ public:
           playerThread(&impl::start, this),
           logject(logging::keywords::channel = "Player")
     {
-        slotman.get<Signals::Output::PlayerSinkChanged>().connect([this,&outman]() {
+        this->slotman.get<Signals::Output::PlayerSinkChanged>().connect([this,&outman]() {
             try {
                 chrono::milliseconds time(0);
                 auto state_ = state();

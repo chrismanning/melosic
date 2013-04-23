@@ -142,15 +142,17 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
 }
 
 bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
-    LOG(logject) << "Inserting " << filenames.count() << " files from QML";
-    std::function<boost::filesystem::path(QUrl)> fun([] (QUrl url) {
-        TRACE_LOG(logject) << "inserting file: " << url.toLocalFile().toStdString();
+    LOG(logject) << "In insertTracks(int, QList<QUrl>)";
+    boost::range::sort(filenames);
+    auto fun([] (QUrl url) {
         return url.toLocalFile().toStdString();
     });
-    TRACE_LOG(logject) << (filenames | transformed(fun));
+    TRACE_LOG(logject) << "Inserting " << filenames.count() << " files";
+    for(auto&& v : filenames | transformed(fun))
+        TRACE_LOG(logject) << v;
 
     std::deque<boost::filesystem::path> tmp;
-    boost::range::push_back(tmp, boost::range::sort(filenames) | reversed | transformed(fun));
+    boost::range::push_back(tmp, filenames | reversed | transformed(fun));
     return insertTracks(row, tmp);
 }
 
@@ -291,8 +293,6 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
     std::move(tmp.begin(), tmp.end(), std::inserter(*playlist, dest));
 
     endMoveRows();
-    for(auto&& t : *playlist)
-        TRACE_LOG(logject) << t.sourceName();
     assert(playlist->size() == s);
 
     return playlist->size() == s;
@@ -311,8 +311,6 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     playlist->erase(row, row + count);
     endRemoveRows();
     assert(playlist->size() == s - count);
-    for(auto&& t : *playlist)
-        TRACE_LOG(logject) << t.sourceName();
 
     return playlist->size() == s - count;
 }
