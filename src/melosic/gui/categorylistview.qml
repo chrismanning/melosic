@@ -303,6 +303,7 @@ ScrollView {
             z: -1
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
+            cursorShape: dragging ? Qt.DragMoveCursor : Qt.ArrowCursor
             property bool dragging: false
             property int startDragY
             property int modifiers
@@ -351,18 +352,23 @@ ScrollView {
                     dragging = true
                 if(!dragging)
                     return
+                var index
                 if(mouse.y <= listView.y && listView.contentY > 0) {
                     //scroll up
-                    var index = listView.indexAt(listView.width/2, listView.contentY)
+                    index = listView.indexAt(listView.width/2, listView.contentY)
                     if(index > 0)
                         --index
-                    console.debug("scroll up: ", index)
                     listView.positionViewAtIndex(index, ListView.Beginning)
                     return
                 }
                 if(mouse.y >= listView.y + listView.height) {
                     //scroll down
-                    console.debug("scroll down")
+                    index = listView.indexAt(listView.width/2, listView.contentY + listView.height-1)
+                    if(index === -1)
+                        return
+                    if(index < listView.count-1)
+                        ++index
+                    listView.positionViewAtIndex(index, ListView.End)
                     return
                 }
             }
