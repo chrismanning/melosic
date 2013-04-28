@@ -64,8 +64,9 @@ MainWindow::MainWindow(Core::Kernel& kernel) :
 
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterInterface<QAbstractItemModel>("QAbstractItemModel");
+    qmlRegisterUncreatableType<PlaylistModel>("Melosic.Playlist", 1, 0, "PlaylistModel", "abstract");
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");
-    qmlRegisterUncreatableType<Criteria>("Melosic.Playlist", 1, 0, "CategoryCriteria", "abtract");
+    qmlRegisterUncreatableType<Criteria>("Melosic.Playlist", 1, 0, "CategoryCriteria", "abstract");
     qmlRegisterType<Role>("Melosic.Playlist", 1, 0, "CategoryRole");
     qmlRegisterType<Tag>("Melosic.Playlist", 1, 0, "CategoryTag");
     qmlRegisterType<Category>("Melosic.Playlist", 1, 0, "Category");

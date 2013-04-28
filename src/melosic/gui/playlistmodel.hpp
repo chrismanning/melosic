@@ -29,8 +29,6 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <opqit/opaque_iterator.hpp>
-
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>

@@ -39,6 +39,14 @@ QObject* PlaylistManagerModel::playlist(QString name) {
     return playlists.value(name, nullptr);
 }
 
+QObject* PlaylistManagerModel::playlist(int index) {
+    TRACE_LOG(logject) << "Getting playlist at index " << index;
+    assert(index < rowCount());
+    auto n = playman.range()[index]->getName();
+    TRACE_LOG(logject) << "playlist name: " << n;
+    return playlists.value(QString::fromStdString(n), nullptr);
+}
+
 Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
     Qt::ItemFlags defaultFlags = QAbstractListModel::flags(index);
 

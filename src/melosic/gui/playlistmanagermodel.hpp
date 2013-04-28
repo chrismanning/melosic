@@ -44,6 +44,7 @@ public:
     };
 
     Q_INVOKABLE QObject* playlist(QString name);
+    Q_INVOKABLE QObject* playlist(int index);
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     Q_INVOKABLE QVariant data(const QModelIndex& index, int role) const override;

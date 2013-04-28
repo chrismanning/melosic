@@ -4,6 +4,7 @@ import QtQuick.Controls 1.0
 import QtQuick.Controls.Private 1.0
 
 import Melosic.Playlist 1.0
+import "naturalsort.js" as NaturalSort
 
 ScrollView {
     id: root
@@ -15,7 +16,7 @@ ScrollView {
     property alias currentItem: listView.currentItem
     property alias currentIndex: listView.currentIndex
     property alias count: listView.count
-    property int spacing: 0
+    property int padding: 0
     property alias categoryModel: categoryModel_
     property int itemHeight: 14
     property var removeItems
@@ -54,7 +55,6 @@ ScrollView {
             var g = groups[i]
             if(g.length <= 0)
                 continue
-            g.sort()
             removeCallback(g[0], g[g.length-1] - g[0] + 1)
         }
     }
@@ -69,7 +69,6 @@ ScrollView {
             var g = groups[i]
             if(g.length <= 0)
                 continue
-            g.sort()
             if(i > 0)
                 to += g[0] - groups[i-1][0]
 
@@ -86,6 +85,7 @@ ScrollView {
         for(var i = 0, j = 0; i < selected.count; i++) {
             if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex && groups[j].length > 0) {
                 groups.push(new Array)
+                groups[j].naturalSort()
                 ++j
             }
             groups[j].push(selected.get(i).itemsIndex)
@@ -102,6 +102,7 @@ ScrollView {
         id: listView
         anchors.fill: parent
         interactive: false
+        boundsBehavior: Flickable.StopAtBounds
 
         Binding {
             target: categoryModel_.category
@@ -312,7 +313,7 @@ ScrollView {
                 startDragY = mouse.y
 
                 var cur = listView.currentIndex
-                listView.currentIndex = listView.indexAt(mouse.x, mouse.y)
+                listView.currentIndex = listView.indexAt(mouse.x, mouse.y + listView.contentY)
 
                 if(listView.currentIndex === -1) {
                     listView.currentIndex = cur
@@ -350,12 +351,18 @@ ScrollView {
                     dragging = true
                 if(!dragging)
                     return
-                if(mouse.y <= listView.contentY) {
+                if(mouse.y <= listView.y && listView.contentY > 0) {
                     //scroll up
+                    var index = listView.indexAt(listView.width/2, listView.contentY)
+                    if(index > 0)
+                        --index
+                    console.debug("scroll up: ", index)
+                    listView.positionViewAtIndex(index, ListView.Beginning)
                     return
                 }
-                if(mouse.y >= listView.contentY) {
+                if(mouse.y >= listView.y + listView.height) {
                     //scroll down
+                    console.debug("scroll down")
                     return
                 }
             }
@@ -364,7 +371,7 @@ ScrollView {
             onReleased: {
                 if(dragging) {
                     console.debug("drag finished")
-                    var idx = listView.indexAt(mouse.x, mouse.y)
+                    var idx = listView.indexAt(mouse.x, mouse.y + listView.contentY)
                     if(mouse.y < 0) {
                         mouse.accepted = false
                         dragging = false
@@ -373,11 +380,11 @@ ScrollView {
 
                     moveSelected(idx === -1 ? listView.count : idx)
                 }
-                else if(listView.indexAt(mouse.x, mouse.y) === -1) {
+                else if(listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
                     clearSelection()
                 }
                 else {
-                    var i = listView.indexAt(mouse.x, mouse.y)
+                    var i = listView.indexAt(mouse.x, mouse.y + listView.contentY)
                     var s = delegateModel.items.get(i).inSelected
                     if(modifiers & Qt.ControlModifier || modifiers & Qt.ShiftModifier)
                         return
@@ -392,7 +399,7 @@ ScrollView {
             }
 
             onClicked: {
-                if(dragging || listView.indexAt(mouse.x, mouse.y) === -1) {
+                if(dragging || listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
                     return
                 }
 
