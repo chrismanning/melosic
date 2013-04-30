@@ -190,6 +190,42 @@ ScrollView {
                         property int itemWidth: width
                         property color textColor: itemSelected ? palette.highlightedText : palette.text
                     }
+
+                    MouseArea {
+                        anchors.fill: parent
+
+                        onPressed: {
+                            console.debug("item pressed")
+
+                            var cur = listView.currentIndex
+                            listView.currentIndex = model.index
+
+                            if(mouse.modifiers & Qt.ControlModifier) {
+                                console.debug("ctrl+click")
+
+                                rowitem.DelegateModel.inSelected = !rowitem.DelegateModel.inSelected
+                            }
+                            else if(mouse.modifiers & Qt.ShiftModifier) {
+                                console.debug("shift+click")
+                                console.debug("model.index: ", cur)
+                                console.debug("current: ", cur)
+                                if(listView.currentIndex > cur) {
+                                    delegateModel.select(cur, listView.currentIndex+1)
+                                }
+                                else if(cur >= listView.currentIndex) {
+                                    delegateModel.select(listView.currentIndex, cur+1)
+                                }
+                            }
+                            else if(mouse.button == Qt.LeftButton) {
+                                if(!rowitem.DelegateModel.inSelected) {
+                                    clearSelection()
+                                }
+                                rowitem.DelegateModel.inSelected = true
+                            }
+
+                            mouse.accepted = false
+                        }
+                    }
                 }
 
                 Loader {
@@ -226,46 +262,43 @@ ScrollView {
                             }
 
                             property var model: itemModel
-                            property bool categorySelected: rowitem.DelegateModel.inSelected
+                            property bool categorySelected//: rowitem.DelegateModel.inSelected
                             property int rowIndex: rowitem.rowIndex
                             property color textColor: categorySelected ? palette.highlightedText : palette.text
                             property int itemCount: block ? block.count : 0
                         }
+
                         MouseArea {
                             anchors.fill: parent
+
                             onPressed: {
-                                if(mouse.button == Qt.RightButton) {
-                                    console.debug("right-click category")
-                                }
+                                console.debug("category pressed")
 
-                                if(mouse.modifiers & Qt.ControlModifier) {
-                                    console.debug("ctrl+click category")
-                                }
-                                else if(mouse.modifiers & Qt.ShiftModifier) {
-                                    console.debug("shift+click category")
-                                    console.debug("model.index: ", model.index)
-                                    var cur = listView.currentIndex
-                                    console.debug("current: ", cur)
-                                    if(model.index > cur) {
-                                        delegateModel.select(cur, model.index)
-                                    }
-                                    else if(cur >= model.index) {
-                                        delegateModel.select(model.index, cur)
-                                        rowitem.DelegateModel.inSelected = false
-                                    }
-                                }
-                                else if(mouse.button == Qt.LeftButton) {
-//                                    clearSelection()
-                                }
-
+                                var cur = listView.currentIndex
                                 listView.currentIndex = model.index
 
-                                rowitem.DelegateModel.inSelected = !rowitem.DelegateModel.inSelected
+                                if(mouse.modifiers & Qt.ShiftModifier) {
+                                    console.debug("shift+click")
+                                    console.debug("model.index: ", cur)
+                                    console.debug("current: ", cur)
+                                    if(listView.currentIndex > cur) {
+                                        delegateModel.select(cur, listView.currentIndex+1)
+                                    }
+                                    else if(cur >= listView.currentIndex) {
+                                        delegateModel.select(listView.currentIndex, cur+1)
+                                    }
+                                }
+                                else if(!(mouse.modifiers & Qt.ControlModifier)) {
+                                    clearSelection()
+                                }
 
                                 delegateModel.select(rowitem.DelegateModel.itemsIndex,
                                                      rowitem.DelegateModel.itemsIndex +
                                                      block.count)
+
+                                mouse.accepted = false
                             }
+
                             onDoubleClicked: {
                                 console.debug("double-click category")
                                 block.collapsed = !block.collapsed
@@ -273,8 +306,6 @@ ScrollView {
                         }
                     }
                 }
-
-                onWidthChanged: listView.contentWidth = width
             }
 
             function select(from, to) {
@@ -320,31 +351,6 @@ ScrollView {
                     listView.currentIndex = cur
                     return
                 }
-
-                var item = delegateModel.items.get(listView.currentIndex)
-
-                if(mouse.modifiers & Qt.ControlModifier) {
-                    console.debug("ctrl+click")
-
-                    item.inSelected = !item.inSelected
-                }
-                else if(mouse.modifiers & Qt.ShiftModifier) {
-                    console.debug("shift+click")
-                    console.debug("model.index: ", cur)
-                    console.debug("current: ", cur)
-                    if(listView.currentIndex > cur) {
-                        delegateModel.select(cur, listView.currentIndex+1)
-                    }
-                    else if(cur >= listView.currentIndex) {
-                        delegateModel.select(listView.currentIndex, cur+1)
-                    }
-                }
-                else if(mouse.button == Qt.LeftButton) {
-                    if(!item.inSelected) {
-                        clearSelection()
-                    }
-                    item.inSelected = true
-                }
             }
 
             onPositionChanged: {
@@ -383,21 +389,13 @@ ScrollView {
                         dragging = false
                         return
                     }
+                    modifiers = Qt.NoModifier
+                    dragging = false
 
                     moveSelected(idx === -1 ? listView.count : idx)
                 }
                 else if(listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
                     clearSelection()
-                }
-                else {
-                    var i = listView.indexAt(mouse.x, mouse.y + listView.contentY)
-                    var s = delegateModel.items.get(i).inSelected
-                    if(modifiers & Qt.ControlModifier || modifiers & Qt.ShiftModifier)
-                        return
-                    else
-                        clearSelection()
-                    if(s)
-                        delegateModel.select(i, i+1)
                 }
 
                 modifiers = Qt.NoModifier
