@@ -1,6 +1,7 @@
 import QtQuick 2.1
 import QtQuick.Dialogs 1.0
 import QtQuick.Controls 1.0
+import QtQuick.Layouts 1.0
 
 import Melosic.Playlist 1.0
 
@@ -150,18 +151,25 @@ ApplicationWindow {
         id: playlistManager
     }
 
-    Column {
+    ColumnLayout {
         anchors.fill: parent
-        Row {
-            height: 24
+        spacing: -1
+        RowLayout {
+            Layout.preferredHeight: addbtn.height
+
             PlaylistChooser {
+                Layout.fillWidth: true
                 id: playlistChooser
-                height: parent.height
+                Layout.preferredHeight: addbtn.height
+                Layout.preferredWidth: 200
+                tabs: true
+                padding: 15
                 manager: playlistManager
                 orientation: Qt.Horizontal
             }
 
             Button {
+                id: addbtn
                 z: 1
                 text: "Add"
                 onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
@@ -169,10 +177,12 @@ ApplicationWindow {
         }
 
         PlaylistView {
-            width: parent.width
             id: playlist
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            Layout.preferredWidth: 100
+            Layout.preferredHeight: 100
             manager: playlistManager
-            height: parent.height - playlistChooser.height + 1
         }
     }
 

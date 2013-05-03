@@ -4,18 +4,19 @@ import Melosic.Playlist 1.0
 
 Rectangle {
     id: root
-    width: 100
-    height: 50
-    color: pal.light
+    color: "transparent"
 
+    property alias background: root.color
     property alias currentIndex: lv.currentIndex
     property alias currentItem: lv.currentItem
     property alias orientation: lv.orientation
     property string textRole: "display"
     property string elementType: "itemrow"
     property alias spacing: lv.spacing
-    property int padding: 3
+    property alias padding: lv.padding
     property PlaylistManager manager
+    property alias tabs: lv.tabs
+
     Binding {
         target: manager
         property: "currentIndex"
@@ -27,5 +28,8 @@ Rectangle {
         model: manager.parts.chooser
         focus: true
         anchors.fill: parent
+
+        property int padding: 3
+        property bool tabs: false
     }
 }
