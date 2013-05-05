@@ -5,6 +5,8 @@ import QtQuick.Layouts 1.0
 
 import Melosic.Playlist 1.0
 
+import "secstomins.js" as SecsToMins
+
 ApplicationWindow {
     id: mainWindow
     width: 600
@@ -124,12 +126,25 @@ ApplicationWindow {
 
         Row {
             anchors.verticalCenter: parent.verticalCenter
+            spacing: 5
 
             Label {
                 property bool selected: currentPlaylist.selected.count > 0
                 property int count: currentPlaylist.count
 
                 text: (selected ? currentPlaylist.selected.count : count) + " tracks" + (selected ? " selected" : "")
+            }
+            Label {
+                id: playlistDuration
+                Connections {
+                    target: currentPlaylist
+                    onCountChanged: {
+                        var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
+                            return previousValue + currentValue.duration;
+                        }, 0)
+                        playlistDuration.text = '[' + SecsToMins.secsToMins(dur) + ']'
+                    }
+                }
             }
         }
     }
