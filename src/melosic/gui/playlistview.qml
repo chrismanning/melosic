@@ -12,7 +12,7 @@ ListView {
     orientation: Qt.Horizontal
     currentIndex: manager.currentIndex
     highlightFollowsCurrentItem: true
-    highlightMoveDuration: 166
+    highlightMoveDuration: 88
     interactive: false
     boundsBehavior: Flickable.StopAtBounds
 }
