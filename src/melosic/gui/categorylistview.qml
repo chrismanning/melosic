@@ -98,6 +98,24 @@ ScrollView {
         return delegateModel.modelIndex(index)
     }
 
+    function reduce(callback, initialValue) {
+        if('function' !== typeof callback)
+            throw new TypeError(callback + ' is not a function')
+        if(initialValue === undefined)
+            throw new TypeError('initialValue required')
+
+        var index = 0, length = this.count >>> 0, value
+        value = initialValue
+
+        for( ; length > index; ++index) {
+            var item = delegateModel.items.get(index)
+
+            value = callback(value, item.model, index, this)
+        }
+
+        return value;
+    }
+
     ListView {
         id: listView
         anchors.fill: parent
