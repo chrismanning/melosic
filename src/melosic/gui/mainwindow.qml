@@ -212,7 +212,7 @@ ApplicationWindow {
             if(fileDialog.fileUrls.length) {
                 var pm = playlistManager.currentModel
                 if(pm !== null) {
-                    pm.insertTracks(playlist.currentIndex, fileDialog.fileUrls)
+                    pm.insertTracks(currentPlaylist.currentIndex, fileDialog.fileUrls)
                     currentPlaylist.currentIndex += fileDialog.fileUrls.length
                 }
                 else {
