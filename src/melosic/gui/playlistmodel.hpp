@@ -45,7 +45,7 @@ struct TrackRoles {
         TrackNumber,
         Genre,
         Date,
-        Length
+        Duration
     };
 };
 

@@ -7,6 +7,8 @@ import QtQuick.Controls.Styles 1.0
 
 import Melosic.Playlist 1.0
 
+import "secstomins.js" as SecsToMins
+
 DelegateModel {
     id: root
     property CategoryListView currentPlaylist
@@ -149,7 +151,7 @@ DelegateModel {
                     x: spacing
                     Row {
                         spacing: parent.spacing
-                        width: itemWidth - duration.width - (spacing*3)
+                        width: itemWidth - durationLbl.width - (spacing*3)
                         Label {
                             id: trackno
                             elide: Text.ElideRight
@@ -166,11 +168,11 @@ DelegateModel {
                         }
                     }
                     Label {
-                        id: duration
+                        id: durationLbl
                         width: contentWidth
 
                         color: textColor
-                        text: Math.floor(model.length/60) + ":" + (model.length%60 > 9 ? "" : "0") + model.length%60
+                        text: SecsToMins.secsToMins(model.duration)
                     }
                 }
             }

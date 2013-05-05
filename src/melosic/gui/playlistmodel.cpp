@@ -84,7 +84,7 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
                 return QString::fromStdString(track.getTag("genre"));
             case TrackRoles::Date:
                 return QString::fromStdString(track.getTag("date"));
-            case TrackRoles::Length: {
+            case TrackRoles::Duration: {
                 return chrono::duration_cast<chrono::seconds>(track.duration()).count();
             }
             default:
@@ -137,7 +137,7 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
     roles[TrackRoles::TrackNumber] = "tracknumber";
     roles[TrackRoles::Genre] = "genre";
     roles[TrackRoles::Date] = "year";
-    roles[TrackRoles::Length] = "length";
+    roles[TrackRoles::Duration] = "duration";
     return roles.unite(QAbstractListModel::roleNames());
 }
 
