@@ -104,16 +104,12 @@ ScrollView {
         if(initialValue === undefined)
             throw new TypeError('initialValue required')
 
-        var index = 0, length = this.count >>> 0, value
-        value = initialValue
+        var length = count >>> 0, value = initialValue
 
-        for( ; length > index; ++index) {
-            var item = delegateModel.items.get(index)
+        for(var index = 0; length > index; ++index)
+            value = callback(value, delegateModel.items.get(index).model, index, this)
 
-            value = callback(value, item.model, index, this)
-        }
-
-        return value;
+        return value
     }
 
     ListView {
