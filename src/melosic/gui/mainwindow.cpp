@@ -34,7 +34,6 @@
 #include <melosic/melin/sigslots/slots.hpp>
 
 #include "mainwindow.hpp"
-#include "trackseeker.hpp"
 #include "playlistmodel.hpp"
 #include "playlistmanagermodel.hpp"
 #include "configurationdialog.hpp"
@@ -56,9 +55,6 @@ MainWindow::MainWindow(Core::Kernel& kernel) :
 
     scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
                                .emplace_connect(&MainWindow::onStateChangeSlot, this, ph::_1));
-//    scopedSigConns.emplace_back(ui->trackSeeker->get<Signals::TrackSeeker::Seek>()
-//                               .emplace_connect(&Player::seek, &player, ph::_1));
-//    ui->trackSeeker->connectSlots(&slotman);
 
     playerControls.reset(new PlayerControls(player));
 

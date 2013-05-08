@@ -7,13 +7,16 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Boost REQUIRED)
 
-SET(qt-gui_SOURCES mainwindow.cpp trackseeker.cpp playlistmodel.cpp configwidget.cpp configurationdialog.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} mainwindow.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} playlistmodel.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} configwidget.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} configurationdialog.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} outputconfwidget.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} playlistmanagermodel.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} playercontrols.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} categoryproxymodel.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} category.cpp)
-SET(qt-gui_HEADERS mainwindow.hpp trackseeker.hpp playlistmodel.hpp)
+SET(qt-gui_HEADERS mainwindow.hpp playlistmodel.hpp)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} ../.. . ${Boost_INCLUDE_DIRS})
 
