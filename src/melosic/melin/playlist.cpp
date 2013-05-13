@@ -118,15 +118,15 @@ bool Manager::empty() const {
     return pimpl->empty();
 }
 
-Manager::Range::iterator Manager::current() const {
+PlaylistType Manager::currentPlaylist() const {
     if(pimpl->current != pimpl->end())
-        return pimpl->current;
+        return *pimpl->current;
 
     if(!empty())
         setCurrent(pimpl->begin());
     else
-        setCurrent(const_cast<Manager*>(this)->insert(pimpl->begin(), 1));
-    return current();
+        setCurrent(pimpl->insert(pimpl->begin(), 1));
+    return currentPlaylist();
 }
 
 void Manager::setCurrent(Range::iterator it) const {

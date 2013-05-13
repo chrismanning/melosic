@@ -61,7 +61,7 @@ public:
     void erase(Range r);
     int count() const;
     bool empty() const;
-    Range::iterator current() const;
+    PlaylistType currentPlaylist() const;
     void setCurrent(Range::iterator) const;
 
 private:
