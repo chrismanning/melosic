@@ -28,7 +28,7 @@ namespace Slots {
 
 class Manager {
 public:
-    Manager(Thread::Manager&);
+    Manager();
     ~Manager();
 
     template <typename T>

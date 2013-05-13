@@ -25,17 +25,19 @@ namespace Slots {
 
 class Manager::impl {
 public:
-    impl(Thread::Manager& tman)
-        : stateChanged(&tman),
-          notifyPos(&tman),
-          playlistChanged(&tman),
-          trackChanged(&tman),
-          seek(&tman),
-          playerSinkChanged(&tman),
-          requestSinkChange(&tman),
-          loaded(&tman)
+    impl() :
+        tman(1),
+        stateChanged(&tman),
+        notifyPos(&tman),
+        playlistChanged(&tman),
+        trackChanged(&tman),
+        seek(&tman),
+        playerSinkChanged(&tman),
+        requestSinkChange(&tman),
+        loaded(&tman)
     {}
 
+    Thread::Manager tman;
     Signals::Player::StateChanged stateChanged;
     Signals::Player::NotifyPlayPos notifyPos;
     Signals::Playlist::PlaylistChanged playlistChanged;
@@ -46,7 +48,7 @@ public:
     Signals::Config::Loaded loaded;
 };
 
-Manager::Manager(Thread::Manager& tman) : pimpl(new impl(tman)) {}
+Manager::Manager() : pimpl(new impl()) {}
 
 Manager::~Manager() {}
 

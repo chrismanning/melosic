@@ -34,7 +34,7 @@ namespace Core {
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
-          slotman(tman),
+          slotman(),
           confman(slotman),
           outman(slotman),
           playlistman(slotman, decman),

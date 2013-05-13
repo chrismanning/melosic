@@ -20,11 +20,10 @@
 namespace Melosic {
 namespace Thread {
 
-Manager::Manager(const unsigned n)
-    : slots(10),
-      tasks(10),
-      done(false),
-      logject(logging::keywords::channel = "Thread::Manager")
+Manager::Manager(const unsigned n) :
+    tasks(10),
+    done(false),
+    logject(logging::keywords::channel = "Thread::Manager")
 {
     assert(n > 0);
     auto f = [&](boost::lockfree::queue<Task>& tasks) {
@@ -40,7 +39,7 @@ Manager::Manager(const unsigned n)
             }
         }
     };
-    signalThread = std::move(std::thread(f, std::ref(slots)));
+
     for(unsigned i=0; i<n; i++)
         threads.emplace_back(f, std::ref(tasks));
     LOG(logject) << threads.size() << " threads started in thread pool";
@@ -50,7 +49,14 @@ Manager::~Manager() {
     done = true;
     for(auto& t : threads)
         t.join();
-    signalThread.join();
+}
+
+bool Manager::contains(std::thread::id id) const {
+    for(auto&& t : threads)
+        if(t.get_id() == id)
+            return true;
+
+    return false;
 }
 
 } // namespace Thread

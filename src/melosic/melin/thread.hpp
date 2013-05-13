@@ -129,19 +129,10 @@ public:
         return enqueue_impl(tasks, std::forward<Func>(f), std::forward<Args>(args)...);
     }
 
-    template <typename Func, typename ...Args>
-    std::future<typename std::result_of<Func(Args...)>::type> enqueueSlot(Func&& f, Args&&... args) {
-        return enqueue_impl(slots, std::forward<Func>(f), std::forward<Args>(args)...);
-    }
-
-    std::thread::id signalThreadId() {
-        return signalThread.get_id();
-    }
+    bool contains(std::thread::id) const;
 
 private:
     std::vector<std::thread> threads;
-    std::thread signalThread;
-    TaskQueue slots;
     TaskQueue tasks;
     std::atomic<bool> done;
     Logger::Logger logject;

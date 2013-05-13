@@ -67,7 +67,7 @@ public:
 
     Signal() : Signal(nullptr) {}
 
-    Signal(Thread::Manager* tman) : tman(tman), threadId(std::this_thread::get_id()), logject(logject_()) {}
+    Signal(Thread::Manager* tman) : tman(tman), logject(logject_()) {}
 
     Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
     Signal& operator=(const Signal& b) {
@@ -92,10 +92,7 @@ public:
     Connection connect(const std::function<Ret(Args...)>& slot) {
         TRACE_LOG(logject) << "Connecting slot to signal.";
         std::lock_guard<Mutex> l(mu);
-        return funs.emplace(std::make_pair(std::move(Connection(*this)),
-                                           slot
-                                          )
-                           ).first->first;
+        return funs.emplace(std::make_pair(std::move(Connection(*this)), slot)).first->first;
     }
 
     template <typename Fun, typename Obj, typename ...A>
@@ -129,11 +126,11 @@ public:
     void operator()(A&& ...args) {
         std::unique_lock<Mutex> l(mu);
         std::list<std::pair<std::future<Ret>, Connection>> fs;
-        for(typename decltype(funs)::const_iterator i = funs.begin(); i != funs.end();) {
+        for(auto i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
-                if(tman && std::this_thread::get_id() != threadId)
-                    fs.emplace_back(std::move(tman->enqueueSlot(i->second, std::forward<A>(args)...)), i->first);
+                if(tman && !tman->contains(std::this_thread::get_id()))
+                    fs.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
                 else
                     i->second(std::forward<A>(args)...);
                 l.lock();
@@ -141,12 +138,12 @@ public:
             }
             catch(std::bad_weak_ptr&) {
                 TRACE_LOG(logject) << "Removing expired slot.";
-                decltype(i) tmp = i;
+                auto tmp = i;
                 ++i;
                 tmp->first.disconnect();
                 l.lock();
                 if(i != funs.begin())
-                    i = std::next(funs.begin(), std::distance(funs.cbegin(), i)-1);
+                    i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
             }
             catch(boost::exception& e) {
                 ERROR_LOG(logject) << boost::diagnostic_information(e);
@@ -159,7 +156,7 @@ public:
                 ++i;
             }
         }
-        for(typename decltype(fs)::reference f : fs) {
+        for(auto&& f : fs) {
             try {
                 l.unlock();
                 f.first.get();
@@ -181,12 +178,13 @@ public:
         }
     }
 
+protected:
+    typedef Signal<Ret (Args...)> super;
 private:
     std::unordered_map<Connection, slot_type, ConnHash> funs;
     typedef std::mutex Mutex;
     Mutex mu;
     Thread::Manager* tman;
-    std::thread::id threadId;
     Logger::Logger& logject;
 };
 
