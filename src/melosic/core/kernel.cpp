@@ -38,7 +38,7 @@ class Kernel::impl {
           confman(slotman),
           outman(slotman),
           playlistman(slotman, decman),
-          player(slotman, outman)
+          player(playlistman, outman, slotman)
     {}
 
     Plugin::Manager plugman;

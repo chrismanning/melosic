@@ -33,6 +33,10 @@ namespace Slots {
 class Manager;
 }
 
+namespace Playlist {
+class Manager;
+}
+
 using Output::DeviceState;
 
 namespace Core {
@@ -41,27 +45,26 @@ class Playlist;
 
 class Player {
 public:
-    Player(Slots::Manager&, Output::Manager&);
+    Player(Melosic::Playlist::Manager&, Output::Manager&, Slots::Manager&);
     ~Player();
 
     Player(const Player&) = delete;
-    Player(Player&&) = delete;
     Player& operator=(const Player&) = delete;
+    Player(Player&&) = delete;
+    Player& operator=(Player&&) = delete;
 
     void play();
     void pause();
     void stop();
-    DeviceState state();
+    DeviceState state() const;
     void seek(chrono::milliseconds dur);
-    chrono::milliseconds tell();
+    chrono::milliseconds tell() const;
     void finish();
     void changeOutput(std::unique_ptr<Output::PlayerSink> device);
-    explicit operator bool();
-    void openPlaylist(std::shared_ptr<Playlist> playlist);
-    std::shared_ptr<Playlist> currentPlaylist();
+    explicit operator bool() const;
 
-private:
     class impl;
+private:
     std::unique_ptr<impl> pimpl;
 };
 
