@@ -53,6 +53,7 @@ inline const char * DLError() {
 #include <list>
 #include <functional>
 #include <thread>
+#include <mutex>
 using std::mutex; using std::unique_lock; using std::lock_guard;
 namespace this_thread = std::this_thread;
 #include <future>
@@ -198,7 +199,7 @@ public:
     }
 
     ForwardRange<const Info> getPlugins() {
-        auto fun([](Plugin& p) {return p.getInfo();});
+        std::function<Info(Plugin&)> fun([](Plugin& p) {return p.getInfo();});
         return loadedPlugins | map_values | transformed(fun);
     }
 

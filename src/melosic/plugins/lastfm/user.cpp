@@ -17,6 +17,7 @@
 
 #include <string>
 #include <thread>
+#include <mutex>
 using std::mutex; using std::unique_lock; using std::lock_guard;
 #include <functional>
 namespace ph = std::placeholders;

@@ -17,6 +17,10 @@
 
 #include <list>
 #include <string>
+#include <mutex>
+using std::mutex;
+using lock_guard = std::lock_guard<mutex>;
+using unique_lock = std::unique_lock<mutex>;
 
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/range/algorithm.hpp>
@@ -27,13 +31,12 @@ using namespace boost::adaptors;
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/string.hpp>
 
 #include "playlist.hpp"
 
 namespace Melosic {
 namespace Playlist {
-
-static const std::string prefix("Playlist ");
 
 class Manager::impl {
 public:
@@ -44,51 +47,86 @@ public:
     {}
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, const std::string& name) {
+        lock_guard l(mu);
         return playlists.insert(pos, std::make_shared<Core::Playlist>(name, slotman, decman));
     }
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
+        lock_guard l(mu);
         if(count_ == 0)
             return pos;
-        auto fun([this] (int c) {
-            return std::make_shared<Core::Playlist>(prefix + std::to_string(c), slotman, decman);
-        });
-        boost::range::insert(playlists, pos, boost::irange(count(), count()+count_) | transformed(fun));
+        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
+            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), slotman, decman));
+        }
         return ++pos;
     }
 
     void erase(Manager::Range r) {
+        lock_guard l(mu);
         boost::range::erase(playlists, r);
     }
 
     int count() {
+        lock_guard l(mu);
         return playlists.size();
     }
 
     bool empty() {
+        lock_guard l(mu);
         return playlists.empty();
     }
 
-    Manager::Range::iterator begin() {
+    Manager::iterator begin() {
+        lock_guard l(mu);
         return playlists.begin();
     }
 
-    Manager::Range::iterator end() {
+    Manager::iterator end() {
+        lock_guard l(mu);
         return playlists.end();
     }
 
     PlaylistType& front() {
+        lock_guard l(mu);
         return playlists.front();
     }
+
     PlaylistType& back() {
+        lock_guard l(mu);
         return playlists.back();
     }
 
+    PlaylistType currentPlaylist() {
+        unique_lock l(mu);
+
+        if(current)
+            return current;
+
+        if(!playlists.empty()) {
+            l.unlock();
+            setCurrent(front());
+        }
+        else {
+            l.unlock();
+            setCurrent(*insert(begin(), "Default"));
+        }
+        assert(current);
+        return current;
+    }
+
+    void setCurrent(PlaylistType p) {
+        lock_guard l(mu);
+        current = p;
+        playlistChanged(p);
+    }
+
 private:
+    mutex mu;
+
     Slots::Manager& slotman;
     Decoder::Manager& decman;
     Signals::Playlist::PlaylistChanged& playlistChanged;
-    Manager::Range::iterator current;
+    PlaylistType current;
     Manager::list playlists;
 
     friend class Manager;
@@ -107,7 +145,7 @@ Manager::Range::iterator Manager::insert(Range::iterator pos, int count) {
 }
 
 void Manager::erase(Manager::Range r) {
-    pimpl->erase(std::move(r));
+    pimpl->erase(r);
 }
 
 int Manager::count() const {
@@ -119,19 +157,11 @@ bool Manager::empty() const {
 }
 
 PlaylistType Manager::currentPlaylist() const {
-    if(pimpl->current != pimpl->end())
-        return *pimpl->current;
-
-    if(!empty())
-        setCurrent(pimpl->begin());
-    else
-        setCurrent(pimpl->insert(pimpl->begin(), 1));
-    return currentPlaylist();
+    return pimpl->currentPlaylist();
 }
 
-void Manager::setCurrent(Range::iterator it) const {
-    pimpl->current = it;
-    pimpl->playlistChanged(*it);
+void Manager::setCurrent(PlaylistType p) const {
+    pimpl->setCurrent(p);
 }
 
 Manager::Range Manager::range() const {

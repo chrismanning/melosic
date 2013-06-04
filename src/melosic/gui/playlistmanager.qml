@@ -33,7 +33,7 @@ DelegateModel {
 
             property int hpadding: lv.padding
             property int vpadding: horizontal ? Math.ceil((lv.height - lbl.height) / 2) : 0
-            property bool hover: false
+            property bool hovered: false
             height: horizontal ? lv.height : lbl.height + (chooserItem.vpadding * 2)
             width: horizontal ? lbl.width + (chooserItem.hpadding * 2) : lv.width
 
@@ -42,7 +42,7 @@ DelegateModel {
                 anchors.fill: parent
                 sourceComponent: !chooserItem.lv.tabs ? si : tabstyleloader.item ? tabstyleloader.item.tab : null
 
-                property Item tab: chooserItem
+                property Item styleData: chooserItem
                 property bool nextSelected: chooserItem.lv.currentIndex === index + 1
                 property bool previousSelected: chooserItem.lv.currentIndex === index - 1
                 property string title: ""
@@ -70,6 +70,7 @@ DelegateModel {
                     id: tabstyleloader
                     property Item control: loader.control
                     sourceComponent: tabloader.item ? tabloader.item.style : null
+                    property alias __control: tabloader
                 }
 
                 property int index: model.index

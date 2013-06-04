@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,58 +15,54 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_PLAYER_HPP
-#define MELOSIC_PLAYER_HPP
+#ifndef MELOSIC_CORE_STATEMACHINE_HPP
+#define MELOSIC_CORE_STATEMACHINE_HPP
 
 #include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
 
 namespace Melosic {
-namespace Output {
-class PlayerSink;
-enum class DeviceState;
-class Manager;
-}
-
-namespace Slots {
-class Manager;
-}
 
 namespace Playlist {
 class Manager;
 }
-
-using Output::DeviceState;
+namespace Output {
+enum class DeviceState;
+class Manager;
+class PlayerSink;
+}
 
 namespace Core {
 
-class Playlist;
+class Track;
+struct StateChanged;
 
-class Player {
+class StateMachine {
 public:
-    Player(Melosic::Playlist::Manager&, Output::Manager&, Slots::Manager&);
-    ~Player();
-
-    Player(const Player&) = delete;
-    Player& operator=(const Player&) = delete;
-    Player(Player&&) = delete;
-    Player& operator=(Player&&) = delete;
+    explicit StateMachine(Melosic::Playlist::Manager&, Output::Manager&);
+    ~StateMachine();
 
     void play();
     void pause();
     void stop();
-    DeviceState state() const;
-    void seek(chrono::milliseconds dur);
-    chrono::milliseconds tell() const;
-    void finish();
 
-    class impl;
+    chrono::milliseconds tell() const;
+
+    Output::DeviceState state() const;
+    Output::PlayerSink& sink();
+
+    void sinkChangeSlot();
+    void trackChangeSlot(const Track& track);
+
 private:
+    class impl;
     std::unique_ptr<impl> pimpl;
+    friend struct State;
+    friend class Output::Manager;
 };
 
 } // namespace Core
 } // namespace Melosic
 
-#endif // MELOSIC_PLAYER_HPP
+#endif // MELOSIC_CORE_STATEMACHINE_HPP

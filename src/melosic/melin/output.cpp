@@ -17,6 +17,7 @@
 
 #include <map>
 #include <thread>
+#include <mutex>
 using std::mutex;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
@@ -24,6 +25,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 
+#include <melosic/common/string.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/sigslots/signals.hpp>
@@ -38,10 +40,10 @@ namespace Output {
 
 class Manager::impl {
 public:
-    impl(Slots::Manager& slotman)
-        : requestSinkChange(slotman.get<Signals::Output::ReqSinkChange>()),
-          playerSinkChanged(slotman.get<Signals::Output::PlayerSinkChanged>()),
-          logject(logging::keywords::channel = "Output::Manager")
+    impl(Slots::Manager& slotman) :
+        requestSinkChange(slotman.get<Signals::Output::ReqSinkChange>()),
+        playerSinkChanged(slotman.get<Signals::Output::PlayerSinkChanged>()),
+        logject(logging::keywords::channel = "Output::Manager")
     {
         slotman.get<Signals::Config::Loaded>().connect([this](Config::Base& base) {
             TRACE_LOG(logject) << "Output conf loaded";
@@ -79,6 +81,7 @@ public:
     }
 
     void addOutputDevice(Factory fact, const DeviceName& device) {
+        lock_guard l(mu);
         auto it = outputFactories.find(device);
         if(it == outputFactories.end()) {
             outputFactories.emplace(device, fact);
@@ -86,6 +89,7 @@ public:
     }
 
     std::unique_ptr<PlayerSink> getPlayerSink() {
+        lock_guard l(mu);
         if(!fact) {
             return nullptr;
         }
@@ -102,6 +106,7 @@ public:
     }
 
     void setPlayerSink(const std::string& sinkname) {
+        unique_lock l(mu);
         LOG(logject) << "Attempting to open player sink: " << sinkname;
         auto it = outputFactories.find(sinkname);
 
@@ -110,12 +115,12 @@ public:
         }
         sinkName = sinkname;
         fact = std::bind(it->second, it->first);
+        l.unlock();
         playerSinkChanged();
     }
 
 private:
-    typedef mutex Mutex;
-    Mutex mu;
+    mutex mu;
     std::string sinkName;
     std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
     std::map<DeviceName, Factory> outputFactories;
@@ -144,7 +149,9 @@ void Manager::setPlayerSink(const std::string& sinkname) {
     pimpl->setPlayerSink(sinkname);
 }
 
-Conf::Conf() : Config::Config("Output") {}
+Conf::Conf() : Config::Config("Output") {
+    putNode("output device", "default:CARD=PCH"_str);
+}
 
 } // namespace Output
 } // namespace Melosic

@@ -24,10 +24,11 @@
 using boost::factory;
 #include <alsa/asoundlib.h>
 #include <string>
-#include <boost/thread.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex; using boost::shared_lock_guard;
 #include <thread>
+#include <mutex>
 using std::unique_lock; using std::lock_guard;
 
 #include <melosic/common/error.hpp>
@@ -124,7 +125,7 @@ public:
         const int buf = frames * 8;
         snd_pcm_hw_params_set_buffer_size_near(pdh, params, (snd_pcm_uframes_t*)&buf);
 
-        snd_pcm_format_t fmt;
+        snd_pcm_format_t fmt(SND_PCM_FORMAT_UNKNOWN);
 
         switch(as.bps) {
             case 8:
@@ -339,6 +340,8 @@ extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
                   : base.getChild("Output").putChild("ALSA", ALSAConf())
                   : base.putChild("Output", Output::Conf()).putChild("ALSA", ALSAConf());
         c.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+        if(!c.existsNode("frames") || !c.existsNode("output device"))
+            c.resetToDefault();
         auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
         varUpdate.connect([&](const std::string& k, const Config::VarType& v) {
             try {
@@ -349,9 +352,7 @@ extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
                 ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << k;
             }
         });
-        if(!c.existsNode("frames"))
-            c.resetToDefault();
-        for(const auto& node : c.getNodes()) {
+        for(auto&& node : c.getNodes()) {
             TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
             varUpdate(node.first, node.second);
         }

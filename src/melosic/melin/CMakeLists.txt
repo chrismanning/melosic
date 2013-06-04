@@ -13,7 +13,7 @@ set(SRC_LIST ${SRC_LIST} sigslots/slots.cpp)
 set(SRC_LIST ${SRC_LIST} sigslots/connection.cpp)
 
 set(HDR_LIST)
-set(HDR_LIST ${HDR_LIST} sigslots/signals_fwd.hpp configvar.hpp)
+set(HDR_LIST ${HDR_LIST} sigslots/signals_fwd.hpp sigslots/signals.hpp configvar.hpp)
 
 find_package(Boost COMPONENTS filesystem system log log_setup thread serialization REQUIRED)
 

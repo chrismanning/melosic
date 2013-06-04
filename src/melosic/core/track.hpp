@@ -45,7 +45,7 @@ public:
     Track(const Track&);
     Track& operator=(const Track&);
 
-    bool operator==(const Track&);
+    bool operator==(const Track&) const;
 
     virtual void reset();
     virtual void seek(chrono::milliseconds dur);

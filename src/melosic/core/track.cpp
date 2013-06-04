@@ -19,6 +19,7 @@
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex; using boost::shared_lock_guard;
 #include <thread>
+#include <mutex>
 using std::unique_lock; using std::lock_guard;
 
 #include <taglib/tpropertymap.h>
@@ -219,7 +220,7 @@ Track& Track::operator=(const Track& b) {
     return *this;
 }
 
-bool Track::operator==(const Track& b) {
+bool Track::operator==(const Track& b) const {
     return pimpl == b.pimpl;
 }
 

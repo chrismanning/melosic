@@ -17,8 +17,10 @@
 
 #include <wordexp.h>
 
+#include <functional>
 #include <map>
 #include <thread>
+#include <mutex>
 typedef std::mutex Mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;

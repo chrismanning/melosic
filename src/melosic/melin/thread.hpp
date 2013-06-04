@@ -85,7 +85,6 @@ public:
 
     template <typename Func, typename ...Args>
     Task(std::promise<typename std::result_of<Func(Args...)>::type> p, Func&& f, Args&&... args) {
-        typedef std::promise<typename std::result_of<Func(Args...)>::type> PromiseType;
         auto fun = std::bind(std::forward<Func>(f), std::forward<Args>(args)...);
         pimpl = new impl<decltype(fun)>(std::move(p), std::move(fun));
     }

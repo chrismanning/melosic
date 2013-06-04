@@ -85,7 +85,7 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
             case TrackRoles::Date:
                 return QString::fromStdString(track.getTag("date"));
             case TrackRoles::Duration: {
-                return chrono::duration_cast<chrono::seconds>(track.duration()).count();
+                return QVariant::fromValue(chrono::duration_cast<chrono::seconds>(track.duration()).count());
             }
             default:
                 return QVariant();
@@ -143,8 +143,8 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
 
 bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
     LOG(logject) << "In insertTracks(int, QList<QUrl>)";
-    boost::range::sort(filenames);
-    auto fun([] (QUrl url) {
+    qSort(filenames);
+    std::function<std::string(QUrl)> fun([] (QUrl url) {
         return url.toLocalFile().toStdString();
     });
     TRACE_LOG(logject) << "Inserting " << filenames.count() << " files";

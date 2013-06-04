@@ -32,6 +32,7 @@
 #include <ctime>
 #include <cstdint>
 #include <ostream>
+#include <memory>
 
 namespace Melosic {
 namespace Plugin {

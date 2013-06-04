@@ -67,9 +67,9 @@ public:
 
     Signal() : Signal(nullptr) {}
 
-    Signal(Thread::Manager* tman) : tman(tman), logject(logject_()) {}
+    Signal(Thread::Manager* tman) : tman(tman) {}
 
-    Signal(const Signal& b) : funs(b.funs), logject(logject_()) {}
+    Signal(const Signal& b) : funs(b.funs) {}
     Signal& operator=(const Signal& b) {
         funs = b.funs;
         return *this;
@@ -125,6 +125,7 @@ public:
     template <typename ...A>
     void operator()(A&& ...args) {
         std::unique_lock<Mutex> l(mu);
+
         std::list<std::pair<std::future<Ret>, Connection>> fs;
         for(auto i = funs.begin(); i != funs.end();) {
             try {
@@ -185,8 +186,10 @@ private:
     typedef std::mutex Mutex;
     Mutex mu;
     Thread::Manager* tman;
-    Logger::Logger& logject;
+    static Logger::Logger logject;
 };
+template <typename Ret, typename ...Args>
+Logger::Logger Signal<Ret (Args...)>::logject(logging::keywords::channel = "Signal");
 
 template <typename T>
 class WeakPtrAdaptor {

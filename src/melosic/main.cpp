@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
         ERROR_LOG(logject) << str.str();
         TRACE_LOG(logject) << boost::diagnostic_information(e);
         TRACE_LOG(logject) << info;
+        return -1;
     }
     catch(PluginException& e) {
         std::string str("Plugin error");
@@ -77,12 +78,9 @@ int main(int argc, char* argv[]) {
         }
         ERROR_LOG(logject) << str;
         TRACE_LOG(logject) << boost::diagnostic_information(e);
-    }
-    catch(boost::exception& e) {
-        TRACE_LOG(logject) << boost::diagnostic_information(e);
-    }
-    catch(std::exception& e) {
-        ERROR_LOG(logject) << e.what();
         return -1;
+    }
+    catch(...) {
+        TRACE_LOG(logject) << boost::diagnostic_information(boost::current_exception());
     }
 }

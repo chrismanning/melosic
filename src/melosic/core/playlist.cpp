@@ -17,6 +17,7 @@
 
 #include <numeric>
 #include <thread>
+#include <mutex>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>

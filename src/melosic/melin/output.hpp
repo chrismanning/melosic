@@ -26,12 +26,14 @@
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/melin/config.hpp>
+#include <melosic/core/statemachine.hpp>
 
 namespace Melosic {
 namespace Output {
 struct DeviceName;
 class PlayerSink;
 class Conf;
+class Sink;
 }
 namespace Slots {
 class Manager;
@@ -48,7 +50,7 @@ namespace Output {
 typedef std::function<std::unique_ptr<PlayerSink>(const DeviceName&)> Factory;
 class Manager {
 public:
-    Manager(Slots::Manager&);
+    explicit Manager(Slots::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -63,13 +65,13 @@ public:
         }
     }
 
+private:
     std::unique_ptr<PlayerSink> getPlayerSink();
     void setPlayerSink(const std::string& sinkname);
 
-private:
     class impl;
     std::unique_ptr<impl> pimpl;
-    friend class Conf;
+    friend class Core::StateMachine::impl;
 };
 
 class Conf : public Config::Config<Conf> {
@@ -92,6 +94,7 @@ enum class DeviceState {
     Playing,
     Paused,
     Stopped,
+    Initial,
 };
 
 class PlayerSink : public Sink {

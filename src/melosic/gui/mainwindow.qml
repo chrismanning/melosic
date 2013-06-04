@@ -168,7 +168,7 @@ ApplicationWindow {
 
     ColumnLayout {
         anchors.fill: parent
-        spacing: -1
+        spacing: 0
         RowLayout {
             Layout.preferredHeight: addbtn.height
 

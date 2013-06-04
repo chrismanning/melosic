@@ -62,7 +62,7 @@ public:
     int count() const;
     bool empty() const;
     PlaylistType currentPlaylist() const;
-    void setCurrent(Range::iterator) const;
+    void setCurrent(PlaylistType p) const;
 
 private:
     class impl;

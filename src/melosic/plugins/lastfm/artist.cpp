@@ -17,6 +17,7 @@
 
 #include <list>
 #include <thread>
+#include <mutex>
 using std::unique_lock; using std::lock_guard;
 
 #include <boost/property_tree/ptree.hpp>

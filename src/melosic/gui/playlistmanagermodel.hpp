@@ -28,12 +28,16 @@ namespace Playlist {
 class Manager;
 }
 
+namespace Core {
+class Playlist;
+}
+
 class PlaylistModel;
 
 class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
-    QHash<QString, PlaylistModel*> playlists;
+    QMap<Core::Playlist*, PlaylistModel*> playlists;
     Logger::Logger logject;
 
 public:
@@ -43,18 +47,17 @@ public:
         PlaylistModelRole = Qt::UserRole * 12
     };
 
-    Q_INVOKABLE QObject* playlist(QString name);
-    Q_INVOKABLE QObject* playlist(int index);
+    QObject* playlist(int index);
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
-    Q_INVOKABLE QVariant data(const QModelIndex& index, int role) const override;
+    QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    Q_INVOKABLE bool setData(const QModelIndex& index, const QVariant& value, int role) override;
+    bool setData(const QModelIndex& index, const QVariant& value, int role) override;
     Q_INVOKABLE bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
-    Q_INVOKABLE QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;
+    QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;
 };
 
 } // namespace Melosic

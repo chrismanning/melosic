@@ -34,17 +34,11 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, QObject* 
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {}
 
-QObject* PlaylistManagerModel::playlist(QString name) {
-    TRACE_LOG(logject) << "Trying to find playlist: " << name.toStdString();
-    return playlists.value(name, nullptr);
-}
-
 QObject* PlaylistManagerModel::playlist(int index) {
     TRACE_LOG(logject) << "Getting playlist at index " << index;
     assert(index < rowCount());
-    auto n = playman.range()[index]->getName();
-    TRACE_LOG(logject) << "playlist name: " << n;
-    return playlists.value(QString::fromStdString(n), nullptr);
+    auto ptr = playman.range()[index];
+    return playlists.value(ptr.get(), nullptr);
 }
 
 Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
@@ -66,8 +60,14 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
         case Qt::EditRole:
             return QString::fromStdString(playman.range()[index.row()]->getName());
         case PlaylistModelRole: {
-            auto it = playlists.find(QString::fromStdString(playman.range()[index.row()]->getName()));
-            return *it ? QVariant::fromValue(*it) : QVariant();
+            auto ptr = playman.range()[index.row()];
+            if(playlists.contains(ptr.get()))
+                return QVariant::fromValue(playlists[ptr.get()]);
+            auto nthis = const_cast<PlaylistManagerModel*>(this);
+
+            return QVariant::fromValue(nthis->playlists[ptr.get()] = new PlaylistModel(ptr, nthis));
+//            auto it = playlists.find(QString::fromStdString(playman.range()[index.row()]->getName()));
+//            return *it ? QVariant::fromValue(*it) : QVariant();
         }
         default:
             return QVariant();
@@ -102,19 +102,20 @@ bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {
 
     TRACE_LOG(logject) << "row: " << row << "; count: " << count;
     beginInsertRows(QModelIndex(), row, row+count-1);
-    for(int i = row; i < row+count; i++) {
-        auto it = playman.insert(std::next(playman.range().begin(), row), count);
-        if(it != playman.range().end()) {
-            if(auto ptr = playman.range()[i]) {
-                playlists[QString::fromStdString(ptr->getName())] = new PlaylistModel(ptr);
-            }
-        }
-        else {
-            ERROR_LOG(logject) << "Failed to add playlist";
-            return false;
-        }
-        TRACE_LOG(logject) << "Playlists: " << playman.count();
-    }
+//    for(int i = row; i < row+count; i++) {
+//        auto it = playman.insert(std::next(playman.range().begin(), row), count);
+//        if(it != playman.range().end()) {
+//            if(auto ptr = playman.range()[i]) {
+//                playlists[QString::fromStdString(ptr->getName())] = new PlaylistModel(ptr);
+//            }
+//        }
+//        else {
+//            ERROR_LOG(logject) << "Failed to add playlist";
+//            return false;
+//        }
+//        TRACE_LOG(logject) << "Playlists: " << playman.count();
+//    }
+    playman.insert(std::next(playman.range().begin(), row), count);
     endInsertRows();
     return true;
 }

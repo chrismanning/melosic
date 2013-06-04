@@ -18,6 +18,7 @@
 #include <sstream>
 #include <memory>
 #include <thread>
+#include <mutex>
 using std::mutex; using std::lock_guard;
 
 #include <boost/thread/shared_mutex.hpp>
@@ -80,8 +81,8 @@ public:
            .host("ws.audioscrobbler.com")
            .path("/2.0/")
            .query(qstr);
-        TRACE_LOG(logject) << "Query uri: " << url.uri();
-        request.set_uri(url.uri());
+        TRACE_LOG(logject) << "Query uri: " << network::uri(url);
+        request.set_uri(network::uri(url));
 
         network::http::response response = client.post(request);
 

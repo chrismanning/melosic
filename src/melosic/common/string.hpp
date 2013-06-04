@@ -23,38 +23,36 @@
 #include <list>
 
 namespace Melosic {
-using namespace boost;
-using namespace algorithm;
 
-#define toUpper(str) to_upper_copy(str)
-#define toLower(str) to_lower_copy(str)
+#define toUpper(str) boost::algorithm::to_upper_copy(str)
+#define toLower(str) boost::algorithm::to_lower_copy(str)
 
-std::string toTitle(const std::string& str) {
+inline std::string toTitle(const std::string& str) {
     std::list<std::string> list;
-    char_separator<char> sep(" ");
-    tokenizer<char_separator<char> > tokens(str, sep);
+    boost::char_separator<char> sep(" ");
+    boost::tokenizer<boost::char_separator<char> > tokens(str, sep);
     for(const auto& s : tokens) {
         std::string tmp(toLower(s));
         tmp[0] = toupper(tmp[0]);
         list.push_back(tmp);
     }
-    return join(list, " ");
+    return boost::algorithm::join(list, " ");
 }
 
 inline namespace Literals {
-    std::basic_string<char> operator ""_str(char const* str, size_t len) {
+    inline std::basic_string<char> operator "" _str(char const* str, size_t len) {
         return std::basic_string<char>(str, len);
     }
 
-    std::basic_string<wchar_t> operator ""_str(wchar_t const* str, size_t len) {
+    inline std::basic_string<wchar_t> operator "" _str(wchar_t const* str, size_t len) {
         return std::basic_string<wchar_t>(str, len);
     }
 
-    std::basic_string<char16_t> operator ""_str(char16_t const* str, size_t len) {
+    inline std::basic_string<char16_t> operator "" _str(char16_t const* str, size_t len) {
         return std::basic_string<char16_t>(str, len);
     }
 
-    std::basic_string<char32_t> operator ""_str(char32_t const* str, size_t len) {
+    inline std::basic_string<char32_t> operator "" _str(char32_t const* str, size_t len) {
         return std::basic_string<char32_t>(str, len);
     }
 }

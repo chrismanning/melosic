@@ -19,6 +19,7 @@
 #define MELOSIC_CONNECTION_HPP
 
 #include <thread>
+#include <mutex>
 
 #include <melosic/melin/sigslots/signals_fwd.hpp>
 
@@ -27,7 +28,6 @@ namespace Signals {
 
 struct Connection;
 
-namespace {
 struct ConnErasure {
     virtual ~ConnErasure() {}
     virtual void disconnect(const Connection&) = 0;
@@ -61,7 +61,6 @@ private:
     typedef std::mutex Mutex;
     Mutex mu;
 };
-}
 
 struct ConnHash;
 
@@ -69,10 +68,10 @@ struct Connection {
     Connection() = default;
     Connection(const Connection&) = default;
     Connection& operator=(const Connection&) = default;
-    Connection(Connection&& conn) = default;
-    Connection& operator=(Connection&& conn) = default;
+    Connection(Connection&&) = default;
+    Connection& operator=(Connection&&) = default;
 
-    bool operator==(const Connection& b) const;
+    bool operator==(const Connection&) const;
 
     template <typename R, typename ...Args>
     Connection(Signal<R(Args...)>& sig, std::shared_ptr<void> ptr = nullptr)

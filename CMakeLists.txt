@@ -12,7 +12,7 @@ include_directories(extern/opqit/include)
 include_directories(extern/kcategorizedview)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fPIC -fno-omit-frame-pointer")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++11 -pthread -stdlib=libc++")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++1y -pthread")
 ADD_DEFINITIONS(-D__GXX_EXPERIMENTAL_CXX0X__=1)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O1 -fsanitize=address")
