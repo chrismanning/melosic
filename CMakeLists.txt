@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 2.8)
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
 
+add_definitions(-DBOOST_ALL_DYN_LINK)
+
 add_subdirectory(extern)
 include_directories(extern/cpp-netlib/http/src/)
 include_directories(extern/cpp-netlib/uri/src/)
