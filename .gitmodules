@@ -4,3 +4,9 @@
 [submodule "extern/opqit"]
 	path = extern/opqit
 	url = git@github.com:chrismanning/opqit.git
+[submodule "extern/gtest"]
+	path = extern/gtest
+	url = https://github.com/cpp-netlib/gtest.git
+[submodule "extern/gmock"]
+	path = extern/gmock
+	url = https://github.com/cpp-netlib/gmock.git
