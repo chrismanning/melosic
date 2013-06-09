@@ -35,7 +35,7 @@ namespace IO {
 
 class File : public BiDirectionalClosableSeekable {
 public:
-    auto static const defaultMode = std::ios_base::binary | std::ios_base::in | std::ios_base::out;
+    auto static const defaultMode = std::ios_base::binary | std::ios_base::in;
 
     File(const boost::filesystem::path& filename, const openmode mode_ = defaultMode)
         : filename_(filename), mode_(mode_)
@@ -54,13 +54,13 @@ public:
         return impl.is_open();
     }
 
-    void open(const openmode mode = std::ios_base::binary | std::ios_base::in | std::ios_base::out)
-    {
+    void open(const openmode mode = defaultMode) {
         try {
             impl.open(filename_.string(), mode);
         }
-        catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(filename_));
+        catch(...) {
+            BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(filename_)
+                                  << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
 
