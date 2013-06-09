@@ -121,6 +121,10 @@ public:
         return playlistman.currentPlaylist();
     }
 
+    Signals::Player::StateChanged& stateChangedSignal() {
+        return stateMachine.stateChangedSignal();
+    }
+
 private:
     bool end() {
         return end_;
@@ -157,7 +161,7 @@ private:
                             break;
                         }
                         case DeviceState::Error:
-                            ERROR_LOG(logject) << "Irrecoverable error occured";
+//                            ERROR_LOG(logject) << "Irrecoverable error occured";
 //                            currentState()->device().reset();
                             break;
                         case DeviceState::Stopped:
@@ -253,6 +257,10 @@ chrono::milliseconds Player::tell() const {
 
 void Player::finish() {
     pimpl->finish();
+}
+
+Signals::Player::StateChanged& Player::stateChangedSignal() const {
+    return pimpl->stateChangedSignal();
 }
 
 } // namespace Core

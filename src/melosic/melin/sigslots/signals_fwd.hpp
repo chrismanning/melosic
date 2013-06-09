@@ -56,7 +56,6 @@ typedef Signal<void(chrono::milliseconds)> Seek;
 }
 
 namespace Output {
-typedef Signal<void(const std::string&)> ReqSinkChange;
 typedef Signal<void()> PlayerSinkChanged;
 }
 

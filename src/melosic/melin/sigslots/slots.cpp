@@ -33,7 +33,6 @@ public:
         trackChanged(&tman),
         seek(&tman),
         playerSinkChanged(&tman),
-        requestSinkChange(&tman),
         loaded(&tman)
     {}
 
@@ -44,7 +43,6 @@ public:
     Signals::Playlist::TrackChanged trackChanged;
     Signals::Player::Seek seek;
     Signals::Output::PlayerSinkChanged playerSinkChanged;
-    Signals::Output::ReqSinkChange requestSinkChange;
     Signals::Config::Loaded loaded;
 };
 
@@ -87,12 +85,6 @@ Signals::Output::PlayerSinkChanged& Manager::get<Signals::Output::PlayerSinkChan
     return pimpl->playerSinkChanged;
 }
 template Signals::Output::PlayerSinkChanged& Manager::get<Signals::Output::PlayerSinkChanged>();
-
-template <>
-Signals::Output::ReqSinkChange& Manager::get<Signals::Output::ReqSinkChange>() {
-    return pimpl->requestSinkChange;
-}
-template Signals::Output::ReqSinkChange& Manager::get<Signals::Output::ReqSinkChange>();
 
 template <>
 Signals::Config::Loaded& Manager::get<Signals::Config::Loaded>() {

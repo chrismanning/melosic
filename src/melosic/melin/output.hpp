@@ -65,9 +65,10 @@ public:
         }
     }
 
+    const std::string& currentSinkName() const;
+
 private:
-    std::unique_ptr<PlayerSink> getPlayerSink();
-    void setPlayerSink(const std::string& sinkname);
+    std::unique_ptr<PlayerSink> createPlayerSink();
 
     class impl;
     std::unique_ptr<impl> pimpl;

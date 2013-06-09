@@ -22,6 +22,8 @@
 #include <chrono>
 namespace chrono = std::chrono;
 
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+
 namespace Melosic {
 
 namespace Playlist {
@@ -36,7 +38,6 @@ class PlayerSink;
 namespace Core {
 
 class Track;
-struct StateChanged;
 
 class StateMachine {
 public:
@@ -54,6 +55,8 @@ public:
 
     void sinkChangeSlot();
     void trackChangeSlot(const Track& track);
+
+    Signals::Player::StateChanged& stateChangedSignal() const;
 
 private:
     class impl;

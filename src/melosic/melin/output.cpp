@@ -41,7 +41,6 @@ namespace Output {
 class Manager::impl {
 public:
     impl(Slots::Manager& slotman) :
-        requestSinkChange(slotman.get<Signals::Output::ReqSinkChange>()),
         playerSinkChanged(slotman.get<Signals::Output::PlayerSinkChanged>()),
         logject(logging::keywords::channel = "Output::Manager")
     {
@@ -61,7 +60,7 @@ public:
                         if(sinkName == sn)
                             LOG(logject) << "Chosen output same as current. Not reinitialising.";
                         else
-                            requestSinkChange(sn);
+                            setPlayerSink(sn);
                     }
                     else
                         ERROR_LOG(logject) << "Config: Unknown key: " << key;
@@ -75,9 +74,6 @@ public:
                 varUpdate(node.first, node.second);
             }
         });
-        slotman.get<Signals::Output::ReqSinkChange>().connect([this](const std::string& sink) {
-            setPlayerSink(sink);
-        });
     }
 
     void addOutputDevice(Factory fact, const DeviceName& device) {
@@ -88,19 +84,16 @@ public:
         }
     }
 
-    std::unique_ptr<PlayerSink> getPlayerSink() {
+    const std::string& currentSinkName() {
+        lock_guard l(mu);
+        return sinkName;
+    }
+
+    std::unique_ptr<PlayerSink> createPlayerSink() {
         lock_guard l(mu);
         if(!fact) {
             return nullptr;
         }
-        struct A {
-            A(decltype(fact)& f) : f(f) {}
-            ~A() {
-                f = decltype(fact)();
-            }
-            decltype(impl::fact)& f;
-        };
-        A a(fact);
 
         return fact();
     }
@@ -125,7 +118,6 @@ private:
     std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
     std::map<DeviceName, Factory> outputFactories;
     Conf conf;
-    Signals::Output::ReqSinkChange& requestSinkChange;
     Signals::Output::PlayerSinkChanged& playerSinkChanged;
     Logger::Logger logject;
     friend class Manager;
@@ -141,16 +133,16 @@ void Manager::addOutputDevice(Factory fact, const DeviceName& avail) {
     pimpl->addOutputDevice(fact, avail);
 }
 
-std::unique_ptr<PlayerSink> Manager::getPlayerSink() {
-    return std::move(pimpl->getPlayerSink());
+const std::string& Manager::currentSinkName() const {
+    return pimpl->currentSinkName();
 }
 
-void Manager::setPlayerSink(const std::string& sinkname) {
-    pimpl->setPlayerSink(sinkname);
+std::unique_ptr<PlayerSink> Manager::createPlayerSink() {
+    return std::move(pimpl->createPlayerSink());
 }
 
 Conf::Conf() : Config::Config("Output") {
-    putNode("output device", "default:CARD=PCH"_str);
+    putNode("output device", "iec958:CARD=PCH,DEV=0"_str);
 }
 
 } // namespace Output

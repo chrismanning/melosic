@@ -31,6 +31,8 @@ using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/range/algorithm/find.hpp>
 #include <boost/range/adaptor/sliced.hpp>
 using namespace boost::adaptors;
+#include <boost/format.hpp>
+using boost::format;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
@@ -217,7 +219,13 @@ public:
 
         auto r = std::next(std::begin(tracks), pos - std::begin(tracks) + 1);
         for(auto& path : values) {
-            pos = tracks.emplace(pos, decman, path);
+            try {
+                pos = tracks.emplace(pos, decman, path);
+            }
+            catch(...) {
+                ERROR_LOG(logject) << format("Track couldn't be add to playlist \"%1%\" %2%:%3%") % name % __FILE__ % __LINE__;
+                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+            }
         }
         l.unlock();
         if(size() == 1) {

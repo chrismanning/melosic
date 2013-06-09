@@ -22,6 +22,8 @@
 #include <chrono>
 namespace chrono = std::chrono;
 
+#include <melosic/melin/sigslots/signals_fwd.hpp>
+
 namespace Melosic {
 namespace Output {
 class PlayerSink;
@@ -60,6 +62,8 @@ public:
     void seek(chrono::milliseconds dur);
     chrono::milliseconds tell() const;
     void finish();
+
+    Signals::Player::StateChanged& stateChangedSignal() const;
 
     class impl;
 private:

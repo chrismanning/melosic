@@ -35,7 +35,7 @@ namespace this_thread = std::this_thread;
 namespace Melosic {
 namespace Core {
 
-struct StateChanged : Signals::Signal<void(Output::DeviceState)> {
+struct StateChanged : Signals::Player::StateChanged {
     using super::Signal;
 };
 
@@ -51,8 +51,6 @@ struct State {
     virtual chrono::milliseconds tell() const {
         return chrono::milliseconds::zero();
     }
-
-//    virtual std::function<void()> save();
 
     virtual Output::DeviceState state() const {
         return Output::DeviceState::Initial;
@@ -76,6 +74,7 @@ StateMachine::impl* State::stateMachine_(nullptr);
 Melosic::Playlist::Manager* State::playman_(nullptr);
 
 struct Stopped;
+struct Error;
 
 class StateMachine::impl {
 public:
@@ -154,6 +153,10 @@ public:
                 }
             }
         }
+        catch(DeviceException& e) {
+            ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
+            changeState<Error>();
+        }
         catch(...) {
             ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
             playman.currentPlaylist()->next();
@@ -162,7 +165,7 @@ public:
 
     void changeDevice() {
         lock_guard l(sinkWrapper_.mu);
-        sinkWrapper_.device = std::move(outman.getPlayerSink());
+        sinkWrapper_.device = std::move(outman.createPlayerSink());
     }
 
     void sinkChangeSlot() {
@@ -177,6 +180,7 @@ public:
             ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
 
             stop();
+            changeState<Error>();
         }
     }
 
@@ -229,6 +233,7 @@ public:
         }
 
         explicit operator bool() {
+            lock_guard l(mu);
             return static_cast<bool>(device);
         }
 
@@ -263,11 +268,54 @@ public:
 };
 
 struct Stopped;
+struct Error;
 
 void State::sinkChange() {
-    stateMachine_->changeDevice();
-    stateMachine->changeState<Stopped>();
+    stateMachine->changeDevice();
+    if(stateMachine->sinkWrapper_)
+        stateMachine->changeState<Stopped>();
+    else
+        stateMachine->changeState<Error>();
 }
+
+struct Error : State {
+    explicit Error(StateChanged& sc) : State(sc) {
+        stateChanged(Output::DeviceState::Error);
+    }
+
+    void play() override {
+        sinkChange();
+        if(stateMachine->state() != Output::DeviceState::Error)
+            stateMachine->play();
+    }
+    void pause() override {
+        sinkChange();
+        if(stateMachine->state() != Output::DeviceState::Error) {
+            stateMachine->play();
+            stateMachine->pause();
+        }
+    }
+    void stop() override {
+        sinkChange();
+        if(stateMachine->state() != Output::DeviceState::Error)
+            assert(stateMachine->state() == Output::DeviceState::Stopped);
+    }
+
+    Output::DeviceState state() const override {
+        return Output::DeviceState::Error;
+    }
+
+    void sinkChange() override {
+        try {
+            stateMachine->changeDevice();
+            if(stateMachine->sinkWrapper_)
+                stateMachine->changeState<Stopped>();
+        }
+        catch(...) {
+            ERROR_LOG(stateMachine->logject) << boost::diagnostic_information(boost::current_exception());
+        }
+    }
+};
 
 struct Stop : virtual State {
     explicit Stop(StateChanged& sc) : State(sc) {}
@@ -369,6 +417,7 @@ struct Stopped : State {
         }
         catch(...) {
             ERROR_LOG(stateMachine->logject) << boost::diagnostic_information(boost::current_exception());
+            stateMachine->changeState<Error>();
         }
     }
 
@@ -412,6 +461,10 @@ void StateMachine::sinkChangeSlot() {
 
 void StateMachine::trackChangeSlot(const Track& track) {
     pimpl->trackChangeSlot(track);
+}
+
+Signals::Player::StateChanged& StateMachine::stateChangedSignal() const {
+    return pimpl->stateChanged;
 }
 
 } // namespace Core
