@@ -39,7 +39,7 @@ enum class DeviceState;
 namespace Signals {
 
 template <typename Ret, typename ...Args>
-class Signal;
+class MELOSIC_MELIN_EXPORT Signal;
 
 namespace Config {
 typedef Signal<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;

@@ -18,7 +18,11 @@
 #include <QApplication>
 #include <QQmlDebuggingEnabler>
 
-#include <melosic/core/kernel.hpp>
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
+#include <melosic/melin/kernel.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/exports.hpp>
@@ -32,6 +36,7 @@ int main(int argc, char* argv[]) {
 #ifdef _WIN32
     SetErrorMode(0x8000);
 #endif
+
     Logger::Logger logject(logging::keywords::channel = "Main");
 
     try {
@@ -42,15 +47,15 @@ int main(int argc, char* argv[]) {
         Core::Kernel kernel;
         Plugin::Manager& plugman = kernel.getPluginManager();
 
-        plugman.loadPlugin("../lib/flac.melin");
-        plugman.loadPlugin("../lib/alsa.melin");
-        plugman.loadPlugin("../lib/lastfm.melin");
+        plugman.loadPlugin("flac.melin");
+//        plugman.loadPlugin("../lib/alsa.melin");
+        plugman.loadPlugin("lastfm.melin");
 
         plugman.initialise();
 
         kernel.getConfigManager().loadConfig();
 
-        QQmlDebuggingEnabler enabler;
+//        QQmlDebuggingEnabler enabler;
 
         MainWindow win(kernel);
 

@@ -18,8 +18,6 @@
 #include "tag.hpp"
 #include "service.hpp"
 
-#include <opqit/opaque_iterator.hpp>
-
 #include <list>
 
 namespace LastFM {

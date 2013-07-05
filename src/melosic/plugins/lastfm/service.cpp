@@ -195,8 +195,8 @@ std::string Service::postMethod(const Method& method) {
 }
 
 void Service::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
-    if(playlist && *playlist)
-        trackChangedSlot(*playlist->currentTrack());
+//    if(playlist && *playlist)
+//        trackChangedSlot(*playlist->currentTrack());
 }
 
 void Service::trackChangedSlot(const Melosic::Core::Track& newTrack) {

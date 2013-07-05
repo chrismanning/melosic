@@ -81,7 +81,7 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 
 static Signals::ScopedConnection varConnection;
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
     funs << registerConfig << registerSlots << registerTasks;
 
@@ -90,7 +90,7 @@ extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsI
                                tman));
 }
 
-extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerConfig(Config::Manager* confman) {
     ::confman = confman;
 
     ::conf.putNode("username", std::string(""));
@@ -98,27 +98,27 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("enable scrobbling", false);
 }
 
-extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerSlots(Slots::Manager* slotman) {
     ::slotman = slotman;
 
-    slotman->get<Signals::Config::Loaded>().connect([&](Config::Base& c) {
-        auto& lc = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
+//    slotman->get<Signals::Config::Loaded>().connect([&](Config::Base& c) {
+//        auto& lc = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
 
-        lc.addDefaultFunc([=]() -> Config::Base& { return *::conf.clone(); });
+//        lc.addDefaultFunc([=]() -> Config::Base& { return *::conf.clone(); });
 
-        varConnection = lc.get<Signals::Config::VariableUpdated>()
-                .connect(refreshConfig);
+//        varConnection = lc.get<Signals::Config::VariableUpdated>()
+//                .connect(refreshConfig);
 
-        for(auto& node : lc.getNodes()) {
-            refreshConfig(node.first, node.second);
-        }
-    });
+//        for(auto& node : lc.getNodes()) {
+//            refreshConfig(node.first, node.second);
+//        }
+//    });
 }
 
-extern "C" MELOSIC_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
     ::tman = tman;
 }
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
 
-extern "C" MELOSIC_EXPORT void destroyPlugin() {}
+extern "C" MELOSIC_PLUGIN_EXPORT void destroyPlugin() {}

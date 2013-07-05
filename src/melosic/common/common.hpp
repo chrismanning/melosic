@@ -22,18 +22,42 @@
 #include <chrono>
 namespace chrono = std::chrono;
 
-#ifdef WIN32
-#include <boost/thread.hpp>
-
-namespace std {
-  using boost::mutex;
-  using boost::recursive_mutex;
-  using boost::lock_guard;
-  using boost::condition_variable;
-  using boost::unique_lock;
-  using boost::thread;
-  namespace this_thread = boost::this_thread;
-}
+#ifdef _WIN32
+#   ifdef MELOSIC_CORE_EXPORTS
+#       define MELOSIC_CORE_EXPORT __declspec(dllexport)
+#   else
+#       define MELOSIC_CORE_EXPORT __declspec(dllimport)
+#   endif
+#   ifdef MELOSIC_PLUGIN_EXPORTS
+#       define MELOSIC_PLUGIN_EXPORT __declspec(dllexport)
+#   else
+#       define MELOSIC_PLUGIN_EXPORT __declspec(dllimport)
+#   endif
+#   ifdef MELOSIC_MELIN_EXPORTS
+#       define MELOSIC_MELIN_EXPORT __declspec(dllexport)
+#   else
+#       define MELOSIC_MELIN_EXPORT __declspec(dllimport)
+#   endif
+#elif __GNUC__ >= 4
+#   ifdef MELOSIC_CORE_EXPORTS
+#       define MELOSIC_CORE_EXPORT __attribute__ ((visibility ("default")))
+#   else
+#       define MELOSIC_CORE_EXPORT
+#   endif
+#   ifdef MELOSIC_PLUGIN_EXPORTS
+#       define MELOSIC_PLUGIN_EXPORT __attribute__ ((visibility ("default")))
+#   else
+#       define MELOSIC_PLUGIN_EXPORT
+#   endif
+#   ifdef MELOSIC_MELIN_EXPORTS
+#       define MELOSIC_MELIN_EXPORT __attribute__ ((visibility ("default")))
+#   else
+#       define MELOSIC_MELIN_EXPORT
+#   endif
+#else
+#   define MELOSIC_CORE_EXPORT
+#   define MELOSIC_MELIN_EXPORT
+#   define MELOSIC_PLUGIN_EXPORT
 #endif
 
 #endif // MELOSIC_COMMON_HPP

@@ -33,7 +33,7 @@ using boost::format;
 using namespace boost::adaptors;
 
 #include <melosic/core/track.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/kernel.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
 

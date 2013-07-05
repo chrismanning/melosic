@@ -17,15 +17,7 @@
 
 #include "lastfmconfig.hpp"
 
-#include <QWidget>
-#include <QLabel>
-#include <QProgressDialog>
-#include <QDesktopServices>
-#include <QMessageBox>
-#include <QBoxLayout>
-
 #include <melosic/common/string.hpp>
-#include <melosic/gui/configwidget.hpp>
 #include <melosic/melin/logging.hpp>
 
 namespace Melosic {
@@ -37,94 +29,6 @@ LastFmConfig::LastFmConfig() :
 {}
 
 LastFmConfig::~LastFmConfig() {}
-
-LastFmConfigWidget::LastFmConfigWidget(Config::Base& conf, QWidget* parent)
-    : GenericConfigWidget(conf, parent)
-{
-    authButton = new QPushButton("Authenticate");
-    authButton->setToolTip("Only do this once per user!!\nIf \"Session Key\" is already present do NOT do this");
-    connect(authButton, &QPushButton::clicked, this, &LastFmConfigWidget::authenticate);
-    layout->addWidget(authButton);
-}
-
-void LastFmConfigWidget::apply() {
-    GenericConfigWidget::apply();
-
-    if(boost::get<std::string>(conf.getNode("session key")).empty() &&
-            !boost::get<std::string>(conf.getNode("username")).empty())
-    {
-        authenticate();
-    }
-}
-
-void LastFmConfigWidget::authenticate() {
-//    QMap<QString, QString> params;
-//    params["method"] = "auth.getToken";
-//    QProgressDialog progress;
-//    progress.setMinimum(0);
-//    progress.setMaximum(0);
-//    progress.setLabelText("Getting session token...");
-//    TRACE_LOG(logject) << "Getting session token...";
-//    QNetworkReply* reply = lastfm::ws::post(params, false);
-////    progress.connect(reply, SIGNAL(error(QNetworkReply::NetworkError)), SLOT(cancel()));
-//    progress.connect(reply, &QNetworkReply::finished, [&progress] () {progress.close();});
-//    progress.exec();
-
-////    if(progress.wasCanceled()) {
-////        TRACE_LOG(logject) << "Canceled";
-////        reply->abort();
-////        return;
-////    }
-
-//    QString token;
-//    {
-//        lastfm::XmlQuery response;
-//        if(!response.parse(reply->readAll())) {
-//            TRACE_LOG(logject) << "XML response parse fail: " << reply->readAll().constData();
-//            return;
-//        }
-//        token = response["token"].text();
-//    }
-
-//    TRACE_LOG(logject) << "Got token: " << token.toStdString();
-
-//    QString lurl = QString("http://www.last.fm/api/auth/?api_key=")
-//            + lastfm::ws::ApiKey
-//            + "&token="
-//            + token;
-//    TRACE_LOG(logject) << "Opening URL: " << lurl.toStdString();
-//    QDesktopServices::openUrl(lurl);
-
-//    if(QMessageBox::question(this, "Continue?", "If web authentication was successful, please continue.",
-//                             QMessageBox::Yes | QMessageBox::No,
-//                             QMessageBox::Yes) != QMessageBox::Yes) {
-//        return;
-//    }
-//    TRACE_LOG(logject) << "Web authenticated";
-
-//    params["method"] = "auth.getSession";
-//    params["token"] = token;
-
-//    reply = lastfm::ws::post(params, false);
-////    progress.connect(reply, &QNetworkReply::error, [&progress] (QNetworkReply::NetworkError&) -> void {progress.cancel();});
-//    progress.connect(reply, &QNetworkReply::finished, [&progress] () {progress.close();});
-//    progress.exec();
-
-//    {
-//        lastfm::XmlQuery response;
-//        if(!response.parse(reply->readAll()))
-//            return;
-//        conf.putNode("session key", response["session"]["key"].text().toStdString());
-//    }
-}
-
-ConfigWidget* LastFmConfig::createWidget(QWidget* parent) {
-    return new LastFmConfigWidget(*this, parent);
-}
-
-QIcon* LastFmConfig::getIcon() const {
-    return nullptr;
-}
 
 } //end namespace Melosic
 

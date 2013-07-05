@@ -21,7 +21,40 @@
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex;
 
+#include <melosic/melin/kernel.hpp>
+
 #include "exports.hpp"
 
 template class std::lock_guard<shared_mutex>;
 template class boost::shared_lock_guard<shared_mutex>;
+
+namespace Melosic {
+
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& /*fun*/) {
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerDecoder_T& fun) {
+    l.push_back(std::bind(fun, &k.getDecoderManager()));
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T& fun) {
+    l.push_back(std::bind(fun, &k.getOutputManager()));
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& /*fun*/) {
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlots_T& fun) {
+    l.push_back(std::bind(fun, &k.getSlotManager()));
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T& fun) {
+    l.push_back(std::bind(fun, &k.getConfigManager()));
+    return *this;
+}
+RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerTasks_T& fun) {
+    l.push_back(std::bind(fun, &k.getThreadManager()));
+    return *this;
+}
+
+}

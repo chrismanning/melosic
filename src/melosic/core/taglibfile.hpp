@@ -20,8 +20,10 @@
 
 #include <taglib/tiostream.h>
 #include <taglib/fileref.h>
+#include <taglib/taglib.h>
 
 namespace Melosic {
+using TagLib::ulong;
 namespace IO {
 
 class File;

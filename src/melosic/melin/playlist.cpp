@@ -48,16 +48,16 @@ public:
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, const std::string& name) {
         lock_guard l(mu);
-        return playlists.insert(pos, std::make_shared<Core::Playlist>(name, slotman, decman));
+//        return playlists.insert(pos, std::make_shared<Core::Playlist>(name, slotman, decman));
     }
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
         lock_guard l(mu);
         if(count_ == 0)
             return pos;
-        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
-            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), slotman, decman));
-        }
+//        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
+//            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), slotman, decman));
+//        }
         return ++pos;
     }
 

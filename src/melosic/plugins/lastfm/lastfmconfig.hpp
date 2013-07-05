@@ -18,10 +18,7 @@
 #ifndef LASTFMCONFIG_HPP
 #define LASTFMCONFIG_HPP
 
-#include <QPushButton>
-
 #include <melosic/melin/config.hpp>
-#include <melosic/gui/configwidget.hpp>
 
 namespace Melosic {
 
@@ -30,19 +27,6 @@ public:
     LastFmConfig();
 
     virtual ~LastFmConfig();
-
-    ConfigWidget* createWidget(QWidget* = nullptr) override;
-    QIcon* getIcon() const override;
-};
-
-class LastFmConfigWidget : public GenericConfigWidget {
-public:
-    LastFmConfigWidget(Config::Base& conf, QWidget* parent = nullptr);
-    void apply();
-private Q_SLOTS:
-    void authenticate();
-private:
-    QPushButton* authButton;
 };
 
 } // end namespace Melosic

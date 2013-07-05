@@ -142,8 +142,10 @@ std::unique_ptr<PlayerSink> Manager::createPlayerSink() {
 }
 
 Conf::Conf() : Config::Config("Output") {
-    putNode("output device", "iec958:CARD=PCH,DEV=0"_str);
+//    putNode("output device", "iec958:CARD=PCH,DEV=0"_str);
 }
+
+Conf::~Conf() {}
 
 } // namespace Output
 } // namespace Melosic

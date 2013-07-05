@@ -23,6 +23,7 @@
 namespace chrono = std::chrono;
 
 #include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/common/common.hpp>
 
 namespace Melosic {
 namespace Output {
@@ -45,9 +46,8 @@ namespace Core {
 
 class Playlist;
 
-class Player {
+class MELOSIC_CORE_EXPORT Player {
 public:
-    Player(Melosic::Playlist::Manager&, Output::Manager&, Slots::Manager&);
     ~Player();
 
     Player(const Player&) = delete;
@@ -61,12 +61,13 @@ public:
     DeviceState state() const;
     void seek(chrono::milliseconds dur);
     chrono::milliseconds tell() const;
-    void finish();
 
     Signals::Player::StateChanged& stateChangedSignal() const;
 
-    class impl;
 private:
+    Player(Melosic::Playlist::Manager&, Output::Manager&, Slots::Manager&);
+
+    class impl;
     std::unique_ptr<impl> pimpl;
 };
 

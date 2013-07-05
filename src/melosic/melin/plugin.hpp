@@ -43,16 +43,16 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    void loadPlugin(const boost::filesystem::path& filepath);
-    void loadPlugins();
+    MELOSIC_MELIN_EXPORT void loadPlugin(const boost::filesystem::path& filepath);
+    MELOSIC_MELIN_EXPORT void loadPlugins();
 
-    void initialise();
-    bool initialised() const;
+    MELOSIC_MELIN_EXPORT void initialise();
+    MELOSIC_MELIN_EXPORT bool initialised() const;
 
-    ForwardRange<const Info> getPlugins() const;
+    MELOSIC_MELIN_EXPORT ForwardRange<const Info> getPlugins() const;
 
 private:
-    Manager(Core::Kernel& kernel);
+    explicit Manager(Core::Kernel& kernel);
     friend class Core::Kernel;
     class impl;
     std::unique_ptr<impl> pimpl;

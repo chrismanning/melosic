@@ -21,10 +21,11 @@
 #include <QQmlContext>
 #include <QQmlComponent>
 #include <QQuickWindow>
+#include <QApplication>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/kernel.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
@@ -36,7 +37,6 @@
 #include "mainwindow.hpp"
 #include "playlistmodel.hpp"
 #include "playlistmanagermodel.hpp"
-#include "configurationdialog.hpp"
 #include "playercontrols.hpp"
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
@@ -45,7 +45,7 @@ namespace Melosic {
 
 MainWindow::MainWindow(Core::Kernel& kernel) :
     kernel(kernel),
-    player(kernel.getPlayer()),
+//    player(kernel.getPlayer()),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
@@ -54,11 +54,12 @@ MainWindow::MainWindow(Core::Kernel& kernel) :
 {
     Slots::Manager& slotman = this->kernel.getSlotManager();
 
-    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
-                               .emplace_connect(&MainWindow::onStateChangeSlot, this, ph::_1));
+//    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
+//                               .emplace_connect(&MainWindow::onStateChangeSlot, this, ph::_1));
 
-    playerControls.reset(new PlayerControls(player));
+//    playerControls.reset(new PlayerControls(player));
 
+    //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterInterface<QAbstractItemModel>("QAbstractItemModel");
     qmlRegisterUncreatableType<PlaylistModel>("Melosic.Playlist", 1, 0, "PlaylistModel", "abstract");
@@ -91,7 +92,8 @@ MainWindow::MainWindow(Core::Kernel& kernel) :
         ERROR_LOG(logject) << "Type: " << topLevel->metaObject()->className();
         BOOST_THROW_EXCEPTION(Exception() << ErrorTag::DecodeErrStr(str));
     }
-    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close, Qt::UniqueConnection);
+//    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close);
+    QObject::connect(engine.data(), SIGNAL(quit()), qApp, SLOT(quit()), Qt::DirectConnection);
     window->show();
 }
 

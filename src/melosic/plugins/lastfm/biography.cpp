@@ -23,28 +23,28 @@
 
 namespace LastFM {
 
-BiographyWidget::BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent)
-    : QWidget(parent),
-      lastserv(lastserv)
-{
-    text = new QLabel;
-    layout = new QVBoxLayout;
-    layout->addWidget(text);
-    this->setLayout(layout);
-    refresh();
-}
+//BiographyWidget::BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent)
+//    : QWidget(parent),
+//      lastserv(lastserv)
+//{
+//    text = new QLabel;
+//    layout = new QVBoxLayout;
+//    layout->addWidget(text);
+//    this->setLayout(layout);
+//    refresh();
+//}
 
-void BiographyWidget::refresh() {
-    std::shared_ptr<Service> ptr(lastserv.lock());
-    if(ptr && ptr->currentTrack()) {
-        Melosic::Thread::Manager* tman = ptr->getThreadManager();
-        tman->enqueue([this](std::shared_ptr<Service> ptr) {
-            if(ptr->currentTrack()->fetchInfo().get()) {
-                text->setText(ptr->currentTrack()->getUrl().string().c_str());
-                update();
-            }
-        }, ptr);
-    }
-}
+//void BiographyWidget::refresh() {
+//    std::shared_ptr<Service> ptr(lastserv.lock());
+//    if(ptr && ptr->currentTrack()) {
+//        Melosic::Thread::Manager* tman = ptr->getThreadManager();
+//        tman->enqueue([this](std::shared_ptr<Service> ptr) {
+//            if(ptr->currentTrack()->fetchInfo().get()) {
+//                text->setText(ptr->currentTrack()->getUrl().string().c_str());
+//                update();
+//            }
+//        }, ptr);
+//    }
+//}
 
 }//namespace LastFM

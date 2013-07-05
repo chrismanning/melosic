@@ -27,6 +27,7 @@ namespace chrono = std::chrono;
 #include <boost/container/stable_vector.hpp>
 
 #include <melosic/common/range.hpp>
+#include <melosic/common/common.hpp>
 
 namespace Melosic {
 
@@ -42,7 +43,7 @@ namespace Core {
 
 class Track;
 
-class Playlist {
+class MELOSIC_CORE_EXPORT Playlist {
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
@@ -64,7 +65,7 @@ public:
     void previous();
     void next();
     void jumpTo(size_type pos);
-    iterator& currentTrack();
+    iterator currentTrack();
     const_iterator currentTrack() const;
 
     reference operator[](size_type pos);

@@ -15,7 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/core/player.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/input.hpp>
@@ -37,8 +36,7 @@ class Kernel::impl {
           slotman(),
           confman(slotman),
           outman(slotman),
-          playlistman(slotman, decman),
-          player(playlistman, outman, slotman)
+          playlistman(slotman, decman)
     {}
 
     Plugin::Manager plugman;
@@ -50,17 +48,12 @@ class Kernel::impl {
     Output::Manager outman;
     Encoder::Manager encman;
     Melosic::Playlist::Manager playlistman;
-    Player player;
     friend class Kernel;
 };
 
 Kernel::Kernel() : pimpl(new impl(*this)) {}
 
 Kernel::~Kernel() {}
-
-Player& Kernel::getPlayer() {
-    return pimpl->player;
-}
 
 Config::Manager& Kernel::getConfigManager() {
     return pimpl->confman;

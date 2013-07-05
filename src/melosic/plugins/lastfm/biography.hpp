@@ -18,9 +18,9 @@
 #ifndef LASTFM_BIOGRAPHY_HPP
 #define LASTFM_BIOGRAPHY_HPP
 
-#include <QWidget>
-#include <QLabel>
-#include <QVBoxLayout>
+//#include <QWidget>
+//#include <QLabel>
+//#include <QVBoxLayout>
 
 #include <memory>
 
@@ -28,18 +28,18 @@ namespace LastFM {
 
 class Service;
 
-class BiographyWidget : public QWidget {
-    Q_OBJECT
-public:
-    BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent = 0);
+//class BiographyWidget : public QWidget {
+//    Q_OBJECT
+//public:
+//    BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent = 0);
 
-    void refresh();
+//    void refresh();
 
-private:
-    std::weak_ptr<Service> lastserv;
-    QLabel* text;
-    QVBoxLayout* layout;
-};
+//private:
+//    std::weak_ptr<Service> lastserv;
+//    QLabel* text;
+//    QVBoxLayout* layout;
+//};
 
 }
 

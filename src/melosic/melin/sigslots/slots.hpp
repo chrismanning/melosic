@@ -20,6 +20,8 @@
 
 #include <memory>
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 namespace Thread {
 class Manager;
@@ -32,7 +34,7 @@ public:
     ~Manager();
 
     template <typename T>
-    T& get();
+    MELOSIC_MELIN_EXPORT T& get();
 
 private:
     class impl;

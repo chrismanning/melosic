@@ -64,7 +64,7 @@ private:
 
 struct ConnHash;
 
-struct Connection {
+struct MELOSIC_MELIN_EXPORT Connection {
     Connection() = default;
     Connection(const Connection&) = default;
     Connection& operator=(const Connection&) = default;
@@ -87,11 +87,11 @@ private:
     std::shared_ptr<ConnErasure> pimpl;
 };
 
-struct ConnHash {
+struct MELOSIC_MELIN_EXPORT ConnHash {
     size_t operator()(const Connection& conn) const;
 };
 
-struct ScopedConnection : Connection {
+struct MELOSIC_MELIN_EXPORT ScopedConnection : Connection {
     ScopedConnection() = default;
     ScopedConnection(ScopedConnection&& conn) = default;
     ScopedConnection& operator=(ScopedConnection&& conn) = default;

@@ -25,7 +25,7 @@
 #define DLError dlerror
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #define DLHandle HMODULE
 #define DLOpen(a) LoadLibrary(a)
@@ -64,7 +64,7 @@ namespace chrono = std::chrono;
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/config.hpp>
@@ -81,7 +81,7 @@ public:
           logject(logging::keywords::channel = "Plugin"),
           kernel(kernel)
     {
-        handle = DLOpen(pluginPath.c_str());
+        handle = DLOpen(pluginPath.string().c_str());
 
         if(handle == nullptr) {
             BOOST_THROW_EXCEPTION(PluginException() <<
@@ -249,32 +249,4 @@ bool Manager::initialised() const {
 }
 
 } // namespace Plugin
-
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& /*fun*/) {
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerDecoder_T& fun) {
-    e->push(std::bind(fun, &k.getDecoderManager()));
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T& fun) {
-    e->push(std::bind(fun, &k.getOutputManager()));
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& /*fun*/) {
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlots_T& fun) {
-    e->push(std::bind(fun, &k.getSlotManager()));
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T& fun) {
-    e->push(std::bind(fun, &k.getConfigManager()));
-    return *this;
-}
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerTasks_T& fun) {
-    e->push(std::bind(fun, &k.getThreadManager()));
-    return *this;
-}
-
 } // namespace Melosic

@@ -1,7 +1,5 @@
 set(LASTFM lastfm)
 
-find_package(Qt5Widgets REQUIRED)
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -20,10 +18,7 @@ find_package(Boost COMPONENTS serialization REQUIRED)
 
 add_library(${LASTFM} SHARED ${SRC})
 
-qt5_use_modules(${LASTFM} Widgets)
-
-target_link_libraries(${LASTFM} melin ${boost_LIBRARIES})
-target_link_libraries(${LASTFM} cppnetlib-uri cppnetlib-http-client cppnetlib-http-client-connections ssl crypto)
+target_link_libraries(${LASTFM} melin ${boost_LIBRARIES} cppnetlib ssl crypto)
 set_target_properties(${LASTFM} PROPERTIES PREFIX "")
 set_target_properties(${LASTFM} PROPERTIES SUFFIX ".melin")
-include_directories(${Qt5Widgets_INCLUDES} ${Boost_INCLUDE_DIRS} ../../..)
+include_directories(${Qt5Widgets_INCLUDES} ${Boost_INCLUDE_DIRS})

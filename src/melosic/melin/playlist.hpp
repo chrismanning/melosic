@@ -23,6 +23,8 @@
 #include <boost/range/iterator_range.hpp>
 #include <boost/container/stable_vector.hpp>
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 
 namespace Core {
@@ -55,14 +57,14 @@ public:
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    Range range() const;
-    Range::iterator insert(Range::iterator pos, const std::string& name);
-    Range::iterator insert(Range::iterator pos, int count);
-    void erase(Range r);
-    int count() const;
-    bool empty() const;
-    PlaylistType currentPlaylist() const;
-    void setCurrent(PlaylistType p) const;
+    MELOSIC_MELIN_EXPORT Range range() const;
+    MELOSIC_MELIN_EXPORT Range::iterator insert(Range::iterator pos, const std::string& name);
+    MELOSIC_MELIN_EXPORT Range::iterator insert(Range::iterator pos, int count);
+    MELOSIC_MELIN_EXPORT void erase(Range r);
+    MELOSIC_MELIN_EXPORT int count() const;
+    MELOSIC_MELIN_EXPORT bool empty() const;
+    MELOSIC_MELIN_EXPORT PlaylistType currentPlaylist() const;
+    MELOSIC_MELIN_EXPORT void setCurrent(PlaylistType p) const;
 
 private:
     class impl;

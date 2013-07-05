@@ -28,6 +28,7 @@
 
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/common/common.hpp>
 
 namespace Melosic {
 namespace Thread {
@@ -96,25 +97,14 @@ public:
         }
     }
 };
+
 namespace {
 using TaskQueue = boost::lockfree::queue<Task>;
-template <typename Func, typename ...Args>
-std::future<typename std::result_of<Func(Args...)>::type> enqueue_impl(TaskQueue& tq, Func&& f, Args&&... args) {
-    std::promise<typename std::result_of<Func(Args...)>::type> p;
-
-    auto fut = p.get_future();
-
-    Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
-    if(!tq.bounded_push(t)) {
-        BOOST_THROW_EXCEPTION(Exception());
-    }
-
-    return std::move(fut);
 }
-}
+
 class Manager {
 public:
-    Manager(const unsigned n = std::thread::hardware_concurrency() + 1);
+    explicit Manager(const unsigned n = std::thread::hardware_concurrency() + 1);
 
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
@@ -125,10 +115,19 @@ public:
 
     template <typename Func, typename ...Args>
     std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
-        return enqueue_impl(tasks, std::forward<Func>(f), std::forward<Args>(args)...);
+        std::promise<typename std::result_of<Func(Args...)>::type> p;
+
+        auto fut(p.get_future());
+
+        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
+        if(!tasks.bounded_push(t)) {
+            BOOST_THROW_EXCEPTION(Exception());
+        }
+
+        return std::move(fut);
     }
 
-    bool contains(std::thread::id) const;
+    MELOSIC_MELIN_EXPORT bool contains(std::thread::id) const;
 
 private:
     std::vector<std::thread> threads;
