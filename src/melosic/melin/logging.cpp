@@ -28,9 +28,7 @@ template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Sev
 
 namespace Melosic {
 namespace Logger {
-struct nullstream : std::ostream {
-    nullstream() : std::ios(0), std::ostream(0) {}
-};
+
 void init() {
     typedef sinks::synchronous_sink<sinks::text_ostream_backend > text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();

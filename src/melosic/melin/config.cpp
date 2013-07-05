@@ -15,7 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#ifdef _POSIX_VERSION
 #include <wordexp.h>
+#endif
 
 #include <functional>
 #include <map>
@@ -44,25 +46,20 @@ using namespace boost::adaptors;
 
 #include "config.hpp"
 
-template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>>;
-
 namespace Melosic {
 static Logger::Logger logject(logging::keywords::channel = "Config");
 namespace Config {
-
-class Configuration : public Config<Configuration> {
-public:
-    Configuration() : Config("root") {}
-};
 
 static const boost::filesystem::path ConfFile("melosic.conf");
 
 class Manager::impl {
     impl(Slots::Manager& slotman) : conf("root"), loaded(slotman.get<Signals::Config::Loaded>()) {
+    #ifdef _POSIX_VERSION
         wordexp_t exp_result;
         wordexp(dirs[UserDir].c_str(), &exp_result, 0);
         dirs[UserDir] = exp_result.we_wordv[0];
         wordfree(&exp_result);
+    #endif
     }
 
     int chooseDir() {
@@ -81,22 +78,12 @@ class Manager::impl {
     }
 
     void loadConfig() {
-        if(confPath.empty()) {
-            switch(chooseDir()) {
-                case CurrentDir:
-                    confPath = dirs[CurrentDir] / ConfFile;
-                    break;
-                case UserDir:
-                    confPath = dirs[UserDir] / ConfFile;
-                    break;
-                case SystemDir:
-                    confPath = dirs[SystemDir] / ConfFile;
-                    break;
-            }
-        }
+        if(confPath.empty())
+            confPath = dirs[chooseDir()] / ConfFile;
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
             loaded(std::ref(conf));
+            saveConfig();
             return;
         }
 
@@ -289,13 +276,13 @@ void Base::addDefaultFunc(std::function<Base&()> func) {
 }
 
 void Base::resetToDefault() {
-    if(pimpl->resetDefault) {
-        auto tmp_sig = std::move(pimpl->variableUpdated);
-        auto tmp_fun = pimpl->resetDefault;
-        *this = pimpl->resetDefault();
-        pimpl->variableUpdated = std::move(tmp_sig);
-        pimpl->resetDefault = std::move(tmp_fun);
-    }
+    if(!pimpl->resetDefault)
+        return;
+    auto tmp_sig(std::move(pimpl->variableUpdated));
+    auto tmp_fun = pimpl->resetDefault;
+    *this = pimpl->resetDefault();
+    pimpl->variableUpdated = std::move(tmp_sig);
+    pimpl->resetDefault = std::move(tmp_fun);
 }
 
 template<class Archive>

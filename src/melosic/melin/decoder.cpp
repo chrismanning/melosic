@@ -103,7 +103,7 @@ std::unique_ptr<Decoder::Playable> FileTypeResolver::getDecoder(IO::File& file) 
 }
 
 std::unique_ptr<TagLib::File> FileTypeResolver::getTagReader(IO::File& file) {
-    taglibFile.reset(new IO::TagLibFile(file));
+//    taglibFile.reset(new IO::TagLibFile(file));
     return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
 }
 

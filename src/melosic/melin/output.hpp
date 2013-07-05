@@ -57,7 +57,7 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    void addOutputDevice(Factory fact, const Output::DeviceName& avail);
+    MELOSIC_MELIN_EXPORT void addOutputDevice(Factory fact, const Output::DeviceName& avail);
     template <typename DeviceList>
     void addOutputDevices(Factory fact, DeviceList avail) {
         for(const DeviceName& device : avail) {
@@ -65,10 +65,10 @@ public:
         }
     }
 
-    const std::string& currentSinkName() const;
+    MELOSIC_MELIN_EXPORT const std::string& currentSinkName() const;
 
 private:
-    std::unique_ptr<PlayerSink> createPlayerSink();
+    MELOSIC_MELIN_EXPORT std::unique_ptr<PlayerSink> createPlayerSink();
 
     class impl;
     std::unique_ptr<impl> pimpl;
@@ -78,7 +78,7 @@ private:
 class Conf : public Config::Config<Conf> {
 public:
     Conf();
-    ConfigWidget* createWidget(QWidget* = nullptr) override;
+    virtual ~Conf();
     std::map<DeviceName, Factory> const* outputFactories = nullptr;
 };
 

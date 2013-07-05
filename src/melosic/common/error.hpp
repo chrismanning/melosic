@@ -21,20 +21,12 @@
 #include <exception>
 #include <utility>
 #include <string>
+#include <thread>
 
 #include <boost/exception/all.hpp>
 #include <boost/filesystem/path.hpp>
 
-#define MELOSIC_THROW(a, str, logger) ERROR_LOG(logger) << str; BOOST_THROW_EXCEPTION(a)
-
 namespace Melosic {
-
-template <class Exception, typename ... Args>
-void enforceEx(bool expression, Args&& ... arguments) {
-    if(!expression) {
-        throw Exception(std::forward<Args>(arguments)...);
-    }
-}
 
 //base exception type
 struct Exception : virtual boost::exception, virtual std::exception {};
@@ -55,6 +47,7 @@ struct FileReadOnlyException : virtual ReadOnlyException, virtual FileException 
 namespace ErrorTag {
 typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
 }
+
 //device exceptions
 struct DeviceException : virtual IOException {};
 struct DeviceOpenException : virtual DeviceException {};
@@ -69,6 +62,13 @@ namespace Output {
 typedef boost::error_info<struct tagDeviceErrStr, std::string> DeviceErrStr;
 }
 }
+
+namespace ErrorTag {
+typedef boost::error_info<struct tagBPS, uint8_t> BPS;
+typedef boost::error_info<struct tagChannels, uint8_t> Channels;
+typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
+}
+
 //decoder exceptions
 struct DecoderException : virtual Exception {};
 struct DecoderInitException : virtual DecoderException {};
@@ -125,10 +125,10 @@ struct _HttpStatus {
 typedef boost::error_info<struct tagHttpStatus, _HttpStatus> HttpStatus;
 }
 
+//thread exceptions
+struct ThreadException : virtual Exception {};
 namespace ErrorTag {
-typedef boost::error_info<struct tagBPS, uint8_t> BPS;
-typedef boost::error_info<struct tagChannels, uint8_t> Channels;
-typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
+typedef boost::error_info<struct ThreadIDTag, std::thread::id> ThreadID;
 }
 
 } // namespace Melosic

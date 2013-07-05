@@ -20,6 +20,8 @@
 
 #include <memory>
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 
 namespace Plugin {
@@ -52,20 +54,16 @@ class Manager;
 
 namespace Core {
 
-class Player;
-
-class Kernel {
+class MELOSIC_MELIN_EXPORT Kernel {
 public:
-    Kernel();
 
+    Kernel();
     Kernel(const Kernel&) = delete;
     Kernel& operator=(const Kernel&) = delete;
     Kernel(Kernel&&) = delete;
     Kernel& operator=(Kernel&&) = delete;
 
     ~Kernel();
-
-    Player& getPlayer();
 
     Config::Manager& getConfigManager();
     Plugin::Manager& getPluginManager();

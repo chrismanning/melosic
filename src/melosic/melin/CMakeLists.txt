@@ -1,3 +1,5 @@
+add_definitions(-DMELOSIC_MELIN_EXPORTS)
+
 SET(SRC_LIST)
 set(SRC_LIST ${SRC_LIST} decoder.cpp)
 set(SRC_LIST ${SRC_LIST} encoder.cpp)
@@ -9,6 +11,7 @@ set(SRC_LIST ${SRC_LIST} exports.cpp)
 SET(SRC_LIST ${SRC_LIST} config.cpp)
 SET(SRC_LIST ${SRC_LIST} thread.cpp)
 SET(SRC_LIST ${SRC_LIST} playlist.cpp)
+SET(SRC_LIST ${SRC_LIST} kernel.cpp)
 set(SRC_LIST ${SRC_LIST} sigslots/slots.cpp)
 set(SRC_LIST ${SRC_LIST} sigslots/connection.cpp)
 
@@ -19,7 +22,7 @@ find_package(Boost COMPONENTS filesystem system log log_setup thread serializati
 
 find_package(OpenSSL REQUIRED)
 
-include_directories(../.. ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
 
 add_library(melin SHARED ${SRC_LIST} ${HDR_LIST})
-target_link_libraries(melin ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES})
+target_link_libraries(melin ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${TAGLIB_LIBRARIES})

@@ -43,8 +43,8 @@ static constexpr Plugin::Info flacInfo("FLAC",
                                    {1,0,0});
 
 #define FLAC_THROW_IF(Exc, cond, flacptr) if(!cond) {\
-    auto str = flacptr->get_state().as_cstring();\
-    MELOSIC_THROW(Exc() << ErrorTag::Plugin::Info(::flacInfo), str, logject);\
+    BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Plugin::Info(::flacInfo)\
+                                << ErrorTag::DecodeErrStr(flacptr->get_state().as_cstring()));\
 }
 
 class FlacDecoderImpl : public FLAC::Decoder::Stream {
@@ -132,7 +132,9 @@ public:
                 }
                 break;
             default:
-                BOOST_THROW_EXCEPTION(AudioDataUnsupported() << ErrorTag::BPS(frame->header.bits_per_sample));
+                BOOST_THROW_EXCEPTION(AudioDataUnsupported()
+                                      << ErrorTag::Plugin::Info(::flacInfo)
+                                      << ErrorTag::BPS(frame->header.bits_per_sample));
                 break;
         }
 
@@ -140,10 +142,9 @@ public:
     }
 
     virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
-        MELOSIC_THROW(DecoderException() <<
-                      ErrorTag::DecodeErrStr(FLAC__StreamDecoderErrorStatusString[status]),
-                      FLAC__StreamDecoderErrorStatusString[status],
-                      logject);
+        BOOST_THROW_EXCEPTION(DecoderException()
+                              << ErrorTag::Plugin::Info(::flacInfo)
+                              << ErrorTag::DecodeErrStr(FLAC__StreamDecoderErrorStatusString[status]));
     }
 
     virtual void metadata_callback(const ::FLAC__StreamMetadata *metadata) {
@@ -258,14 +259,14 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::flacInfo;
     funs << registerDecoder;
 }
 
-extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
+extern "C" MELOSIC_PLUGIN_EXPORT void registerDecoder(Decoder::Manager* decman) {
     decman->addAudioFormat(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
-extern "C" MELOSIC_EXPORT void destroyPlugin() {
+extern "C" MELOSIC_PLUGIN_EXPORT void destroyPlugin() {
 }

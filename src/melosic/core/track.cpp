@@ -29,7 +29,7 @@ using std::unique_lock; using std::lock_guard;
 #include <melosic/common/stream.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
@@ -177,7 +177,7 @@ public:
             return false;
     }
 
-    const std::string& sourceName() const {
+    const std::string sourceName() const {
         return input->filename().string();
     }
 
@@ -271,7 +271,7 @@ Track::operator bool() {
     return bool(*pimpl);
 }
 
-const std::string& Track::sourceName() const {
+const std::string Track::sourceName() const {
     return pimpl->sourceName();
 }
 

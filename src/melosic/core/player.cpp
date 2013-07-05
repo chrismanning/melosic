@@ -40,7 +40,7 @@ namespace io = boost::iostreams;
 #include <melosic/melin/sigslots/signals.hpp>
 #include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/playlist.hpp>
-#include <melosic/core/kernel.hpp>
+#include <melosic/melin/kernel.hpp>
 #include <melosic/core/statemachine.hpp>
 
 #include "player.hpp"
@@ -108,12 +108,6 @@ public:
     chrono::milliseconds tell() {
         TRACE_LOG(logject) << "Tell...";
         return stateMachine.tell();
-    }
-
-    void finish() {
-        if(playerThread.joinable()) {
-            playerThread.join();
-        }
     }
 
     std::shared_ptr<Playlist> currentPlaylist() {
@@ -253,10 +247,6 @@ void Player::seek(chrono::milliseconds dur) {
 
 chrono::milliseconds Player::tell() const {
     return pimpl->tell();
-}
-
-void Player::finish() {
-    pimpl->finish();
 }
 
 Signals::Player::StateChanged& Player::stateChangedSignal() const {

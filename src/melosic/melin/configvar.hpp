@@ -25,12 +25,12 @@
 #include <boost/serialization/split_free.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 namespace Config {
 typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>> VarType;
 }
 }
-
-extern template class boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>>;
 
 #endif // MELOSIC_CONFIGVAR_HPP

@@ -29,10 +29,8 @@ namespace fs = boost::filesystem;
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
+#include <melosic/common/common.hpp>
 #include "configvar.hpp"
-
-class QIcon;
-class QWidget;
 
 namespace Melosic {
 
@@ -59,18 +57,18 @@ public:
     Manager(Slots::Manager&);
     ~Manager();
 
-    void loadConfig();
-    void saveConfig();
+    MELOSIC_MELIN_EXPORT void loadConfig();
+    MELOSIC_MELIN_EXPORT void saveConfig();
 
-    Base& addConfigTree(const Base&);
-    Base& getConfigRoot();
+    MELOSIC_MELIN_EXPORT Base& addConfigTree(const Base&);
+    MELOSIC_MELIN_EXPORT Base& getConfigRoot();
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-class Base {
+class MELOSIC_MELIN_EXPORT Base {
 public:
     Base(const std::string& name);
     virtual ~Base();
@@ -91,9 +89,6 @@ public:
     void addDefaultFunc(std::function<Base&()>);
     void resetToDefault();
 
-    virtual ConfigWidget* createWidget(QWidget* = nullptr);
-    virtual QIcon* getIcon() const;
-
     virtual Base* clone() const {
         return new Base(*this);
     }
@@ -110,7 +105,7 @@ protected:
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/);
+    MELOSIC_MELIN_EXPORT void serialize(Archive& ar, const unsigned int /*version*/);
 };
 
 Base* new_clone(const Base& conf);
@@ -118,6 +113,7 @@ Base* new_clone(const Base& conf);
 template <typename T>
 class Config : public Base {
 public:
+    virtual ~Config() {}
     virtual Base* clone() const override {
         return new T(*static_cast<const T*>(this));
     }
@@ -138,11 +134,11 @@ protected:
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-extern template void Melosic::Config::Base::serialize<boost::archive::binary_iarchive>(
+extern template MELOSIC_MELIN_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_iarchive>(
     boost::archive::binary_iarchive& ar,
     const unsigned int file_version
 );
-extern template void Melosic::Config::Base::serialize<boost::archive::binary_oarchive>(
+extern template MELOSIC_MELIN_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_oarchive>(
     boost::archive::binary_oarchive& ar,
     const unsigned int file_version
 );

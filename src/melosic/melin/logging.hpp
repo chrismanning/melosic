@@ -29,6 +29,8 @@ namespace src = logging::sources;
 namespace attrs = logging::attributes;
 namespace keywords = logging::keywords;
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 
 namespace Logger {
@@ -67,13 +69,18 @@ inline std::basic_ostream<CharT, TraitsT>& operator<< (
     return strm;
 }
 
-void init();
+MELOSIC_MELIN_EXPORT void init();
+
+struct nullstream : std::ostream {
+    nullstream() : std::ios(0), std::ostream(0) {}
+};
 
 }//end namespace Logger
 }//end namespace Melosic
 
 extern template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
 
+#ifndef MELOSIC_DISABLE_LOGGING
 #define LOG(lg) BOOST_LOG(lg)
 #define ERROR_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::error)
 #define WARN_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::warning)
@@ -84,9 +91,21 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 #define CHAN_WARN_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::warning)
 #define CHAN_DEBUG_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::debug)
 #define CHAN_TRACE_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::trace)
+#else
+#define LOG(lg) Melosic::Logger::nullstream()
+#define ERROR_LOG(lg) Melosic::Logger::nullstream()
+#define WARN_LOG(lg) Melosic::Logger::nullstream()
+#define DEBUG_LOG(lg) Melosic::Logger::nullstream()
+#define TRACE_LOG(lg) Melosic::Logger::nullstream()
+#define CHAN_LOG(lg, chan) Melosic::Logger::nullstream()
+#define CHAN_ERROR_LOG(lg) Melosic::Logger::nullstream()
+#define CHAN_WARN_LOG(lg) Melosic::Logger::nullstream()
+#define CHAN_DEBUG_LOG(lg) Melosic::Logger::nullstream()
+#define CHAN_TRACE_LOG(lg) Melosic::Logger::nullstream()
+#endif //MELOSIC_DISABLE_LOGGING
 
 namespace std {
-std::ostream& operator<<(std::ostream& strm, const std::type_info& t);
+MELOSIC_MELIN_EXPORT std::ostream& operator<<(std::ostream& strm, const std::type_info& t);
 }
 
 #endif // MELOSIC_LOGGING_HPP

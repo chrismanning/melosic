@@ -120,7 +120,7 @@ public:
         trackChanged(std::cref(*currentTrack()));
     }
 
-    Playlist::iterator& currentTrack() {
+    Playlist::iterator currentTrack() {
         shared_lock_guard l(mu);
         return current_track_;
     }
@@ -335,7 +335,7 @@ void Playlist::jumpTo(Playlist::size_type pos) {
     pimpl->jumpTo(pos);
 }
 
-Playlist::iterator& Playlist::currentTrack() {
+Playlist::iterator Playlist::currentTrack() {
     return pimpl->currentTrack();
 }
 

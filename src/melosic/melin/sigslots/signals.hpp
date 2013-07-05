@@ -42,10 +42,27 @@ static inline Logger::Logger& logject_() {
 }
 namespace Signals {
 
-template <typename T>
-class WeakPtrAdaptor;
-
 namespace {
+
+template <typename T>
+class WeakPtrAdaptor {
+public:
+    typedef T element_type;
+
+    WeakPtrAdaptor(const std::weak_ptr<T>& ptr) : ptr(ptr) {}
+
+    T* operator->() {
+        return std::shared_ptr<T>(ptr).get();
+    }
+
+    T& operator*() {
+        return *std::shared_ptr<T>(ptr);
+    }
+
+private:
+    std::weak_ptr<T> ptr;
+};
+
 template <typename T>
 struct AdaptIfSmartPtr {
     typedef T type;
@@ -67,27 +84,17 @@ public:
 
     Signal() : Signal(nullptr) {}
 
-    Signal(Thread::Manager* tman) : tman(tman) {}
+    explicit Signal(Thread::Manager* tman) : tman(tman) {}
 
-    Signal(const Signal& b) : funs(b.funs) {}
-    Signal& operator=(const Signal& b) {
-        funs = b.funs;
+    Signal(const Signal&) = delete;
+
+    Signal(Signal&& b) : funs(std::move(b.funs)), tman(b.tman) {}
+    Signal& operator=(Signal&& b) {
+        funs = std::move(b.funs);
         return *this;
     }
 
-    ~Signal() {
-        while(auto s = funs.size()) {
-            funs.begin()->first.disconnect();
-            if(funs.size() != s-1) {
-                funs.clear();
-                break;
-            }
-        }
-    }
-
-    void clear() {
-        funs.clear();
-    }
+    ~Signal() {}
 
     Connection connect(const std::function<Ret(Args...)>& slot) {
         TRACE_LOG(logject) << "Connecting slot to signal.";
@@ -182,33 +189,14 @@ public:
 protected:
     typedef Signal<Ret (Args...)> super;
 private:
-    std::unordered_map<Connection, slot_type, ConnHash> funs;
+    std::unordered_map<ScopedConnection, slot_type, ConnHash> funs;
     typedef std::mutex Mutex;
     Mutex mu;
-    Thread::Manager* tman;
+    Thread::Manager* const tman;
     static Logger::Logger logject;
 };
 template <typename Ret, typename ...Args>
 Logger::Logger Signal<Ret (Args...)>::logject(logging::keywords::channel = "Signal");
-
-template <typename T>
-class WeakPtrAdaptor {
-public:
-    typedef T element_type;
-
-    WeakPtrAdaptor(const std::weak_ptr<T>& ptr) : ptr(ptr) {}
-
-    T* operator->() {
-        return std::shared_ptr<T>(ptr).get();
-    }
-
-    T& operator*() {
-        return *std::shared_ptr<T>(ptr);
-    }
-
-private:
-    std::weak_ptr<T> ptr;
-};
 
 } // namespace Signals
 } // namespace Melosic

@@ -34,7 +34,7 @@ class Manager;
 
 namespace Core {
 
-class Track : public Input::Playable, public IO::Closable {
+class MELOSIC_CORE_EXPORT Track : public Input::Playable, public IO::Closable {
 public:
     Track(Melosic::Decoder::Manager& decman,
           const boost::filesystem::path& filename,
@@ -53,13 +53,13 @@ public:
     virtual chrono::milliseconds duration() const;
     virtual Melosic::AudioSpecs& getAudioSpecs();
     virtual const Melosic::AudioSpecs& getAudioSpecs() const;
-    std::string getTag(const std::string& key) const;
+    MELOSIC_PLUGIN_EXPORT std::string getTag(const std::string& key) const;
     virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
     virtual void close();
     virtual bool isOpen() const;
     virtual void reOpen();
-    const std::string& sourceName() const;
+    const std::string sourceName() const;
 
     void reloadTags();
     void reloadDecoder();

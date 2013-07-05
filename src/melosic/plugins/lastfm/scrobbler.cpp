@@ -78,8 +78,8 @@ void Scrobbler::stateChangedSlot(DeviceState newstate) {
 }
 
 void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
-    if(playlist && *playlist)
-        trackChangedSlot(*playlist->currentTrack());
+//    if(playlist && *playlist)
+//        trackChangedSlot(*playlist->currentTrack());
 }
 
 void Scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {

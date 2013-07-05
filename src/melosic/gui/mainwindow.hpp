@@ -49,7 +49,7 @@ using Output::DeviceState;
 
 class PlaylistManagerModel;
 
-class MainWindow {
+class MELOSIC_CORE_EXPORT MainWindow {
 public:
     explicit MainWindow(Core::Kernel& kernel);
     ~MainWindow();
@@ -57,7 +57,7 @@ public:
 
 private:
     Core::Kernel& kernel;
-    Core::Player& player;
+    Core::Player* player;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     QScopedPointer<PlayerControls> playerControls;
