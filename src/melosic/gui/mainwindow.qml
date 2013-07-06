@@ -146,6 +146,9 @@ ApplicationWindow {
                     }
                 }
             }
+            Label {
+                text: playerControls.stateStr
+            }
         }
     }
 

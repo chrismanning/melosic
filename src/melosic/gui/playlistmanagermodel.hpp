@@ -47,8 +47,6 @@ public:
         PlaylistModelRole = Qt::UserRole * 12
     };
 
-    QObject* playlist(int index);
-
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     QVariant data(const QModelIndex& index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;

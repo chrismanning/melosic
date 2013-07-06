@@ -15,11 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-/* Use the newer ALSA API
- * TODO: Find out if this is still needed
- */
-#define ALSA_PCM_NEW_HW_PARAMS_API
-
 #include <boost/functional/factory.hpp>
 using boost::factory;
 #include <alsa/asoundlib.h>
@@ -79,7 +74,7 @@ int64_t frames = 0;
 
 class AlsaOutput : public Output::PlayerSink {
 public:
-    AlsaOutput(Output::DeviceName name)
+    explicit AlsaOutput(Output::DeviceName name)
         : pdh(nullptr),
           params(nullptr),
           name(name.getName()),
@@ -95,7 +90,7 @@ public:
             snd_pcm_hw_params_free(params);
     }
 
-    virtual void prepareSink(AudioSpecs& as) {
+    void prepareSink(AudioSpecs& as) override {
         lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
@@ -174,11 +169,11 @@ public:
         state_ = Output::DeviceState::Ready;
     }
 
-    virtual const Melosic::AudioSpecs& currentSpecs() {
+    const Melosic::AudioSpecs& currentSpecs() override {
         return current;
     }
 
-    virtual void play() {
+    void play() override {
         unique_lock<Mutex> l(mu);
         if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
             l.unlock();
@@ -194,7 +189,7 @@ public:
         }
     }
 
-    virtual void pause() {
+    void pause() override {
         lock_guard<Mutex> l(mu);
         if(state_ == Output::DeviceState::Playing) {
             if(snd_pcm_hw_params_can_pause(params)) {
@@ -221,7 +216,7 @@ public:
         state_ = Output::DeviceState::Playing;
     }
 
-    virtual void stop() {
+    void stop() override {
         lock_guard<Mutex> l(mu);
         if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
             ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
@@ -231,12 +226,12 @@ public:
         pdh = nullptr;
     }
 
-    virtual Output::DeviceState state() {
+    Output::DeviceState state() override {
         shared_lock_guard<Mutex> l(mu);
         return state_;
     }
 
-    virtual std::streamsize write(const char* s, std::streamsize n) {
+    std::streamsize write(const char* s, std::streamsize n) override {
         unique_lock<Mutex> l(mu);
         if(pdh != nullptr) {
             auto frames = snd_pcm_bytes_to_frames(pdh, n);
@@ -269,11 +264,11 @@ public:
         }
     }
 
-    virtual const std::string& getSinkDescription() {
+    const std::string& getSinkDescription() override {
         return desc;
     }
 
-    virtual const std::string& getSinkName() {
+    const std::string& getSinkName() override {
         return name;
     }
 

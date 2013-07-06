@@ -44,7 +44,7 @@ class CategoryProxyModel : public QIdentityProxyModel {
 public:
     explicit CategoryProxyModel(QObject* parent = nullptr);
 
-    Q_INVOKABLE QString indexCategory(const QModelIndex& index) const;
+    QString indexCategory(const QModelIndex& index) const;
 
     static CategoryProxyModelAttached* qmlAttachedProperties(QObject *object);
 

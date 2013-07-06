@@ -19,6 +19,7 @@
 #define MELOSIC_PLAYERCONTROLS_HPP
 
 #include <QObject>
+#include <QString>
 
 namespace Melosic {
 
@@ -31,9 +32,22 @@ class PlayerControls : public QObject {
     class PlayerControlsPrivate;
     Q_DECLARE_PRIVATE(PlayerControls)
     const QScopedPointer<PlayerControlsPrivate> d_ptr;
+    Q_ENUMS(DeviceState)
+
+    Q_PROPERTY(DeviceState state READ state NOTIFY stateChanged)
+    Q_PROPERTY(QString stateStr READ stateStr NOTIFY stateStrChanged)
 
 public:
     explicit PlayerControls(Core::Player& player, QObject* parent = 0);
+
+    enum DeviceState {
+        Error,
+        Ready,
+        Playing,
+        Paused,
+        Stopped,
+        Initial,
+    };
 
     virtual ~PlayerControls();
 
@@ -43,6 +57,13 @@ public:
     Q_INVOKABLE void previous();
     Q_INVOKABLE void next();
     Q_INVOKABLE void seek();
+
+    DeviceState state() const;
+    QString stateStr() const;
+
+Q_SIGNALS:
+    void stateChanged(DeviceState);
+    void stateStrChanged(QString);
 };
 
 } // namespace Melosic

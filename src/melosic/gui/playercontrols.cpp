@@ -15,7 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <QMetaEnum>
+
 #include <melosic/core/player.hpp>
+#include <melosic/melin/sigslots/signals.hpp>
 
 #include "playercontrols.hpp"
 
@@ -25,13 +28,26 @@ class PlayerControls::PlayerControlsPrivate {
     Q_DECLARE_PUBLIC(PlayerControls)
     Core::Player& player;
     PlayerControls* const q_ptr;
+
+    Signals::ScopedConnection stateChangedConn;
 public:
-    PlayerControlsPrivate(Core::Player& player, PlayerControls* parent) : player(player), q_ptr(parent) {}
+    PlayerControlsPrivate(Core::Player& player, PlayerControls* parent) : player(player), q_ptr(parent) {
+        state = (PlayerControls::DeviceState) player.state();
+    }
+
+    PlayerControls::DeviceState state;
 };
 
 PlayerControls::PlayerControls(Core::Player& player, QObject *parent) :
     QObject(parent), d_ptr(new PlayerControlsPrivate(player, this))
-{}
+{
+    qRegisterMetaType<DeviceState>("DeviceState");
+    d_func()->stateChangedConn = d_func()->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
+        d_func()->state = (PlayerControls::DeviceState) ds;
+        Q_EMIT stateChanged(state());
+        Q_EMIT stateStrChanged(stateStr());
+    });
+}
 
 PlayerControls::~PlayerControls() {}
 
@@ -54,6 +70,19 @@ void PlayerControls::next() {
 }
 
 void PlayerControls::seek() {
+}
+
+PlayerControls::DeviceState PlayerControls::state() const {
+    return d_func()->state;
+}
+
+QString PlayerControls::stateStr() const {
+    for(int i=0; i < metaObject()->enumeratorCount(); ++i) {
+        QMetaEnum m = metaObject()->enumerator(i);
+        if(m.name() == QLatin1String("DeviceState"))
+            return QLatin1String(m.valueToKey(state()));
+    }
+    assert(false);
 }
 
 } // namespace Melosic

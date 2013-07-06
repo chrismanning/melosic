@@ -28,6 +28,8 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/adaptors.hpp>
+#include <boost/format.hpp>
+using boost::format;
 using namespace boost::adaptors;
 
 #include <melosic/core/track.hpp>
@@ -161,13 +163,18 @@ bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::
     auto beg = ++row > playlist->size() ? playlist->size() : row;
     beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
 
-    int r = true;
+    bool r = true;
     try {
-        playlist->emplace(std::next(playlist->begin(), beg), filenames);
+        auto first(std::next(playlist->begin(), beg));
+        auto last(playlist->emplace(std::next(playlist->begin(), beg), filenames));
+//        if(std::distance(first, last) < boost::distance(filenames))
+//            return false;
     }
-    catch(Exception& e) {
-        ERROR_LOG(logject) << boost::diagnostic_information(e);
+    catch(...) {
+        ERROR_LOG(logject) << format("%1%:%2%: Exception caught") % __FILE__ % __LINE__;
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
         //TODO: error handling
+//        return false;
         r = false;
     }
 

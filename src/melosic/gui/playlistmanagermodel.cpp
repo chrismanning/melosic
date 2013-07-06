@@ -34,13 +34,6 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, QObject* 
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {}
 
-QObject* PlaylistManagerModel::playlist(int index) {
-    TRACE_LOG(logject) << "Getting playlist at index " << index;
-    assert(index < rowCount());
-    auto ptr = playman.range()[index];
-    return playlists.value(ptr.get(), nullptr);
-}
-
 Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
     Qt::ItemFlags defaultFlags = QAbstractListModel::flags(index);
 
@@ -51,7 +44,7 @@ Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
 
 QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
     if(!index.isValid() || index.row() >= playman.count())
-        QVariant();
+        return QVariant();
 
     Q_ASSERT(playman.range()[index.row()] != nullptr);
 
