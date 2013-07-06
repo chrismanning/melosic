@@ -49,7 +49,8 @@ MainWindow::MainWindow(Core::Kernel& kernel) :
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
-    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager()))
+    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager())),
+    modelTest(playlistManagerModel)
 {
     Slots::Manager& slotman = this->kernel.getSlotManager();
 

@@ -25,6 +25,8 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/sigslots/connection.hpp>
 
+#include "modeltest.h"
+
 class QQmlEngine;
 class QQmlContext;
 class QQmlComponent;
@@ -64,6 +66,7 @@ private:
     QScopedPointer<QQmlComponent> component;
     QScopedPointer<QQuickWindow> window;
     PlaylistManagerModel* playlistManagerModel;
+    ModelTest modelTest;
 };
 
 } // namespace Melosic

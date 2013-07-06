@@ -28,3 +28,6 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 add_subdirectory(src/melosic)
+
+enable_testing()
+add_subdirectory(test)
