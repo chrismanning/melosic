@@ -15,44 +15,37 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "connection.hpp"
+#ifndef MELOSIC_SIGNALS_HPP
+#define MELOSIC_SIGNALS_HPP
+
+#include <memory>
+#include <type_traits>
+
+#include <boost/utility/result_of.hpp>
+
+#include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/signal_core.hpp>
 
 namespace Melosic {
 namespace Signals {
 
-size_t ConnHash::operator()(const Connection& conn) const {
-    return std::hash<std::shared_ptr<ConnErasure>>()(conn.pimpl);
-}
+template <typename Ret, typename ...Args>
+struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
+    using SignalCore<Ret (Args...)>::SignalCore;
 
-bool Connection::operator==(const Connection& b) const {
-    return pimpl == b.pimpl;
-}
+    template <typename ...A>
+    void operator()(A&& ...args) {
+        SignalCore<Ret (Args...)>::call(std::forward<A>(args)...);
+    }
 
-void Connection::disconnect() const {
-    pimpl->disconnect(*this);
-}
+protected:
+    typedef Signal<Ret (Args...)> Super;
+};
 
-bool Connection::isConnected() const {
-    return pimpl->isConnected();
-}
+template <typename Ret, typename ...Args>
+struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {};
 
-ScopedConnection::~ScopedConnection() {
-    if(pimpl)
-        disconnect();
-}
+} // namespace Signals
+} // namespace Melosic
 
-ScopedConnection::ScopedConnection(const Connection& conn) {
-    pimpl = conn.pimpl;
-}
-
-ScopedConnection::ScopedConnection(Connection&& conn) : Connection(conn) {}
-
-ScopedConnection& ScopedConnection::operator=(Connection&& conn) {
-    pimpl = conn.pimpl;
-    conn.pimpl.reset();
-
-    return *this;
-}
-
-}
-}
+#endif // MELOSIC_SIGNALS_HPP

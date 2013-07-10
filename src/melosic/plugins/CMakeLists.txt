@@ -1,4 +1,4 @@
-add_definitions(-DMELOSIC_PLUGIN_EXPORTS)
+add_definitions(-DMELOSIC_EXPORTS)
 
 add_subdirectory(flac)
 add_subdirectory(lastfm)

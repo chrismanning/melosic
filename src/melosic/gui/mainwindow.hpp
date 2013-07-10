@@ -23,7 +23,7 @@
 #include <list>
 
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/sigslots/connection.hpp>
+#include <melosic/common/connection.hpp>
 
 #include "modeltest.h"
 
@@ -49,15 +49,15 @@ using Output::DeviceState;
 
 class PlaylistManagerModel;
 
-class MELOSIC_CORE_EXPORT MainWindow {
+class MELOSIC_EXPORT MainWindow {
 public:
-    explicit MainWindow(Core::Kernel& kernel);
+    explicit MainWindow(Core::Kernel& kernel, Core::Player& player);
     ~MainWindow();
     void onStateChangeSlot(DeviceState state);
 
 private:
     Core::Kernel& kernel;
-    Core::Player* player;
+    Core::Player& player;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     QScopedPointer<PlayerControls> playerControls;

@@ -15,16 +15,19 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/functional/factory.hpp>
-using boost::factory;
 #include <alsa/asoundlib.h>
-#include <string>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex; using boost::shared_lock_guard;
+
 #include <thread>
 #include <mutex>
 using std::unique_lock; using std::lock_guard;
+#include <string>
+
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+using boost::shared_mutex; using boost::shared_lock_guard;
+#include <boost/functional/factory.hpp>
+using boost::factory;
+#include <boost/variant.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
@@ -32,8 +35,7 @@ using std::unique_lock; using std::lock_guard;
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/output.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/melin/config.hpp>
 using namespace Melosic;
 
@@ -47,11 +49,8 @@ static constexpr Plugin::Info alsaInfo("ALSA",
                                        Plugin::Version(1,0,0));
 
 #define ALSA_THROW_IF(Exc, ret) if(ret != 0) {\
-    std::stringstream tmp;\
-    tmp << "Exception: " << strdup(snd_strerror(ret));\
-    MELOSIC_THROW(Exc() << ErrorTag::Output::DeviceErrStr(tmp.str())\
-    << ErrorTag::Plugin::Info(::alsaInfo),\
-    tmp.str(), logject);\
+    BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Output::DeviceErrStr(strdup(snd_strerror(ret)))\
+    << ErrorTag::Plugin::Info(::alsaInfo));\
 }
 
 static constexpr snd_pcm_format_t formats[] = {
@@ -285,7 +284,7 @@ private:
 
 extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
-    funs << registerOutput << registerConfig << registerSlots;
+    funs << registerOutput << registerConfig;
 }
 
 extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
@@ -323,12 +322,9 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
 }
 
-extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager*) {
+extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", static_cast<int64_t>(1024));
-}
-
-extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
-    slotman->get<Signals::Config::Loaded>().connect([](Config::Base& base) {
+    confman->getLoadedSignal().connect([](Config::Base& base) {
         auto& c = base.existsChild("Output")
                 ? base.getChild("Output").existsChild("ALSA")
                   ? base.getChild("Output").getChild("ALSA")
@@ -338,7 +334,7 @@ extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
         if(!c.existsNode("frames") || !c.existsNode("output device"))
             c.resetToDefault();
         auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
-        varUpdate.connect([&](const std::string& k, const Config::VarType& v) {
+        auto fun = [&](const std::string& k, const Config::VarType& v) {
             try {
                 if(k == "frames")
                     ::frames = boost::get<int64_t>(v);
@@ -346,10 +342,11 @@ extern "C" MELOSIC_EXPORT void registerSlots(Slots::Manager* slotman) {
             catch(boost::bad_get&) {
                 ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << k;
             }
-        });
+        };
+        varUpdate.connect(fun);
         for(auto&& node : c.getNodes()) {
             TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
-            varUpdate(node.first, node.second);
+            fun(node.first, node.second);
         }
     });
 }

@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,60 +15,29 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_PLAYER_HPP
-#define MELOSIC_PLAYER_HPP
+#ifndef MELOSIC_STATECHANGED_HPP
+#define MELOSIC_STATECHANGED_HPP
 
-#include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
 
 #include <melosic/common/signal_fwd.hpp>
-#include <melosic/core/player_signals.hpp>
-#include <melosic/common/common.hpp>
 
 namespace Melosic {
+
 namespace Output {
-class PlayerSink;
 enum class DeviceState;
-class Manager;
 }
 
-namespace Playlist {
-class Manager;
+namespace Signals {
+
+namespace Player {
+typedef SignalCore<void(Melosic::Output::DeviceState)> StateChanged;
+typedef SignalCore<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
 }
 
-using Output::DeviceState;
+}
 
-namespace Core {
+}
 
-class Playlist;
-
-class Player {
-public:
-    Player(Melosic::Playlist::Manager&, Output::Manager&);
-
-    ~Player();
-
-    Player(const Player&) = delete;
-    Player& operator=(const Player&) = delete;
-    Player(Player&&) = delete;
-    Player& operator=(Player&&) = delete;
-
-    void play();
-    void pause();
-    void stop();
-    DeviceState state() const;
-    void seek(chrono::milliseconds dur);
-    chrono::milliseconds tell() const;
-
-    Signals::SignalCore<void(Output::DeviceState)>& stateChangedSignal() const;
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-} // namespace Core
-} // namespace Melosic
-
-#endif // MELOSIC_PLAYER_HPP
+#endif // MELOSIC_STATECHANGED_HPP

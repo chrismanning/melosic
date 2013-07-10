@@ -30,7 +30,8 @@ namespace fs = boost::filesystem;
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
-#include "configvar.hpp"
+#include <melosic/common/configvar.hpp>
+#include <melosic/melin/config_signals.hpp>
 
 namespace Melosic {
 
@@ -54,21 +55,23 @@ static std::array<fs::path,3> dirs{{".", "~/.config/melosic/", "/etc/melosic/"}}
 
 class Manager {
 public:
-    Manager(Slots::Manager&);
+    Manager();
     ~Manager();
 
-    MELOSIC_MELIN_EXPORT void loadConfig();
-    MELOSIC_MELIN_EXPORT void saveConfig();
+    MELOSIC_EXPORT void loadConfig();
+    MELOSIC_EXPORT void saveConfig();
 
-    MELOSIC_MELIN_EXPORT Base& addConfigTree(const Base&);
-    MELOSIC_MELIN_EXPORT Base& getConfigRoot();
+    MELOSIC_EXPORT Base& addConfigTree(const Base&);
+    MELOSIC_EXPORT Base& getConfigRoot();
+
+    Signals::Config::Loaded& getLoadedSignal() const;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-class MELOSIC_MELIN_EXPORT Base {
+class MELOSIC_EXPORT Base {
 public:
     Base(const std::string& name);
     virtual ~Base();
@@ -105,7 +108,7 @@ protected:
 
     friend class boost::serialization::access;
     template<class Archive>
-    MELOSIC_MELIN_EXPORT void serialize(Archive& ar, const unsigned int /*version*/);
+    MELOSIC_EXPORT void serialize(Archive& ar, const unsigned int /*version*/);
 };
 
 Base* new_clone(const Base& conf);
@@ -134,11 +137,11 @@ protected:
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-extern template MELOSIC_MELIN_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_iarchive>(
+extern template MELOSIC_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_iarchive>(
     boost::archive::binary_iarchive& ar,
     const unsigned int file_version
 );
-extern template MELOSIC_MELIN_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_oarchive>(
+extern template MELOSIC_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_oarchive>(
     boost::archive::binary_oarchive& ar,
     const unsigned int file_version
 );

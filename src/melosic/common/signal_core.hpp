@@ -15,110 +15,62 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SIGNALS_HPP
-#define MELOSIC_SIGNALS_HPP
+#ifndef MELOSIC_SIGNAL_CORE_HPP
+#define MELOSIC_SIGNAL_CORE_HPP
 
-#include <chrono>
-namespace chrono = std::chrono;
-#include <memory>
 #include <unordered_map>
-#include <iterator>
+#include <future>
+#include <mutex>
 #include <functional>
 namespace ph = std::placeholders;
-#include <type_traits>
 
-#include <boost/utility/result_of.hpp>
-
-#include <melosic/melin/sigslots/connection.hpp>
-#include <melosic/melin/logging.hpp>
+#include <melosic/common/signal_fwd.hpp>
 #include <melosic/melin/thread.hpp>
+#include <melosic/melin/logging.hpp>
+#include <melosic/common/ptr_adaptor.hpp>
+#include <melosic/common/connection.hpp>
 
 namespace Melosic {
-namespace {
-static inline Logger::Logger& logject_() {
-    static Logger::Logger l(logging::keywords::channel = "Signal");
-    return l;
-}
-}
 namespace Signals {
 
-namespace {
-
-template <typename T>
-class WeakPtrAdaptor {
-public:
-    typedef T element_type;
-
-    WeakPtrAdaptor(const std::weak_ptr<T>& ptr) : ptr(ptr) {}
-
-    T* operator->() {
-        return std::shared_ptr<T>(ptr).get();
-    }
-
-    T& operator*() {
-        return *std::shared_ptr<T>(ptr);
-    }
-
-private:
-    std::weak_ptr<T> ptr;
-};
-
-template <typename T>
-struct AdaptIfSmartPtr {
-    typedef T type;
-};
-template <typename T>
-struct AdaptIfSmartPtr<std::shared_ptr<T>> {
-    typedef WeakPtrAdaptor<T> type;
-};
-template <typename T>
-struct AdaptIfSmartPtr<std::weak_ptr<T>> {
-    typedef WeakPtrAdaptor<T> type;
-};
-}
-
 template <typename Ret, typename ...Args>
-class Signal<Ret (Args...)> {
-public:
-    typedef std::function<Ret (Args...)> slot_type;
+struct SignalCore<Ret (Args...)> {
 
-    Signal() : Signal(nullptr) {}
+    typedef std::function<Ret(Args...)> Slot;
 
-    explicit Signal(Thread::Manager* tman) : tman(tman) {}
+    SignalCore() : SignalCore(nullptr) {}
+    explicit SignalCore(Thread::Manager* tman) : tman(tman) {}
 
-    Signal(const Signal&) = delete;
-
-    Signal(Signal&& b) : funs(std::move(b.funs)), tman(b.tman) {}
-    Signal& operator=(Signal&& b) {
+    SignalCore(SignalCore&& b) : funs(std::move(b.funs)), tman(b.tman) {}
+    SignalCore& operator=(SignalCore&& b) {
         funs = std::move(b.funs);
         return *this;
     }
 
-    ~Signal() {}
+    ~SignalCore() {
+        while(auto s = funs.size()) {
+            funs.begin()->first.disconnect();
+            if(funs.size() != s-1) {
+                funs.clear();
+                break;
+            }
+        }
+    }
 
-    Connection connect(const std::function<Ret(Args...)>& slot) {
+    Connection connect(const Slot& slot) {
         TRACE_LOG(logject) << "Connecting slot to signal.";
         std::lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)), slot)).first->first;
     }
 
     template <typename Fun, typename Obj, typename ...A>
-    Connection emplace_connect(Fun func, Obj obj, A&&... args) {
-        static_assert(std::is_member_function_pointer<Fun>::value, "emplace_connect is for member functions");
+    Connection connect(Fun func, Obj obj, A&&... args) {
+        static_assert(std::is_member_function_pointer<Fun>::value, "connect is for member functions");
         static_assert(std::is_same<typename boost::result_of<Fun(typename std::pointer_traits<Obj>::pointer,
                                                                  A&&...)>::type, Ret>::value,
                       "Slot must return correct type");
-        TRACE_LOG(logject) << "Connecting slot to signal.";
-        TRACE_LOG(logject) << "emplace_connect: obj type: " << typeid(typename AdaptIfSmartPtr<Obj>::type);
-        std::lock_guard<Mutex> l(mu);
-        return funs.emplace(std::make_pair(std::move(Connection(*this)),
-                                           slot_type(std::bind(func,
-                                                               static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj),
-                                                               std::forward<A>(args)...
-                                                              )
-                                                    )
-                                          )
-                           ).first->first;
+        TRACE_LOG(logject) << "connect: obj type: " << typeid(typename AdaptIfSmartPtr<Obj>::type);
+        return connect(std::bind(func, static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj), std::forward<A>(args)...));
     }
 
     void disconnect(const Connection& conn) {
@@ -129,18 +81,19 @@ public:
         assert(funs.size() == s-1);
     }
 
+protected:
     template <typename ...A>
-    void operator()(A&& ...args) {
+    void call(A&& ...args) {
         std::unique_lock<Mutex> l(mu);
 
-        std::list<std::pair<std::future<Ret>, Connection>> fs;
+        std::list<std::pair<std::future<Ret>, Connection>> futures;
         for(auto i = funs.begin(); i != funs.end();) {
             try {
                 l.unlock();
                 if(tman && !tman->contains(std::this_thread::get_id()))
-                    fs.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
+                    futures.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
                 else
-                    i->second(std::forward<A>(args)...);
+                    i->second(std::forward<Args>(args)...);
                 l.lock();
                 ++i;
             }
@@ -164,7 +117,7 @@ public:
                 ++i;
             }
         }
-        for(auto&& f : fs) {
+        for(auto&& f : futures) {
             try {
                 l.unlock();
                 f.first.get();
@@ -186,19 +139,19 @@ public:
         }
     }
 
-protected:
-    typedef Signal<Ret (Args...)> super;
 private:
-    std::unordered_map<ScopedConnection, slot_type, ConnHash> funs;
+    std::unordered_map<Connection, Slot, ConnHash> funs;
+    Thread::Manager* const tman;
+
     typedef std::mutex Mutex;
     Mutex mu;
-    Thread::Manager* const tman;
     static Logger::Logger logject;
 };
+
 template <typename Ret, typename ...Args>
-Logger::Logger Signal<Ret (Args...)>::logject(logging::keywords::channel = "Signal");
+Logger::Logger SignalCore<Ret (Args...)>::logject(logging::keywords::channel = "Signal");
 
-} // namespace Signals
-} // namespace Melosic
+}
+}
 
-#endif // MELOSIC_SIGNALS_HPP
+#endif // MELOSIC_SIGNAL_CORE_HPP

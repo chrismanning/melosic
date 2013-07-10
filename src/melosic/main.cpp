@@ -30,6 +30,7 @@
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/gui/mainwindow.hpp>
+#include <melosic/core/player.hpp>
 using namespace Melosic;
 
 int main(int argc, char* argv[]) {
@@ -47,17 +48,20 @@ int main(int argc, char* argv[]) {
         Core::Kernel kernel;
         Plugin::Manager& plugman = kernel.getPluginManager();
 
+        plugman.addSearchPaths({fs::canonical("../bin"), fs::canonical("../lib")});
         plugman.loadPlugin("flac.melin");
-//        plugman.loadPlugin("../lib/alsa.melin");
+        plugman.loadPlugin("alsa.melin");
         plugman.loadPlugin("lastfm.melin");
 
         plugman.initialise();
 
-        kernel.getConfigManager().loadConfig();
-
 //        QQmlDebuggingEnabler enabler;
 
-        MainWindow win(kernel);
+        Core::Player player(kernel.getPlaylistManager(), kernel.getOutputManager());
+
+        kernel.getConfigManager().loadConfig();
+
+        MainWindow win(kernel, player);
 
         return app.exec();
     }

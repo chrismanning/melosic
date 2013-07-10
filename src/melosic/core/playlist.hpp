@@ -28,12 +28,9 @@ namespace chrono = std::chrono;
 
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
+#include <melosic/melin/playlist_signals.hpp>
 
 namespace Melosic {
-
-namespace Slots {
-class Manager;
-}
 
 namespace Decoder {
 class Manager;
@@ -43,7 +40,7 @@ namespace Core {
 
 class Track;
 
-class MELOSIC_CORE_EXPORT Playlist {
+class MELOSIC_EXPORT Playlist {
 public:
     typedef boost::iostreams::input_seekable category;
     typedef char char_type;
@@ -56,10 +53,10 @@ public:
     typedef list_type::const_iterator const_iterator;
     typedef int size_type;
 
-    Playlist(const std::string&, Slots::Manager&, Decoder::Manager&);
+    Playlist(const std::string&, Decoder::Manager&);
     ~Playlist();
 
-    std::streamsize read(char* s, std::streamsize n);
+    MELOSIC_LOCAL std::streamsize read(char* s, std::streamsize n);
     void seek(chrono::milliseconds dur);
     chrono::milliseconds duration() const;
     void previous();
@@ -108,6 +105,8 @@ public:
 
     const std::string& getName() const;
     void setName(const std::string&);
+
+    static Signals::Playlist::TrackChanged& getTrackChangedSignal();
 
 private:
     class impl;

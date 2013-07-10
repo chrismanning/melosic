@@ -19,11 +19,12 @@
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/melin/sigslots/connection.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/common/signal.hpp>
+#include <melosic/common/connection.hpp>
 #include <melosic/melin/thread.hpp>
 using namespace Melosic;
+
+#include <boost/variant.hpp>
 
 #include "lastfm.hpp"
 #include "lastfmconfig.hpp"
@@ -42,7 +43,6 @@ static constexpr Plugin::Info lastFmInfo("LastFM",
 
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
-static Slots::Manager* slotman = nullptr;
 static Config::Manager* confman = nullptr;
 static Thread::Manager* tman = nullptr;
 static std::string sk;
@@ -56,9 +56,9 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
         }
         else if(key == "enable scrobbling") {
             if(boost::get<bool>(value)) {
-                if(slotman == nullptr)
-                    return;
-                scrobbler.reset(new Scrobbler(lastserv, slotman));
+//                if(slotman == nullptr)
+//                    return;
+                scrobbler.reset(new Scrobbler(lastserv));
             }
             else {
                 scrobbler.reset();
@@ -81,16 +81,16 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 
 static Signals::ScopedConnection varConnection;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
-    funs << registerConfig << registerSlots << registerTasks;
+    funs << registerConfig << registerTasks;
 
     lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
                                "64a3811653376876431daad679ce5b67",
                                tman));
 }
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerConfig(Config::Manager* confman) {
+extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::confman = confman;
 
     ::conf.putNode("username", std::string(""));
@@ -98,27 +98,10 @@ extern "C" MELOSIC_PLUGIN_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("enable scrobbling", false);
 }
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerSlots(Slots::Manager* slotman) {
-    ::slotman = slotman;
-
-//    slotman->get<Signals::Config::Loaded>().connect([&](Config::Base& c) {
-//        auto& lc = c.existsChild("lastfm") ? c.getChild("lastfm") : c.putChild("lastfm", ::conf);
-
-//        lc.addDefaultFunc([=]() -> Config::Base& { return *::conf.clone(); });
-
-//        varConnection = lc.get<Signals::Config::VariableUpdated>()
-//                .connect(refreshConfig);
-
-//        for(auto& node : lc.getNodes()) {
-//            refreshConfig(node.first, node.second);
-//        }
-//    });
-}
-
-extern "C" MELOSIC_PLUGIN_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
+extern "C" MELOSIC_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
     ::tman = tman;
 }
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
 
-extern "C" MELOSIC_PLUGIN_EXPORT void destroyPlugin() {}
+extern "C" MELOSIC_EXPORT void destroyPlugin() {}

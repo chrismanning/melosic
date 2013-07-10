@@ -23,41 +23,32 @@
 namespace chrono = std::chrono;
 
 #ifdef _WIN32
-#   ifdef MELOSIC_CORE_EXPORTS
-#       define MELOSIC_CORE_EXPORT __declspec(dllexport)
+#   define MELOSIC_LOCAL
+#   ifdef MELOSIC_EXPORTS
+#       define MELOSIC_EXPORT __declspec(dllexport)
 #   else
-#       define MELOSIC_CORE_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT __declspec(dllimport)
 #   endif
-#   ifdef MELOSIC_PLUGIN_EXPORTS
-#       define MELOSIC_PLUGIN_EXPORT __declspec(dllexport)
+#   ifdef MELOSIC_EXPORTS
+#       define MELOSIC_EXPORT __declspec(dllexport)
 #   else
-#       define MELOSIC_PLUGIN_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT __declspec(dllimport)
 #   endif
-#   ifdef MELOSIC_MELIN_EXPORTS
-#       define MELOSIC_MELIN_EXPORT __declspec(dllexport)
+#   ifdef MELOSIC_EXPORTS
+#       define MELOSIC_EXPORT __declspec(dllexport)
 #   else
-#       define MELOSIC_MELIN_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT __declspec(dllimport)
 #   endif
 #elif __GNUC__ >= 4
-#   ifdef MELOSIC_CORE_EXPORTS
-#       define MELOSIC_CORE_EXPORT __attribute__ ((visibility ("default")))
+#   ifdef MELOSIC_EXPORTS
+#       define MELOSIC_EXPORT __attribute__((visibility ("default")))
 #   else
-#       define MELOSIC_CORE_EXPORT
+#       define MELOSIC_EXPORT
 #   endif
-#   ifdef MELOSIC_PLUGIN_EXPORTS
-#       define MELOSIC_PLUGIN_EXPORT __attribute__ ((visibility ("default")))
-#   else
-#       define MELOSIC_PLUGIN_EXPORT
-#   endif
-#   ifdef MELOSIC_MELIN_EXPORTS
-#       define MELOSIC_MELIN_EXPORT __attribute__ ((visibility ("default")))
-#   else
-#       define MELOSIC_MELIN_EXPORT
-#   endif
+#   define MELOSIC_LOCAL __attribute__((visibility ("hidden")))
 #else
-#   define MELOSIC_CORE_EXPORT
-#   define MELOSIC_MELIN_EXPORT
-#   define MELOSIC_PLUGIN_EXPORT
+#   define MELOSIC_EXPORT
+#   define MELOSIC_LOCAL
 #endif
 
 #endif // MELOSIC_COMMON_HPP

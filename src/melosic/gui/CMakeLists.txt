@@ -1,5 +1,3 @@
-add_definitions(-DMELOSIC_CORE_EXPORTS)
-
 FIND_PACKAGE(Qt5Qml REQUIRED)
 FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
@@ -27,4 +25,4 @@ QT5_ADD_RESOURCES(RCS_FILES resources.qrc)
 ADD_LIBRARY(qt-gui SHARED ${qt-gui_SOURCES} ${qt-gui_HEADERS_MOC} ${RCS_FILES})
 set_target_properties(qt-gui PROPERTIES PREFIX "")
 qt5_use_modules(qt-gui Widgets Qml Quick Test)
-TARGET_LINK_LIBRARIES(qt-gui ${QT5Widgets_LIBRARIES} ${QT5Quick_LIBRARIES} ${QT5Test_LIBRARIES} melosiccore)
+TARGET_LINK_LIBRARIES(qt-gui ${QT5Widgets_LIBRARIES} ${QT5Quick_LIBRARIES} ${QT5Test_LIBRARIES} melosiclib)

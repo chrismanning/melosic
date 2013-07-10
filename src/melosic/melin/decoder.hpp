@@ -43,7 +43,7 @@ class File;
 namespace Decoder {
 class Manager;
 
-struct MELOSIC_MELIN_EXPORT FileTypeResolver {
+struct MELOSIC_EXPORT FileTypeResolver {
     FileTypeResolver(Manager& decman, const boost::filesystem::path&);
     std::unique_ptr<Decoder::Playable> getDecoder(IO::File& file);
     std::unique_ptr<TagLib::File> getTagReader(IO::File& file);
@@ -63,7 +63,7 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_MELIN_EXPORT void addAudioFormat(Factory fact, const std::string& extension);
+    MELOSIC_EXPORT void addAudioFormat(Factory fact, const std::string& extension);
     template <typename List>
     void addAudioFormats(Factory fact, const List& extensions) {
         for(const auto& ext : extensions) {

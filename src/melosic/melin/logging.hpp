@@ -69,7 +69,7 @@ inline std::basic_ostream<CharT, TraitsT>& operator<< (
     return strm;
 }
 
-MELOSIC_MELIN_EXPORT void init();
+MELOSIC_EXPORT void init();
 
 struct nullstream : std::ostream {
     nullstream() : std::ios(0), std::ostream(0) {}
@@ -105,7 +105,7 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 #endif //MELOSIC_DISABLE_LOGGING
 
 namespace std {
-MELOSIC_MELIN_EXPORT std::ostream& operator<<(std::ostream& strm, const std::type_info& t);
+MELOSIC_EXPORT std::ostream& operator<<(std::ostream& strm, const std::type_info& t);
 }
 
 #endif // MELOSIC_LOGGING_HPP

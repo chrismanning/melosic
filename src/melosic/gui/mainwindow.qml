@@ -140,7 +140,7 @@ ApplicationWindow {
                     target: currentPlaylist
                     onCountChanged: {
                         var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
-                            return previousValue + currentValue.duration;
+                            return parseInt(previousValue) + parseInt(currentValue.duration);
                         }, 0)
                         playlistDuration.text = '[' + SecsToMins.secsToMins(dur) + ']'
                     }

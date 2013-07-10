@@ -18,7 +18,7 @@
 #include <QMetaEnum>
 
 #include <melosic/core/player.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/signal.hpp>
 
 #include "playercontrols.hpp"
 

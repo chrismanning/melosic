@@ -259,14 +259,14 @@ private:
     std::unique_ptr<FlacDecoderImpl> pimpl;
 };
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::flacInfo;
     funs << registerDecoder;
 }
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerDecoder(Decoder::Manager* decman) {
+extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
     decman->addAudioFormat(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
 }
 
-extern "C" MELOSIC_PLUGIN_EXPORT void destroyPlugin() {
+extern "C" MELOSIC_EXPORT void destroyPlugin() {
 }

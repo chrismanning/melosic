@@ -15,29 +15,19 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_DELEGATE_HPP
-#define MELOSIC_DELEGATE_HPP
+#ifndef MELOSIC_CONFIGVAR_HPP
+#define MELOSIC_CONFIGVAR_HPP
 
-#include <functional>
+#include <cstdint>
+#include <vector>
+#include <string>
 
-template <typename T>
-class Delegate;
+#include <boost/variant/variant_fwd.hpp>
 
-template <typename Ret, typename ...Args>
-class Delegate<Ret(Args...)> {
-public:
-    template <typename Obj>
-    Delegate(const std::function<Ret, Args...>& de, Obj) {
+namespace Melosic {
+namespace Config {
+typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>> VarType;
+}
+}
 
-    }
-
-    Ret operator()(Args... args) {
-        return fun(std::forward<Args>(args...));
-    }
-
-private:
-    std::function<Ret(Args...)> fun;
-    bool member = false;
-};
-
-#endif // MELOSIC_DELEGATE_HPP
+#endif // MELOSIC_CONFIGVAR_HPP

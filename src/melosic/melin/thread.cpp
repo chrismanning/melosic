@@ -22,8 +22,7 @@ namespace Thread {
 
 Manager::Manager(const unsigned n) :
     tasks(10),
-    done(false),
-    logject(logging::keywords::channel = "Thread::Manager")
+    done(false)
 {
     assert(n > 0);
     auto f = [&](boost::lockfree::queue<Task>& tasks) {

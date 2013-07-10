@@ -26,7 +26,7 @@
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/melin/config.hpp>
-#include <melosic/core/statemachine.hpp>
+#include <melosic/melin/output_signals.hpp>
 
 namespace Melosic {
 namespace Output {
@@ -35,29 +35,26 @@ class PlayerSink;
 class Conf;
 class Sink;
 }
-namespace Slots {
+namespace Config {
 class Manager;
 }
 namespace Plugin {
 class Manager;
 }
-}
 
-extern template class std::function<std::unique_ptr<Melosic::Output::PlayerSink>(const Melosic::Output::DeviceName&)>;
-
-namespace Melosic {
 namespace Output {
 typedef std::function<std::unique_ptr<PlayerSink>(const DeviceName&)> Factory;
+
 class Manager {
 public:
-    explicit Manager(Slots::Manager&);
+    explicit Manager(Config::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_MELIN_EXPORT void addOutputDevice(Factory fact, const Output::DeviceName& avail);
+    MELOSIC_EXPORT void addOutputDevice(Factory fact, const Output::DeviceName& avail);
     template <typename DeviceList>
     void addOutputDevices(Factory fact, DeviceList avail) {
         for(const DeviceName& device : avail) {
@@ -65,17 +62,17 @@ public:
         }
     }
 
-    MELOSIC_MELIN_EXPORT const std::string& currentSinkName() const;
+    MELOSIC_EXPORT const std::string& currentSinkName() const;
+
+    std::unique_ptr<PlayerSink> createPlayerSink();
+    Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;
 
 private:
-    MELOSIC_MELIN_EXPORT std::unique_ptr<PlayerSink> createPlayerSink();
-
     class impl;
     std::unique_ptr<impl> pimpl;
-    friend class Core::StateMachine::impl;
 };
 
-class Conf : public Config::Config<Conf> {
+class MELOSIC_EXPORT Conf : public Config::Config<Conf> {
 public:
     Conf();
     virtual ~Conf();

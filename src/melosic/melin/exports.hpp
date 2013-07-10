@@ -55,39 +55,35 @@ class Manager;
 struct RegisterFuncsInserter;
 }
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerPlugin(Melosic::Plugin::Info*, Melosic::RegisterFuncsInserter);
+extern "C" MELOSIC_EXPORT void registerPlugin(Melosic::Plugin::Info*, Melosic::RegisterFuncsInserter);
 typedef decltype(registerPlugin) registerPlugin_F;
 typedef std::function<registerPlugin_F> registerPlugin_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerInput(Melosic::Input::Manager*);
+extern "C" MELOSIC_EXPORT void registerInput(Melosic::Input::Manager*);
 typedef decltype(registerInput) registerInput_F;
 typedef std::function<registerInput_F> registerInput_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerDecoder(Melosic::Decoder::Manager*);
+extern "C" MELOSIC_EXPORT void registerDecoder(Melosic::Decoder::Manager*);
 typedef decltype(registerDecoder) registerDecoder_F;
 typedef std::function<registerDecoder_F> registerDecoder_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerOutput(Melosic::Output::Manager*);
+extern "C" MELOSIC_EXPORT void registerOutput(Melosic::Output::Manager*);
 typedef decltype(registerOutput) registerOutput_F;
 typedef std::function<registerOutput_F> registerOutput_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerEncoder(Melosic::Encoder::Manager*);
+extern "C" MELOSIC_EXPORT void registerEncoder(Melosic::Encoder::Manager*);
 typedef decltype(registerEncoder) registerEncoder_F;
 typedef std::function<registerEncoder_F> registerEncoder_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerSlots(Melosic::Slots::Manager*);
-typedef decltype(registerSlots) registerSlots_F;
-typedef std::function<registerSlots_F> registerSlots_T;
-
-extern "C" MELOSIC_PLUGIN_EXPORT void registerConfig(Melosic::Config::Manager*);
+extern "C" MELOSIC_EXPORT void registerConfig(Melosic::Config::Manager*);
 typedef decltype(registerConfig) registerConfig_F;
 typedef std::function<registerConfig_F> registerConfig_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void registerTasks(Melosic::Thread::Manager*);
+extern "C" MELOSIC_EXPORT void registerTasks(Melosic::Thread::Manager*);
 typedef decltype(registerTasks) registerTasks_F;
 typedef std::function<registerTasks_F> registerTasks_T;
 
-extern "C" MELOSIC_PLUGIN_EXPORT void destroyPlugin();
+extern "C" MELOSIC_EXPORT void destroyPlugin();
 typedef decltype(destroyPlugin) destroyPlugin_F;
 typedef std::function<destroyPlugin_F> destroyPlugin_T;
 
@@ -158,19 +154,18 @@ namespace Core {
 class Kernel;
 }
 
-struct MELOSIC_MELIN_EXPORT RegisterFuncsInserter {
+struct MELOSIC_EXPORT RegisterFuncsInserter {
     RegisterFuncsInserter(Core::Kernel& k, std::list<std::function<void()>>& l) : k(k), l(l) {}
 
     RegisterFuncsInserter& operator<<(const registerInput_T&);
     RegisterFuncsInserter& operator<<(const registerDecoder_T&);
     RegisterFuncsInserter& operator<<(const registerOutput_T&);
     RegisterFuncsInserter& operator<<(const registerEncoder_T&);
-    RegisterFuncsInserter& operator<<(const registerSlots_T&);
     RegisterFuncsInserter& operator<<(const registerConfig_T&);
     RegisterFuncsInserter& operator<<(const registerTasks_T&);
 private:
     Core::Kernel& k;
-    std::list<std::function<void()>> l;
+    std::list<std::function<void()>>& l;
 };
 
 } // namespace Melosic

@@ -36,9 +36,8 @@ namespace io = boost::iostreams;
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/audiospecs.hpp>
-#include <melosic/melin/sigslots/signals_fwd.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/melin/kernel.hpp>
 #include <melosic/core/statemachine.hpp>
@@ -50,21 +49,23 @@ namespace Core {
 
 struct Stopped;
 
+struct NotifyPlayPos : Signals::Signal<Signals::Player::NotifyPlayPos> {
+    using Super::Signal;
+};
+
 class Player::impl {
 public:
-    impl(Melosic::Playlist::Manager& playlistman, Output::Manager& outman, Slots::Manager& slotman) :
+    impl(Melosic::Playlist::Manager& playlistman, Output::Manager& outman) :
         playlistman(playlistman),
-        slotman(slotman),
-        stateChanged(slotman.get<Signals::Player::StateChanged>()),
         stateMachine(playlistman, outman),
-        notifyPlayPosition(slotman.get<Signals::Player::NotifyPlayPos>()),
         end_(false),
-        playerThread(&impl::start, this),
-        logject(logging::keywords::channel = "Player")
+        playerThread(&impl::start, this)
     {
-        slotman.get<Signals::Playlist::TrackChanged>().emplace_connect(&StateMachine::trackChangeSlot,
-                                                                       &stateMachine,
-                                                                       ph::_1);
+        playlistman.getTrackChangedSignal().connect(&StateMachine::trackChangeSlot,
+                                                    &stateMachine,
+                                                    ph::_1);
+
+        outman.getPlayerSinkChangedSignal().connect(&StateMachine::sinkChangeSlot, &stateMachine);
     }
 
     ~impl() {
@@ -129,43 +130,50 @@ private:
         std::array<uint8_t,16384> s;
         std::streamsize n = 0;
         while(!end()) {
-            try {
-                if(playlistman.currentPlaylist()) {
-                    switch(stateMachine.state()) {
-                        case DeviceState::Playing: {
-//                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                            if(n < 1024) {
-                                auto a = io::read(*playlistman.currentPlaylist(), (char*)s.data(), s.size());
-                                if(static_cast<bool>(*playlistman.currentPlaylist()))
-                                    notifyPlayPosition(playlistman.currentPlaylist()->currentTrack()->tell(),
-                                                       playlistman.currentPlaylist()->currentTrack()->duration());
+            std::shared_ptr<Playlist> playlist;
 
-                                if(a == -1) {
-                                    if(n == 0) {
-                                        stateMachine.stop();
-                                        playlistman.currentPlaylist()->currentTrack() = playlistman.currentPlaylist()->begin();
-                                    }
-                                    break;
+            this_thread::sleep_for(chrono::milliseconds(10));
+            try {
+                playlist = playlistman.currentPlaylist();
+                if(!playlist) {
+                    ERROR_LOG(logject) << "No playlist";
+                    continue;
+                }
+                switch(stateMachine.state()) {
+                    case DeviceState::Playing: {
+//                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
+                        if(n < 1024) {
+                            auto a = io::read(*playlist, (char*)s.data(), s.size());
+                            if(static_cast<bool>(*playlist))
+                                notifyPlayPosition(playlist->currentTrack()->tell(),
+                                                   playlist->currentTrack()->duration());
+
+                            if(a == -1) {
+                                if(n == 0) {
+                                    stateMachine.stop();
+                                    playlist->currentTrack() = playlist->begin();
                                 }
-                                else
-                                    n += a;
+                                break;
                             }
-                            TRACE_LOG(logject) << "playing... " << stateMachine.tell().count();
-                            n -= io::write(stateMachine.sink(), (char*)s.data()+s.size()-n, n);
-                            break;
+                            else
+                                n += a;
                         }
-                        case DeviceState::Error:
+                        TRACE_LOG(logject) << "playing... " << stateMachine.tell().count();
+                        n -= io::write(stateMachine.sink(), (char*)s.data()+s.size()-n, n);
+                        break;
+                    }
+                    case DeviceState::Error:
 //                            ERROR_LOG(logject) << "Irrecoverable error occured";
 //                            currentState()->device().reset();
-                            break;
-                        case DeviceState::Stopped:
-                            n = 0;
-                        case DeviceState::Paused:
+                        break;
+                    case DeviceState::Stopped:
+                        TRACE_LOG(logject) << "stopped...";
+                        n = 0;
+                    case DeviceState::Paused:
 //                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                        case DeviceState::Ready:
-                        default:
-                            break;
-                    }
+                    case DeviceState::Ready:
+                    default:
+                        break;
                 }
             }
             //TODO: copy caught exceptions to main thread
@@ -195,8 +203,6 @@ private:
                 n = 0;
                 stateMachine.play();
             }
-
-            this_thread::sleep_for(chrono::milliseconds(10));
         }
 
         stateMachine.stop();
@@ -204,24 +210,19 @@ private:
     }
 
     Melosic::Playlist::Manager& playlistman;
-    Slots::Manager& slotman;
-    Signals::Player::StateChanged& stateChanged;
     StateMachine stateMachine;
-    Signals::Player::NotifyPlayPos& notifyPlayPosition;
-    std::atomic<bool> end_;
+    NotifyPlayPos notifyPlayPosition;
+    std::atomic_bool end_;
     thread playerThread;
-    Logger::Logger logject;
+    Logger::Logger logject{logging::keywords::channel = "Player"};
     typedef mutex Mutex;
     Mutex m;
     friend class Player;
 };
 
-Player::Player(Melosic::Playlist::Manager& playlistman, Output::Manager& outman, Slots::Manager& slotman) :
-    pimpl(new impl(playlistman, outman, slotman))
-{
-    slotman.get<Signals::Output::PlayerSinkChanged>().emplace_connect(&StateMachine::sinkChangeSlot,
-                                                                      &pimpl->stateMachine);
-}
+Player::Player(Melosic::Playlist::Manager& playlistman, Output::Manager& outman) :
+    pimpl(new impl(playlistman, outman))
+{}
 
 Player::~Player() {}
 

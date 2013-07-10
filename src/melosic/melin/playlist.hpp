@@ -24,14 +24,12 @@
 #include <boost/container/stable_vector.hpp>
 
 #include <melosic/common/common.hpp>
+#include <melosic/melin/playlist_signals.hpp>
 
 namespace Melosic {
 
 namespace Core {
 class Playlist;
-}
-namespace Slots {
-class Manager;
 }
 namespace Decoder {
 class Manager;
@@ -49,7 +47,7 @@ public:
     typedef boost::iterator_range<iterator> Range;
     typedef boost::iterator_range<const_iterator> ConstRange;
 
-    Manager(Slots::Manager&, Decoder::Manager&);
+    explicit Manager(Decoder::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -57,14 +55,17 @@ public:
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_MELIN_EXPORT Range range() const;
-    MELOSIC_MELIN_EXPORT Range::iterator insert(Range::iterator pos, const std::string& name);
-    MELOSIC_MELIN_EXPORT Range::iterator insert(Range::iterator pos, int count);
-    MELOSIC_MELIN_EXPORT void erase(Range r);
-    MELOSIC_MELIN_EXPORT int count() const;
-    MELOSIC_MELIN_EXPORT bool empty() const;
-    MELOSIC_MELIN_EXPORT PlaylistType currentPlaylist() const;
-    MELOSIC_MELIN_EXPORT void setCurrent(PlaylistType p) const;
+    MELOSIC_EXPORT Range range() const;
+    MELOSIC_EXPORT Range::iterator insert(Range::iterator pos, const std::string& name);
+    MELOSIC_EXPORT Range::iterator insert(Range::iterator pos, int count);
+    MELOSIC_EXPORT void erase(Range r);
+    MELOSIC_EXPORT int count() const;
+    MELOSIC_EXPORT bool empty() const;
+    MELOSIC_EXPORT PlaylistType currentPlaylist() const;
+    MELOSIC_EXPORT void setCurrent(PlaylistType p) const;
+
+    Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() const;
+    Signals::Playlist::TrackChanged& getTrackChangedSignal() const;
 
 private:
     class impl;

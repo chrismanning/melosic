@@ -30,9 +30,8 @@
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/output.hpp>
-#include <melosic/melin/sigslots/signals_fwd.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/signal.hpp>
 
 #include "mainwindow.hpp"
 #include "playlistmodel.hpp"
@@ -43,21 +42,20 @@
 
 namespace Melosic {
 
-MainWindow::MainWindow(Core::Kernel& kernel) :
+MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     kernel(kernel),
-//    player(kernel.getPlayer()),
+    player(player),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
     playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager())),
     modelTest(playlistManagerModel)
 {
-    Slots::Manager& slotman = this->kernel.getSlotManager();
+//    Slots::Manager& slotman = this->kernel.getSlotManager();
 
-//    scopedSigConns.emplace_back(slotman.get<Signals::Player::StateChanged>()
-//                               .emplace_connect(&MainWindow::onStateChangeSlot, this, ph::_1));
+    scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this, ph::_1));
 
-//    playerControls.reset(new PlayerControls(player));
+    playerControls.reset(new PlayerControls(player));
 
     //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");

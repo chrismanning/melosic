@@ -18,53 +18,13 @@
 #ifndef MELOSIC_SIGNALS_FWD_HPP
 #define MELOSIC_SIGNALS_FWD_HPP
 
-#include <memory>
-#include <string>
-
-#include <melosic/common/common.hpp>
-#include <melosic/melin/configvar.hpp>
-
 namespace Melosic {
-namespace Core {
-class Playlist;
-class Track;
-}
-
-namespace Config {
-class Base;
-}
-namespace Output {
-enum class DeviceState;
-}
 namespace Signals {
 
 template <typename Ret, typename ...Args>
-class MELOSIC_MELIN_EXPORT Signal;
-
-namespace Config {
-typedef Signal<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef Signal<void(Melosic::Config::Base&)> Loaded;
-}
-
-namespace Player {
-typedef Signal<void(Output::DeviceState)> StateChanged;
-typedef Signal<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
-typedef Signal<void()> Play;
-typedef Signal<void()> Pause;
-typedef Signal<void()> Stop;
-typedef Signal<void(chrono::milliseconds)> Seek;
-}
-
-namespace Output {
-typedef Signal<void()> PlayerSinkChanged;
-}
-
-namespace Playlist {
-typedef Signal<void(std::shared_ptr<Melosic::Core::Playlist>)> PlaylistChanged;
-typedef Signal<void(const Core::Track&)> TrackChanged;
-typedef Signal<void()> Next;
-typedef Signal<void()> Previous;
-}
+struct Signal;
+template <typename Ret, typename ...Args>
+struct SignalCore;
 
 } // namespace Signals
 } // namespace Melosic

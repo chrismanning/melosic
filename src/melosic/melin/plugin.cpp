@@ -63,6 +63,8 @@ namespace chrono = std::chrono;
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
@@ -78,7 +80,6 @@ class Plugin {
 public:
     Plugin(const boost::filesystem::path& filename, Core::Kernel& kernel)
         : pluginPath(absolute(filename)),
-          logject(logging::keywords::channel = "Plugin"),
           kernel(kernel)
     {
         handle = DLOpen(pluginPath.string().c_str());
@@ -107,7 +108,6 @@ public:
           destroyPlugin_(b.destroyPlugin_),
           regFuns(b.regFuns),
           handle(b.handle),
-          logject(b.logject),
           kernel(b.kernel),
           info(b.info)
     {
@@ -166,25 +166,47 @@ private:
     destroyPlugin_T destroyPlugin_;
     std::list<std::function<void()>> regFuns;
     DLHandle handle;
-    Logger::Logger logject;
+    static Logger::Logger logject;
     Core::Kernel& kernel;
     Info info;
 };
+Logger::Logger Plugin::logject(logging::keywords::channel = "Plugin");
 
 class Manager::impl {
 public:
     impl(Core::Kernel& kernel)
-        : kernel(kernel),
-          logject(logging::keywords::channel = "Plugin::Manager")
+        : kernel(kernel)
     {}
 
-    void loadPlugin(const boost::filesystem::path& filepath) {
-        if(!exists(filepath) && !is_regular_file(filepath)) {
-            BOOST_THROW_EXCEPTION(FileNotFoundException() << ErrorTag::FilePath(absolute(filepath)));
+    void addSearchPath(const boost::filesystem::path& pluginpath) {
+        lock_guard<Mutex> l(mu);
+        if(fs::exists(pluginpath) && fs::is_directory(pluginpath) && pluginpath.is_absolute()) {
+            searchPaths.push_back(pluginpath);
+            searchPaths.sort();
+        }
+        else
+            ERROR_LOG(logject) << pluginpath << " not a directory";
+    }
+
+    void loadPlugin(fs::path filepath) {
+        if(!filepath.is_absolute()) {
+            TRACE_LOG(logject) << "plugin path relative";
+            for(const fs::path& searchpath : searchPaths) {
+                TRACE_LOG(logject) << "Plugin search path: " << searchpath;
+                auto p(fs::absolute(filepath, searchpath));
+                if(fs::exists(p)) {
+                    filepath = p;
+                    break;
+                }
+            }
+        }
+
+        if(!fs::exists(filepath) && !fs::is_regular_file(filepath)) {
+            BOOST_THROW_EXCEPTION(FileNotFoundException() << ErrorTag::FilePath(filepath));
         }
 
         if(filepath.extension() != ".melin") {
-            BOOST_THROW_EXCEPTION(PluginInvalidException() << ErrorTag::FilePath(absolute(filepath)));
+            BOOST_THROW_EXCEPTION(PluginInvalidException() << ErrorTag::FilePath(filepath));
         }
 
         auto filename = filepath.filename().string();
@@ -220,10 +242,11 @@ public:
 private:
     Core::Kernel& kernel;
     std::map<std::string, Plugin> loadedPlugins;
-    Logger::Logger logject;
+    Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
     typedef mutex Mutex;
     Mutex mu;
     bool initialised_ = false;
+    std::list<fs::path> searchPaths;
     friend class Manager;
     friend struct RegisterFuncsInserter;
 };
@@ -246,6 +269,10 @@ void Manager::initialise() {
 
 bool Manager::initialised() const {
     return pimpl->initialised();
+}
+
+void Manager::addSearchPath(const boost::filesystem::path& pluginpath) {
+    pimpl->addSearchPath(pluginpath);
 }
 
 } // namespace Plugin
