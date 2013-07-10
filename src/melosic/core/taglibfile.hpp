@@ -22,13 +22,15 @@
 #include <taglib/fileref.h>
 #include <taglib/taglib.h>
 
+#include <melosic/common/common.hpp>
+
 namespace Melosic {
 using TagLib::ulong;
 namespace IO {
 
 class File;
 
-class TagLibFile : public TagLib::IOStream {
+class MELOSIC_EXPORT TagLibFile : public TagLib::IOStream {
 public:
     explicit TagLibFile(File& file) : file(file) {
         seek(0);

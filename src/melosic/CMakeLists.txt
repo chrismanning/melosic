@@ -11,13 +11,23 @@ SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(.. ${Boost_INCLUDE_DIRS})
 
+add_definitions(-DMELOSIC_EXPORTS)
+
 SET(SRC_LIST main.cpp)
 
+set(CORE_SRC_LIST)
 add_subdirectory(core)
 add_subdirectory(common)
-add_subdirectory(plugins)
-add_subdirectory(gui)
+set(MELIN_SRC_LIST)
 add_subdirectory(melin)
+add_subdirectory(gui)
+add_subdirectory(plugins)
+
+add_library(${PN}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
+target_link_libraries(${PN}lib "-Wl,--whole-archive" melin melosiccore "-Wl,--no-whole-archive")
+if(UNIX)
+ target_link_libraries(${PN}lib dl)
+endif()
 
 add_executable(${PN} ${SRC_LIST})
 
@@ -26,8 +36,4 @@ SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})
 
 include_directories(${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
 
-IF(${UNIX})
-    SET(LINK_LIBS ${LINK_LIBS})
-ENDIF(${UNIX})
-
-target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} qt-gui melin melosiccore ${LINK_LIBS})
+target_link_libraries(${PN} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES} qt-gui ${PN}lib ${LINK_LIBS})

@@ -21,7 +21,6 @@
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/encoder.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
 #include <melosic/melin/thread.hpp>
 #include <melosic/melin/playlist.hpp>
 
@@ -33,15 +32,13 @@ namespace Core {
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
-          slotman(),
-          confman(slotman),
-          outman(slotman),
-          playlistman(slotman, decman)
+          confman(),
+          outman(confman),
+          playlistman(decman)
     {}
 
     Plugin::Manager plugman;
     Thread::Manager tman;
-    Slots::Manager slotman;
     Config::Manager confman;
     Input::Manager inman;
     Decoder::Manager decman;
@@ -77,10 +74,6 @@ Encoder::Manager& Kernel::getEncoderManager() {
 
 Plugin::Manager& Kernel::getPluginManager() {
     return pimpl->plugman;
-}
-
-Slots::Manager& Kernel::getSlotManager() {
-    return pimpl->slotman;
 }
 
 Thread::Manager& Kernel::getThreadManager() {

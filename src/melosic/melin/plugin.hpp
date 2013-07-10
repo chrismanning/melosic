@@ -22,7 +22,6 @@
 #include <condition_variable>
 
 #include <boost/filesystem.hpp>
-using boost::filesystem::absolute;
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/common/range.hpp>
@@ -43,13 +42,20 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_MELIN_EXPORT void loadPlugin(const boost::filesystem::path& filepath);
-    MELOSIC_MELIN_EXPORT void loadPlugins();
+    MELOSIC_EXPORT void addSearchPath(const boost::filesystem::path& pluginpath);
 
-    MELOSIC_MELIN_EXPORT void initialise();
-    MELOSIC_MELIN_EXPORT bool initialised() const;
+    MELOSIC_EXPORT void addSearchPaths(std::initializer_list<boost::filesystem::path> paths) {
+        for(auto&& p : paths)
+            addSearchPath(p);
+    }
 
-    MELOSIC_MELIN_EXPORT ForwardRange<const Info> getPlugins() const;
+    MELOSIC_EXPORT void loadPlugin(const boost::filesystem::path& filepath);
+    MELOSIC_EXPORT void loadPlugins();
+
+    MELOSIC_EXPORT void initialise();
+    MELOSIC_EXPORT bool initialised() const;
+
+    MELOSIC_EXPORT ForwardRange<const Info> getPlugins() const;
 
 private:
     explicit Manager(Core::Kernel& kernel);

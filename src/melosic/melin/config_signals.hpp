@@ -15,22 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_CONFIGVAR_HPP
-#define MELOSIC_CONFIGVAR_HPP
+#ifndef MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
+#define MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
 
-#include <cstdint>
-#include <vector>
-
-#include <boost/variant.hpp>
-#include <boost/serialization/split_free.hpp>
-#include <boost/serialization/vector.hpp>
-
-#include <melosic/common/common.hpp>
+#include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/configvar.hpp>
 
 namespace Melosic {
+
 namespace Config {
-typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>> VarType;
+class Base;
+}
+
+namespace Signals {
+
+namespace Config {
+typedef SignalCore<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
+typedef SignalCore<void(Melosic::Config::Base&)> Loaded;
+}
+
 }
 }
 
-#endif // MELOSIC_CONFIGVAR_HPP
+#endif // MELOSIC_CONFIG_VARIABLE_UPDATED_HPP

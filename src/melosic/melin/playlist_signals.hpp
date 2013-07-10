@@ -15,53 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_CORE_STATEMACHINE_HPP
-#define MELOSIC_CORE_STATEMACHINE_HPP
+#ifndef MELOSIC_PLAYLIST_SIGNALS_HPP
+#define MELOSIC_PLAYLIST_SIGNALS_HPP
 
 #include <memory>
-#include <chrono>
-namespace chrono = std::chrono;
 
-#include <melosic/core/player_signals.hpp>
+#include <melosic/common/signal_fwd.hpp>
 
 namespace Melosic {
 
-namespace Playlist {
-class Manager;
-}
-namespace Output {
-enum class DeviceState;
-class Manager;
-class PlayerSink;
-}
-
 namespace Core {
-
+class Playlist;
 class Track;
+}
 
-struct StateMachine {
-    explicit StateMachine(Melosic::Playlist::Manager&, Output::Manager&);
-    ~StateMachine();
+namespace Signals {
+namespace Playlist {
+typedef SignalCore<void(std::shared_ptr<Core::Playlist>)> PlaylistChanged;
+typedef SignalCore<void(const Core::Track&)> TrackChanged;
+}
+}
+}
 
-    void play();
-    void pause();
-    void stop();
-
-    chrono::milliseconds tell() const;
-
-    Output::DeviceState state() const;
-    Output::PlayerSink& sink();
-
-    void sinkChangeSlot();
-    void trackChangeSlot(const Track& track);
-
-    Signals::Player::StateChanged& stateChangedSignal() const;
-
-    struct impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-} // namespace Core
-} // namespace Melosic
-
-#endif // MELOSIC_CORE_STATEMACHINE_HPP
+#endif // MELOSIC_PLAYLIST_SIGNALS_HPP

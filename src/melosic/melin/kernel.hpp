@@ -42,9 +42,6 @@ class Manager;
 namespace Config {
 class Manager;
 }
-namespace Slots {
-class Manager;
-}
 namespace Thread {
 class Manager;
 }
@@ -54,10 +51,10 @@ class Manager;
 
 namespace Core {
 
-class MELOSIC_MELIN_EXPORT Kernel {
+class MELOSIC_EXPORT Kernel {
 public:
+    MELOSIC_LOCAL Kernel();
 
-    Kernel();
     Kernel(const Kernel&) = delete;
     Kernel& operator=(const Kernel&) = delete;
     Kernel(Kernel&&) = delete;
@@ -71,7 +68,6 @@ public:
     Decoder::Manager& getDecoderManager();
     Output::Manager& getOutputManager();
     Encoder::Manager& getEncoderManager();
-    Slots::Manager& getSlotManager();
     Thread::Manager& getThreadManager();
     Melosic::Playlist::Manager& getPlaylistManager();
 

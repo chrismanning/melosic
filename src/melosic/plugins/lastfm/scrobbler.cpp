@@ -20,31 +20,29 @@
 #include <melosic/melin/output.hpp>
 using Melosic::Output::DeviceState;
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/signal.hpp>
 
 #include "scrobbler.hpp"
 #include "service.hpp"
 
 namespace LastFM {
 
-Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager* slotman) :
+Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
     lastserv(lastserv),
-    slotman(slotman),
     logject(logging::keywords::channel = "LastFM::Scrobbler")
 {
     TRACE_LOG(logject) << "Scrobbling enabled";
-    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
-            .emplace_connect(&Scrobbler::notifySlot, this, ph::_1, ph::_2));
+//    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
+//            .connect(&Scrobbler::notifySlot, this, ph::_1, ph::_2));
     TRACE_LOG(logject) << "Connected notify slot";
-    connections.emplace_back(slotman->get<Melosic::Signals::Player::StateChanged>()
-            .emplace_connect(&Scrobbler::stateChangedSlot, this, ph::_1));
-    TRACE_LOG(logject) << "Connected state changed slot";
-    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::PlaylistChanged>()
-            .emplace_connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
+//    connections.emplace_back(slotman->get<Melosic::Signals::Signal<void(Output::DeviceState)>>()
+//            .connect(&Scrobbler::stateChangedSlot, this, ph::_1));
+//    TRACE_LOG(logject) << "Connected state changed slot";
+//    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::PlaylistChanged>()
+//            .connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected playlist changed slot";
-    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::TrackChanged>()
-            .emplace_connect(&Scrobbler::trackChangedSlot, this, ph::_1));
+//    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::TrackChanged>()
+//            .connect(&Scrobbler::trackChangedSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected track changed slot";
 }
 

@@ -23,7 +23,7 @@ using unique_lock = std::unique_lock<mutex>;
 #include <thread>
 namespace this_thread = std::this_thread;
 
-#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
@@ -35,8 +35,8 @@ namespace this_thread = std::this_thread;
 namespace Melosic {
 namespace Core {
 
-struct StateChanged : Signals::Player::StateChanged {
-    using super::Signal;
+struct StateChanged : Signals::Signal<Signals::Player::StateChanged> {
+    using Super::Signal;
 };
 
 struct State {
@@ -76,8 +76,7 @@ Melosic::Playlist::Manager* State::playman_(nullptr);
 struct Stopped;
 struct Error;
 
-class StateMachine::impl {
-public:
+struct StateMachine::impl {
     explicit impl(Melosic::Playlist::Manager& playman, Output::Manager& outman) :
         playman(playman),
         outman(outman),
@@ -164,11 +163,13 @@ public:
     }
 
     void changeDevice() {
+        TRACE_LOG(logject) << "changeDevice()";
         lock_guard l(sinkWrapper_.mu);
         sinkWrapper_.device = std::move(outman.createPlayerSink());
     }
 
     void sinkChangeSlot() {
+        TRACE_LOG(logject) << "sinkChangeSlot()";
         try {
             unique_lock l(mu);
             auto cs = currentState_;
@@ -258,11 +259,13 @@ public:
     auto changeState() -> decltype(currentState_) {
         static_assert(std::is_base_of<State, S>::value, "Template parameter must be State derived");
 
+        TRACE_LOG(logject) << "changeState(): changing state to " << typeid(S);
         lock_guard l(mu);
 
         auto r(currentState_);
         assert(r);
         currentState_.reset(new S(r->stateChanged));
+        assert(currentState_);
         return std::move(r);
     }
 };
@@ -272,8 +275,11 @@ struct Error;
 
 void State::sinkChange() {
     stateMachine->changeDevice();
-    if(stateMachine->sinkWrapper_)
-        stateMachine->changeState<Stopped>();
+    if(stateMachine->sinkWrapper_) {
+        auto ptr = stateMachine->changeState<Stopped>();
+        assert(ptr == this);
+        assert(stateMachine->state() == Output::DeviceState::Stopped);
+    }
     else
         stateMachine->changeState<Error>();
 }
@@ -312,7 +318,7 @@ struct Error : State {
                 stateMachine->changeState<Stopped>();
         }
         catch(...) {
-            ERROR_LOG(stateMachine->logject) << boost::diagnostic_information(boost::current_exception());
+            ERROR_LOG(stateMachine->logject) << boost::current_exception_diagnostic_information();
         }
     }
 };

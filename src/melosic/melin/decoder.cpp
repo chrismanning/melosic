@@ -18,6 +18,9 @@
 #include <map>
 #include <string>
 
+#include <boost/range/adaptor/map.hpp>
+using namespace boost::adaptors;
+
 #include <taglib/flacfile.h>
 
 #include <melosic/melin/logging.hpp>
@@ -33,7 +36,7 @@ namespace Decoder {
 
 class Manager::impl {
 public:
-    impl() : logject(logging::keywords::channel = "Decoder::Manager") {}
+    impl() {}
 
     void addAudioFormat(Factory fact, const std::string& extension) {
         auto bef = inputFactories.size();
@@ -49,7 +52,7 @@ public:
 
 private:
     std::map<std::string, Factory> inputFactories;
-    Logger::Logger logject;
+    Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
     friend struct FileTypeResolver;
 };
 
@@ -71,6 +74,11 @@ FileTypeResolver::FileTypeResolver(Manager& decman, const boost::filesystem::pat
         decoderFactory = fact->second;
     }
     else {
+        std::clog << "Supported file types (" << inputFactories.size() << "): ";
+        for(const auto& key : inputFactories | map_keys) {
+            std::clog << key << ", ";
+        }
+        std::clog << std::endl;
         decoderFactory = [](decltype(decoderFactory)::argument_type a) -> decltype(decoderFactory)::result_type {
             try {
                 IO::File& b = dynamic_cast<IO::File&>(a);
@@ -103,7 +111,7 @@ std::unique_ptr<Decoder::Playable> FileTypeResolver::getDecoder(IO::File& file) 
 }
 
 std::unique_ptr<TagLib::File> FileTypeResolver::getTagReader(IO::File& file) {
-//    taglibFile.reset(new IO::TagLibFile(file));
+    taglibFile.reset(new IO::TagLibFile(file));
     return std::unique_ptr<TagLib::File>(tagFactory(taglibFile.get()));
 }
 

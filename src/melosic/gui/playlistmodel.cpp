@@ -167,7 +167,8 @@ bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::
     try {
         auto first(std::next(playlist->begin(), beg));
         auto last(playlist->emplace(std::next(playlist->begin(), beg), filenames));
-//        if(std::distance(first, last) < boost::distance(filenames))
+        if(std::distance(first, last) < boost::distance(filenames))
+            r = false;
 //            return false;
     }
     catch(...) {

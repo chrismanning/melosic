@@ -44,10 +44,6 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T&
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& /*fun*/) {
     return *this;
 }
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerSlots_T& fun) {
-    l.push_back(std::bind(fun, &k.getSlotManager()));
-    return *this;
-}
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T& fun) {
     l.push_back(std::bind(fun, &k.getConfigManager()));
     return *this;

@@ -18,10 +18,10 @@
 #ifndef MELOSIC_CONNECTION_HPP
 #define MELOSIC_CONNECTION_HPP
 
-#include <thread>
-#include <mutex>
+#include <functional>
+#include <atomic>
 
-#include <melosic/melin/sigslots/signals_fwd.hpp>
+#include <melosic/common/signal_fwd.hpp>
 
 namespace Melosic {
 namespace Signals {
@@ -36,73 +36,79 @@ struct ConnErasure {
 
 template <typename SigType>
 struct ConnImpl : ConnErasure {
-    ConnImpl(SigType& sig, std::shared_ptr<void> ka)
-        : sig(sig), ka(ka)
-    {}
+    ConnImpl(SigType& sig) : sig(sig), connected(true) {}
 
-    void disconnect(const Connection& conn) {
-        std::unique_lock<Mutex> l(mu);
+    void disconnect(const Connection& conn) override {
         if(connected) {
             connected = false;
-            l.unlock();
             sig.disconnect(conn);
         }
     }
 
-    bool isConnected() {
-        std::lock_guard<Mutex> l(mu);
+    bool isConnected() override {
         return connected;
     }
 
 private:
-    bool connected = true;
     SigType& sig;
-    std::shared_ptr<void> ka;
-    typedef std::mutex Mutex;
-    Mutex mu;
+    std::atomic_bool connected;
 };
 
 struct ConnHash;
 
-struct MELOSIC_MELIN_EXPORT Connection {
+struct Connection {
     Connection() = default;
     Connection(const Connection&) = default;
     Connection& operator=(const Connection&) = default;
     Connection(Connection&&) = default;
     Connection& operator=(Connection&&) = default;
 
-    bool operator==(const Connection&) const;
+    bool operator==(const Connection& b) const {
+        return pimpl == b.pimpl;
+    }
 
     template <typename R, typename ...Args>
-    Connection(Signal<R(Args...)>& sig, std::shared_ptr<void> ptr = nullptr)
-        : pimpl(new ConnImpl<Signal<R(Args...)>>(sig, ptr)) {}
+    Connection(SignalCore<R(Args...)>& sig)
+        : pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
 
-    void disconnect() const;
-    bool isConnected() const;
+    void disconnect() const {
+        pimpl->disconnect(*this);
+    }
+    bool isConnected() const {
+        return pimpl->isConnected();
+    }
 
 private:
-    template <typename,typename...> friend class Signal;
     friend struct ScopedConnection;
     friend struct ConnHash;
     std::shared_ptr<ConnErasure> pimpl;
 };
 
-struct MELOSIC_MELIN_EXPORT ConnHash {
-    size_t operator()(const Connection& conn) const;
+struct ConnHash {
+    size_t operator()(const Connection& conn) const {
+        return std::hash<std::shared_ptr<ConnErasure>>()(conn.pimpl);
+    }
 };
 
-struct MELOSIC_MELIN_EXPORT ScopedConnection : Connection {
+struct ScopedConnection : Connection {
     ScopedConnection() = default;
     ScopedConnection(ScopedConnection&& conn) = default;
     ScopedConnection& operator=(ScopedConnection&& conn) = default;
-    ScopedConnection(const Connection& conn);
-    ScopedConnection(Connection&& conn);
-    ScopedConnection& operator=(Connection&& conn);
+
+    ScopedConnection(const Connection& conn) : Connection(conn) {}
+
+    ScopedConnection(Connection&& conn) : Connection(conn) {}
+    ScopedConnection& operator=(Connection&& conn) {
+        return *this = ScopedConnection(conn);
+    }
 
     ScopedConnection(const ScopedConnection&) = delete;
     ScopedConnection& operator=(const ScopedConnection&) = delete;
 
-    ~ScopedConnection();
+    ~ScopedConnection()  {
+        if(pimpl)
+            disconnect();
+    }
 };
 
 }

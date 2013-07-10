@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,33 +15,43 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SLOTS_HPP
-#define MELOSIC_SLOTS_HPP
-
-#include <memory>
-
-#include <melosic/common/common.hpp>
+#ifndef MELOSIC_PTR_ADAPTOR_HPP
+#define MELOSIC_PTR_ADAPTOR_HPP
 
 namespace Melosic {
-namespace Thread {
-class Manager;
-}
-namespace Slots {
 
-class Manager {
+template <typename T>
+class WeakPtrAdaptor {
 public:
-    Manager();
-    ~Manager();
+    typedef T element_type;
 
-    template <typename T>
-    MELOSIC_MELIN_EXPORT T& get();
+    WeakPtrAdaptor(const std::weak_ptr<T>& ptr) : ptr(ptr) {}
+
+    T* operator->() {
+        return std::shared_ptr<T>(ptr).get();
+    }
+
+    T& operator*() {
+        return *std::shared_ptr<T>(ptr);
+    }
 
 private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
+    std::weak_ptr<T> ptr;
 };
 
-} // namespace Slots
-} // namespace Melosic
+template <typename T>
+struct AdaptIfSmartPtr {
+    typedef T type;
+};
+template <typename T>
+struct AdaptIfSmartPtr<std::shared_ptr<T>> {
+    typedef WeakPtrAdaptor<T> type;
+};
+template <typename T>
+struct AdaptIfSmartPtr<std::weak_ptr<T>> {
+    typedef WeakPtrAdaptor<T> type;
+};
 
-#endif // MELOSIC_SLOTS_HPP
+}
+
+#endif // MELOSIC_PTR_ADAPTOR_HPP

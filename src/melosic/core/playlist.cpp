@@ -36,9 +36,8 @@ using boost::format;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/sigslots/signals_fwd.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/melin/decoder.hpp>
 
 #include "playlist.hpp"
@@ -46,14 +45,20 @@ using boost::format;
 namespace Melosic {
 namespace Core {
 
+static Logger::Logger logject(logging::keywords::channel = "Playlist");
+
+struct TrackChanged : Signals::Signal<Signals::Playlist::TrackChanged> {
+    using Super::Signal;
+};
+
+static TrackChanged trackChanged;
+
 class Playlist::impl {
 public:
-    impl(const std::string& name, Slots::Manager& slotman, Decoder::Manager& decman)
+    impl(const std::string& name, Decoder::Manager& decman)
         : current_track_(begin()),
           name(name),
-          trackChanged(slotman.get<Signals::Playlist::TrackChanged>()),
-          decman(decman),
-          logject(logging::keywords::channel = "Playlist")
+          decman(decman)
     {}
 
     //IO
@@ -85,7 +90,7 @@ public:
     //playlist controls
     chrono::milliseconds duration() {
         return std::accumulate(begin(), end(), chrono::milliseconds(0),
-                               [&](chrono::milliseconds a, Track& b) { return a + b.duration();});
+                               [&](chrono::milliseconds a, Track& b) { return a + b.duration(); });
     }
 
     void previous() {
@@ -291,21 +296,15 @@ public:
         this->name = name;
     }
 
-private:
     Mutex mu;
-    friend struct Block;
     Playlist::list_type tracks;
     Playlist::iterator current_track_;
     std::string name;
-    Signals::Playlist::TrackChanged& trackChanged;
     Decoder::Manager& decman;
-    Logger::Logger logject;
 };
 
-//Logger::Logger Playlist::impl::logject(logging::keywords::channel = "Playlist");
-
-Playlist::Playlist(const std::string& name, Slots::Manager& slotman, Decoder::Manager& decman)
-    : pimpl(new impl(name, slotman, decman)) {}
+Playlist::Playlist(const std::string& name, Decoder::Manager& decman)
+    : pimpl(new impl(name, decman)) {}
 
 Playlist::~Playlist() {}
 
@@ -447,6 +446,10 @@ const std::string& Playlist::getName() const {
 
 void Playlist::setName(const std::string& name) {
     pimpl->setName(name);
+}
+
+Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() {
+    return trackChanged;
 }
 
 } // namespace Core

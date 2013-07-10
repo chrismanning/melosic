@@ -127,13 +127,13 @@ public:
         return std::move(fut);
     }
 
-    MELOSIC_MELIN_EXPORT bool contains(std::thread::id) const;
+    MELOSIC_EXPORT bool contains(std::thread::id) const;
 
 private:
     std::vector<std::thread> threads;
     TaskQueue tasks;
-    std::atomic<bool> done;
-    Logger::Logger logject;
+    std::atomic_bool done;
+    Logger::Logger logject{logging::keywords::channel = "Thread::Manager"};
 };
 
 } // namespace Thread

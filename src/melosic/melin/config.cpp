@@ -15,10 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifdef _POSIX_VERSION
-#include <wordexp.h>
-#endif
-
 #include <functional>
 #include <map>
 #include <thread>
@@ -27,7 +23,7 @@ typedef std::mutex Mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;
 
-#include "configvar.hpp"
+#include <melosic/common/configvar.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/vector.hpp>
@@ -39,12 +35,14 @@ using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-#include <melosic/melin/sigslots/signals_fwd.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
 
 #include "config.hpp"
+
+#ifdef _POSIX_VERSION
+#include <wordexp.h>
+#endif
 
 namespace Melosic {
 static Logger::Logger logject(logging::keywords::channel = "Config");
@@ -52,8 +50,16 @@ namespace Config {
 
 static const boost::filesystem::path ConfFile("melosic.conf");
 
+struct Loaded : Signals::Signal<Signals::Config::Loaded> {
+    using Super::Signal;
+};
+
+struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
+    using Super::Signal;
+};
+
 class Manager::impl {
-    impl(Slots::Manager& slotman) : conf("root"), loaded(slotman.get<Signals::Config::Loaded>()) {
+    impl() : conf("root") {
     #ifdef _POSIX_VERSION
         wordexp_t exp_result;
         wordexp(dirs[UserDir].c_str(), &exp_result, 0);
@@ -105,11 +111,11 @@ class Manager::impl {
 
     fs::path confPath;
     Base conf;
-    Signals::Config::Loaded& loaded;
+    Loaded loaded;
     friend class Manager;
 };
 
-Manager::Manager(Slots::Manager& slotman) : pimpl(new impl(slotman)) {}
+Manager::Manager() : pimpl(new impl) {}
 
 Manager::~Manager() {}
 
@@ -127,6 +133,10 @@ Base& Manager::addConfigTree(const Base& c) {
 
 Base& Manager::getConfigRoot() {
     return pimpl->conf;
+}
+
+Signals::Config::Loaded& Manager::getLoadedSignal() const{
+    return pimpl->loaded;
 }
 
 class Base::impl {
@@ -173,7 +183,7 @@ private:
         ar & nodes;
         ar & name;
     }
-    Signals::Config::VariableUpdated variableUpdated;
+    VariableUpdated variableUpdated;
     std::function<Base&()> resetDefault;
 };
 

@@ -26,7 +26,7 @@ namespace chrono = std::chrono;
 using std::mutex; using std::lock_guard; using std::unique_lock;
 
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/sigslots/connection.hpp>
+#include <melosic/common/connection.hpp>
 #include <melosic/melin/output.hpp>
 
 #include "track.hpp"
@@ -38,9 +38,6 @@ class Track;
 class Playlist;
 }
 
-namespace Slots {
-class Manager;
-}
 }
 
 namespace LastFM {
@@ -50,7 +47,7 @@ struct Method;
 
 class Scrobbler : public std::enable_shared_from_this<Scrobbler> {
 public:
-    Scrobbler(std::shared_ptr<Service> lastserv, Melosic::Slots::Manager* slotman);
+    explicit Scrobbler(std::shared_ptr<Service> lastserv);
 
     std::shared_ptr<Track> currentTrack();
     void updateNowPlaying(std::shared_ptr<Track> track);
@@ -63,7 +60,6 @@ public:
 
 private:
     std::shared_ptr<Service> lastserv;
-    Melosic::Slots::Manager* slotman;
     Melosic::Logger::Logger logject;
     std::shared_ptr<Track> currentTrack_;
     std::list<std::shared_ptr<Track>> cache;

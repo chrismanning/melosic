@@ -29,35 +29,37 @@ using unique_lock = std::unique_lock<mutex>;
 using namespace boost::adaptors;
 
 #include <melosic/core/playlist.hpp>
-#include <melosic/melin/sigslots/slots.hpp>
-#include <melosic/melin/sigslots/signals.hpp>
+#include <melosic/common/signal.hpp>
 #include <melosic/common/string.hpp>
+#include <melosic/melin/playlist_signals.hpp>
 
 #include "playlist.hpp"
 
 namespace Melosic {
 namespace Playlist {
 
+struct PlaylistChanged : Signals::Signal<Signals::Playlist::PlaylistChanged> {
+    using Super::Signal;
+};
+
 class Manager::impl {
 public:
-    impl(Slots::Manager& slotman, Decoder::Manager& decman)
-        : slotman(slotman),
-          decman(decman),
-          playlistChanged(slotman.get<Signals::Playlist::PlaylistChanged>())
+    impl(Decoder::Manager& decman) :
+        decman(decman)
     {}
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, const std::string& name) {
         lock_guard l(mu);
-//        return playlists.insert(pos, std::make_shared<Core::Playlist>(name, slotman, decman));
+        return playlists.insert(pos, std::make_shared<Core::Playlist>(name, decman));
     }
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
         lock_guard l(mu);
         if(count_ == 0)
             return pos;
-//        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
-//            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), slotman, decman));
-//        }
+        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
+            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), decman));
+        }
         return ++pos;
     }
 
@@ -120,19 +122,22 @@ public:
         playlistChanged(p);
     }
 
+    Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() {
+        return playlistChanged;
+    }
+
 private:
     mutex mu;
 
-    Slots::Manager& slotman;
     Decoder::Manager& decman;
-    Signals::Playlist::PlaylistChanged& playlistChanged;
+    PlaylistChanged playlistChanged;
     PlaylistType current;
     Manager::list playlists;
 
     friend class Manager;
 };
 
-Manager::Manager(Slots::Manager& slotman, Decoder::Manager& decman) : pimpl(new impl(slotman, decman)) {}
+Manager::Manager(Decoder::Manager& decman) : pimpl(new impl(decman)) {}
 
 Manager::~Manager() {}
 
@@ -162,6 +167,14 @@ PlaylistType Manager::currentPlaylist() const {
 
 void Manager::setCurrent(PlaylistType p) const {
     pimpl->setCurrent(p);
+}
+
+Signals::Playlist::PlaylistChanged& Manager::getPlaylistChangedSignal() const {
+    return pimpl->getPlaylistChangedSignal();
+}
+
+Signals::Playlist::TrackChanged& Manager::getTrackChangedSignal() const {
+    return Core::Playlist::getTrackChangedSignal();
 }
 
 Manager::Range Manager::range() const {
