@@ -39,7 +39,6 @@ namespace io = boost::iostreams;
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/playlist.hpp>
-#include <melosic/melin/kernel.hpp>
 #include <melosic/core/statemachine.hpp>
 
 #include "player.hpp"

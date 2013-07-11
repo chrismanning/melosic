@@ -29,7 +29,6 @@ using std::unique_lock; using std::lock_guard;
 #include <melosic/common/stream.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
-#include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
