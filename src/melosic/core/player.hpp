@@ -43,7 +43,7 @@ namespace Core {
 
 class Playlist;
 
-class Player {
+class MELOSIC_EXPORT Player {
 public:
     Player(Melosic::Playlist::Manager&, Output::Manager&);
 

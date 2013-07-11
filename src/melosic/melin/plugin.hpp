@@ -44,7 +44,7 @@ public:
 
     MELOSIC_EXPORT void addSearchPath(const boost::filesystem::path& pluginpath);
 
-    MELOSIC_EXPORT void addSearchPaths(std::initializer_list<boost::filesystem::path> paths) {
+    void addSearchPaths(std::initializer_list<boost::filesystem::path> paths) {
         for(auto&& p : paths)
             addSearchPath(p);
     }
