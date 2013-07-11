@@ -53,7 +53,7 @@ namespace Core {
 
 class MELOSIC_EXPORT Kernel {
 public:
-    MELOSIC_LOCAL Kernel();
+    Kernel();
 
     Kernel(const Kernel&) = delete;
     Kernel& operator=(const Kernel&) = delete;

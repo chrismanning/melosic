@@ -10,14 +10,3 @@ SET(MELIN_SRC_LIST ${MELIN_SRC_LIST} ${CMAKE_CURRENT_SOURCE_DIR}/thread.cpp)
 SET(MELIN_SRC_LIST ${MELIN_SRC_LIST} ${CMAKE_CURRENT_SOURCE_DIR}/playlist.cpp)
 SET(MELIN_SRC_LIST ${MELIN_SRC_LIST} ${CMAKE_CURRENT_SOURCE_DIR}/kernel.cpp)
 SET(MELIN_SRC_LIST ${MELIN_SRC_LIST} PARENT_SCOPE)
-
-set(HDR_LIST)
-
-find_package(Boost COMPONENTS filesystem system log log_setup thread serialization REQUIRED)
-
-find_package(OpenSSL REQUIRED)
-
-include_directories(${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIR})
-
-add_library(melin STATIC ${MELIN_SRC_LIST} ${HDR_LIST})
-target_link_libraries(melin ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${TAGLIB_LIBRARIES})
