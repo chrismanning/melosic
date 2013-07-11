@@ -18,7 +18,13 @@ find_package(Boost COMPONENTS serialization REQUIRED)
 
 add_library(${LASTFM} SHARED ${SRC})
 
-target_link_libraries(${LASTFM} melin ${boost_LIBRARIES} cppnetlib-http-client ssl crypto)
+if(WIN32)
+set(LINK_LIBS cppnetlib)
+else()
+set(LINK_LIBS cppnetlib-http-client)
+endif()
+
+target_link_libraries(${LASTFM} melosiclib ${boost_LIBRARIES} ${LINK_LIBS} ssl crypto)
 set_target_properties(${LASTFM} PROPERTIES PREFIX "")
 set_target_properties(${LASTFM} PROPERTIES SUFFIX ".melin")
 include_directories(${Qt5Widgets_INCLUDES} ${Boost_INCLUDE_DIRS})
