@@ -64,7 +64,7 @@ public:
     MELOSIC_EXPORT Base& addConfigTree(const Base&);
     MELOSIC_EXPORT Base& getConfigRoot();
 
-    Signals::Config::Loaded& getLoadedSignal() const;
+    MELOSIC_EXPORT Signals::Config::Loaded& getLoadedSignal() const;
 
 private:
     class impl;
