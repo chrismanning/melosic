@@ -38,22 +38,18 @@ struct SignalCore<Ret (Args...)> {
 
     typedef std::function<Ret(Args...)> Slot;
 
-    SignalCore() : SignalCore(nullptr) {}
-    explicit SignalCore(Thread::Manager* tman) : tman(tman) {}
+    SignalCore() = default;
 
-    SignalCore(SignalCore&& b) : funs(std::move(b.funs)), tman(b.tman) {}
+    SignalCore(SignalCore&& b) : funs(std::move(b.funs)) {}
     SignalCore& operator=(SignalCore&& b) {
         funs = std::move(b.funs);
         return *this;
     }
 
     ~SignalCore() {
-        while(auto s = funs.size()) {
-            funs.begin()->first.disconnect();
-            if(funs.size() != s-1) {
-                funs.clear();
-                break;
-            }
+        while(!funs.empty()) {
+            auto c(funs.begin()->first);
+            c.disconnect();
         }
     }
 
@@ -73,25 +69,26 @@ struct SignalCore<Ret (Args...)> {
         return connect(std::bind(func, static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj), std::forward<A>(args)...));
     }
 
-    void disconnect(const Connection& conn) {
+    bool disconnect(const Connection& conn) {
         TRACE_LOG(logject) << "Disconnecting slot from signal.";
         std::lock_guard<Mutex> l(mu);
         auto s = funs.size();
-        funs.erase(conn);
-        assert(funs.size() == s-1);
+        auto n = funs.erase(conn);
+        return(funs.size() == s-n);
     }
 
 protected:
     template <typename ...A>
     void call(A&& ...args) {
+        static Thread::Manager tman{1};
         std::unique_lock<Mutex> l(mu);
 
         std::list<std::pair<std::future<Ret>, Connection>> futures;
-        for(auto i = funs.begin(); i != funs.end();) {
+        for(auto i(funs.begin()); i != funs.end();) {
             try {
                 l.unlock();
-                if(tman && !tman->contains(std::this_thread::get_id()))
-                    futures.emplace_back(std::move(tman->enqueue(i->second, std::forward<A>(args)...)), i->first);
+                if(!tman.contains(std::this_thread::get_id()))
+                    futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
                 else
                     i->second(std::forward<Args>(args)...);
                 l.lock();
@@ -99,9 +96,9 @@ protected:
             }
             catch(std::bad_weak_ptr&) {
                 TRACE_LOG(logject) << "Removing expired slot.";
-                auto tmp = i;
+                auto tmp(i->first);
                 ++i;
-                tmp->first.disconnect();
+                tmp.disconnect();
                 l.lock();
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
@@ -141,7 +138,6 @@ protected:
 
 private:
     std::unordered_map<Connection, Slot, ConnHash> funs;
-    Thread::Manager* const tman;
 
     typedef std::mutex Mutex;
     Mutex mu;
@@ -149,7 +145,7 @@ private:
 };
 
 template <typename Ret, typename ...Args>
-Logger::Logger SignalCore<Ret (Args...)>::logject(logging::keywords::channel = "Signal");
+Logger::Logger SignalCore<Ret (Args...)>::logject{logging::keywords::channel = "Signal"};
 
 }
 }
