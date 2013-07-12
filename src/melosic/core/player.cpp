@@ -57,7 +57,7 @@ public:
     impl(Melosic::Playlist::Manager& playlistman, Output::Manager& outman) :
         playlistman(playlistman),
         stateMachine(playlistman, outman),
-        end_(false),
+        end(false),
         playerThread(&impl::start, this)
     {
         playlistman.getTrackChangedSignal().connect(&StateMachine::trackChangeSlot,
@@ -68,7 +68,7 @@ public:
     }
 
     ~impl() {
-        end_ = true;
+        end = true;
         if(playerThread.joinable()) {
             TRACE_LOG(logject) << "Closing thread";
             playerThread.join();
@@ -120,15 +120,11 @@ public:
     }
 
 private:
-    bool end() {
-        return end_;
-    }
-
     void start() {
         TRACE_LOG(logject) << "Thread starting";
         std::array<uint8_t,16384> s;
         std::streamsize n = 0;
-        while(!end()) {
+        while(!end) {
             std::shared_ptr<Playlist> playlist;
 
             this_thread::sleep_for(chrono::milliseconds(10));
@@ -211,7 +207,7 @@ private:
     Melosic::Playlist::Manager& playlistman;
     StateMachine stateMachine;
     NotifyPlayPos notifyPlayPosition;
-    std::atomic_bool end_;
+    std::atomic_bool end;
     thread playerThread;
     Logger::Logger logject{logging::keywords::channel = "Player"};
     typedef mutex Mutex;

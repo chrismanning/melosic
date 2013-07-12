@@ -123,12 +123,6 @@ struct StateMachine::impl {
         lock_guard l(mu);
         auto cs = currentState_;
         assert(cs);
-//        l.unlock();
-//        cs
-//        lock_guard l(mu);
-        assert(cs);
-//        assert(currentState_->device());
-//        return currentState_->device()->state();
         return cs->state();
     }
 

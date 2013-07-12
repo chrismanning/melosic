@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
 
         plugman.addSearchPaths({fs::canonical("../bin"), fs::canonical("../lib")});
         plugman.loadPlugin("flac.melin");
-#if 0//linux only
+#if __linux
         plugman.loadPlugin("alsa.melin");
 #endif
         plugman.loadPlugin("lastfm.melin");
