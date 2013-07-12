@@ -18,6 +18,7 @@
 #ifndef MELOSIC_CONNECTION_HPP
 #define MELOSIC_CONNECTION_HPP
 
+#include <memory>
 #include <functional>
 #include <atomic>
 
@@ -30,7 +31,7 @@ struct Connection;
 
 struct ConnErasure {
     virtual ~ConnErasure() {}
-    virtual void disconnect(const Connection&) = 0;
+    virtual void disconnect(Connection&) = 0;
     virtual bool isConnected() = 0;
 };
 
@@ -38,11 +39,9 @@ template <typename SigType>
 struct ConnImpl : ConnErasure {
     ConnImpl(SigType& sig) : sig(sig), connected(true) {}
 
-    void disconnect(const Connection& conn) override {
-        if(connected) {
-            connected = false;
-            sig.disconnect(conn);
-        }
+    void disconnect(Connection& conn) override {
+        if(connected)
+            connected = !sig.disconnect(conn);
     }
 
     bool isConnected() override {
@@ -71,15 +70,17 @@ struct Connection {
     Connection(SignalCore<R(Args...)>& sig)
         : pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
 
-    void disconnect() const {
-        pimpl->disconnect(*this);
+    void disconnect() {
+        if(pimpl)
+            pimpl->disconnect(*this);
     }
     bool isConnected() const {
-        return pimpl->isConnected();
+        if(pimpl)
+            return pimpl->isConnected();
+        return false;
     }
 
 private:
-    friend struct ScopedConnection;
     friend struct ConnHash;
     std::shared_ptr<ConnErasure> pimpl;
 };
@@ -106,8 +107,8 @@ struct ScopedConnection : Connection {
     ScopedConnection& operator=(const ScopedConnection&) = delete;
 
     ~ScopedConnection()  {
-        if(pimpl)
-            disconnect();
+        disconnect();
+        assert(!isConnected());
     }
 };
 
