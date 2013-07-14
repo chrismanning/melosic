@@ -31,7 +31,7 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 #include <melosic/common/string.hpp>
 using namespace Melosic::Literals;
 

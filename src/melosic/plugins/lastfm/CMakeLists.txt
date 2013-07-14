@@ -14,8 +14,6 @@ SET(SRC ${SRC} artist.cpp)
 SET(SRC ${SRC} track.cpp)
 SET(SRC ${SRC} biography.cpp)
 
-find_package(Boost COMPONENTS serialization REQUIRED)
-
 add_library(${LASTFM} SHARED ${SRC})
 
 if(WIN32)

@@ -15,36 +15,21 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SIGNALS_HPP
-#define MELOSIC_SIGNALS_HPP
+#ifndef MELOSIC_TYPEID_HPP
+#define MELOSIC_TYPEID_HPP
 
-#include <memory>
-#include <type_traits>
+#include <ostream>
+#include <typeinfo>
 
-#include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/signal_core.hpp>
-
-namespace Melosic {
-namespace Signals {
-
-template <typename Ret, typename ...Args>
-struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
-    using SignalCore<Ret (Args...)>::SignalCore;
-
-    template <typename ...A>
-    inline std::future<void> operator()(A&& ...args) {
-        static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
-        return Super::call(std::forward<A>(args)...);
+namespace std {
+inline std::ostream& operator<<(std::ostream& strm, const std::type_info& t) {
+    const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
+    if(str) {
+        strm << str;
+        ::free(str);
     }
+    return strm;
+}
+} //std
 
-protected:
-    typedef Signal<Ret (Args...)> Super;
-};
-
-template <typename Ret, typename ...Args>
-struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {};
-
-} // namespace Signals
-} // namespace Melosic
-
-#endif // MELOSIC_SIGNALS_HPP
+#endif // MELOSIC_TYPEID_HPP

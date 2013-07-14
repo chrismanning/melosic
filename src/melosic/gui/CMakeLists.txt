@@ -6,8 +6,6 @@ FIND_PACKAGE(Qt5Test REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Boost REQUIRED)
-
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} mainwindow.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} playlistmodel.cpp)
 

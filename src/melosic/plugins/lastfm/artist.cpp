@@ -27,7 +27,7 @@ using namespace boost::property_tree::xml_parser;
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex; using boost::shared_lock_guard;
 
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 
 #include "artist.hpp"
 #include "service.hpp"

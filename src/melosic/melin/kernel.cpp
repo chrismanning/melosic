@@ -21,7 +21,7 @@
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/encoder.hpp>
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 #include <melosic/melin/playlist.hpp>
 
 #include "kernel.hpp"
