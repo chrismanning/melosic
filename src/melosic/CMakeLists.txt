@@ -1,15 +1,5 @@
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5Qml REQUIRED)
-SET(PN ${PROJECT_NAME})
-
-find_package(Boost COMPONENTS filesystem iostreams system log log_setup thread serialization REQUIRED)
-
-add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
-
-find_package(Taglib REQUIRED)
-SET(TAGLIB_MIN_VERSION "1.8")
-
-include_directories(.. ${Boost_INCLUDE_DIRS})
 
 add_definitions(-DMELOSIC_EXPORTS)
 

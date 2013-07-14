@@ -1,6 +1,5 @@
 set(ALSA alsa)
 find_package(ALSA REQUIRED)
-find_package(Boost COMPONENTS thread REQUIRED)
 add_library(${ALSA} SHARED alsa.cpp)
 target_link_libraries(${ALSA} ${ALSA_LIBRARIES} ${Boost_LIBRARIES} melosiclib)
 set_target_properties(${ALSA} PROPERTIES PREFIX "")

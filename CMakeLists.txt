@@ -41,7 +41,27 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
+find_package(Boost COMPONENTS filesystem iostreams system log log_setup thread serialization REQUIRED)
+
+add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
+
+find_package(Taglib REQUIRED)
+SET(TAGLIB_MIN_VERSION "1.8")
+
+include_directories(src ${Boost_INCLUDE_DIRS})
+
+SET(PN ${PROJECT_NAME})
+#test stuff
+enable_testing()
+function(cxx_test test_name)
+  add_executable(${test_name} ${test_name}.cpp)
+  target_link_libraries(${test_name} gtest gtest_main ${Boost_LIBRARIES} ${PN}lib)
+  add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+endfunction()
+
+include_directories(extern/gtest/include)
+include_directories(extern/gmock/include)
+
 add_subdirectory(src/melosic)
 
-enable_testing()
 add_subdirectory(test)

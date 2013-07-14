@@ -42,7 +42,7 @@ static constexpr Plugin::Info flacInfo("FLAC",
                                    Plugin::Type::decode,
                                    {1,0,0});
 
-#define FLAC_THROW_IF(Exc, cond, flacptr) if(!cond) {\
+#define FLAC_THROW_IF(Exc, cond, flacptr) if(!(cond)) {\
     BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Plugin::Info(::flacInfo)\
                                 << ErrorTag::DecodeErrStr(flacptr->get_state().as_cstring()));\
 }

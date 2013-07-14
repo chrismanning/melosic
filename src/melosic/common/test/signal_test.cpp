@@ -15,36 +15,32 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SIGNALS_HPP
-#define MELOSIC_SIGNALS_HPP
+#include <gtest/gtest.h>
 
-#include <memory>
-#include <type_traits>
+#include <melosic/common/signal.hpp>
 
-#include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/signal_core.hpp>
+typedef Melosic::Signals::Signal<void(int)> SignalType;
 
-namespace Melosic {
-namespace Signals {
-
-template <typename Ret, typename ...Args>
-struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
-    using SignalCore<Ret (Args...)>::SignalCore;
-
-    template <typename ...A>
-    inline std::future<void> operator()(A&& ...args) {
-        static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
-        return Super::call(std::forward<A>(args)...);
-    }
-
+struct SignalTest : ::testing::Test {
 protected:
-    typedef Signal<Ret (Args...)> Super;
+    SignalType s1;
+    std::mutex mu;
+    std::chrono::milliseconds defaultTimeout{500};
 };
 
-template <typename Ret, typename ...Args>
-struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {};
+TEST_F(SignalTest, SignalConnectTest) {
+    s1.connect([] (int) {});
+    ASSERT_EQ(s1.slotCount(), 1) << "Slot not added";
+}
 
-} // namespace Signals
-} // namespace Melosic
-
-#endif // MELOSIC_SIGNALS_HPP
+TEST_F(SignalTest, SignalCallTest) {
+    int a = 5, b = 12;
+    s1.connect([&] (int s) { a *= s; });
+    s1.connect([&] (int s) { b *= s; });
+    auto scalar(3);
+    auto f(s1(scalar));
+    auto r = f.wait_for(defaultTimeout);
+    ASSERT_EQ(r, std::future_status::ready) << "Signal call deferred or timed-out";
+    ASSERT_EQ(a, 5*scalar) << "First slot not called";
+    ASSERT_EQ(b, 12*scalar) << "Second slot not called";
+}

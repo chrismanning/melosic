@@ -21,7 +21,7 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/connection.hpp>
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 using namespace Melosic;
 
 #include <boost/variant.hpp>

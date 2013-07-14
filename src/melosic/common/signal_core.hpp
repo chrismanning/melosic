@@ -24,9 +24,10 @@
 #include <functional>
 namespace ph = std::placeholders;
 
+#include <boost/utility/result_of.hpp>
+
 #include <melosic/common/signal_fwd.hpp>
-#include <melosic/melin/thread.hpp>
-#include <melosic/melin/logging.hpp>
+#include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
 #include <melosic/common/connection.hpp>
 
@@ -54,7 +55,6 @@ struct SignalCore<Ret (Args...)> {
     }
 
     Connection connect(const Slot& slot) {
-        TRACE_LOG(logject) << "Connecting slot to signal.";
         std::lock_guard<Mutex> l(mu);
         return funs.emplace(std::make_pair(std::move(Connection(*this)), slot)).first->first;
     }
@@ -65,24 +65,28 @@ struct SignalCore<Ret (Args...)> {
         static_assert(std::is_same<typename boost::result_of<Fun(typename std::pointer_traits<Obj>::pointer,
                                                                  A&&...)>::type, Ret>::value,
                       "Slot must return correct type");
-        TRACE_LOG(logject) << "connect: obj type: " << typeid(typename AdaptIfSmartPtr<Obj>::type);
         return connect(std::bind(func, static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj), std::forward<A>(args)...));
     }
 
     bool disconnect(const Connection& conn) {
-        TRACE_LOG(logject) << "Disconnecting slot from signal.";
         std::lock_guard<Mutex> l(mu);
         auto s = funs.size();
         auto n = funs.erase(conn);
         return(funs.size() == s-n);
     }
 
+    size_t slotCount() const {
+        return funs.size();
+    }
+
 protected:
     template <typename ...A>
-    void call(A&& ...args) {
+    std::future<void> call(A&& ...args) {
         static Thread::Manager tman{1};
-        std::unique_lock<Mutex> l(mu);
+        std::unique_lock<Mutex> l{mu};
 
+        std::promise<void> promise;
+        auto ret(promise.get_future());
         std::list<std::pair<std::future<Ret>, Connection>> futures;
         for(auto i(funs.begin()); i != funs.end();) {
             try {
@@ -95,7 +99,6 @@ protected:
                 ++i;
             }
             catch(std::bad_weak_ptr&) {
-                TRACE_LOG(logject) << "Removing expired slot.";
                 auto tmp(i->first);
                 ++i;
                 tmp.disconnect();
@@ -104,12 +107,10 @@ protected:
                     i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
             }
             catch(boost::exception& e) {
-                ERROR_LOG(logject) << boost::diagnostic_information(e);
                 l.lock();
                 ++i;
             }
             catch(...) {
-                ERROR_LOG(logject) << "Exception caught in signal";
                 l.lock();
                 ++i;
             }
@@ -121,19 +122,18 @@ protected:
                 l.lock();
             }
             catch(std::bad_weak_ptr&) {
-                TRACE_LOG(logject) << "Removing expired slot.";
                 l.lock();
                 funs.erase(f.second);
             }
             catch(boost::exception& e) {
-                ERROR_LOG(logject) << boost::diagnostic_information(e);
                 l.lock();
             }
             catch(std::exception& e) {
-                ERROR_LOG(logject) << "Exception caught in signal: " << e.what();
                 l.lock();
             }
         }
+        promise.set_value();
+        return std::move(ret);
     }
 
 private:
@@ -141,11 +141,7 @@ private:
 
     typedef std::mutex Mutex;
     Mutex mu;
-    static Logger::Logger logject;
 };
-
-template <typename Ret, typename ...Args>
-Logger::Logger SignalCore<Ret (Args...)>::logject{logging::keywords::channel = "Signal"};
 
 }
 }

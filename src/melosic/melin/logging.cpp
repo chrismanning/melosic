@@ -50,14 +50,3 @@ void init() {
 }
 }
 }
-
-namespace std {
-std::ostream& operator<<(std::ostream& strm, const std::type_info& t) {
-    const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
-    if(str) {
-        strm << str;
-        ::free(str);
-    }
-    return strm;
-}
-}

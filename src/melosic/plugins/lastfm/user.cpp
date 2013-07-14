@@ -30,7 +30,7 @@ using namespace boost::property_tree::xml_parser;
 
 #include <network/uri.hpp>
 
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 #include <melosic/melin/logging.hpp>
 
 #include "user.hpp"

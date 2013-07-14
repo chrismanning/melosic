@@ -30,6 +30,7 @@ namespace attrs = logging::attributes;
 namespace keywords = logging::keywords;
 
 #include <melosic/common/common.hpp>
+#include <melosic/common/typeid.hpp>
 
 namespace Melosic {
 
@@ -103,9 +104,5 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 #define CHAN_DEBUG_LOG(lg) Melosic::Logger::nullstream()
 #define CHAN_TRACE_LOG(lg) Melosic::Logger::nullstream()
 #endif //MELOSIC_DISABLE_LOGGING
-
-namespace std {
-MELOSIC_EXPORT std::ostream& operator<<(std::ostream& strm, const std::type_info& t);
-}
 
 #endif // MELOSIC_LOGGING_HPP

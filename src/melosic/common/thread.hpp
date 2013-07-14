@@ -27,7 +27,6 @@
 #include <boost/lockfree/queue.hpp>
 
 #include <melosic/common/error.hpp>
-#include <melosic/melin/logging.hpp>
 #include <melosic/common/common.hpp>
 
 namespace Melosic {
@@ -104,14 +103,39 @@ using TaskQueue = boost::lockfree::queue<Task>;
 
 class Manager {
 public:
-    explicit Manager(const unsigned n = std::thread::hardware_concurrency() + 1);
+    explicit Manager(const unsigned n = std::thread::hardware_concurrency() + 1) :
+        tasks(10),
+        done(false)
+    {
+        assert(n > 0);
+        auto f = [&](boost::lockfree::queue<Task>& tasks) {
+            while(!done) {
+                Task t;
+                if(tasks.pop(t)) {
+                    t();
+                    t.destroy();
+                }
+                else {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    std::this_thread::yield();
+                }
+            }
+        };
+
+        for(unsigned i=0; i<n; i++)
+            threads.emplace_back(f, std::ref(tasks));
+    }
 
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
     Manager(Manager&&) = delete;
     Manager& operator=(Manager&&) = delete;
 
-    ~Manager();
+    ~Manager() {
+        done = true;
+        for(auto& t : threads)
+            t.join();
+    }
 
     template <typename Func, typename ...Args>
     std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
@@ -127,13 +151,18 @@ public:
         return std::move(fut);
     }
 
-    MELOSIC_EXPORT bool contains(std::thread::id) const;
+    bool contains(std::thread::id id) const {
+        for(auto&& t : threads)
+            if(t.get_id() == id)
+                return true;
+
+        return false;
+    }
 
 private:
     std::vector<std::thread> threads;
     TaskQueue tasks;
     std::atomic_bool done;
-    Logger::Logger logject{logging::keywords::channel = "Thread::Manager"};
 };
 
 } // namespace Thread

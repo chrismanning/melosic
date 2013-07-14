@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 
 #include "biography.hpp"
 #include "service.hpp"

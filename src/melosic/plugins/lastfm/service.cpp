@@ -44,7 +44,7 @@ using boost::algorithm::hex;
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/common/error.hpp>
-#include <melosic/melin/thread.hpp>
+#include <melosic/common/thread.hpp>
 
 #include "service.hpp"
 #include "track.hpp"
