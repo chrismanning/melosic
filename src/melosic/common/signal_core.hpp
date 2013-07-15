@@ -59,13 +59,24 @@ struct SignalCore<Ret (Args...)> {
         return funs.emplace(std::make_pair(std::move(Connection(*this)), slot)).first->first;
     }
 
-    template <typename Fun, typename Obj, typename ...A>
+    template <typename Fun, typename Obj,
+              class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type,
+              typename ...A>
+    Connection connect(Fun func, Obj* obj, A&&... args) {
+        return connect(std::bind(func, obj, std::forward<A>(args)...));
+    }
+
+    template <typename Fun, typename Obj,
+              class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type,
+              class = typename std::enable_if<isStdPtr<Obj>::value>::type,
+              typename ...A>
     Connection connect(Fun func, Obj obj, A&&... args) {
-        static_assert(std::is_member_function_pointer<Fun>::value, "connect is for member functions");
-        static_assert(std::is_same<typename boost::result_of<Fun(typename std::pointer_traits<Obj>::pointer,
-                                                                 A&&...)>::type, Ret>::value,
-                      "Slot must return correct type");
-        return connect(std::bind(func, static_cast<typename AdaptIfSmartPtr<Obj>::type>(obj), std::forward<A>(args)...));
+        return connect(std::bind(func, bindWeakPtr(obj), std::forward<A>(args)...));
+    }
+
+    template <typename Fun, typename Obj, typename ...A>
+    Connection connect(Fun func, A&&... args) {
+        return connect(std::bind(func, std::forward<A>(args)...));
     }
 
     bool disconnect(const Connection& conn) {
@@ -88,6 +99,9 @@ protected:
         std::promise<void> promise;
         auto ret(promise.get_future());
         std::list<std::pair<std::future<Ret>, Connection>> futures;
+
+        std::exception_ptr eptr;
+
         for(auto i(funs.begin()); i != funs.end();) {
             try {
                 l.unlock();
@@ -106,11 +120,8 @@ protected:
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
             }
-            catch(boost::exception& e) {
-                l.lock();
-                ++i;
-            }
             catch(...) {
+                eptr = std::current_exception();
                 l.lock();
                 ++i;
             }
@@ -118,21 +129,25 @@ protected:
         for(auto&& f : futures) {
             try {
                 l.unlock();
+                std::clog << "getting results..." << std::endl;
                 f.first.get();
                 l.lock();
             }
             catch(std::bad_weak_ptr&) {
-                l.lock();
-                funs.erase(f.second);
+                std::clog << "std::bad_weak_ptr: should disconnect slot" << std::endl;
+                f.second.disconnect();
             }
-            catch(boost::exception& e) {
-                l.lock();
-            }
-            catch(std::exception& e) {
+            catch(...) {
+                eptr = std::current_exception();
                 l.lock();
             }
         }
-        promise.set_value();
+
+        if(eptr)
+            promise.set_exception(eptr);
+        else
+            promise.set_value();
+
         return std::move(ret);
     }
 

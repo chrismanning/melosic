@@ -18,40 +18,39 @@
 #ifndef MELOSIC_PTR_ADAPTOR_HPP
 #define MELOSIC_PTR_ADAPTOR_HPP
 
+#include <memory>
+
 namespace Melosic {
 
 template <typename T>
-class WeakPtrAdaptor {
-public:
-    typedef T element_type;
+struct isStdPtr : std::false_type {};
+template <typename T>
+struct isStdPtr<std::shared_ptr<T>> : std::true_type {};
+template <typename T>
+struct isStdPtr<std::weak_ptr<T>> : std::true_type {};
 
-    WeakPtrAdaptor(const std::weak_ptr<T>& ptr) : ptr(ptr) {}
-
-    T* operator->() {
-        return std::shared_ptr<T>(ptr).get();
+template <typename T>
+struct WeakPtrBind {
+    typedef T* result_type;
+    T* operator()(const std::weak_ptr<T>& ptr) {
+        //libstdc++ doesn't throw when it should
+        auto sptr = ptr.lock();
+        if(sptr)
+            return sptr.get();
+        throw std::bad_weak_ptr();
     }
-
-    T& operator*() {
-        return *std::shared_ptr<T>(ptr);
-    }
-
-private:
-    std::weak_ptr<T> ptr;
 };
 
+template <template<class> class Ptr, typename T>
+auto bindWeakPtr(Ptr<T> ptr) {
+    return std::bind(WeakPtrBind<T>(), std::weak_ptr<T>(ptr));
+}
+
+}// Melosic
+
+namespace std {
 template <typename T>
-struct AdaptIfSmartPtr {
-    typedef T type;
-};
-template <typename T>
-struct AdaptIfSmartPtr<std::shared_ptr<T>> {
-    typedef WeakPtrAdaptor<T> type;
-};
-template <typename T>
-struct AdaptIfSmartPtr<std::weak_ptr<T>> {
-    typedef WeakPtrAdaptor<T> type;
-};
-
+struct is_bind_expression<Melosic::WeakPtrBind<T>> : public true_type {};
 }
 
 #endif // MELOSIC_PTR_ADAPTOR_HPP
