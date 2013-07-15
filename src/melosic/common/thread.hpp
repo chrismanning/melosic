@@ -41,12 +41,13 @@ private:
 
     template <typename Func>
     struct impl : impl_base {
+        static_assert(std::is_bind_expression<Func>::value, "Func should be a bind expression");
         typedef typename std::result_of<Func()>::type Result;
         impl(std::promise<Result>&& p, Func&& f) : p(std::move(p)), f(std::move(f)) {}
 
         void call() {
             try {
-                call_impl<typename std::result_of<Func()>::type>::call(*this);
+                call_impl<Result>::call(*this);
             }
             catch(...) {
                 p.set_exception(std::current_exception());
@@ -84,8 +85,8 @@ public:
     }
 
     template <typename Func, typename ...Args>
-    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, Func&& f, Args&&... args) {
-        auto fun = std::bind(std::forward<Func>(f), std::forward<Args>(args)...);
+    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, const Func& f, Args&&... args) {
+        auto fun = std::bind(f, std::forward<Args>(args)...);
         pimpl = new impl<decltype(fun)>(std::move(p), std::move(fun));
     }
 
@@ -138,14 +139,14 @@ public:
     }
 
     template <typename Func, typename ...Args>
-    std::future<typename std::result_of<Func(Args...)>::type> enqueue(Func&& f, Args&&... args) {
+    std::future<typename std::result_of<Func(Args...)>::type> enqueue(const Func& f, Args&&... args) {
         std::promise<typename std::result_of<Func(Args...)>::type> p;
 
         auto fut(p.get_future());
 
-        Task t(std::move(p), std::move(f), std::forward<Args>(args)...);
+        Task t(std::move(p), f, std::forward<Args>(args)...);
         if(!tasks.bounded_push(t)) {
-            BOOST_THROW_EXCEPTION(Exception());
+            p.set_exception(std::make_exception_ptr(Exception()));
         }
 
         return std::move(fut);
