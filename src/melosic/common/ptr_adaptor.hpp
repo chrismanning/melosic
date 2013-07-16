@@ -19,21 +19,43 @@
 #define MELOSIC_PTR_ADAPTOR_HPP
 
 #include <memory>
+#include <functional>
+
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <boost/smart_ptr/weak_ptr.hpp>
 
 namespace Melosic {
 
 template <typename T>
-struct isStdPtr : std::false_type {};
+struct isSharedPtr : std::false_type {};
 template <typename T>
-struct isStdPtr<std::shared_ptr<T>> : std::true_type {};
+struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
 template <typename T>
-struct isStdPtr<std::weak_ptr<T>> : std::true_type {};
+struct isSharedPtr<boost::shared_ptr<T>> : std::true_type {};
+
+template <typename T>
+struct isWeakPtr : std::false_type {};
+template <typename T>
+struct isWeakPtr<std::weak_ptr<T>> : std::true_type {};
+template <typename T>
+struct isWeakPtr<boost::weak_ptr<T>> : std::true_type {};
 
 template <typename T>
 struct WeakPtrBind {
     typedef T* result_type;
-    T* operator()(const std::weak_ptr<T>& ptr) {
-        return std::shared_ptr<T>(ptr).get();
+
+    template <template<class> class Ptr>
+    T* operator()(const Ptr<T>& ptr) {
+        static_assert(isWeakPtr<Ptr<T>>::value, "WeakPtrBind is for binding weak pointers ONLY");
+        return call_impl(ptr);
+    }
+
+private:
+    template <template<class> class WeakPtr>
+    inline T* call_impl(const WeakPtr<T>& ptr) {
+        if(ptr.expired())
+            throw std::bad_weak_ptr();
+        return ptr.lock().get();
     }
 };
 
@@ -45,9 +67,19 @@ auto bindWeakPtr(T ptr) {
     return ptr;
 }
 
-template <template<class> class Ptr, typename T, class = typename std::enable_if<isStdPtr<Ptr<T>>::value>::type>
-auto bindWeakPtr(Ptr<T> ptr) {
-    return std::bind(WeakPtrBind<T>(), std::weak_ptr<T>(ptr));
+template <template<class> class Ptr, typename T, class = typename std::enable_if<isWeakPtr<Ptr<T>>::value>::type>
+auto bindWeakPtr(const Ptr<T>& ptr) {
+    return std::bind(WeakPtrBind<T>(), ptr);
+}
+
+template <typename T>
+auto bindWeakPtr(boost::shared_ptr<T> ptr) {
+    return bindWeakPtr(boost::weak_ptr<T>(ptr));
+}
+
+template <typename T>
+auto bindWeakPtr(std::shared_ptr<T> ptr) {
+    return bindWeakPtr(std::weak_ptr<T>(ptr));
 }
 
 }// Melosic

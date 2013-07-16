@@ -17,6 +17,8 @@
 
 #include <memory>
 
+#include <boost/smart_ptr/make_shared.hpp>
+
 #include <gtest/gtest.h>
 
 #include <melosic/common/ptr_adaptor.hpp>
@@ -94,6 +96,45 @@ TEST_F(SignalTest, WeakPtrAdaptorBindTest) {
 TEST_F(SignalTest, SignalSharedBindTest) {
     ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
     auto s(std::make_shared<S>());
+
+    auto c = sig1.connect(&S::fun, s, ph::_1);
+
+    int i{37};
+    auto f(sig1(i));
+    auto r(f.wait_for(defaultTimeout));
+    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
+    EXPECT_EQ(i, s->m_a) << "Slot call failed";
+
+    s.reset();
+    i = 81;
+    f = sig1(i);
+    r = f.wait_for(defaultTimeout);
+    EXPECT_NO_THROW(f.get()) << "std::function threw";
+    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
+    EXPECT_EQ(0, sig1.slotCount()) << "Slot wasn't disconnected when expired";
+}
+
+TEST_F(SignalTest, BoostWeakPtrAdaptorTest) {
+    auto s(boost::make_shared<S>());
+    auto fun = Melosic::bindWeakPtr(s);
+    EXPECT_NO_THROW(fun()) << "Ptr should be good";
+
+    s.reset();
+    EXPECT_THROW(fun(), std::bad_weak_ptr) << "Ptr should be bad";
+}
+
+TEST_F(SignalTest, BoostWeakPtrAdaptorBindTest) {
+    auto s(boost::make_shared<S>());
+
+    auto mf = std::bind(&S::fun, Melosic::bindWeakPtr(s), ph::_1);
+    EXPECT_NO_THROW(mf(2)) << "Ptr should be good";
+    s.reset();
+    EXPECT_THROW(mf(2), std::bad_weak_ptr) << "Ptr should be bad";
+}
+
+TEST_F(SignalTest, BoostSignalSharedBindTest) {
+    ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
+    auto s(boost::make_shared<S>());
 
     auto c = sig1.connect(&S::fun, s, ph::_1);
 
