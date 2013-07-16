@@ -60,26 +60,40 @@ private:
 };
 
 template <typename>
-void bindWeakPtr();
+void bindObj();
 
-template <typename T, class = typename std::enable_if<std::is_pointer<T>::value>::type>
-auto bindWeakPtr(T ptr) {
+template <typename T>
+auto bindObj(T& obj) {
+    static_assert(std::is_class<typename std::decay<T>::type>::value,
+                  "bindObj must be called with a class object");
+    return std::ref(obj);
+}
+
+template <typename T>
+auto bindObj(std::reference_wrapper<T> obj) {
+    static_assert(std::is_class<typename std::decay<T>::type>::value,
+                  "bindObj must be called with a class object");
+    return obj;
+}
+
+template <typename T>
+T* bindObj(T* ptr) {
     return ptr;
 }
 
 template <template<class> class Ptr, typename T, class = typename std::enable_if<isWeakPtr<Ptr<T>>::value>::type>
-auto bindWeakPtr(const Ptr<T>& ptr) {
+auto bindObj(const Ptr<T>& ptr) {
     return std::bind(WeakPtrBind<T>(), ptr);
 }
 
 template <typename T>
-auto bindWeakPtr(boost::shared_ptr<T> ptr) {
-    return bindWeakPtr(boost::weak_ptr<T>(ptr));
+auto bindObj(boost::shared_ptr<T> ptr) {
+    return bindObj(boost::weak_ptr<T>(ptr));
 }
 
 template <typename T>
-auto bindWeakPtr(std::shared_ptr<T> ptr) {
-    return bindWeakPtr(std::weak_ptr<T>(ptr));
+auto bindObj(std::shared_ptr<T> ptr) {
+    return bindObj(std::weak_ptr<T>(ptr));
 }
 
 }// Melosic

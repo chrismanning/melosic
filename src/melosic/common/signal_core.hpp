@@ -62,8 +62,8 @@ struct SignalCore<Ret (Args...)> {
     template <typename Fun, typename Obj,
               class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type,
               typename ...A>
-    Connection connect(Fun func, Obj obj, A&&... args) {
-        return connect(std::bind(func, bindWeakPtr(obj), std::forward<A>(args)...));
+    Connection connect(Fun func, Obj&& obj, A&&... args) {
+        return connect(std::bind(func, bindObj(std::forward<Obj>(obj)), std::forward<A>(args)...));
     }
 
     template <typename Fun, typename Obj, typename ...A>

@@ -77,7 +77,7 @@ TEST_F(SignalTest, SignalBindTest) {
 
 TEST_F(SignalTest, WeakPtrAdaptorTest) {
     auto s(std::make_shared<S>());
-    auto fun = Melosic::bindWeakPtr(s);
+    auto fun = Melosic::bindObj(s);
     EXPECT_NO_THROW(fun()) << "Ptr should be good";
 
     s.reset();
@@ -87,7 +87,7 @@ TEST_F(SignalTest, WeakPtrAdaptorTest) {
 TEST_F(SignalTest, WeakPtrAdaptorBindTest) {
     auto s(std::make_shared<S>());
 
-    auto mf = std::bind(&S::fun, Melosic::bindWeakPtr(s), ph::_1);
+    auto mf = std::bind(&S::fun, Melosic::bindObj(s), ph::_1);
     EXPECT_NO_THROW(mf(2)) << "Ptr should be good";
     s.reset();
     EXPECT_THROW(mf(2), std::bad_weak_ptr) << "Ptr should be bad";
@@ -116,7 +116,7 @@ TEST_F(SignalTest, SignalSharedBindTest) {
 
 TEST_F(SignalTest, BoostWeakPtrAdaptorTest) {
     auto s(boost::make_shared<S>());
-    auto fun = Melosic::bindWeakPtr(s);
+    auto fun = Melosic::bindObj(s);
     EXPECT_NO_THROW(fun()) << "Ptr should be good";
 
     s.reset();
@@ -126,7 +126,7 @@ TEST_F(SignalTest, BoostWeakPtrAdaptorTest) {
 TEST_F(SignalTest, BoostWeakPtrAdaptorBindTest) {
     auto s(boost::make_shared<S>());
 
-    auto mf = std::bind(&S::fun, Melosic::bindWeakPtr(s), ph::_1);
+    auto mf = std::bind(&S::fun, Melosic::bindObj(s), ph::_1);
     EXPECT_NO_THROW(mf(2)) << "Ptr should be good";
     s.reset();
     EXPECT_THROW(mf(2), std::bad_weak_ptr) << "Ptr should be bad";
@@ -151,4 +151,18 @@ TEST_F(SignalTest, BoostSignalSharedBindTest) {
     EXPECT_NO_THROW(f.get()) << "std::function threw";
     ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
     EXPECT_EQ(0, sig1.slotCount()) << "Slot wasn't disconnected when expired";
+}
+
+TEST_F(SignalTest, ObjSignalBindTest) {
+    ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
+    S s;
+    auto c = sig1.connect(&S::fun, s, ph::_1);
+    EXPECT_EQ(1, sig1.slotCount()) << "Slot not added";
+    int i{37};
+    auto f(sig1(i));
+    auto r(f.wait_for(defaultTimeout));
+    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
+    EXPECT_EQ(i, s.m_a) << "Slot call failed";
+    c.disconnect();
+    EXPECT_EQ(0, sig1.slotCount()) << "Slot wasn't disconnected";
 }
