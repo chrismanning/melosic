@@ -97,8 +97,14 @@ protected:
         for(auto i(funs.begin()); i != funs.end();) {
             try {
                 l.unlock();
-                if(!tman.contains(std::this_thread::get_id()))
-                    futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
+                if(!tman.contains(std::this_thread::get_id())) {
+                    try {
+                        futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
+                    }
+                    catch(TaskQueueError& e) {
+                        i->second(std::forward<Args>(args)...);
+                    }
+                }
                 else
                     i->second(std::forward<Args>(args)...);
                 l.lock();
@@ -121,12 +127,10 @@ protected:
         for(auto&& f : futures) {
             try {
                 l.unlock();
-                std::clog << "getting results..." << std::endl;
                 f.first.get();
                 l.lock();
             }
             catch(std::bad_weak_ptr&) {
-                std::clog << "std::bad_weak_ptr: should disconnect slot" << std::endl;
                 f.second.disconnect();
             }
             catch(...) {

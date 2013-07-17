@@ -127,6 +127,7 @@ typedef boost::error_info<struct tagHttpStatus, _HttpStatus> HttpStatus;
 
 //thread exceptions
 struct ThreadException : virtual Exception {};
+struct TaskQueueError : virtual ThreadException {};
 namespace ErrorTag {
 typedef boost::error_info<struct ThreadIDTag, std::thread::id> ThreadID;
 }

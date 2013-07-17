@@ -1,2 +1,3 @@
-remove_definitions(-DMELOSIC_EXPORTS)
+cxx_test(ptr_adaptor_test)
+cxx_test(thread_test)
 cxx_test(signal_test)

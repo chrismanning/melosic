@@ -43,9 +43,9 @@ private:
     struct impl : impl_base {
         static_assert(std::is_bind_expression<Func>::value, "Func should be a bind expression");
         typedef typename std::result_of<Func()>::type Result;
-        impl(std::promise<Result>&& p, Func&& f) : p(std::move(p)), f(std::move(f)) {}
+        impl(std::promise<Result> p, Func&& f) : p(std::move(p)), f(std::forward<Func>(f)) {}
 
-        void call() {
+        void call() noexcept {
             try {
                 call_impl<Result>::call(*this);
             }
@@ -79,18 +79,19 @@ private:
 public:
     Task() = default;
 
-    void operator()() {
+    void operator()() noexcept {
         if(pimpl)
             pimpl->call();
     }
 
     template <typename Func, typename ...Args>
-    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, const Func& f, Args&&... args) {
-        auto fun = std::bind(f, std::forward<Args>(args)...);
-        pimpl = new impl<decltype(fun)>(std::move(p), std::move(fun));
+    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, Func&& f, Args&&... args) noexcept {
+        auto fun(std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
+        pimpl = new(std::nothrow) impl<decltype(fun)>(std::move(p), std::move(fun));
+        assert(pimpl);
     }
 
-    void destroy() {
+    void destroy() noexcept {
         if(pimpl) {
             delete pimpl;
             pimpl = nullptr;
@@ -99,17 +100,17 @@ public:
 };
 
 namespace {
-using TaskQueue = boost::lockfree::queue<Task>;
+using TaskQueue = boost::lockfree::queue<Task, boost::lockfree::fixed_sized<true>>;
 }
 
 class Manager {
 public:
-    explicit Manager(const unsigned n = std::thread::hardware_concurrency() + 1) :
+    explicit Manager(const size_t n = std::thread::hardware_concurrency() + 1) :
         tasks(10),
         done(false)
     {
         assert(n > 0);
-        auto f = [&](boost::lockfree::queue<Task>& tasks) {
+        auto f = [&](TaskQueue& tasks) {
             while(!done) {
                 Task t;
                 if(tasks.pop(t)) {
@@ -123,7 +124,7 @@ public:
             }
         };
 
-        for(unsigned i=0; i<n; i++)
+        for(size_t i=0; i<n; i++)
             threads.emplace_back(f, std::ref(tasks));
     }
 
@@ -138,21 +139,21 @@ public:
             t.join();
     }
 
-    template <typename Func, typename ...Args>
-    std::future<typename std::result_of<Func(Args...)>::type> enqueue(const Func& f, Args&&... args) {
-        std::promise<typename std::result_of<Func(Args...)>::type> p;
+    template <typename Func, typename ...Args, typename Ret = typename std::result_of<Func(Args...)>::type>
+    std::future<Ret> enqueue(Func&& f, Args&&... args) {
+        std::promise<Ret> p;
 
         auto fut(p.get_future());
 
-        Task t(std::move(p), f, std::forward<Args>(args)...);
+        Task t(std::move(p), std::forward<Func>(f), std::forward<Args>(args)...);
         if(!tasks.bounded_push(t)) {
-            p.set_exception(std::make_exception_ptr(Exception()));
+            BOOST_THROW_EXCEPTION(TaskQueueError());
         }
 
         return std::move(fut);
     }
 
-    bool contains(std::thread::id id) const {
+    bool contains(std::thread::id id) const noexcept {
         for(auto&& t : threads)
             if(t.get_id() == id)
                 return true;
