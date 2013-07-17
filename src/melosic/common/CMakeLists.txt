@@ -14,6 +14,7 @@ SET(COMMON_SRC_LIST ${COMMON_SRC_LIST} signal_core.hpp)
 SET(COMMON_SRC_LIST ${COMMON_SRC_LIST} connection.hpp)
 SET(COMMON_SRC_LIST ${COMMON_SRC_LIST} configvar.hpp)
 SET(COMMON_SRC_LIST ${COMMON_SRC_LIST} thread.hpp)
+SET(COMMON_SRC_LIST ${COMMON_SRC_LIST} typeid.hpp)
 
 add_library(common_heads STATIC ${COMMON_SRC_LIST})
 set_target_properties(common_heads PROPERTIES LINKER_LANGUAGE CXX)

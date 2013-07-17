@@ -21,6 +21,7 @@
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <list>
+#include <string>
 
 namespace Melosic {
 

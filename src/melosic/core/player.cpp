@@ -162,7 +162,6 @@ private:
 //                            currentState()->device().reset();
                         break;
                     case DeviceState::Stopped:
-                        TRACE_LOG(logject) << "stopped...";
                         n = 0;
                     case DeviceState::Paused:
 //                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
