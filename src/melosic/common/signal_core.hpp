@@ -56,7 +56,7 @@ struct SignalCore<Ret (Args...)> {
 
     Connection connect(const Slot& slot) {
         std::lock_guard<Mutex> l(mu);
-        return funs.emplace(std::make_pair(std::move(Connection(*this)), slot)).first->first;
+        return funs.emplace(Connection(*this), slot).first->first;
     }
 
     template <typename Fun, typename Obj,
@@ -78,7 +78,7 @@ struct SignalCore<Ret (Args...)> {
         return(funs.size() == s-n);
     }
 
-    size_t slotCount() const {
+    size_t slotCount() const noexcept {
         return funs.size();
     }
 
