@@ -41,11 +41,11 @@ private:
 
     template <typename Func>
     struct impl : impl_base {
-        static_assert(std::is_bind_expression<Func>::value, "Func should be a bind expression");
-        typedef typename std::result_of<Func()>::type Result;
-        impl(std::promise<Result> p, Func&& f) : p(std::move(p)), f(std::forward<Func>(f)) {}
+        typedef typename std::result_of<Func()>::type Result; //Func must be callable
+        impl(std::promise<Result> p, Func&& f) noexcept(noexcept(Func(std::forward<Func>(f)))) :
+            p(std::move(p)), f(std::forward<Func>(f)) {}
 
-        void call() noexcept {
+        void call() noexcept override {
             try {
                 call_impl<Result>::call(*this);
             }
@@ -76,18 +76,31 @@ private:
 
     impl_base* pimpl = nullptr;
 
+    template <typename Func, typename Ret = typename std::result_of<Func()>::type>
+    static impl_base* createImpl(std::promise<Ret> p, Func&& fun)
+    noexcept(noexcept(impl<Func>(std::move(p), std::forward<Func>(fun)))) {
+        return new(std::nothrow) impl<Func>(std::move(p), std::forward<Func>(fun));
+    }
+
 public:
-    Task() = default;
+    Task() noexcept = default;
 
     void operator()() noexcept {
         if(pimpl)
             pimpl->call();
     }
 
-    template <typename Func, typename ...Args>
-    Task(std::promise<typename std::result_of<Func(Args...)>::type> p, Func&& f, Args&&... args) noexcept {
-        auto fun(std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
-        pimpl = new(std::nothrow) impl<decltype(fun)>(std::move(p), std::move(fun));
+    template <typename Func, typename ...Args, typename Ret = typename std::result_of<Func(Args...)>::type>
+    Task(std::promise<Ret> p, Func&& f, Args&&... args)
+    noexcept(noexcept(createImpl(std::move(p), std::bind(std::forward<Func>(f), std::forward<Args>(args)...)))) {
+        pimpl = createImpl(std::move(p), std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
+        assert(pimpl);
+    }
+
+    template <typename Func, typename Ret = typename std::result_of<Func()>::type>
+    Task(std::promise<Ret> p, Func&& f)
+    noexcept(noexcept(createImpl(std::move(p), std::forward<Func>(f)))) {
+        pimpl = createImpl(std::move(p), std::forward<Func>(f));
         assert(pimpl);
     }
 
@@ -105,28 +118,31 @@ using TaskQueue = boost::lockfree::queue<Task, boost::lockfree::fixed_sized<true
 
 class Manager {
 public:
-    explicit Manager(const size_t n = std::thread::hardware_concurrency() + 1) :
-        tasks(10),
+    Manager(size_t numThreads, TaskQueue::size_type numTasks) :
+        tasks(numTasks),
         done(false)
     {
-        assert(n > 0);
-        auto f = [&](TaskQueue& tasks) {
-            while(!done) {
-                Task t;
-                if(tasks.pop(t)) {
-                    t();
-                    t.destroy();
-                }
-                else {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    std::this_thread::yield();
-                }
-            }
-        };
+        assert(numThreads > 0);
 
-        for(size_t i=0; i<n; i++)
-            threads.emplace_back(f, std::ref(tasks));
+        for(size_t i=0; i<numThreads; i++)
+            threads.emplace_back([&] () {
+                while(!done) {
+                    Task t;
+                    if(tasks.pop(t)) {
+                        t();
+                        t.destroy();
+                    }
+                    else {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                        std::this_thread::yield();
+                    }
+                }
+            });
     }
+
+    explicit Manager(size_t numThreads = std::thread::hardware_concurrency() + 1) :
+        Manager(numThreads, numThreads * 2)
+    {}
 
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
@@ -139,6 +155,7 @@ public:
             t.join();
     }
 
+    //throws: std::future_error, TaskQueueError, Task *may* throw
     template <typename Func, typename ...Args, typename Ret = typename std::result_of<Func(Args...)>::type>
     std::future<Ret> enqueue(Func&& f, Args&&... args) {
         std::promise<Ret> p;
