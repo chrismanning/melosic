@@ -27,6 +27,7 @@ add_subdirectory(plugins)
 
 #create main executable
 add_executable(${PN} ${SRC_LIST})
+add_library(${PN}_test_main test_main.cpp)
 
 qt5_use_modules(${PN} Widgets Qml)
 SET(LINK_LIBS ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})

@@ -18,27 +18,15 @@
 #ifndef MELOSIC_STRING_HPP
 #define MELOSIC_STRING_HPP
 
-#include <boost/tokenizer.hpp>
-#include <boost/algorithm/string.hpp>
+#include <boost/locale/conversion.hpp>
 #include <list>
 #include <string>
 
 namespace Melosic {
 
-#define toUpper(str) boost::algorithm::to_upper_copy(str)
-#define toLower(str) boost::algorithm::to_lower_copy(str)
-
-inline std::string toTitle(const std::string& str) {
-    std::list<std::string> list;
-    boost::char_separator<char> sep(" ");
-    boost::tokenizer<boost::char_separator<char> > tokens(str, sep);
-    for(const auto& s : tokens) {
-        std::string tmp(toLower(s));
-        tmp[0] = toupper(tmp[0]);
-        list.push_back(tmp);
-    }
-    return boost::algorithm::join(list, " ");
-}
+#define toUpper(str) boost::locale::to_upper(str)
+#define toLower(str) boost::locale::to_lower(str)
+#define toTitle(str) boost::locale::to_title(str)
 
 inline namespace Literals {
     inline std::basic_string<char> operator "" _str(char const* str, size_t len) {
