@@ -22,6 +22,8 @@
 #include <Windows.h>
 #endif
 
+#include <boost/locale.hpp>
+
 #include <melosic/melin/kernel.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/error.hpp>
@@ -38,6 +40,8 @@ int main(int argc, char* argv[]) {
     SetErrorMode(0x8000);
 #endif
 
+    boost::locale::generator gen;
+    std::locale::global(gen("en_GB.UTF-8"));
     Logger::Logger logject(logging::keywords::channel = "Main");
 
     try {
