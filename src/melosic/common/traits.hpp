@@ -15,35 +15,24 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_SIGNALS_HPP
-#define MELOSIC_SIGNALS_HPP
+#ifndef MELOSIC_TRAITS_HPP
+#define MELOSIC_TRAITS_HPP
 
-#include <memory>
+//some useful type traits
 
-#include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/signal_core.hpp>
+#include <type_traits>
 
 namespace Melosic {
-namespace Signals {
 
-template <typename Ret, typename ...Args>
-struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
-    using SignalCore<Ret (Args...)>::SignalCore;
+template <template <class> class Trait, typename ...Args>
+struct MultiArgsTrait : std::true_type {};
 
-    template <typename ...A>
-    inline std::future<void> operator()(A&& ...args) {
-        static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
-        return Super::call(std::forward<A>(args)...);
-    }
-
-protected:
-    typedef Signal<Ret (Args...)> Super;
+template <template <class> class Trait, typename T1, typename ...Args>
+struct MultiArgsTrait<Trait, T1, Args...> {
+    static constexpr bool value = Trait<T1>::value && MultiArgsTrait<Trait, Args...>::value;
+    typedef MultiArgsTrait<Trait, T1, Args...> type;
 };
 
-template <typename Ret, typename ...Args>
-struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {};
+}
 
-} // namespace Signals
-} // namespace Melosic
-
-#endif // MELOSIC_SIGNALS_HPP
+#endif // MELOSIC_TRAITS_HPP

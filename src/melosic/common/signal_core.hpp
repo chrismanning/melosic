@@ -23,9 +23,13 @@
 #include <mutex>
 #include <functional>
 namespace ph = std::placeholders;
+#include <type_traits>
 
-#include <boost/utility/result_of.hpp>
+#include <boost/mpl/if.hpp>
+#include <boost/mpl/logical.hpp>
+#include <boost/mpl/bool.hpp>
 
+#include <melosic/common/traits.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
@@ -34,8 +38,19 @@ namespace ph = std::placeholders;
 namespace Melosic {
 namespace Signals {
 
+namespace {
+namespace mpl = boost::mpl;
+}
 template <typename Ret, typename ...Args>
 struct SignalCore<Ret (Args...)> {
+    static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                  mpl::not_<MultiArgsTrait<std::is_rvalue_reference, Args...>>,
+                  std::true_type>::type::value,
+                  "Signal args cannot be rvalue references as they may be used more than once");
+    static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                  MultiArgsTrait<std::is_copy_constructible, Args...>,
+                  std::true_type>::type::value,
+                  "Signal args must be copyable");
 
     typedef std::function<Ret(Args...)> Slot;
 
@@ -47,7 +62,7 @@ struct SignalCore<Ret (Args...)> {
         return *this;
     }
 
-    ~SignalCore() {
+    virtual ~SignalCore() {
         while(!funs.empty()) {
             auto c(funs.begin()->first);
             c.disconnect();
@@ -86,7 +101,6 @@ protected:
     template <typename ...A>
     std::future<void> call(A&& ...args) {
         static Thread::Manager tman{1};
-        std::unique_lock<Mutex> l{mu};
 
         std::promise<void> promise;
         auto ret(promise.get_future());
@@ -94,6 +108,7 @@ protected:
 
         std::exception_ptr eptr;
 
+        std::unique_lock<Mutex> l{mu};
         for(auto i(funs.begin()); i != funs.end();) {
             try {
                 l.unlock();

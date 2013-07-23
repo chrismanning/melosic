@@ -23,11 +23,16 @@
 #include <thread>
 #include <vector>
 #include <atomic>
+#include <type_traits>
 
 #include <boost/lockfree/queue.hpp>
+#include <boost/mpl/if.hpp>
+#include <boost/mpl/logical.hpp>
+#include <boost/mpl/bool.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/common.hpp>
+#include <melosic/common/traits.hpp>
 
 namespace Melosic {
 namespace Thread {
@@ -114,6 +119,7 @@ public:
 
 namespace {
 using TaskQueue = boost::lockfree::queue<Task, boost::lockfree::fixed_sized<true>>;
+namespace mpl = boost::mpl;
 }
 
 class Manager {
@@ -158,6 +164,10 @@ public:
     //throws: std::future_error, TaskQueueError, Task *may* throw
     template <typename Func, typename ...Args, typename Ret = typename std::result_of<Func(Args...)>::type>
     std::future<Ret> enqueue(Func&& f, Args&&... args) {
+        static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                      MultiArgsTrait<std::is_copy_constructible, Args...>,
+                      std::true_type>::type::value,
+                      "Task args must be copyable");
         std::promise<Ret> p;
 
         auto fut(p.get_future());
