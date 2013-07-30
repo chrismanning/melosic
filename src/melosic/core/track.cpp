@@ -48,7 +48,7 @@ public:
         : input(new IO::File(filepath)),
           start(start),
           end(end),
-          fileResolver(decman, filepath),
+          fileResolver(decman.getFileTypeResolver(filepath)),
           decman(decman)
     {
         input->seek(0, std::ios_base::beg, std::ios_base::in);

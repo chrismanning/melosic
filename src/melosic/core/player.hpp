@@ -43,7 +43,7 @@ namespace Core {
 
 class Playlist;
 
-class MELOSIC_EXPORT Player {
+class Player {
 public:
     Player(Melosic::Playlist::Manager&, Output::Manager&);
 
@@ -54,14 +54,14 @@ public:
     Player(Player&&) = delete;
     Player& operator=(Player&&) = delete;
 
-    void play();
-    void pause();
-    void stop();
-    DeviceState state() const;
-    void seek(chrono::milliseconds dur);
-    chrono::milliseconds tell() const;
+    MELOSIC_EXPORT void play();
+    MELOSIC_EXPORT void pause();
+    MELOSIC_EXPORT void stop();
+    MELOSIC_EXPORT DeviceState state() const;
+    MELOSIC_EXPORT void seek(chrono::milliseconds dur);
+    MELOSIC_EXPORT chrono::milliseconds tell() const;
 
-    Signals::SignalCore<void(Output::DeviceState)>& stateChangedSignal() const;
+    MELOSIC_EXPORT Signals::Player::StateChanged& stateChangedSignal() const;
 
 private:
     class impl;

@@ -22,7 +22,6 @@
 #include <future>
 #include <mutex>
 #include <functional>
-namespace ph = std::placeholders;
 #include <type_traits>
 
 #include <boost/mpl/if.hpp>
@@ -40,24 +39,41 @@ namespace Signals {
 
 namespace {
 namespace mpl = boost::mpl;
+typedef std::mutex Mutex;
+
+template <typename Slot>
+using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
 }
 template <typename Ret, typename ...Args>
 struct SignalCore<Ret (Args...)> {
     static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                  mpl::not_<MultiArgsTrait<std::is_rvalue_reference, Args...>>,
+                  mpl::not_<MultiArgsTrait<std::is_rvalue_reference<mpl::_1>, Args...>>,
                   std::true_type>::type::value,
                   "Signal args cannot be rvalue references as they may be used more than once");
     static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                  MultiArgsTrait<std::is_copy_constructible, Args...>,
+                  MultiArgsTrait<mpl::or_<std::is_copy_constructible<mpl::_1>,
+                                          std::is_trivially_copyable<mpl::_1>>,
+                                 typename std::decay<Args>::type...>,
                   std::true_type>::type::value,
                   "Signal args must be copyable");
 
     typedef std::function<Ret(Args...)> Slot;
 
-    SignalCore() = default;
+    SignalCore() noexcept(std::is_nothrow_constructible<FunsType<Slot>>::value
+                          && std::is_nothrow_constructible<Mutex>::value) = default;
 
-    SignalCore(SignalCore&& b) : funs(std::move(b.funs)) {}
-    SignalCore& operator=(SignalCore&& b) {
+    SignalCore(const SignalCore&) = delete;
+    SignalCore& operator=(const SignalCore&) = delete;
+
+    SignalCore(SignalCore&& b)
+            noexcept(std::is_nothrow_move_constructible<FunsType<Slot>>::value
+                     && std::is_nothrow_constructible<Mutex>::value)
+        : funs(std::move(b.funs))
+    {}
+
+    SignalCore& operator=(SignalCore&& b)
+            noexcept(std::is_nothrow_move_assignable<FunsType<Slot>>::value)
+    {
         funs = std::move(b.funs);
         return *this;
     }
@@ -69,21 +85,22 @@ struct SignalCore<Ret (Args...)> {
         }
     }
 
-    Connection connect(const Slot& slot) {
+    Connection connect(Slot slot) {
         std::lock_guard<Mutex> l(mu);
         return funs.emplace(Connection(*this), slot).first->first;
     }
 
     template <typename Fun, typename Obj,
-              class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type,
-              typename ...A>
-    Connection connect(Fun func, Obj&& obj, A&&... args) {
-        return connect(std::bind(func, bindObj(std::forward<Obj>(obj)), std::forward<A>(args)...));
-    }
-
-    template <typename Fun, typename Obj, typename ...A>
-    Connection connect(Fun func, A&&... args) {
-        return connect(std::bind(func, std::forward<A>(args)...));
+              class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type>
+    Connection connect(Fun func, Obj&& obj) {
+        auto bo = bindObj(std::forward<Obj>(obj));
+        static_assert(std::is_base_of<typename ObjFromMemFunPtr<Fun>::type,
+                      typename std::remove_pointer<decltype(bo())>::type>::value,
+                      "obj must have member function func");
+        auto mem = std::mem_fn(func);
+        static_assert(std::is_convertible<typename decltype(mem)::result_type, Ret>::value,
+                      "Return types incompatible");
+        return connect([=] (Args&&... as) mutable { return mem(*bo, std::forward<Args>(as)...); });
     }
 
     bool disconnect(const Connection& conn) {
@@ -163,9 +180,8 @@ protected:
     }
 
 private:
-    std::unordered_map<Connection, Slot, ConnHash> funs;
+    FunsType<Slot> funs;
 
-    typedef std::mutex Mutex;
     Mutex mu;
 };
 

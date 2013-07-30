@@ -32,6 +32,7 @@
 #include <melosic/melin/output.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/signal.hpp>
+#include <melosic/melin/logging.hpp>
 
 #include "mainwindow.hpp"
 #include "playlistmodel.hpp"
@@ -53,7 +54,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 {
 //    Slots::Manager& slotman = this->kernel.getSlotManager();
 
-    scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this, ph::_1));
+    scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
     playerControls.reset(new PlayerControls(player));
 

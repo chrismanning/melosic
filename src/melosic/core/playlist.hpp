@@ -21,10 +21,12 @@
 #include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
+using namespace std::literals;
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/container/stable_vector.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
@@ -51,6 +53,8 @@ public:
     typedef boost::container::stable_vector<value_type> list_type;
     typedef list_type::iterator iterator;
     typedef list_type::const_iterator const_iterator;
+    typedef boost::iterator_range<iterator> range;
+    typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
     Playlist(const std::string&, Decoder::Manager&);
@@ -88,17 +92,17 @@ public:
 
     iterator emplace(const_iterator pos,
                      const boost::filesystem::path& filename,
-                     chrono::milliseconds start = chrono::milliseconds(0),
-                     chrono::milliseconds end = chrono::milliseconds(0));
-    iterator emplace(const_iterator pos, ForwardRange<const boost::filesystem::path> values);
+                     chrono::milliseconds start = 0ms,
+                     chrono::milliseconds end = 0ms);
+    const_range emplace(const_iterator pos, ForwardRange<const boost::filesystem::path> values);
 
     void push_back(value_type&& value);
     void emplace_back(const boost::filesystem::path& filename,
-                      chrono::milliseconds start = chrono::milliseconds(0),
-                      chrono::milliseconds end = chrono::milliseconds(0));
+                      chrono::milliseconds start = 0ms,
+                      chrono::milliseconds end = 0ms);
 
     iterator erase(const_iterator pos);
-    iterator erase(size_type start, size_type end);
+    iterator erase(const_iterator start, const_iterator end);
 
     void clear();
     void swap(Playlist& b);

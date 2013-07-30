@@ -46,6 +46,7 @@ struct FileWriteException : virtual WriteException, virtual FileException {};
 struct FileReadOnlyException : virtual ReadOnlyException, virtual FileException {};
 namespace ErrorTag {
 typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
+typedef boost::error_info<struct tagFileExtension, std::string> FileExtension;
 }
 
 //device exceptions

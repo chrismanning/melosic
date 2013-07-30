@@ -37,11 +37,13 @@ struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
     }
 
 protected:
-    typedef Signal<Ret (Args...)> Super;
+    using Super = Signal<Ret (Args...)>;
 };
 
 template <typename Ret, typename ...Args>
-struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {};
+struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {
+    using Super = Signal<SignalCore<Ret (Args...)>>;
+};
 
 } // namespace Signals
 } // namespace Melosic

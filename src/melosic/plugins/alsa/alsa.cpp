@@ -21,12 +21,11 @@
 #include <mutex>
 using std::unique_lock; using std::lock_guard;
 #include <string>
+#include <memory>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex; using boost::shared_lock_guard;
-#include <boost/functional/factory.hpp>
-using boost::factory;
 #include <boost/variant.hpp>
 
 #include <melosic/common/error.hpp>
@@ -39,10 +38,7 @@ using boost::factory;
 #include <melosic/melin/config.hpp>
 using namespace Melosic;
 
-extern template class std::lock_guard<shared_mutex>;
-extern template class boost::shared_lock_guard<shared_mutex>;
-
-static Logger::Logger logject(logging::keywords::channel = "ALSA");
+Logger::Logger logject(logging::keywords::channel = "ALSA");
 
 static constexpr Plugin::Info alsaInfo("ALSA",
                                        Plugin::Type::outputDevice,
@@ -62,13 +58,7 @@ static constexpr snd_pcm_format_t formats[] = {
 };
 static constexpr uint8_t bpss[] = {8, 16, 24, 24, 32};
 
-class ALSAConf : public Config::Config<ALSAConf> {
-public:
-    ALSAConf() : Config("ALSA") {}
-};
-BOOST_CLASS_EXPORT(ALSAConf)
-
-ALSAConf conf;
+Config::Conf conf{"ALSA"};
 int64_t frames = 0;
 
 class AlsaOutput : public Output::PlayerSink {
@@ -319,21 +309,21 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     }
     snd_device_name_free_hint(hints);
 
-    outman->addOutputDevices(factory<std::unique_ptr<AlsaOutput>>(), names);
+    outman->addOutputDevices([] (Output::DeviceName name) { return std::make_unique<AlsaOutput>(name); }, names);
 }
 
 extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", static_cast<int64_t>(1024));
-    confman->getLoadedSignal().connect([](Config::Base& base) {
+    confman->getLoadedSignal().connect([](Config::Conf& base) {
         auto& c = base.existsChild("Output")
                 ? base.getChild("Output").existsChild("ALSA")
                   ? base.getChild("Output").getChild("ALSA")
-                  : base.getChild("Output").putChild("ALSA", ALSAConf())
-                  : base.putChild("Output", Output::Conf()).putChild("ALSA", ALSAConf());
-        c.addDefaultFunc([&]() -> Config::Base& { return *::conf.clone(); });
+                  : base.getChild("Output").putChild("ALSA", Config::Conf("ALSA"))
+                  : base.putChild("Output", Config::Conf("Output")).putChild("ALSA", Config::Conf("ALSA"));
+        c.addDefaultFunc([=]() -> Config::Conf& { return ::conf; });
         if(!c.existsNode("frames") || !c.existsNode("output device"))
             c.resetToDefault();
-        auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
+        auto& varUpdate = c.getVariableUpdatedSignal();
         auto fun = [&](const std::string& k, const Config::VarType& v) {
             try {
                 if(k == "frames")
@@ -344,7 +334,7 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
             }
         };
         varUpdate.connect(fun);
-        for(auto&& node : c.getNodes()) {
+        for(const auto& node : c.getNodes()) {
             TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
             fun(node.first, node.second);
         }

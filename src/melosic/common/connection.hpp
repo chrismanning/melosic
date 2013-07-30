@@ -32,49 +32,54 @@ struct Connection;
 struct ConnErasure {
     virtual ~ConnErasure() {}
     virtual void disconnect(Connection&) = 0;
-    virtual bool isConnected() = 0;
+    virtual bool isConnected() const noexcept = 0;
 };
 
 template <typename SigType>
 struct ConnImpl : ConnErasure {
-    ConnImpl(SigType& sig) : sig(sig), connected(true) {}
-
-    void disconnect(Connection& conn) override {
-        if(connected)
-            connected = !sig.disconnect(conn);
-    }
-
-    bool isConnected() override {
-        return connected;
-    }
+    explicit ConnImpl(SigType& sig) noexcept : sig(sig), connected(true) {}
 
 private:
     SigType& sig;
     std::atomic_bool connected;
+
+public:
+    void disconnect(Connection& conn) noexcept(noexcept(sig.disconnect(conn))) override {
+        if(connected)
+            connected = !sig.disconnect(conn);
+    }
+
+    bool isConnected() const noexcept override {
+        return connected;
+    }
 };
 
 struct ConnHash;
 
 struct Connection {
-    Connection() = default;
-    Connection(const Connection&) = default;
-    Connection& operator=(const Connection&) = default;
-    Connection(Connection&&) = default;
-    Connection& operator=(Connection&&) = default;
+    Connection() noexcept = default;
+    Connection(const Connection&) noexcept = default;
+    Connection& operator=(const Connection&) noexcept = default;
+    Connection(Connection&&) noexcept = default;
+    Connection& operator=(Connection&&) noexcept = default;
 
-    bool operator==(const Connection& b) const {
+    bool operator==(const Connection& b) const noexcept {
         return pimpl == b.pimpl;
     }
 
-    template <typename R, typename ...Args>
-    Connection(SignalCore<R(Args...)>& sig)
-        : pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
+private:
+    std::shared_ptr<ConnErasure> pimpl;
 
-    void disconnect() {
+public:
+    template <typename R, typename ...Args>
+    Connection(SignalCore<R(Args...)>& sig) :
+        pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
+
+    void disconnect() noexcept(noexcept(pimpl->disconnect(*this))) {
         if(pimpl)
             pimpl->disconnect(*this);
     }
-    bool isConnected() const {
+    bool isConnected() const noexcept(noexcept(pimpl.operator ->())) {
         if(pimpl)
             return pimpl->isConnected();
         return false;
@@ -82,31 +87,31 @@ struct Connection {
 
 private:
     friend struct ConnHash;
-    std::shared_ptr<ConnErasure> pimpl;
 };
 
 struct ConnHash {
-    size_t operator()(const Connection& conn) const {
+    ConnHash() noexcept = default;
+    size_t operator()(const Connection& conn) const noexcept {
         return std::hash<std::shared_ptr<ConnErasure>>()(conn.pimpl);
     }
 };
 
 struct ScopedConnection : Connection {
-    ScopedConnection() = default;
-    ScopedConnection(ScopedConnection&& conn) = default;
-    ScopedConnection& operator=(ScopedConnection&& conn) = default;
+    ScopedConnection() noexcept = default;
+    ScopedConnection(ScopedConnection&& conn) noexcept = default;
+    ScopedConnection& operator=(ScopedConnection&& conn) noexcept = default;
 
-    ScopedConnection(const Connection& conn) : Connection(conn) {}
+    ScopedConnection(const Connection& conn) noexcept : Connection(conn) {}
 
-    ScopedConnection(Connection&& conn) : Connection(conn) {}
-    ScopedConnection& operator=(Connection&& conn) {
+    ScopedConnection(Connection&& conn) noexcept : Connection(conn) {}
+    ScopedConnection& operator=(Connection&& conn) noexcept {
         return *this = ScopedConnection(conn);
     }
 
-    ScopedConnection(const ScopedConnection&) = delete;
-    ScopedConnection& operator=(const ScopedConnection&) = delete;
+    ScopedConnection(const ScopedConnection&) noexcept = delete;
+    ScopedConnection& operator=(const ScopedConnection&) noexcept = delete;
 
-    ~ScopedConnection()  {
+    ~ScopedConnection() noexcept(noexcept(disconnect())) {
         disconnect();
         assert(!isConnected());
     }

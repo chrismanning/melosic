@@ -32,7 +32,6 @@ namespace Melosic {
 namespace Output {
 struct DeviceName;
 class PlayerSink;
-class Conf;
 class Sink;
 }
 namespace Config {
@@ -51,8 +50,9 @@ public:
     ~Manager();
 
     Manager(Manager&&) = delete;
-    Manager(const Manager&&) = delete;
+    Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
+    Manager& operator=(Manager&&) = delete;
 
     MELOSIC_EXPORT void addOutputDevice(Factory fact, const Output::DeviceName& avail);
     template <typename DeviceList>
@@ -70,13 +70,6 @@ public:
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
-};
-
-class MELOSIC_EXPORT Conf : public Config::Config<Conf> {
-public:
-    Conf();
-    virtual ~Conf();
-    std::map<DeviceName, Factory> const* outputFactories = nullptr;
 };
 
 class Sink : public IO::Sink {
@@ -129,7 +122,5 @@ inline std::ostream& operator<<(std::ostream& out, const DeviceName& b) {
 
 } // namespace Output
 } // namespace Melosic
-
-BOOST_CLASS_EXPORT_KEY(Melosic::Output::Conf)
 
 #endif // MELOSIC_OUTPUTMANAGER_HPP

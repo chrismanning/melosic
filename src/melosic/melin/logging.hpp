@@ -36,7 +36,7 @@ namespace Melosic {
 
 namespace Logger {
 
-enum class Severity {
+enum MELOSIC_EXPORT class Severity {
     info,
     warning,
     error,
@@ -88,10 +88,10 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 #define DEBUG_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::debug)
 #define TRACE_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::trace)
 #define CHAN_LOG(lg, chan) BOOST_LOG_CHANNEL(lg, chan)
-#define CHAN_ERROR_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::error)
-#define CHAN_WARN_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::warning)
-#define CHAN_DEBUG_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::debug)
-#define CHAN_TRACE_LOG(lg) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::trace)
+#define CHAN_ERROR_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::error)
+#define CHAN_WARN_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::warning)
+#define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::debug)
+#define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::trace)
 #else
 #define LOG(lg) Melosic::Logger::nullstream()
 #define ERROR_LOG(lg) Melosic::Logger::nullstream()

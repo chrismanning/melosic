@@ -20,31 +20,35 @@
 
 #include <memory>
 #include <functional>
+#include <type_traits>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/mpl/lambda.hpp>
+namespace { namespace mpl = boost::mpl; }
 
 #include <taglib/tfile.h>
 
 #include <melosic/melin/input.hpp>
+#include <melosic/common/traits.hpp>
 
 namespace Melosic {
-namespace Decoder {
-typedef Input::Playable Playable;
-}
-}
-extern template class std::function<std::unique_ptr<Melosic::Decoder::Playable>(Melosic::IO::BiDirectionalClosableSeekable&)>;
-namespace Melosic {
-namespace Decoder {
-typedef std::function<std::unique_ptr<Playable>(IO::BiDirectionalClosableSeekable&)> Factory;
-}
 namespace IO {
 class File;
 }
+
 namespace Decoder {
+typedef Input::Playable Playable;
+typedef std::function<std::unique_ptr<Playable>(IO::BiDirectionalClosableSeekable&)> Factory;
+
 class Manager;
 
-struct MELOSIC_EXPORT FileTypeResolver {
-    FileTypeResolver(Manager& decman, const boost::filesystem::path&);
+struct FileTypeResolver {
+    FileTypeResolver(Manager& decman, std::string ext);
+
+    FileTypeResolver(const FileTypeResolver&) = delete;
+    FileTypeResolver(FileTypeResolver&&) = default;
+
     std::unique_ptr<Decoder::Playable> getDecoder(IO::File& file);
     std::unique_ptr<TagLib::File> getTagReader(IO::File& file);
 
@@ -52,6 +56,7 @@ private:
     Factory decoderFactory;
     std::unique_ptr<TagLib::IOStream> taglibFile;
     std::function<TagLib::File*(TagLib::IOStream*)> tagFactory;
+    static constexpr auto chan = "FileTypeResolver";
 };
 
 class Manager {
@@ -63,23 +68,23 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_EXPORT void addAudioFormat(Factory fact, const std::string& extension);
-    template <typename List>
-    void addAudioFormats(Factory fact, const List& extensions) {
-        for(const auto& ext : extensions) {
-            addAudioFormat(fact, ext);
-        }
-    }
-    template <typename String>
-    void addAudioFormats(Factory fact, const std::initializer_list<String>& extensions) {
-        for(const auto& ext : extensions) {
-            addAudioFormat(fact, ext);
+    MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string extension);
+
+    template <template <class...> class List, typename ...ListArgs>
+    void addAudioFormat(Factory fact, List<std::string, ListArgs...> extensions) {
+        for(std::string& ext : extensions) {
+            addAudioFormat(fact, std::move(ext));
         }
     }
 
-    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path) {
-        return FileTypeResolver(*this, path);
+    template <typename ...Strings, class = typename std::enable_if<(sizeof...(Strings) > 1)>::type>
+    void addAudioFormat(Factory fact, Strings&&... extensions) {
+        static_assert(MultiArgsTrait<mpl::lambda<std::is_same<std::string, mpl::_1>>::type, Strings...>::value,
+                      "extensions must be std::strings or convertible to");
+        addAudioFormat(fact, std::list<std::string>{std::move(extensions)...});
     }
+
+    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path);
 
 private:
     class impl;

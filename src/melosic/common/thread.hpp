@@ -24,6 +24,8 @@
 #include <vector>
 #include <atomic>
 #include <type_traits>
+#include <chrono>
+using namespace std::literals;
 
 #include <boost/lockfree/queue.hpp>
 #include <boost/mpl/if.hpp>
@@ -31,7 +33,6 @@
 #include <boost/mpl/bool.hpp>
 
 #include <melosic/common/error.hpp>
-#include <melosic/common/common.hpp>
 #include <melosic/common/traits.hpp>
 
 namespace Melosic {
@@ -79,16 +80,15 @@ private:
         Func f;
     };
 
-    impl_base* pimpl = nullptr;
+    impl_base* pimpl;
 
     template <typename Func, typename Ret = typename std::result_of<Func()>::type>
-    static impl_base* createImpl(std::promise<Ret> p, Func&& fun)
-    noexcept(noexcept(impl<Func>(std::move(p), std::forward<Func>(fun)))) {
-        return new(std::nothrow) impl<Func>(std::move(p), std::forward<Func>(fun));
+    static impl_base* createImpl(std::promise<Ret> p, Func&& fun) {
+        return new impl<Func>(std::move(p), std::forward<Func>(fun));
     }
 
 public:
-    Task() noexcept = default;
+    Task() noexcept : pimpl(nullptr) {}
 
     void operator()() noexcept {
         if(pimpl)
@@ -99,7 +99,6 @@ public:
     Task(std::promise<Ret> p, Func&& f, Args&&... args)
     noexcept(noexcept(createImpl(std::move(p), std::bind(std::forward<Func>(f), std::forward<Args>(args)...)))) {
         pimpl = createImpl(std::move(p), std::bind(std::forward<Func>(f), std::forward<Args>(args)...));
-        assert(pimpl);
     }
 
     template <typename Func, typename Ret = typename std::result_of<Func()>::type>
@@ -110,10 +109,8 @@ public:
     }
 
     void destroy() noexcept {
-        if(pimpl) {
-            delete pimpl;
-            pimpl = nullptr;
-        }
+        delete pimpl;
+        pimpl = nullptr;
     }
 };
 
@@ -130,20 +127,21 @@ public:
     {
         assert(numThreads > 0);
 
-        for(size_t i=0; i<numThreads; i++)
-            threads.emplace_back([&] () {
-                while(!done) {
-                    Task t;
-                    if(tasks.pop(t)) {
-                        t();
-                        t.destroy();
-                    }
-                    else {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                        std::this_thread::yield();
-                    }
+        auto f = [&] () {
+            while(!done) {
+                Task t;
+                if(tasks.pop(t)) {
+                    t();
+                    t.destroy();
                 }
-            });
+                else {
+                    std::this_thread::sleep_for(10ms);
+                    std::this_thread::yield();
+                }
+            }
+        };
+        for(size_t i=0; i<numThreads; i++)
+            threads.emplace_back(f);
     }
 
     explicit Manager(size_t numThreads = std::thread::hardware_concurrency() + 1) :
@@ -158,14 +156,17 @@ public:
     ~Manager() {
         done = true;
         for(auto& t : threads)
-            t.join();
+            if(t.joinable())
+                t.join();
     }
 
     //throws: std::future_error, TaskQueueError, Task *may* throw
     template <typename Func, typename ...Args, typename Ret = typename std::result_of<Func(Args...)>::type>
     std::future<Ret> enqueue(Func&& f, Args&&... args) {
         static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                      MultiArgsTrait<std::is_copy_constructible, Args...>,
+                      MultiArgsTrait<mpl::or_<std::is_copy_constructible<mpl::_1>,
+                                              std::is_trivially_copyable<mpl::_1>>,
+                                     typename std::decay<Args>::type...>,
                       std::true_type>::type::value,
                       "Task args must be copyable");
         std::promise<Ret> p;

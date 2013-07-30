@@ -27,14 +27,13 @@ using namespace Melosic;
 #include <boost/variant.hpp>
 
 #include "lastfm.hpp"
-#include "lastfmconfig.hpp"
 #include "scrobbler.hpp"
 #include "service.hpp"
 #include "user.hpp"
 using namespace LastFM;
 
 static Logger::Logger logject(logging::keywords::channel = "LastFM");
-static LastFmConfig conf;
+Config::Conf conf{"LastFM"};
 
 static constexpr Plugin::Info lastFmInfo("LastFM",
                                          Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,

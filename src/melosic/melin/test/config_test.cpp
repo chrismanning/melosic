@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,21 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "lastfmconfig.hpp"
+#include <gtest/gtest.h>
 
-#include <melosic/common/string.hpp>
-#include <melosic/melin/logging.hpp>
+#include <melosic/melin/config.hpp>
 
-namespace Melosic {
-
-static Logger::Logger logject(logging::keywords::channel = "LastFMConfig");
-
-LastFmConfig::LastFmConfig() :
-    Config::Config("LastFM")
-{}
-
-LastFmConfig::~LastFmConfig() {}
-
-} //end namespace Melosic
-
-BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::LastFmConfig)
+TEST(ConfigTest, ConfigBaseTest1) {
+}

@@ -17,8 +17,6 @@
 
 #include <FLAC++/decoder.h>
 
-#include <boost/functional/factory.hpp>
-using boost::factory;
 #include <boost/format.hpp>
 using boost::format;
 #include <boost/iostreams/read.hpp>
@@ -219,14 +217,14 @@ public:
     virtual ~FlacDecoder() {}
 
     virtual std::streamsize read(char * s, std::streamsize n) {
-        while((std::streamsize)buf.size() < n && *this) {
+        while(static_cast<std::streamsize>(buf.size()) < n && *this) {
             FLAC_THROW_IF(AudioDataInvalidException, pimpl->process_single() && !buf.empty(), pimpl.get());
         }
 
-        auto min = std::min(n, (std::streamsize)buf.size());
-        auto m = std::move(buf.begin(), buf.begin() + min, s);
+        auto min = std::min(n, static_cast<std::streamsize>(buf.size()));
+        auto m = std::move(buf.begin(), std::next(buf.begin(), min), s);
         auto d = std::distance(s, m);
-        buf.erase(buf.begin(), buf.begin() + d);
+        buf.erase(buf.begin(), std::next(buf.begin(), d));
 
         return d == 0 && !(*this) ? -1 : d;
     }
@@ -241,7 +239,7 @@ public:
 
     virtual void reset() {
         pimpl->reset();
-        seek(chrono::milliseconds(0));
+        seek(0ms);
         buf.clear();
     }
 
@@ -265,7 +263,8 @@ extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsI
 }
 
 extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
-    decman->addAudioFormat(factory<std::unique_ptr<FlacDecoder>>(), ".flac");
+    decman->addAudioFormat([](IO::SeekableSource& input) { return std::make_unique<FlacDecoder>(input); },
+    ".flac"s);
 }
 
 extern "C" MELOSIC_EXPORT void destroyPlugin() {

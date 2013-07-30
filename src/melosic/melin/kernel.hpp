@@ -51,7 +51,7 @@ class Manager;
 
 namespace Core {
 
-class MELOSIC_EXPORT Kernel {
+class Kernel {
 public:
     Kernel();
 
@@ -62,14 +62,14 @@ public:
 
     ~Kernel();
 
-    Config::Manager& getConfigManager();
-    Plugin::Manager& getPluginManager();
-    Input::Manager& getInputManager();
-    Decoder::Manager& getDecoderManager();
-    Output::Manager& getOutputManager();
-    Encoder::Manager& getEncoderManager();
-    Thread::Manager& getThreadManager();
-    Melosic::Playlist::Manager& getPlaylistManager();
+    MELOSIC_EXPORT Config::Manager& getConfigManager();
+    MELOSIC_EXPORT Plugin::Manager& getPluginManager();
+    MELOSIC_EXPORT Input::Manager& getInputManager();
+    MELOSIC_EXPORT Decoder::Manager& getDecoderManager();
+    MELOSIC_EXPORT Output::Manager& getOutputManager();
+    MELOSIC_EXPORT Encoder::Manager& getEncoderManager();
+    MELOSIC_EXPORT Thread::Manager& getThreadManager();
+    MELOSIC_EXPORT Melosic::Playlist::Manager& getPlaylistManager();
 
 private:
     class impl;

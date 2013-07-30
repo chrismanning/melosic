@@ -58,7 +58,7 @@ public:
         if(count_ == 0)
             return pos;
         for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
-            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "_str + std::to_string(i+beg), decman));
+            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "s + std::to_string(i+beg), decman));
         }
         return ++pos;
     }

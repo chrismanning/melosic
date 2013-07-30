@@ -24,14 +24,14 @@
 namespace Melosic {
 
 namespace Config {
-class Base;
+class Conf;
 }
 
 namespace Signals {
 
 namespace Config {
 typedef SignalCore<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef SignalCore<void(Melosic::Config::Base&)> Loaded;
+typedef SignalCore<void(Melosic::Config::Conf&)> Loaded;
 }
 
 }

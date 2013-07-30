@@ -18,17 +18,8 @@
 #include <gtest/gtest.h>
 
 #include <melosic/common/string.hpp>
-using namespace Melosic;
 
 static const std::string testString1("The Quick Brown Fox Jumps Over The Lazy Dog");
-
-TEST(StringTest, StringLiteralTest) {
-    EXPECT_EQ(testString1, "The Quick Brown Fox Jumps Over The Lazy Dog"_str);
-}
-
-TEST(StringTest, ToUpperCaseTest) {
-    EXPECT_EQ("THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG"_str, toUpper(testString1));
-}
 
 TEST(StringTest, ToLowerCaseTest) {
     EXPECT_EQ("the quick brown fox jumps over the lazy dog", toLower(testString1));

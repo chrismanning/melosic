@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2013 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,22 +15,16 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFMCONFIG_HPP
-#define LASTFMCONFIG_HPP
+#include <gtest/gtest.h>
 
-#include <melosic/melin/config.hpp>
+#include <melosic/melin/decoder.hpp>
 
-namespace Melosic {
-
-class LastFmConfig : public Config::Config<LastFmConfig> {
-public:
-    LastFmConfig();
-
-    virtual ~LastFmConfig();
+struct DecoderTest : ::testing::Test {
+protected:
+    Melosic::Decoder::Manager decman;
+    std::chrono::milliseconds defaultTimeout{500};
 };
 
-} // end namespace Melosic
+TEST_F(DecoderTest, DecoderTestASDd) {
 
-BOOST_CLASS_EXPORT_KEY(Melosic::LastFmConfig)
-
-#endif // LASTFMCONFIG_HPP
+}

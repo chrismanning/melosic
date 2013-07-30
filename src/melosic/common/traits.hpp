@@ -18,19 +18,25 @@
 #ifndef MELOSIC_TRAITS_HPP
 #define MELOSIC_TRAITS_HPP
 
-//some useful type traits
+#include <boost/mpl/apply.hpp>
+#include <boost/mpl/logical.hpp>
+namespace { namespace mpl = boost::mpl; }
 
 #include <type_traits>
 
+//some useful type traits
+
 namespace Melosic {
 
-template <template <class> class Trait, typename ...Args>
-struct MultiArgsTrait : std::true_type {};
+template <class Trait, typename ...Args>
+struct MultiArgsTrait : mpl::and_<mpl::true_, mpl::apply<Trait, Args>...>::type {};
 
-template <template <class> class Trait, typename T1, typename ...Args>
-struct MultiArgsTrait<Trait, T1, Args...> {
-    static constexpr bool value = Trait<T1>::value && MultiArgsTrait<Trait, Args...>::value;
-    typedef MultiArgsTrait<Trait, T1, Args...> type;
+template <class T>
+struct ObjFromMemFunPtr {};
+
+template <class T, class U>
+struct ObjFromMemFunPtr<T U::*> {
+    typedef typename std::decay<U>::type type;
 };
 
 }

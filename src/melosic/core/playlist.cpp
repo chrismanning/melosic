@@ -55,10 +55,9 @@ static TrackChanged trackChanged;
 
 class Playlist::impl {
 public:
-    impl(const std::string& name, Decoder::Manager& decman)
-        : current_track_(begin()),
-          name(name),
-          decman(decman)
+    impl(const std::string& name, Decoder::Manager& decman) noexcept(noexcept(std::string(name))) :
+        name(name),
+        decman(decman)
     {}
 
     //IO
@@ -89,13 +88,13 @@ public:
 
     //playlist controls
     chrono::milliseconds duration() {
-        return std::accumulate(begin(), end(), chrono::milliseconds(0),
-                               [&](chrono::milliseconds a, Track& b) { return a + b.duration(); });
+        return std::accumulate(begin(), end(), 0ms,
+                               [](chrono::milliseconds a, Track& b) { return a + b.duration(); });
     }
 
     void previous() {
         if(currentTrack() == begin()) {
-            seek(chrono::milliseconds(0));
+            seek(0ms);
         }
         else if(size() >= 1) {
             lock_guard l(mu);
@@ -173,26 +172,26 @@ public:
     }
 
     Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
-        mu.lock();
+        unique_lock l(mu);
         auto r = tracks.insert(pos, std::move(value));
-        mu.unlock();
+        l.unlock();
         if(size() == 1) {
-            mu.lock();
+            l.lock();
             current_track_ = r;
-            mu.unlock();
+            l.unlock();
             trackChanged(std::cref(*currentTrack()));
         }
         return r;
     }
 
     void insert(Playlist::const_iterator pos, Playlist::iterator first, Playlist::iterator last) {
-        mu.lock();
+        unique_lock l(mu);
         auto r = tracks.insert(pos, std::make_move_iterator(first), std::make_move_iterator(last));
-        mu.unlock();
+        l.unlock();
         if(size() == 1) {
-            mu.lock();
+            l.lock();
             current_track_ = r;
-            mu.unlock();
+            l.unlock();
             trackChanged(std::cref(*currentTrack()));
         }
     }
@@ -217,21 +216,26 @@ public:
         return r;
     }
 
-    Playlist::iterator emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
+    Playlist::const_range emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
         unique_lock l(mu);
         if(values.empty())
-            return std::next(std::begin(tracks), pos - std::begin(tracks));
+            return Playlist::const_range(pos, pos);
 
-        auto r = std::next(std::begin(tracks), pos - std::begin(tracks) + 1);
-        for(auto& path : values) {
+        std::list<Playlist::const_iterator> its;
+        for(const auto& path : values) {
             try {
-                pos = tracks.emplace(pos, decman, path);
+                its.push_back(tracks.emplace(pos, decman, path));
             }
             catch(...) {
                 ERROR_LOG(logject) << format("Track couldn't be add to playlist \"%1%\" %2%:%3%") % name % __FILE__ % __LINE__;
                 ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
             }
         }
+
+        assert(its.size() > 0);
+        Playlist::const_range r(its.front(), pos);
+        assert(std::distance(its.front(), pos) == boost::distance(r));
+
         l.unlock();
         if(size() == 1) {
             l.lock();
@@ -244,13 +248,13 @@ public:
     }
 
     void push_back(Playlist::value_type&& value) {
-        mu.lock();
+        unique_lock l(mu);
         tracks.push_back(std::move(value));
-        mu.unlock();
+        l.unlock();
         if(size() == 1) {
-            mu.lock();
+            l.lock();
             current_track_ = std::begin(tracks);
-            mu.unlock();
+            l.unlock();
             trackChanged(std::cref(*currentTrack()));
         }
     }
@@ -275,10 +279,9 @@ public:
         return tracks.erase(pos);
     }
 
-    Playlist::iterator erase(Playlist::size_type start, Playlist::size_type end) {
+    Playlist::iterator erase(Playlist::const_iterator start, Playlist::const_iterator end) {
         lock_guard l(mu);
-        boost::range::erase(tracks, tracks | sliced(start, end));
-        return std::next(tracks.begin(), start);
+        return tracks.erase(start, end);
     }
 
     void clear() {
@@ -303,8 +306,8 @@ public:
     Decoder::Manager& decman;
 };
 
-Playlist::Playlist(const std::string& name, Decoder::Manager& decman)
-    : pimpl(new impl(name, decman)) {}
+Playlist::Playlist(const std::string& name, Decoder::Manager& decman) :
+    pimpl(new impl(name, decman)) {}
 
 Playlist::~Playlist() {}
 
@@ -409,7 +412,7 @@ Playlist::iterator Playlist::emplace(Playlist::const_iterator pos,
     return pimpl->emplace(pos, filename, start, end);
 }
 
-Playlist::iterator Playlist::emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
+Playlist::const_range Playlist::emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
     return pimpl->emplace(pos, values);
 }
 
@@ -428,7 +431,7 @@ Playlist::iterator Playlist::erase(const_iterator pos) {
     return pimpl->erase(pos);
 }
 
-Playlist::iterator Playlist::erase(Playlist::size_type start, Playlist::size_type end) {
+Playlist::iterator Playlist::erase(Playlist::const_iterator start, Playlist::const_iterator end) {
     return pimpl->erase(start, end);
 }
 

@@ -20,6 +20,7 @@
 
 #include <ostream>
 #include <typeinfo>
+#include <cxxabi.h>
 
 namespace std {
 inline std::ostream& operator<<(std::ostream& strm, const std::type_info& t) {

@@ -22,16 +22,19 @@
 #include <array>
 
 #include <boost/serialization/access.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
 #include <boost/filesystem/path.hpp>
-namespace fs = boost::filesystem;
+#include <boost/range/sub_range.hpp>
+#include <boost/variant.hpp>
+#include <boost/range/adaptors.hpp>
+namespace {
+using namespace boost::adaptors;
+}
 
 #include <melosic/common/error.hpp>
-#include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/common/configvar.hpp>
 #include <melosic/melin/config_signals.hpp>
+#include <melosic/common/signal.hpp>
 
 namespace Melosic {
 
@@ -43,7 +46,7 @@ class Manager;
 
 namespace Config {
 
-class Base;
+class Conf;
 
 enum {
     CurrentDir,
@@ -51,7 +54,7 @@ enum {
     SystemDir
 };
 
-static std::array<fs::path,3> dirs{{".", "~/.config/melosic/", "/etc/melosic/"}};
+static std::array<boost::filesystem::path,3> dirs{{".", "~/.config/melosic/", "/etc/melosic/"}};
 
 class Manager {
 public:
@@ -61,136 +64,73 @@ public:
     MELOSIC_EXPORT void loadConfig();
     MELOSIC_EXPORT void saveConfig();
 
-    MELOSIC_EXPORT Base& addConfigTree(const Base&);
-    MELOSIC_EXPORT Base& getConfigRoot();
-
     MELOSIC_EXPORT Signals::Config::Loaded& getLoadedSignal() const;
 
 private:
-    class impl;
+    struct impl;
     std::unique_ptr<impl> pimpl;
 };
 
-class MELOSIC_EXPORT Base {
+class MELOSIC_EXPORT Conf final {
 public:
-    Base(const std::string& name);
-    virtual ~Base();
+    typedef std::map<std::string, Conf> ChildMap;
+    typedef boost::range_detail::select_second_mutable_range<ChildMap> ChildRange;
+    typedef boost::range_detail::select_second_const_range<ChildMap> ConstChildRange;
+    typedef std::map<std::string, VarType> NodeMap;
+    typedef boost::sub_range<NodeMap> NodeRange;
+    typedef boost::sub_range<const NodeMap> ConstNodeRange;
+    typedef std::function<Conf&()> DefaultFunc;
+
+    Conf() : Conf("") {}
+    explicit Conf(std::string name);
+
+    Conf(const Conf&);
+    Conf(Conf&&) = default;
+    Conf& operator=(Conf);
+
+    friend void swap(Conf&, Conf&) noexcept;
 
     const std::string& getName() const;
-    bool existsNode(const std::string& key) const;
-    bool existsChild(const std::string& key) const;
-    const VarType& getNode(const std::string& key) const;
-    Base& getChild(const std::string& key);
-    const Base& getChild(const std::string& key) const;
-    Base& putChild(const std::string& key, const Base& child);
-    const VarType& putNode(const std::string& key, const VarType& value);
-    ForwardRange<std::shared_ptr<Base>> getChildren();
-    ForwardRange<const std::shared_ptr<Melosic::Config::Base>> getChildren() const;
-    ForwardRange<std::pair<const std::string, VarType>> getNodes();
-    ForwardRange<const std::pair<const std::string, VarType>> getNodes() const;
+    bool existsNode(std::string key) const;
+    bool existsChild(std::string key) const;
+    const VarType& getNode(std::string key) const;
+    Conf& getChild(std::string key);
+    const Conf& getChild(std::string key) const;
+    Conf& putChild(std::string key, Conf child);
+    VarType& putNode(std::string key, VarType value);
+    ChildRange getChildren();
+    ConstChildRange getChildren() const;
+    NodeRange getNodes();
+    ConstNodeRange getNodes() const;
 
-    void addDefaultFunc(std::function<Base&()>);
+    void addDefaultFunc(DefaultFunc);
     void resetToDefault();
 
-    virtual Base* clone() const {
-        return new Base(*this);
-    }
+    Signals::Config::VariableUpdated& getVariableUpdatedSignal();
 
-    template <typename T>
-    T& get();
+private:
+    struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
+        using Super::Signal;
+    };
 
-protected:
-    Base();
-    Base(const Base& b);
-    Base& operator=(const Base& b);
-    class impl;
-    std::unique_ptr<impl> pimpl;
-
-    friend class boost::serialization::access;
-    template<class Archive>
-    MELOSIC_EXPORT void serialize(Archive& ar, const unsigned int /*version*/);
-};
-
-Base* new_clone(const Base& conf);
-
-template <typename T>
-class Config : public Base {
-public:
-    virtual ~Config() {}
-    virtual Base* clone() const override {
-        return new T(*static_cast<const T*>(this));
-    }
-
-protected:
-    Config(const std::string& name) : Base(name) {}
-    Config() : Config("") {}
+    ChildMap children;
+    NodeMap nodes;
+    std::string name;
+    VariableUpdated variableUpdated;
+    DefaultFunc resetDefault;
 
     friend class boost::serialization::access;
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/) {
-        ar & boost::serialization::base_object<Base>(*static_cast<T*>(this));
+    MELOSIC_EXPORT void serialize(Archive& ar, const unsigned int /*version*/) {
+        ar & children;
+        ar & nodes;
+        ar & name;
     }
 };
+
+void swap(Conf& a, Conf& b) noexcept;
 
 } // namespace Config
 } // namespace Melosic
-
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
-extern template MELOSIC_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_iarchive>(
-    boost::archive::binary_iarchive& ar,
-    const unsigned int file_version
-);
-extern template MELOSIC_EXPORT void Melosic::Config::Base::serialize<boost::archive::binary_oarchive>(
-    boost::archive::binary_oarchive& ar,
-    const unsigned int file_version
-);
-
-namespace boost {
-namespace serialization {
-
-template<class Archive, class T>
-inline void save(Archive& ar,
-                 const std::shared_ptr<T>& t,
-                 const unsigned int /* file_version */)
-{
-    // The most common cause of trapping here would be serializing
-    // something like shared_ptr<int>.  This occurs because int
-    // is never tracked by default.  Wrap int in a trackable type
-    BOOST_STATIC_ASSERT((tracking_level<T>::value != track_never));
-    const T* t_ptr = t.get();
-    ar << boost::serialization::make_nvp("px", t_ptr);
-}
-
-template<class Archive, class T>
-inline void load(Archive& ar,
-                 std::shared_ptr<T>& t,
-                 const unsigned int /*file_version*/)
-{
-    // The most common cause of trapping here would be serializing
-    // something like shared_ptr<int>.  This occurs because int
-    // is never tracked by default.  Wrap int in a trackable type
-    BOOST_STATIC_ASSERT((tracking_level<T>::value != track_never));
-    T* r;
-    ar >> boost::serialization::make_nvp("px", r);
-    t.reset(r);
-//    ar.reset(t,r);
-}
-
-template<class Archive, class T>
-inline void serialize(Archive& ar,
-                      std::shared_ptr<T>& t,
-                      const unsigned int file_version)
-{
-    // correct shared_ptr serialization depends upon object tracking
-    // being used.
-    BOOST_STATIC_ASSERT(boost::serialization::tracking_level<T>::value
-                        != boost::serialization::track_never
-    );
-    boost::serialization::split_free(ar, t, file_version);
-}
-
-} // namespace serialization
-} // namespace boost
 
 #endif // MELOSIC_CONFIGURATION_HPP

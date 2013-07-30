@@ -20,6 +20,8 @@
 using std::unique_lock; using std::lock_guard;
 #include <functional>
 namespace ph = std::placeholders;
+#include <string>
+using namespace std::literals;
 
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -32,8 +34,6 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/thread.hpp>
-#include <melosic/common/string.hpp>
-using namespace Melosic::Literals;
 
 #include "track.hpp"
 #include "service.hpp"
@@ -59,19 +59,19 @@ struct Track::impl {
     impl(std::weak_ptr<Service> lastserv, const Melosic::Core::Track& track)
         : lastserv(lastserv), artist(lastserv)
     {
-        {   auto artist = ""_str;//track.getTag("artist");
+        {   auto artist = ""s;//track.getTag("artist");
             if(artist != "?")
                 this->artist = Artist(lastserv, artist);}
-        {   auto title = ""_str;//track.getTag("title");
+        {   auto title = ""s;//track.getTag("title");
             if(title != "?")
                 this->name = title;}
 //        {   auto album = track.getTag("album");
 //            if(album != "?")
 //                this->album = album;}
-        {   auto tracknum = ""_str;//track.getTag("tracknumber");
+        {   auto tracknum = ""s;//track.getTag("tracknumber");
             if(tracknum != "?")
                 this->tracknumber = boost::lexical_cast<int>(tracknum);}
-        this->duration = chrono::duration_cast<chrono::milliseconds>(track.duration()).count();
+        this->duration = track.duration().count();
         timestamp = chrono::system_clock::to_time_t(chrono::system_clock::now());
     }
 

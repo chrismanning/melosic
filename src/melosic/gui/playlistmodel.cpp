@@ -154,33 +154,25 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
         TRACE_LOG(logject) << v;
 
     std::deque<boost::filesystem::path> tmp;
-    boost::range::push_back(tmp, filenames | reversed | transformed(fun));
+    boost::range::push_back(tmp, filenames | transformed(fun));
     return insertTracks(row, tmp);
 }
 
 bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
     TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
-    auto beg = ++row > playlist->size() ? playlist->size() : row;
-    beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
 
-    bool r = true;
-    try {
-        auto first(std::next(playlist->begin(), beg));
-        auto last(playlist->emplace(std::next(playlist->begin(), beg), filenames));
-        if(std::distance(first, last) < boost::distance(filenames))
-            r = false;
-//            return false;
-    }
-    catch(...) {
-        ERROR_LOG(logject) << format("%1%:%2%: Exception caught") % __FILE__ % __LINE__;
-        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
-        //TODO: error handling
-//        return false;
-        r = false;
-    }
+    Core::Playlist::const_range range;
+    auto beg = ++row > playlist->size() ? playlist->size() : row;
+    auto first(std::next(playlist->begin(), beg));
+
+    range = playlist->emplace(first, filenames);
+
+    TRACE_LOG(logject) << boost::distance(range) << " tracks inserted";
+
+    beginInsertRows(QModelIndex(), beg, beg + boost::distance(range) -1);
 
     endInsertRows();
-    return r;
+    return boost::distance(range) == boost::distance(filenames);
 }
 
 //QStringList PlaylistModel::appendFiles(const ForwardRange<const boost::filesystem::path>& filenames) {
@@ -296,7 +288,7 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
         return false;
     std::vector<Core::Playlist::value_type> tmp(std::make_move_iterator(std::next(beg, sourceRow)),
                                                 std::make_move_iterator(std::next(beg, sourceRow + count)));
-    playlist->erase(sourceRow, sourceRow + count);
+    playlist->erase(std::next(playlist->begin(), sourceRow), std::next(playlist->begin(), sourceRow + count));
 
     std::move(tmp.begin(), tmp.end(), std::inserter(*playlist, dest));
 
@@ -316,7 +308,7 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
 
     const auto s = playlist->size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
-    playlist->erase(row, row + count);
+    playlist->erase(std::next(playlist->begin(), row), std::next(playlist->begin(), row + count));
     endRemoveRows();
     assert(playlist->size() == s - count);
 

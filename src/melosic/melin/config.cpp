@@ -27,13 +27,13 @@ using unique_lock = std::unique_lock<Mutex>;
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/variant.hpp>
 #include <boost/serialization/vector.hpp>
-#include <boost/serialization/shared_ptr.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/range/adaptors.hpp>
-using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+namespace fs = boost::filesystem;
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/mpl/assert.hpp>
 
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
@@ -58,7 +58,7 @@ struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
     using Super::Signal;
 };
 
-class Manager::impl {
+struct Manager::impl {
     impl() : conf("root") {
     #ifdef _POSIX_VERSION
         wordexp_t exp_result;
@@ -66,6 +66,18 @@ class Manager::impl {
         dirs[UserDir] = exp_result.we_wordv[0];
         wordfree(&exp_result);
     #endif
+        loaded.connect([this] (Conf&) {
+            saveConfig();
+        });
+    }
+
+    ~impl() {
+        try {
+            saveConfig();
+        }
+        catch(...) {
+            std::clog << boost::current_exception_diagnostic_information() << std::endl;
+        }
     }
 
     int chooseDir() {
@@ -89,7 +101,6 @@ class Manager::impl {
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
             loaded(std::ref(conf));
-            saveConfig();
             return;
         }
 
@@ -110,9 +121,8 @@ class Manager::impl {
     }
 
     fs::path confPath;
-    Base conf;
+    Conf conf;
     Loaded loaded;
-    friend class Manager;
 };
 
 Manager::Manager() : pimpl(new impl) {}
@@ -127,87 +137,30 @@ void Manager::saveConfig() {
     pimpl->saveConfig();
 }
 
-Base& Manager::addConfigTree(const Base& c) {
-    return pimpl->conf.putChild(c.getName(), c);
-}
-
-Base& Manager::getConfigRoot() {
-    return pimpl->conf;
-}
-
 Signals::Config::Loaded& Manager::getLoadedSignal() const{
     return pimpl->loaded;
 }
 
-class Base::impl {
-public:
-    typedef std::map<std::string, std::shared_ptr<Base>> ChildMap;
-    typedef std::map<std::string, VarType> NodeMap;
+Conf::Conf(std::string name) : name(std::move(name)) {}
 
-    impl() {}
-    impl(const impl& b)
-        : children(b.children),
-          nodes(b.nodes),
-          name(b.name),
-          resetDefault(b.resetDefault)
-    {}
-    impl(const std::string& name) : name(name) {}
+Conf::Conf(const Conf& b) :
+    children(b.children),
+    nodes(b.nodes),
+    name(b.name),
+    resetDefault(b.resetDefault)
+{}
 
-    impl* clone() {
-        TRACE_LOG(logject) << "Cloning...";
-        lock_guard l(mu);
-        return new impl(*this);
-    }
-
-    const VarType& putNode(const std::string& key, const VarType& value) {
-        variableUpdated(key, value);
-        lock_guard l(mu);
-        return nodes[key] = value;
-    }
-
-    std::shared_ptr<Base> putChild(const std::string& key, const Base& child) {
-        lock_guard l(mu);
-        return children[key] = std::move(std::shared_ptr<Base>(child.clone()));
-    }
-
-private:
-    ChildMap children;
-    NodeMap nodes;
-    std::string name;
-    Mutex mu;
-    friend class Base;
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int /*version*/) {
-        ar & children;
-        ar & nodes;
-        ar & name;
-    }
-    VariableUpdated variableUpdated;
-    std::function<Base&()> resetDefault;
-};
-
-Base::Base(const std::string& name) : pimpl(new impl(name)) {}
-
-Base::Base() : pimpl(new impl) {}
-
-Base::~Base() {}
-
-Base::Base(const Base& b) : pimpl(b.pimpl->clone()) {
-    TRACE_LOG(logject) << "Copying...";
-}
-
-Base& Base::operator=(const Base& b) {
-    pimpl.reset(b.pimpl->clone());
-
+Conf& Conf::operator=(Conf b) {
+    using std::swap;
+    swap(*this, b);
     return *this;
 }
 
-const std::string& Base::getName() const {
-    return pimpl->name;
+const std::string& Conf::getName() const {
+    return name;
 }
 
-bool Base::existsNode(const std::string& key) const {
+bool Conf::existsNode(std::string key) const {
     try {
         getNode(key);
         return true;
@@ -217,7 +170,7 @@ bool Base::existsNode(const std::string& key) const {
     }
 }
 
-bool Base::existsChild(const std::string& key) const {
+bool Conf::existsChild(std::string key) const {
     try {
         getChild(key);
         return true;
@@ -227,9 +180,9 @@ bool Base::existsChild(const std::string& key) const {
     }
 }
 
-const VarType& Base::getNode(const std::string& key) const {
-    auto it = pimpl->nodes.find(key);
-    if(it != pimpl->nodes.end()) {
+const VarType& Conf::getNode(std::string key) const {
+    auto it = nodes.find(key);
+    if(it != nodes.end()) {
         return it->second;
     }
     else {
@@ -237,88 +190,81 @@ const VarType& Base::getNode(const std::string& key) const {
     }
 }
 
-Base& Base::getChild(const std::string& key) {
-    auto it = pimpl->children.find(key);
-    if(it != pimpl->children.end()) {
-        return *(it->second);
+Conf& Conf::getChild(std::string key) {
+    auto it = children.find(key);
+    if(it != children.end()) {
+        return it->second;
     }
     else {
         BOOST_THROW_EXCEPTION(ChildNotFoundException() << ErrorTag::ConfigChild(key));
     }
 }
 
-const Base& Base::getChild(const std::string& key) const {
-    auto it = pimpl->children.find(key);
-    if(it != pimpl->children.end()) {
-        return *(it->second);
+const Conf& Conf::getChild(std::string key) const {
+    auto it = children.find(key);
+    if(it != children.end()) {
+        return it->second;
     }
     else {
         BOOST_THROW_EXCEPTION(ChildNotFoundException() << ErrorTag::ConfigChild(key));
     }
 }
 
-Base& Base::putChild(const std::string& key, const Base& child) {
-    return *pimpl->putChild(key, child);
+Conf& Conf::putChild(std::string key, Conf child) {
+    return children[std::move(key)] = std::move(child);
 }
 
-const VarType& Base::putNode(const std::string& key, const VarType& value) {
-    return pimpl->putNode(key, value);
+VarType& Conf::putNode(std::string key, VarType value) {
+    variableUpdated(key, value);
+    return nodes[std::move(key)] = std::move(value);
 }
 
-ForwardRange<std::shared_ptr<Base>> Base::getChildren() {
-    return pimpl->children | map_values;
+Conf::ChildRange Conf::getChildren() {
+    return children | map_values;
 }
 
-ForwardRange<const std::shared_ptr<Base>> Base::getChildren() const {
-    return pimpl->children | map_values;
+Conf::ConstChildRange Conf::getChildren() const {
+    return children | map_values;
 }
 
-ForwardRange<Base::impl::NodeMap::value_type> Base::getNodes() {
-    return pimpl->nodes;
+Conf::NodeRange Conf::getNodes() {
+    return nodes;
 }
 
-ForwardRange<const Base::impl::NodeMap::value_type> Base::getNodes() const {
-    return pimpl->nodes;
+Conf::ConstNodeRange Conf::getNodes() const {
+    return nodes;
 }
 
-void Base::addDefaultFunc(std::function<Base&()> func) {
-    pimpl->resetDefault = func;
+void Conf::addDefaultFunc(std::function<Conf&()> func) {
+    resetDefault = func;
 }
 
-void Base::resetToDefault() {
-    if(!pimpl->resetDefault)
+void Conf::resetToDefault() {
+    if(!resetDefault)
         return;
-    auto tmp_sig(std::move(pimpl->variableUpdated));
-    auto tmp_fun = pimpl->resetDefault;
-    *this = pimpl->resetDefault();
-    pimpl->variableUpdated = std::move(tmp_sig);
-    pimpl->resetDefault = std::move(tmp_fun);
+    auto tmp_sig(std::move(variableUpdated));
+    DefaultFunc tmp_fun = resetDefault;
+    *this = resetDefault();
+    variableUpdated = std::move(tmp_sig);
+    resetDefault = std::move(tmp_fun);
 }
 
-template<class Archive>
-void Base::serialize(Archive& ar, const unsigned int /*version*/) {
-    ar & *pimpl;
+Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() {
+    return variableUpdated;
 }
 
-template void Base::serialize<boost::archive::binary_iarchive>(
-    boost::archive::binary_iarchive& ar,
-    const unsigned int file_version
-);
-template void Base::serialize<boost::archive::binary_oarchive>(
-    boost::archive::binary_oarchive& ar,
-    const unsigned int file_version
-);
-
-Base* new_clone(const Base& conf) {
-    return conf.clone();
+void swap(Conf& a, Conf& b)
+noexcept(noexcept(swap(a.nodes, b.nodes))
+         && noexcept(swap(a.children, b.children))
+         && noexcept(swap(a.name, b.name))
+         && noexcept(swap(a.resetDefault, b.resetDefault)))
+{
+    using std::swap;
+    swap(a.nodes, b.nodes);
+    swap(a.children, b.children);
+    swap(a.name, b.name);
+    swap(a.resetDefault, b.resetDefault);
 }
-
-template <>
-Signals::Config::VariableUpdated& Base::get<Signals::Config::VariableUpdated>() {
-    return pimpl->variableUpdated;
-}
-
-template Signals::Config::VariableUpdated& Base::get<Signals::Config::VariableUpdated>();
 
 } // namespace Config
 } // namespace Melosic

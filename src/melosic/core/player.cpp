@@ -60,9 +60,7 @@ public:
         end(false),
         playerThread(&impl::start, this)
     {
-        playlistman.getTrackChangedSignal().connect(&StateMachine::trackChangeSlot,
-                                                    &stateMachine,
-                                                    ph::_1);
+        playlistman.getTrackChangedSignal().connect(&StateMachine::trackChangeSlot, &stateMachine);
 
         outman.getPlayerSinkChangedSignal().connect(&StateMachine::sinkChangeSlot, &stateMachine);
     }
@@ -127,7 +125,7 @@ private:
         while(!end) {
             std::shared_ptr<Playlist> playlist;
 
-            this_thread::sleep_for(chrono::milliseconds(10));
+            this_thread::sleep_for(10ms);
             try {
                 playlist = playlistman.currentPlaylist();
                 if(!playlist) {

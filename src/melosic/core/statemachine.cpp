@@ -63,7 +63,7 @@ private:
     static Melosic::Playlist::Manager* playman_;
     static void setPlayer(StateMachine::impl* p) { stateMachine_ = p; }
     static void setPlayMan(Melosic::Playlist::Manager* p) { playman_ = p; }
-    friend class StateMachine::impl;
+    friend struct StateMachine::impl;
 
 protected:
     decltype(stateMachine_) const& stateMachine = stateMachine_;
@@ -139,9 +139,9 @@ struct StateMachine::impl {
                 if(sinkWrapper_.currentSpecs() != track.getAudioSpecs()) {
                     LOG(logject) << "Changing sink specs for new track";
                     sinkWrapper_.stop();
-                    this_thread::sleep_for(chrono::milliseconds(100));
+                    this_thread::sleep_for(100ms);
                     sinkWrapper_.prepareSink(const_cast<Track&>(track).getAudioSpecs());
-                    this_thread::sleep_for(chrono::milliseconds(100));
+                    this_thread::sleep_for(100ms);
                     sinkWrapper_.play();
                 }
             }
@@ -244,7 +244,7 @@ struct StateMachine::impl {
     std::function<void()> restoreFun;
 
     std::shared_ptr<State> currentState_;
-    friend class StateMachine;
+    friend struct StateMachine;
     friend struct State;
 
     StateChanged stateChanged;
@@ -335,7 +335,7 @@ struct Tell : virtual State {
         auto playlist = playman->currentPlaylist();
         assert(playlist);
         if(playlist->currentTrack() == playlist->end())
-            return chrono::milliseconds::zero();
+            return 0ms;
         return playlist->currentTrack()->tell();
     }
 };

@@ -23,6 +23,8 @@
 #endif
 
 #include <boost/locale.hpp>
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/common/file.hpp>
@@ -65,9 +67,9 @@ int main(int argc, char* argv[]) {
 
         Core::Player player(kernel.getPlaylistManager(), kernel.getOutputManager());
 
-        kernel.getConfigManager().loadConfig();
-
         MainWindow win(kernel, player);
+
+        kernel.getConfigManager().loadConfig();
 
         return app.exec();
     }

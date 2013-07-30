@@ -21,6 +21,11 @@
 #include <cstdint>
 #include <chrono>
 namespace chrono = std::chrono;
+#include <string>
+
+namespace Melosic {
+using namespace std::literals;
+}
 
 #ifdef _WIN32
 #   define MELOSIC_LOCAL

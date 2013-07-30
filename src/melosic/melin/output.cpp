@@ -21,17 +21,18 @@
 using std::mutex;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
+#include <string>
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 #include <boost/variant.hpp>
 
-#include <melosic/common/string.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/signal_core.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/plugin.hpp>
+#include <melosic/melin/config.hpp>
 
 #include "output.hpp"
 
@@ -45,14 +46,14 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 class Manager::impl {
 public:
     impl(Config::Manager& confman) {
-        confman.getLoadedSignal().connect([this](Config::Base& base) {
+        conf.putNode("output device", "iec958:CARD=PCH,DEV=0"s);
+        confman.getLoadedSignal().connect([this](Config::Conf& base) {
             TRACE_LOG(logject) << "Output conf loaded";
             auto& c = base.existsChild("Output")
                     ? base.getChild("Output")
                     : base.putChild("Output", conf);
-            static_cast<Conf&>(c).outputFactories = &outputFactories;
-            c.addDefaultFunc([=]() -> Config::Base& { return *conf.clone(); });
-            auto& varUpdate = c.get<Signals::Config::VariableUpdated>();
+            c.addDefaultFunc([=]() -> Config::Conf& { return conf; });
+            auto& varUpdate = c.getVariableUpdatedSignal();
             auto fun = [this](const std::string& key, const Config::VarType& val) {
                 TRACE_LOG(logject) << "Config: variable updated: " << key;
                 try {
@@ -125,11 +126,10 @@ private:
     std::string sinkName;
     std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
     std::map<DeviceName, Factory> outputFactories;
-    Conf conf;
+    Config::Conf conf{"Output"};
     PlayerSinkChanged playerSinkChanged;
     Logger::Logger logject{logging::keywords::channel = "Output::Manager"};
     friend class Manager;
-    friend class Conf;
 };
 
 Manager::Manager(Config::Manager& confman)
@@ -153,13 +153,5 @@ Signals::Output::PlayerSinkChanged& Manager::getPlayerSinkChangedSignal() const 
     return pimpl->getPlayerSinkChangedSignal();
 }
 
-Conf::Conf() : Config::Config("Output") {
-    putNode("output device", "iec958:CARD=PCH,DEV=0"_str);
-}
-
-Conf::~Conf() {}
-
 } // namespace Output
 } // namespace Melosic
-
-BOOST_CLASS_EXPORT_IMPLEMENT(Melosic::Output::Conf)

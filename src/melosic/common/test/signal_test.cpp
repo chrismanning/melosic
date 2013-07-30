@@ -64,7 +64,7 @@ struct S {
 TEST_F(SignalTest, SignalBindTest) {
     ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
     S s;
-    auto c = sig1.connect(&S::fun, &s, ph::_1);
+    auto c = sig1.connect(&S::fun, &s);
     EXPECT_EQ(1, sig1.slotCount()) << "Slot not added";
     int32_t i{rand()};
     auto f(sig1(i));
@@ -79,7 +79,7 @@ TEST_F(SignalTest, SignalSharedBindTest) {
     ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
     auto s(std::make_shared<S>());
 
-    auto c = sig1.connect(&S::fun, s, ph::_1);
+    auto c = sig1.connect(&S::fun, s);
 
     int32_t i{rand()};
     auto f(sig1(i));
@@ -100,7 +100,7 @@ TEST_F(SignalTest, BoostSignalSharedBindTest) {
     ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
     auto s(boost::make_shared<S>());
 
-    auto c = sig1.connect(&S::fun, s, ph::_1);
+    auto c = sig1.connect(&S::fun, s);
 
     int32_t i{rand()};
     auto f(sig1(i));
@@ -120,7 +120,7 @@ TEST_F(SignalTest, BoostSignalSharedBindTest) {
 TEST_F(SignalTest, ObjSignalBindTest) {
     ASSERT_EQ(0, sig1.slotCount()) << "Should not be any slots connected";
     S s;
-    auto c = sig1.connect(&S::fun, s, ph::_1);
+    auto c = sig1.connect(&S::fun, s);
     EXPECT_EQ(1, sig1.slotCount()) << "Slot not added";
     int32_t i{rand()};
     auto f(sig1(i));

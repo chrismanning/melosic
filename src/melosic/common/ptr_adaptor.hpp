@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <functional>
+#include <type_traits>
 
 #include <boost/smart_ptr/shared_ptr.hpp>
 #include <boost/smart_ptr/weak_ptr.hpp>
@@ -40,50 +41,88 @@ struct isWeakPtr<std::weak_ptr<T>> : std::true_type {};
 template <typename T>
 struct isWeakPtr<boost::weak_ptr<T>> : std::true_type {};
 
-template <typename T>
+template <template<class> class Ptr, typename T>
 struct WeakPtrBind {
+    static_assert(isWeakPtr<Ptr<T>>::value, "WeakPtrBind is for binding weak pointers ONLY");
     typedef T* result_type;
 
-    template <template<class> class Ptr>
-    T* operator()(const Ptr<T>& ptr) {
-        static_assert(isWeakPtr<Ptr<T>>::value, "WeakPtrBind is for binding weak pointers ONLY");
-        return call_impl(ptr);
-    }
+    explicit WeakPtrBind(const Ptr<T>& ptr) noexcept : ptr(ptr) {}
 
-private:
-    template <template<class> class WeakPtr>
-    inline T* call_impl(const WeakPtr<T>& ptr) {
+    T* operator()() const {
         if(ptr.expired())
             throw std::bad_weak_ptr();
         return ptr.lock().get();
     }
+
+    T& operator*() const {
+        return *(*this)();
+    }
+
+private:
+    Ptr<T> ptr;
+};
+
+template <typename T>
+struct RefBind {
+    typedef T* result_type;
+
+    explicit RefBind(const std::reference_wrapper<T>& wrapper) noexcept : wrapper(wrapper) {}
+
+    T* operator()() const noexcept {
+        return &wrapper.get();
+    }
+
+    T& operator*() const {
+        return *(*this)();
+    }
+
+private:
+    std::reference_wrapper<T> wrapper;
+};
+
+template <typename T>
+struct PtrBind {
+    typedef T* result_type;
+
+    explicit PtrBind(T* ptr) noexcept : ptr(ptr) {}
+
+    T* operator()() const noexcept {
+        return ptr;
+    }
+
+    T& operator*() const {
+        return *(*this)();
+    }
+
+private:
+    T* ptr;
 };
 
 template <typename>
 void bindObj();
 
+template <typename T, class DecayedT = typename std::decay<T>::type>
+auto bindObj(std::reference_wrapper<T> obj) {
+    static_assert(std::is_class<DecayedT>::value || std::is_pointer<DecayedT>::value,
+                  "bindObj must be called with a class object/pointer");
+    return RefBind<T>(obj);
+}
+
 template <typename T>
 auto bindObj(T& obj) {
     static_assert(std::is_class<typename std::decay<T>::type>::value,
                   "bindObj must be called with a class object");
-    return std::ref(obj);
+    return bindObj(std::ref(obj));
 }
 
 template <typename T>
-auto bindObj(std::reference_wrapper<T> obj) {
-    static_assert(std::is_class<typename std::decay<T>::type>::value,
-                  "bindObj must be called with a class object");
-    return obj;
-}
-
-template <typename T>
-T* bindObj(T* ptr) {
-    return ptr;
+auto bindObj(T* ptr) {
+    return PtrBind<T>(ptr);
 }
 
 template <template<class> class Ptr, typename T, class = typename std::enable_if<isWeakPtr<Ptr<T>>::value>::type>
 auto bindObj(const Ptr<T>& ptr) {
-    return std::bind(WeakPtrBind<T>(), ptr);
+    return WeakPtrBind<Ptr, T>(ptr);
 }
 
 template <typename T>

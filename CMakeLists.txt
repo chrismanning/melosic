@@ -11,6 +11,12 @@ endif()
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
 
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+ set(CMAKE_STANDARD_LIBRARIES "-lc++abi")
+endif()
+
 add_subdirectory(extern)
 include_directories(extern/cpp-netlib/http/src/)
 include_directories(extern/cpp-netlib/uri/src/)
@@ -24,7 +30,6 @@ if(NOT WIN32)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++1y")
-ADD_DEFINITIONS(-D__GXX_EXPERIMENTAL_CXX0X__=1)
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O1")
 
@@ -55,7 +60,7 @@ SET(PN ${PROJECT_NAME})
 enable_testing()
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp)
-  target_link_libraries(${test_name} gtest ${PN}_test_main ${Boost_LIBRARIES} ${PN}lib)
+  target_link_libraries(${test_name} gtest ${PN}_test_main ${Boost_LIBRARIES})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()
 
