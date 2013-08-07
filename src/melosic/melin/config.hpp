@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <array>
+#include <string>
 
 #include <boost/serialization/access.hpp>
 #include <boost/filesystem/path.hpp>
@@ -34,11 +35,8 @@ using namespace boost::adaptors;
 #include <melosic/common/common.hpp>
 #include <melosic/common/configvar.hpp>
 #include <melosic/melin/config_signals.hpp>
-#include <melosic/common/signal.hpp>
 
 namespace Melosic {
-
-class ConfigWidget;
 
 namespace Slots {
 class Manager;
@@ -54,17 +52,15 @@ enum {
     SystemDir
 };
 
-static std::array<boost::filesystem::path,3> dirs{{".", "~/.config/melosic/", "/etc/melosic/"}};
-
-class Manager {
+class MELOSIC_EXPORT Manager {
 public:
-    Manager();
+    explicit Manager(boost::filesystem::path p);
     ~Manager();
 
-    MELOSIC_EXPORT void loadConfig();
-    MELOSIC_EXPORT void saveConfig();
+    void loadConfig();
+    void saveConfig();
 
-    MELOSIC_EXPORT Signals::Config::Loaded& getLoadedSignal() const;
+    Signals::Config::Loaded& getLoadedSignal() const;
 
 private:
     struct impl;
@@ -81,11 +77,13 @@ public:
     typedef boost::sub_range<const NodeMap> ConstNodeRange;
     typedef std::function<Conf&()> DefaultFunc;
 
-    Conf() : Conf("") {}
+    Conf();
     explicit Conf(std::string name);
 
+    ~Conf();
+
     Conf(const Conf&);
-    Conf(Conf&&) = default;
+    Conf(Conf&&);
     Conf& operator=(Conf);
 
     friend void swap(Conf&, Conf&) noexcept;
@@ -103,21 +101,24 @@ public:
     NodeRange getNodes();
     ConstNodeRange getNodes() const;
 
+    template <typename Func>
+    void addDefaultFunc(Func fun) {
+        static_assert(std::is_same<decltype(fun()), Conf&>::value, "Default function must return reference to Conf");
+        addDefaultFunc(DefaultFunc(fun));
+    }
+
     void addDefaultFunc(DefaultFunc);
     void resetToDefault();
 
     Signals::Config::VariableUpdated& getVariableUpdatedSignal();
 
 private:
-    struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
-        using Super::Signal;
-    };
+    struct impl;
+    std::unique_ptr<impl> pimpl;
 
     ChildMap children;
     NodeMap nodes;
     std::string name;
-    VariableUpdated variableUpdated;
-    DefaultFunc resetDefault;
 
     friend class boost::serialization::access;
     template<class Archive>

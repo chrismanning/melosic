@@ -23,6 +23,7 @@
 #include <melosic/melin/encoder.hpp>
 #include <melosic/common/thread.hpp>
 #include <melosic/melin/playlist.hpp>
+#include <melosic/common/directories.hpp>
 
 #include "kernel.hpp"
 
@@ -32,7 +33,7 @@ namespace Core {
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
-          confman(),
+          confman("melosic.conf"s),
           outman(confman),
           playlistman(decman)
     {}
@@ -50,7 +51,14 @@ class Kernel::impl {
 
 Kernel::Kernel() : pimpl(new impl(*this)) {}
 
-Kernel::~Kernel() {}
+Kernel::~Kernel() {
+    try {
+        getConfigManager().saveConfig();
+    }
+    catch(...) {
+        std::clog << boost::current_exception_diagnostic_information() << std::endl;
+    }
+}
 
 Config::Manager& Kernel::getConfigManager() {
     return pimpl->confman;

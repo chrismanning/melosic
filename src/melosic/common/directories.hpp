@@ -15,31 +15,11 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#ifndef MELOSIC_DIRECTORIES_HPP
+#define MELOSIC_DIRECTORIES_HPP
 
-#include <boost/filesystem.hpp>
-namespace fs = boost::filesystem;
+#ifdef _POSIX_VERSION
+#include <melosic/common/xdg.hpp>
+#endif
 
-#include <melosic/melin/config.hpp>
-#include <melosic/common/directories.hpp>
-#include <melosic/common/signal_core.hpp>
-using namespace Melosic;
-
-TEST(ConfigTest, ConfVars) {
-
-}
-
-struct ConfigManagerTest : ::testing::Test {
-    ~ConfigManagerTest() {
-        fs::remove(confPath);
-    }
-
-    fs::path confPath{Directories::configHome() / "melosic" / "test.conf"};
-    Config::Manager confman{confPath};
-};
-
-TEST_F(ConfigManagerTest, ConfigManagerTest1) {
-    ASSERT_EQ(Directories::configHome() / "melosic" / "test.conf", confPath);
-    confman.loadConfig();
-    ASSERT_TRUE(fs::exists(confPath)) << "config file not found:" << confPath;
-}
+#endif // MELOSIC_DIRECTORIES_HPP

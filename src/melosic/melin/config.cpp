@@ -33,22 +33,19 @@ using unique_lock = std::unique_lock<Mutex>;
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/mpl/assert.hpp>
 
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
 
 #include "config.hpp"
 
-#ifdef _POSIX_VERSION
-#include <wordexp.h>
-#endif
+#include <melosic/common/directories.hpp>
 
 namespace Melosic {
 static Logger::Logger logject(logging::keywords::channel = "Config");
 namespace Config {
 
-static const boost::filesystem::path ConfFile("melosic.conf");
+static const fs::path ConfFile("melosic.conf");
 
 struct Loaded : Signals::Signal<Signals::Config::Loaded> {
     using Super::Signal;
@@ -59,48 +56,24 @@ struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
 };
 
 struct Manager::impl {
-    impl() : conf("root") {
-    #ifdef _POSIX_VERSION
-        wordexp_t exp_result;
-        wordexp(dirs[UserDir].c_str(), &exp_result, 0);
-        dirs[UserDir] = exp_result.we_wordv[0];
-        wordfree(&exp_result);
-    #endif
-        loaded.connect([this] (Conf&) {
-            saveConfig();
-        });
+    impl(fs::path p) : conf("root") {
+        if(p.empty())
+            BOOST_THROW_EXCEPTION(Exception());
+
+        confPath = std::move(Directories::configHome() / "melosic" / p.filename());
+
+        if(!fs::exists(confPath.parent_path()))
+            fs::create_directories(confPath.parent_path());
+        TRACE_LOG(logject) << "Conf file path: " << confPath;
     }
 
-    ~impl() {
-        try {
-            saveConfig();
-        }
-        catch(...) {
-            std::clog << boost::current_exception_diagnostic_information() << std::endl;
-        }
-    }
-
-    int chooseDir() {
-        if(fs::exists(dirs[CurrentDir] / ConfFile)) {
-            return CurrentDir;
-        }
-        if(fs::exists(fs::absolute(dirs[UserDir]) / ConfFile)) {
-            return UserDir;
-        }
-        if(fs::exists(dirs[SystemDir] / ConfFile)) {
-            return SystemDir;
-        }
-        if(!fs::exists(dirs[UserDir]))
-            fs::create_directories(dirs[UserDir]);
-        return UserDir;
-    }
+    ~impl() {}
 
     void loadConfig() {
-        if(confPath.empty())
-            confPath = dirs[chooseDir()] / ConfFile;
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
             loaded(std::ref(conf));
+            saveConfig();
             return;
         }
 
@@ -109,6 +82,7 @@ struct Manager::impl {
         boost::archive::binary_iarchive ia(ifs);
         ia >> conf;
         loaded(std::ref(conf));
+        saveConfig();
     }
 
     void saveConfig() {
@@ -125,7 +99,7 @@ struct Manager::impl {
     Loaded loaded;
 };
 
-Manager::Manager() : pimpl(new impl) {}
+Manager::Manager(fs::path p) : pimpl(new impl(std::move(p))) {}
 
 Manager::~Manager() {}
 
@@ -137,18 +111,39 @@ void Manager::saveConfig() {
     pimpl->saveConfig();
 }
 
-Signals::Config::Loaded& Manager::getLoadedSignal() const{
+Signals::Config::Loaded& Manager::getLoadedSignal() const {
     return pimpl->loaded;
 }
 
-Conf::Conf(std::string name) : name(std::move(name)) {}
+struct Conf::impl {
+    struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
+        using Super::Signal;
+    };
+    VariableUpdated variableUpdated;
+    Conf::DefaultFunc resetDefault;
+};
+
+Conf::Conf() : Conf(""s) {}
+
+Conf::Conf(Conf&& b) {
+    using std::swap;
+    swap(*this, b);
+}
+
+Conf::Conf(std::string name) :
+    pimpl(std::make_unique<impl>()),
+    name(std::move(name)) {}
+
+Conf::~Conf() {}
 
 Conf::Conf(const Conf& b) :
+    pimpl(std::make_unique<impl>()),
     children(b.children),
     nodes(b.nodes),
-    name(b.name),
-    resetDefault(b.resetDefault)
-{}
+    name(b.name)
+{
+    pimpl->resetDefault = b.pimpl->resetDefault;
+}
 
 Conf& Conf::operator=(Conf b) {
     using std::swap;
@@ -215,7 +210,7 @@ Conf& Conf::putChild(std::string key, Conf child) {
 }
 
 VarType& Conf::putNode(std::string key, VarType value) {
-    variableUpdated(key, value);
+    pimpl->variableUpdated(key, value);
     return nodes[std::move(key)] = std::move(value);
 }
 
@@ -236,34 +231,30 @@ Conf::ConstNodeRange Conf::getNodes() const {
 }
 
 void Conf::addDefaultFunc(std::function<Conf&()> func) {
-    resetDefault = func;
+    pimpl->resetDefault = func;
 }
 
 void Conf::resetToDefault() {
-    if(!resetDefault)
+    if(!pimpl->resetDefault)
         return;
-    auto tmp_sig(std::move(variableUpdated));
-    DefaultFunc tmp_fun = resetDefault;
-    *this = resetDefault();
-    variableUpdated = std::move(tmp_sig);
-    resetDefault = std::move(tmp_fun);
+    *this = std::move(pimpl->resetDefault());
 }
 
 Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() {
-    return variableUpdated;
+    return pimpl->variableUpdated;
 }
 
 void swap(Conf& a, Conf& b)
-noexcept(noexcept(swap(a.nodes, b.nodes))
+noexcept(noexcept(swap(a.pimpl, b.pimpl))
+         && noexcept(swap(a.nodes, b.nodes))
          && noexcept(swap(a.children, b.children))
-         && noexcept(swap(a.name, b.name))
-         && noexcept(swap(a.resetDefault, b.resetDefault)))
+         && noexcept(swap(a.name, b.name)))
 {
     using std::swap;
+    swap(a.pimpl, b.pimpl);
     swap(a.nodes, b.nodes);
     swap(a.children, b.children);
     swap(a.name, b.name);
-    swap(a.resetDefault, b.resetDefault);
 }
 
 } // namespace Config

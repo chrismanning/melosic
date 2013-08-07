@@ -53,7 +53,7 @@ add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
-include_directories(src ${Boost_INCLUDE_DIRS})
+include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
 
 SET(PN ${PROJECT_NAME})
 #test stuff
@@ -61,6 +61,7 @@ enable_testing()
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp)
   target_link_libraries(${test_name} gtest ${PN}_test_main ${Boost_LIBRARIES})
+  set_target_properties(${test_name} PROPERTIES COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING=1")
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()
 

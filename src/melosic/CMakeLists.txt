@@ -30,7 +30,6 @@ add_library(${PN}_test_main STATIC test_main.cpp $<TARGET_OBJECTS:${PN}objects>)
 
 qt5_use_modules(${PN} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES} ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES})
-message(STATUS "${Boost_LIBRARIES}")
 
 target_link_libraries(${PN} ${LINK_LIBS} qt-gui -lc++abi)
 target_link_libraries(${PN}lib ${LINK_LIBS} -lc++abi)

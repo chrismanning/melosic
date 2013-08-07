@@ -22,21 +22,19 @@
 #include <boost/mpl/logical.hpp>
 namespace { namespace mpl = boost::mpl; }
 
-#include <type_traits>
-
 //some useful type traits
 
 namespace Melosic {
 
 template <class Trait, typename ...Args>
-struct MultiArgsTrait : mpl::and_<mpl::true_, mpl::apply<Trait, Args>...>::type {};
+using MultiArgsTrait = typename mpl::and_<mpl::true_, mpl::apply<Trait, Args>...>::type;
 
 template <class T>
 struct ObjFromMemFunPtr {};
 
 template <class T, class U>
 struct ObjFromMemFunPtr<T U::*> {
-    typedef typename std::decay<U>::type type;
+    typedef U type;
 };
 
 }
