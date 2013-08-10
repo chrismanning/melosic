@@ -22,7 +22,6 @@
 #include <array>
 #include <string>
 
-#include <boost/serialization/access.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/range/sub_range.hpp>
 #include <boost/variant.hpp>
@@ -75,7 +74,7 @@ public:
     typedef std::map<std::string, VarType> NodeMap;
     typedef boost::sub_range<NodeMap> NodeRange;
     typedef boost::sub_range<const NodeMap> ConstNodeRange;
-    typedef std::function<Conf&()> DefaultFunc;
+    typedef std::function<Conf()> DefaultFunc;
 
     Conf();
     explicit Conf(std::string name);
@@ -101,9 +100,11 @@ public:
     NodeRange getNodes();
     ConstNodeRange getNodes() const;
 
+    Conf& merge(Conf c);
+
     template <typename Func>
     void addDefaultFunc(Func fun) {
-        static_assert(std::is_same<decltype(fun()), Conf&>::value, "Default function must return reference to Conf");
+        static_assert(std::is_same<decltype(fun()), Conf>::value, "Default function must return reference to Conf");
         addDefaultFunc(DefaultFunc(fun));
     }
 
@@ -120,13 +121,7 @@ private:
     NodeMap nodes;
     std::string name;
 
-    friend class boost::serialization::access;
-    template<class Archive>
-    MELOSIC_EXPORT void serialize(Archive& ar, const unsigned int /*version*/) {
-        ar & children;
-        ar & nodes;
-        ar & name;
-    }
+    friend class Manager;
 };
 
 void swap(Conf& a, Conf& b) noexcept;

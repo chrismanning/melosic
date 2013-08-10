@@ -320,7 +320,8 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
                   ? base.getChild("Output").getChild("ALSA")
                   : base.getChild("Output").putChild("ALSA", Config::Conf("ALSA"))
                   : base.putChild("Output", Config::Conf("Output")).putChild("ALSA", Config::Conf("ALSA"));
-        c.addDefaultFunc([=]() -> Config::Conf& { return ::conf; });
+        c.merge(::conf);
+        c.addDefaultFunc([=]() -> Config::Conf { return ::conf; });
         if(!c.existsNode("frames") || !c.existsNode("output device"))
             c.resetToDefault();
         auto& varUpdate = c.getVariableUpdatedSignal();

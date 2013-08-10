@@ -52,7 +52,8 @@ public:
             auto& c = base.existsChild("Output")
                     ? base.getChild("Output")
                     : base.putChild("Output", conf);
-            c.addDefaultFunc([=]() -> Config::Conf& { return conf; });
+            c.merge(conf);
+            c.addDefaultFunc([=]() -> Config::Conf { return conf; });
             auto& varUpdate = c.getVariableUpdatedSignal();
             auto fun = [this](const std::string& key, const Config::VarType& val) {
                 TRACE_LOG(logject) << "Config: variable updated: " << key;

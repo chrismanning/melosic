@@ -10,3 +10,6 @@
 [submodule "extern/gmock"]
 	path = extern/gmock
 	url = https://github.com/cpp-netlib/gmock.git
+[submodule "extern/rapidjson"]
+	path = extern/rapidjson
+	url = git@github.com:chrismanning/rapidjson.git

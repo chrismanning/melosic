@@ -24,22 +24,22 @@ using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;
 
 #include <melosic/common/configvar.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/variant.hpp>
-#include <boost/serialization/vector.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
 #include <boost/exception/diagnostic_information.hpp>
+#include <boost/mpl/find.hpp>
+namespace { namespace mpl = boost::mpl; }
 
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
-
-#include "config.hpp"
-
+#include <melosic/melin/config.hpp>
 #include <melosic/common/directories.hpp>
+
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/prettywriter.h>
+namespace json = rapidjson;
 
 namespace Melosic {
 static Logger::Logger logject(logging::keywords::channel = "Config");
@@ -69,9 +69,36 @@ struct Manager::impl {
 
     ~impl() {}
 
+    VarType VarFromJson(json::Value& val) {
+        if(val.IsString())
+            return VarType(std::string(val.GetString()));
+        else if(val.IsInt64())
+            return VarType(val.GetInt64());
+        else if(val.IsDouble())
+            return VarType(val.GetDouble());
+        else if(val.IsBool())
+            return VarType(val.GetBool());
+        assert(false);
+    }
+
+    Conf ConfFromJson(json::Value& val) {
+        assert(val.IsObject());
+        auto members = boost::make_iterator_range(val.MemberBegin(), val.MemberEnd());
+        Conf c;
+        for(auto& member : members) {
+            if(member.value.IsObject())
+                c.children.emplace(member.name.GetString(), ConfFromJson(member.value));
+            else
+                c.nodes.emplace(member.name.GetString(), VarFromJson(member.value));
+        }
+        return std::move(c);
+    }
+
     void loadConfig() {
+        unique_lock l(mu);
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
+            l.unlock();
             loaded(std::ref(conf));
             saveConfig();
             return;
@@ -79,21 +106,85 @@ struct Manager::impl {
 
         fs::ifstream ifs(confPath);
         assert(ifs.good());
-        boost::archive::binary_iarchive ia(ifs);
-        ia >> conf;
+
+        ifs.seekg(0, std::ios::end);
+        char confstring[static_cast<std::streamoff>(ifs.tellg())+1];
+        ifs.seekg(0, std::ios::beg);
+        ifs.read(confstring, sizeof(confstring)-1);
+        ifs.close();
+        confstring[sizeof(confstring)-1] = 0;
+        TRACE_LOG(logject) << confstring;
+
+        json::Document rootjson;
+        rootjson.ParseInsitu<0>(confstring);
+
+        if(!rootjson.HasParseError()) {
+            Conf tmp_conf = ConfFromJson(rootjson);
+
+            using std::swap;
+            swap(conf, tmp_conf);
+        }
+        else
+            ERROR_LOG(logject) << "JSON parse error: " << rootjson.GetParseError();
+
+        l.unlock();
         loaded(std::ref(conf));
         saveConfig();
     }
 
-    void saveConfig() {
-        assert(!confPath.empty());
-
-        fs::ofstream ofs(confPath);
-        assert(ofs.good());
-        boost::archive::binary_oarchive oa(ofs);
-        oa << conf;
+    template <typename T>
+    static constexpr int TypeIndex = mpl::index_of<VarType::types, T>::type::value;
+    json::Value JsonFromVar(const VarType& var) {
+        switch(var.which()) {
+            case TypeIndex<std::string>: {
+                const auto& tmp = boost::get<std::string>(var);
+                return json::Value(tmp.c_str(),
+                                   tmp.size(), poolAlloc);
+            }
+            case TypeIndex<bool>:
+                return json::Value(boost::get<bool>(var));
+            case TypeIndex<int64_t>:
+                return json::Value(boost::get<int64_t>(var));
+            case TypeIndex<double>:
+                return json::Value(boost::get<double>(var));
+        }
+        assert(false);
     }
 
+    json::Value JsonFromNodes(const Conf::NodeMap& nodes) {
+        json::Value v(json::kObjectType);
+        for(const Conf::NodeMap::value_type& pair: nodes) {
+            v.AddMember(pair.first.c_str(), std::move(JsonFromVar(pair.second)), poolAlloc);
+        }
+        return v;
+    }
+
+    json::Value JsonFromConf(const Conf& c) {
+        json::Value obj(JsonFromNodes(c.nodes));
+        for(const Conf::ChildMap::value_type& pair: c.children) {
+            obj.AddMember(pair.first.c_str(), std::move(JsonFromConf(pair.second)), poolAlloc);
+        }
+        return obj;
+    }
+
+    void saveConfig() {
+        lock_guard l(mu);
+
+        assert(!confPath.empty());
+
+        json::Document rootjson(JsonFromConf(conf));
+        json::StringBuffer strbuf;
+        json::PrettyWriter<json::StringBuffer> writer(strbuf);
+        rootjson.Accept(writer);
+
+        std::string stringified(strbuf.GetString());
+        fs::ofstream ofs(confPath);
+        assert(ofs.good());
+        ofs << stringified << std::endl;
+    }
+
+    Mutex mu;
+    json::Value::AllocatorType poolAlloc;
     fs::path confPath;
     Conf conf;
     Loaded loaded;
@@ -230,7 +321,16 @@ Conf::ConstNodeRange Conf::getNodes() const {
     return nodes;
 }
 
-void Conf::addDefaultFunc(std::function<Conf&()> func) {
+Conf& Conf::merge(Conf c) {
+    nodes.insert(c.nodes.begin(), c.nodes.end());
+    children.insert(c.children.begin(), c.children.end());
+    for(auto&& child : c.children) {
+        getChild(child.first).merge(child.second);
+    }
+    return *this;
+}
+
+void Conf::addDefaultFunc(Conf::DefaultFunc func) {
     pimpl->resetDefault = func;
 }
 
@@ -258,4 +358,6 @@ noexcept(noexcept(swap(a.pimpl, b.pimpl))
 }
 
 } // namespace Config
-} // namespace Melosic
+}
+
+// namespace Melosic

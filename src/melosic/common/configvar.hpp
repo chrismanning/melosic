@@ -19,14 +19,13 @@
 #define MELOSIC_CONFIGVAR_HPP
 
 #include <cstdint>
-#include <vector>
 #include <string>
 
 #include <boost/variant/variant_fwd.hpp>
 
 namespace Melosic {
 namespace Config {
-typedef boost::variant<std::string, bool, int64_t, double, std::vector<uint8_t>> VarType;
+typedef boost::variant<std::string, bool, int64_t, double> VarType;
 }
 }
 

@@ -18,9 +18,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 add_subdirectory(extern)
-include_directories(extern/cpp-netlib/http/src/)
-include_directories(extern/cpp-netlib/uri/src/)
-include_directories(extern/cpp-netlib/message/src/)
+include_directories(${EXTERN_INCLUDES})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer -pthread")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs -Wno-missing-field-initializers -Wno-attributes -Wno-unused-parameter")
@@ -46,7 +44,7 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
-find_package(Boost COMPONENTS filesystem iostreams system log log_setup thread serialization locale REQUIRED)
+find_package(Boost COMPONENTS filesystem iostreams system log log_setup thread locale REQUIRED)
 
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
 
