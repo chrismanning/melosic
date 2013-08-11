@@ -187,6 +187,7 @@ struct Manager::impl {
         rootjson.Accept(writer);
 
         std::string stringified(strbuf.GetString());
+        TRACE_LOG(logject) << "JSON: " << stringified;
         fs::ofstream ofs(confPath);
         assert(ofs.good());
         ofs << stringified << std::endl;
@@ -245,7 +246,7 @@ struct Conf::impl {
 
     bool existsNode(std::string key);
     bool existsChild(std::string key);
-    const VarType& getNode(std::string key);
+    VarType& getNode(std::string key);
     Conf& getChild(std::string key);
     Conf& putChild(std::string key, Conf child);
     VarType& putNode(std::string key, VarType value);
@@ -278,7 +279,7 @@ bool Conf::impl::existsChild(std::string key) {
     }
 }
 
-const VarType& Conf::impl::getNode(std::string key) {
+VarType& Conf::impl::getNode(std::string key) {
     TRACE_LOG(logject) << (format("[%s] getNode(): %s") % name % key);
     shared_lock_guard l(mu);
     auto it = nodes.find(key);
@@ -384,22 +385,60 @@ bool Conf::existsChild(std::string key) const {
     return pimpl->existsChild(std::move(key));
 }
 
-const VarType& Conf::getNode(std::string key) const {
-    return pimpl->getNode(std::move(key));
-}
-Conf& Conf::getChild(std::string key) {
-    return pimpl->getChild(std::move(key));
-}
-
-const Conf& Conf::getChild(std::string key) const {
-    return pimpl->getChild(std::move(key));
-}
-Conf& Conf::putChild(std::string key, Conf child) {
-    return pimpl->putChild(std::move(key), std::move(child));
+bool Conf::applyNode(std::string key, std::function<void(NodeMap::mapped_type&)> fun) {
+    try {
+        auto& node = pimpl->getNode(key);
+        impl::lock_guard l(pimpl->mu);
+        fun(node);
+        return true;
+    }
+    catch(...) {
+        return false;
+    }
 }
 
-VarType& Conf::putNode(std::string key, VarType value) {
-    return pimpl->putNode(std::move(key), std::move(value));
+bool Conf::applyNode(std::string key, std::function<void(const NodeMap::mapped_type&)> fun) const {
+    try {
+        const auto& node = pimpl->getNode(key);
+        impl::shared_lock_guard l(pimpl->mu);
+        fun(node);
+        return true;
+    }
+    catch(...) {
+        return false;
+    }
+}
+
+bool Conf::applyChild(std::string key, std::function<void(Conf&)> fun) {
+    try {
+        auto& child = pimpl->getChild(key);
+        impl::lock_guard l(pimpl->mu);
+        fun(child);
+        return true;
+    }
+    catch(...) {
+        return false;
+    }
+}
+
+bool Conf::applyChild(std::string key, std::function<void(const Conf&)> fun) const {
+    try {
+        const auto& child = pimpl->getChild(key);
+        impl::shared_lock_guard l(pimpl->mu);
+        fun(child);
+        return true;
+    }
+    catch(...) {
+        return false;
+    }
+}
+
+void Conf::putChild(std::string key, Conf child) {
+    pimpl->putChild(std::move(key), std::move(child));
+}
+
+void Conf::putNode(std::string key, VarType value) {
+    pimpl->putNode(std::move(key), std::move(value));
 }
 
 Conf::ChildMap::size_type Conf::childCount() const noexcept {

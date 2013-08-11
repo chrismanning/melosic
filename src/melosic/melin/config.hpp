@@ -86,11 +86,14 @@ public:
     const std::string& getName() const noexcept;
     bool existsNode(std::string key) const;
     bool existsChild(std::string key) const;
-    const VarType& getNode(std::string key) const;
-    Conf& getChild(std::string key);
-    const Conf& getChild(std::string key) const;
-    Conf& putChild(std::string key, Conf child);
-    VarType& putNode(std::string key, VarType value);
+
+    bool applyNode(std::string key, std::function<void(NodeMap::mapped_type&)>);
+    bool applyNode(std::string key, std::function<void(const NodeMap::mapped_type&)>) const;
+    bool applyChild(std::string key, std::function<void(Conf&)>);
+    bool applyChild(std::string key, std::function<void(const Conf&)>) const;
+
+    void putChild(std::string key, Conf child);
+    void putNode(std::string key, VarType value);
 
     ChildMap::size_type childCount() const noexcept;
     NodeMap::size_type nodeCount() const noexcept;

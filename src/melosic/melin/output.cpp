@@ -47,14 +47,8 @@ class Manager::impl {
 public:
     impl(Config::Manager& confman) {
         conf.putNode("output device", "iec958:CARD=PCH,DEV=0"s);
-        confman.getLoadedSignal().connect([this](Config::Conf& base) {
+        confman.getLoadedSignal().connect([this] (Config::Conf& base) {
             TRACE_LOG(logject) << "Output conf loaded";
-            auto& c = base.existsChild("Output")
-                    ? base.getChild("Output")
-                    : base.putChild("Output", conf);
-            c.merge(conf);
-            c.addDefaultFunc([=]() -> Config::Conf { return conf; });
-            auto& varUpdate = c.getVariableUpdatedSignal();
             auto fun = [this](const std::string& key, const Config::VarType& val) {
                 TRACE_LOG(logject) << "Config: variable updated: " << key;
                 try {
@@ -72,11 +66,19 @@ public:
                     ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
                 }
             };
-            varUpdate.connect(fun);
-            c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
-                TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
-                fun(node.first, node.second);
+
+            if(!base.existsChild("Output"s))
+                base.putChild("Output"s, conf);
+            auto r = base.applyChild("Output"s, [&] (Config::Conf& c) {
+                c.merge(conf);
+                c.addDefaultFunc([=]() -> Config::Conf { return conf; });
+                c.getVariableUpdatedSignal().connect(fun);
+                c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
+                    TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
+                    fun(node.first, node.second);
+                });
             });
+            assert(r);
         });
     }
 

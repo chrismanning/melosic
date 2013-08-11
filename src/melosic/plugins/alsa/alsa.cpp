@@ -314,17 +314,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
 
 extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", static_cast<int64_t>(1024));
-    confman->getLoadedSignal().connect([](Config::Conf& base) {
-        auto& c = base.existsChild("Output")
-                ? base.getChild("Output").existsChild("ALSA")
-                  ? base.getChild("Output").getChild("ALSA")
-                  : base.getChild("Output").putChild("ALSA", Config::Conf("ALSA"))
-                  : base.putChild("Output", Config::Conf("Output")).putChild("ALSA", Config::Conf("ALSA"));
-        c.merge(::conf);
-        c.addDefaultFunc([=]() -> Config::Conf { return ::conf; });
-        if(!c.existsNode("frames") || !c.existsNode("output device"))
-            c.resetToDefault();
-        auto& varUpdate = c.getVariableUpdatedSignal();
+    confman->getLoadedSignal().connect([] (Config::Conf& base) {
         auto fun = [&](const std::string& k, const Config::VarType& v) {
             try {
                 if(k == "frames")
@@ -334,11 +324,24 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
                 ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << k;
             }
         };
-        varUpdate.connect(fun);
-        c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
-            TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
-            fun(node.first, node.second);
+
+        if(!base.existsChild("Output"s))
+            base.putChild("Output"s, Config::Conf("Output"s));
+        auto ro = base.applyChild("Output"s, [&] (Config::Conf& c1) {
+            if(!c1.existsChild("ALSA"s))
+                c1.putChild("ALSA"s, ::conf);
+            auto r = c1.applyChild("ALSA"s, [&] (Config::Conf& c) {
+                c.merge(::conf);
+                c.addDefaultFunc([=]() -> Config::Conf { return ::conf; });
+                c.getVariableUpdatedSignal().connect(fun);
+                c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
+                    TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
+                    fun(node.first, node.second);
+                });
+            });
+            assert(r);
         });
+        assert(ro);
     });
 }
 
