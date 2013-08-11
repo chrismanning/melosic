@@ -100,7 +100,7 @@ public:
     NodeRange getNodes();
     ConstNodeRange getNodes() const;
 
-    Conf& merge(Conf c);
+    Conf& merge(const Conf& c);
 
     template <typename Func>
     void addDefaultFunc(Func fun) {
@@ -116,10 +116,6 @@ public:
 private:
     struct impl;
     std::unique_ptr<impl> pimpl;
-
-    ChildMap children;
-    NodeMap nodes;
-    std::string name;
 
     friend class Manager;
 };
