@@ -73,10 +73,10 @@ public:
                 }
             };
             varUpdate.connect(fun);
-            for(const auto& node : c.getNodes()) {
+            c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
                 TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
                 fun(node.first, node.second);
-            }
+            });
         });
     }
 

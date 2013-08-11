@@ -95,12 +95,13 @@ public:
     const Conf& getChild(std::string key) const;
     Conf& putChild(std::string key, Conf child);
     VarType& putNode(std::string key, VarType value);
-    ChildRange getChildren();
-    ConstChildRange getChildren() const;
-    NodeRange getNodes();
-    ConstNodeRange getNodes() const;
 
-    Conf& merge(const Conf& c);
+    void iterateChildren(std::function<void(const Conf&)>) const;
+    void iterateChildren(std::function<void(Conf&)>);
+    void iterateNodes(std::function<void(const NodeMap::value_type&)>) const;
+    void iterateNodes(std::function<void(NodeMap::value_type&)>);
+
+    void merge(const Conf& c);
 
     template <typename Func>
     void addDefaultFunc(Func fun) {

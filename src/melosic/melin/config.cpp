@@ -19,9 +19,6 @@
 #include <map>
 #include <thread>
 #include <mutex>
-typedef std::mutex Mutex;
-using lock_guard = std::lock_guard<Mutex>;
-using unique_lock = std::unique_lock<Mutex>;
 
 #include <melosic/common/configvar.hpp>
 #include <boost/filesystem.hpp>
@@ -30,6 +27,10 @@ namespace fs = boost::filesystem;
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/mpl/find.hpp>
 namespace { namespace mpl = boost::mpl; }
+#include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/shared_lock_guard.hpp>
+#include <boost/format.hpp>
+namespace { using boost::format; }
 
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
@@ -56,6 +57,10 @@ struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
 };
 
 struct Manager::impl {
+    typedef std::mutex Mutex;
+    using lock_guard = std::lock_guard<Mutex>;
+    using unique_lock = std::unique_lock<Mutex>;
+
     impl(fs::path p) : conf("root") {
         if(p.empty())
             BOOST_THROW_EXCEPTION(Exception());
@@ -81,20 +86,27 @@ struct Manager::impl {
         assert(false);
     }
 
-    Conf ConfFromJson(json::Value& val) {
+    Conf ConfFromJson(json::Value& val, std::string name) {
         assert(val.IsObject());
         auto members = boost::make_iterator_range(val.MemberBegin(), val.MemberEnd());
-        Conf c;
+        Conf c(name);
         for(auto& member : members) {
-            if(member.value.IsObject())
-                c.putChild(member.name.GetString(), ConfFromJson(member.value));
-            else
-                c.putNode(member.name.GetString(), VarFromJson(member.value));
+            std::string name_str(member.name.GetString());
+            if(member.value.IsObject()) {
+                TRACE_LOG(logject) << "adding child conf from json: " << name_str;
+                c.putChild(name_str, ConfFromJson(member.value, std::move(name_str)));
+            }
+            else {
+                TRACE_LOG(logject) << "adding node from json: " << name_str;
+                c.putNode(name_str, VarFromJson(member.value));
+            }
         }
         return std::move(c);
     }
 
     void loadConfig() {
+        TRACE_LOG(logject) << "loading config from json";
+
         unique_lock l(mu);
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
@@ -113,13 +125,12 @@ struct Manager::impl {
         ifs.read(confstring, sizeof(confstring)-1);
         ifs.close();
         confstring[sizeof(confstring)-1] = 0;
-        TRACE_LOG(logject) << confstring;
 
         json::Document rootjson;
         rootjson.ParseInsitu<0>(confstring);
 
         if(!rootjson.HasParseError()) {
-            Conf tmp_conf = std::move(ConfFromJson(rootjson));
+            Conf tmp_conf = std::move(ConfFromJson(rootjson, "root"s));
 
             using std::swap;
             swap(conf, tmp_conf);
@@ -151,25 +162,23 @@ struct Manager::impl {
         assert(false);
     }
 
-    json::Value JsonFromNodes(Conf::ConstNodeRange nodes) {
-        json::Value v(json::kObjectType);
-        for(const Conf::NodeMap::value_type& pair : nodes) {
-            v.AddMember(pair.first.c_str(), std::move(JsonFromVar(pair.second)), poolAlloc);
-        }
-        return v;
-    }
-
     json::Value JsonFromConf(const Conf& c) {
-        json::Value obj(JsonFromNodes(c.getNodes()));
-        for(const auto& conf : c.getChildren()) {
-            obj.AddMember(conf.getName().c_str(), std::move(JsonFromConf(conf)), poolAlloc);
-        }
+        json::Value obj(json::kObjectType);
+        c.iterateNodes([&] (const Conf::NodeMap::value_type& pair) {
+            TRACE_LOG(logject) << "adding node to json: " << pair.first;
+            obj.AddMember(pair.first.c_str(), std::move(JsonFromVar(pair.second)), poolAlloc);
+        });
+        c.iterateChildren([&] (const Conf& childconf) {
+            TRACE_LOG(logject) << "adding conf to json: " << childconf.getName();
+            obj.AddMember(childconf.getName().c_str(), std::move(JsonFromConf(childconf)), poolAlloc);
+        });
         return obj;
     }
 
     void saveConfig() {
-        lock_guard l(mu);
+        TRACE_LOG(logject) << "saving config as json";
 
+        lock_guard l(mu);
         assert(!confPath.empty());
 
         json::Document rootjson(JsonFromConf(conf));
@@ -207,6 +216,11 @@ Signals::Config::Loaded& Manager::getLoadedSignal() const {
 }
 
 struct Conf::impl {
+    typedef boost::shared_mutex Mutex;
+    using lock_guard = std::lock_guard<Mutex>;
+    using unique_lock = std::unique_lock<Mutex>;
+    using shared_lock_guard = boost::shared_lock_guard<Mutex>;
+
     struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
         using Super::Signal;
     };
@@ -247,37 +261,12 @@ struct Conf::impl {
     Conf resetToDefault();
 };
 
-Conf::Conf() : Conf(""s) {}
-
-Conf::Conf(Conf&& b) {
-    using std::swap;
-    swap(*this, b);
-}
-
-Conf::Conf(std::string name) :
-    pimpl(std::make_unique<impl>(std::move(name)))
-{}
-
-Conf::~Conf() {}
-
-Conf::Conf(const Conf& b) {
-    lock_guard l(b.pimpl->mu);
-    pimpl = std::make_unique<impl>(*b.pimpl);
-}
-
-Conf& Conf::operator=(Conf b) {
-    lock_guard l(b.pimpl->mu);
-    using std::swap;
-    swap(*this, b);
-    return *this;
-}
-
 const std::string& Conf::impl::getName() {
-    lock_guard l(mu);
     return name;
 }
 
 bool Conf::impl::existsNode(std::string key) {
+    shared_lock_guard l(mu);
     try {
         getNode(key);
         return true;
@@ -288,6 +277,7 @@ bool Conf::impl::existsNode(std::string key) {
 }
 
 bool Conf::impl::existsChild(std::string key) {
+    shared_lock_guard l(mu);
     try {
         getChild(key);
         return true;
@@ -298,7 +288,8 @@ bool Conf::impl::existsChild(std::string key) {
 }
 
 const VarType& Conf::impl::getNode(std::string key) {
-    lock_guard l(mu);
+    TRACE_LOG(logject) << (format("[%s] getNode(): %s") % name % key);
+    shared_lock_guard l(mu);
     auto it = nodes.find(key);
     if(it != nodes.end()) {
         return it->second;
@@ -309,7 +300,8 @@ const VarType& Conf::impl::getNode(std::string key) {
 }
 
 Conf& Conf::impl::getChild(std::string key) {
-    lock_guard l(mu);
+    TRACE_LOG(logject) << (format("[%s] getChild(): %s") % name % key);
+    shared_lock_guard l(mu);
     auto it = children.find(key);
     if(it != children.end()) {
         return it->second;
@@ -320,37 +312,37 @@ Conf& Conf::impl::getChild(std::string key) {
 }
 
 Conf& Conf::impl::putChild(std::string key, Conf child) {
+    TRACE_LOG(logject) << (format("[%s] putChild(): (%s, %s)") % name % key % child.getName());
     lock_guard l(mu);
     return children[std::move(key)] = std::move(child);
 }
 
 VarType& Conf::impl::putNode(std::string key, VarType value) {
+    TRACE_LOG(logject) << (format("[%s] putNode(): %s") % name % key);
     variableUpdated(key, value);
     lock_guard l(mu);
     return nodes[std::move(key)] = std::move(value);
 }
 
 Conf::ChildRange Conf::impl::getChildren() {
-    lock_guard l(mu);
     return children | map_values;
 }
 
 Conf::ConstChildRange Conf::impl::getChildren() const {
-    lock_guard l(mu);
     return children | map_values;
 }
 
 Conf::NodeRange Conf::impl::getNodes() {
-    lock_guard l(mu);
     return nodes;
 }
 
 void Conf::impl::merge(Conf::impl& c) {
+    TRACE_LOG(logject) << (format("[%s] merge(): %s") % name % c.name);
     std::lock(mu, c.mu);
     nodes.insert(c.nodes.begin(), c.nodes.end());
     children.insert(c.children.begin(), c.children.end());
     mu.unlock();
-    for(auto& child : c.children) {
+    for(const auto& child : c.children) {
         getChild(child.first).merge(child.second);
     }
     c.mu.unlock();
@@ -370,6 +362,31 @@ Conf Conf::impl::resetToDefault() {
 
 Signals::Config::VariableUpdated& Conf::impl::getVariableUpdatedSignal() {
     return variableUpdated;
+}
+
+Conf::Conf() : Conf(""s) {}
+
+Conf::Conf(std::string name) :
+    pimpl(std::make_unique<impl>(std::move(name)))
+{}
+
+Conf::Conf(Conf&& b) {
+    using std::swap;
+    swap(*this, b);
+}
+
+Conf::~Conf() {}
+
+Conf::Conf(const Conf& b) {
+    impl::lock_guard l(b.pimpl->mu);
+    pimpl = std::make_unique<impl>(*b.pimpl);
+}
+
+Conf& Conf::operator=(Conf b) {
+    impl::lock_guard l(b.pimpl->mu);
+    using std::swap;
+    swap(*this, b);
+    return *this;
 }
 
 const std::string& Conf::getName() const {
@@ -396,22 +413,33 @@ Conf& Conf::putChild(std::string key, Conf child) {
 VarType& Conf::putNode(std::string key, VarType value) {
     return pimpl->putNode(std::move(key), std::move(value));
 }
-Conf::ChildRange Conf::getChildren() {
-    return pimpl->getChildren();
-}
-Conf::ConstChildRange Conf::getChildren() const {
-    return static_cast<impl const*>(pimpl.get())->getChildren();
-}
-Conf::NodeRange Conf::getNodes() {
-    return pimpl->getNodes();
-}
-Conf::ConstNodeRange Conf::getNodes() const {
-    return pimpl->getNodes();
+
+void Conf::iterateChildren(std::function<void(const Conf&)> fun) const {
+    impl::shared_lock_guard l(pimpl->mu);
+    for(const auto& child : pimpl->getChildren())
+        fun(child);
 }
 
-Conf& Conf::merge(const Conf& c) {
+void Conf::iterateChildren(std::function<void(Conf&)> fun) {
+    impl::lock_guard l(pimpl->mu);
+    for(auto& child : pimpl->getChildren())
+        fun(child);
+}
+
+void Conf::iterateNodes(std::function<void(const NodeMap::value_type&)> fun) const {
+    impl::shared_lock_guard l(pimpl->mu);
+    for(const auto& node : pimpl->getNodes())
+        fun(node);
+}
+
+void Conf::iterateNodes(std::function<void(NodeMap::value_type&)> fun) {
+    impl::lock_guard l(pimpl->mu);
+    for(auto& node : pimpl->getNodes())
+        fun(node);
+}
+
+void Conf::merge(const Conf& c) {
     pimpl->merge(*c.pimpl);
-    return *this;
 }
 
 void Conf::addDefaultFunc(DefaultFunc df) {
