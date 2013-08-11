@@ -159,7 +159,13 @@ struct Manager::impl {
         return v;
     }
 
-    json::Value JsonFromConf(const Conf& c);
+    json::Value JsonFromConf(const Conf& c) {
+        json::Value obj(JsonFromNodes(c.getNodes()));
+        for(const auto& conf : c.getChildren()) {
+            obj.AddMember(conf.getName().c_str(), std::move(JsonFromConf(conf)), poolAlloc);
+        }
+        return obj;
+    }
 
     void saveConfig() {
         lock_guard l(mu);
@@ -240,14 +246,6 @@ struct Conf::impl {
     void addDefaultFunc(Conf::DefaultFunc func);
     Conf resetToDefault();
 };
-
-json::Value Manager::impl::JsonFromConf(const Conf& c) {
-    json::Value obj(JsonFromNodes(c.getNodes()));
-    for(const Conf::ChildMap::value_type& pair : c.pimpl->children) {
-        obj.AddMember(pair.first.c_str(), std::move(JsonFromConf(pair.second)), poolAlloc);
-    }
-    return obj;
-}
 
 Conf::Conf() : Conf(""s) {}
 

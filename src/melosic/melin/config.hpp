@@ -116,8 +116,6 @@ public:
 private:
     struct impl;
     std::unique_ptr<impl> pimpl;
-
-    friend class Manager;
 };
 
 void swap(Conf& a, Conf& b) noexcept;
