@@ -225,7 +225,6 @@ struct Conf::impl {
         using Super::Signal;
     };
     VariableUpdated variableUpdated;
-    Signals::Config::VariableUpdated& getVariableUpdatedSignal();
 
     impl(std::string name) : name(std::move(name)) {}
 
@@ -244,16 +243,14 @@ struct Conf::impl {
     std::string name;
     Conf::DefaultFunc resetDefault;
 
-    const std::string& getName();
     bool existsNode(std::string key);
     bool existsChild(std::string key);
     const VarType& getNode(std::string key);
     Conf& getChild(std::string key);
     Conf& putChild(std::string key, Conf child);
     VarType& putNode(std::string key, VarType value);
-    Conf::ChildRange getChildren();
-    Conf::ConstChildRange getChildren() const;
-    Conf::NodeRange getNodes();
+    auto getChildren();
+    auto& getNodes();
 
     void merge(impl& c);
 
@@ -261,28 +258,22 @@ struct Conf::impl {
     Conf resetToDefault();
 };
 
-const std::string& Conf::impl::getName() {
-    return name;
-}
-
 bool Conf::impl::existsNode(std::string key) {
-    shared_lock_guard l(mu);
     try {
-        getNode(key);
-        return true;
+        shared_lock_guard l(mu);
+        return nodes.end() != nodes.find(key);
     }
-    catch(KeyNotFoundException& e) {
+    catch(...) {
         return false;
     }
 }
 
 bool Conf::impl::existsChild(std::string key) {
-    shared_lock_guard l(mu);
     try {
-        getChild(key);
-        return true;
+        shared_lock_guard l(mu);
+        return children.end() != children.find(key);
     }
-    catch(ChildNotFoundException& e) {
+    catch(...) {
         return false;
     }
 }
@@ -324,15 +315,11 @@ VarType& Conf::impl::putNode(std::string key, VarType value) {
     return nodes[std::move(key)] = std::move(value);
 }
 
-Conf::ChildRange Conf::impl::getChildren() {
+auto Conf::impl::getChildren() {
     return children | map_values;
 }
 
-Conf::ConstChildRange Conf::impl::getChildren() const {
-    return children | map_values;
-}
-
-Conf::NodeRange Conf::impl::getNodes() {
+auto& Conf::impl::getNodes() {
     return nodes;
 }
 
@@ -360,10 +347,6 @@ Conf Conf::impl::resetToDefault() {
     return std::move(resetDefault());
 }
 
-Signals::Config::VariableUpdated& Conf::impl::getVariableUpdatedSignal() {
-    return variableUpdated;
-}
-
 Conf::Conf() : Conf(""s) {}
 
 Conf::Conf(std::string name) :
@@ -389,29 +372,41 @@ Conf& Conf::operator=(Conf b) {
     return *this;
 }
 
-const std::string& Conf::getName() const {
-    return pimpl->getName();
+const std::string& Conf::getName() const noexcept {
+    return pimpl->name;
 }
+
 bool Conf::existsNode(std::string key) const {
     return pimpl->existsNode(std::move(key));
 }
+
 bool Conf::existsChild(std::string key) const {
     return pimpl->existsChild(std::move(key));
 }
-const VarType& Conf::getNode(std::string key) const{
+
+const VarType& Conf::getNode(std::string key) const {
     return pimpl->getNode(std::move(key));
 }
 Conf& Conf::getChild(std::string key) {
     return pimpl->getChild(std::move(key));
 }
-const Conf& Conf::getChild(std::string key) const{
+
+const Conf& Conf::getChild(std::string key) const {
     return pimpl->getChild(std::move(key));
 }
 Conf& Conf::putChild(std::string key, Conf child) {
     return pimpl->putChild(std::move(key), std::move(child));
 }
+
 VarType& Conf::putNode(std::string key, VarType value) {
     return pimpl->putNode(std::move(key), std::move(value));
+}
+
+Conf::ChildMap::size_type Conf::childCount() const noexcept {
+    return pimpl->children.size();
+}
+Conf::NodeMap::size_type Conf::nodeCount() const noexcept {
+    return pimpl->nodes.size();
 }
 
 void Conf::iterateChildren(std::function<void(const Conf&)> fun) const {
@@ -449,8 +444,8 @@ void Conf::resetToDefault() {
     *this = pimpl->resetToDefault();
 }
 
-Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() {
-    return pimpl->getVariableUpdatedSignal();
+Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() noexcept {
+    return pimpl->variableUpdated;
 }
 
 void swap(Conf& a, Conf& b)

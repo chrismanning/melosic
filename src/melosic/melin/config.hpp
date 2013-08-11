@@ -69,11 +69,7 @@ private:
 class MELOSIC_EXPORT Conf final {
 public:
     typedef std::map<std::string, Conf> ChildMap;
-    typedef boost::range_detail::select_second_mutable_range<ChildMap> ChildRange;
-    typedef boost::range_detail::select_second_const_range<ChildMap> ConstChildRange;
     typedef std::map<std::string, VarType> NodeMap;
-    typedef boost::sub_range<NodeMap> NodeRange;
-    typedef boost::sub_range<const NodeMap> ConstNodeRange;
     typedef std::function<Conf()> DefaultFunc;
 
     Conf();
@@ -87,7 +83,7 @@ public:
 
     friend void swap(Conf&, Conf&) noexcept;
 
-    const std::string& getName() const;
+    const std::string& getName() const noexcept;
     bool existsNode(std::string key) const;
     bool existsChild(std::string key) const;
     const VarType& getNode(std::string key) const;
@@ -95,6 +91,9 @@ public:
     const Conf& getChild(std::string key) const;
     Conf& putChild(std::string key, Conf child);
     VarType& putNode(std::string key, VarType value);
+
+    ChildMap::size_type childCount() const noexcept;
+    NodeMap::size_type nodeCount() const noexcept;
 
     void iterateChildren(std::function<void(const Conf&)>) const;
     void iterateChildren(std::function<void(Conf&)>);
@@ -112,7 +111,7 @@ public:
     void addDefaultFunc(DefaultFunc);
     void resetToDefault();
 
-    Signals::Config::VariableUpdated& getVariableUpdatedSignal();
+    Signals::Config::VariableUpdated& getVariableUpdatedSignal() noexcept;
 
 private:
     struct impl;
