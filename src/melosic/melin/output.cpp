@@ -67,18 +67,19 @@ public:
                 }
             };
 
-            if(!base.existsChild("Output"s))
-                base.putChild("Output"s, conf);
-            auto r = base.applyChild("Output"s, [&] (Config::Conf& c) {
-                c.merge(conf);
-                c.addDefaultFunc([=]() -> Config::Conf { return conf; });
-                c.getVariableUpdatedSignal().connect(fun);
-                c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
-                    TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
-                    fun(node.first, node.second);
-                });
+            auto c = base.getChild("Output"s);
+            if(!c) {
+                base.putChild(conf);
+                c = base.getChild("Output"s);
+            }
+            assert(c);
+            c->merge(conf);
+            c->addDefaultFunc([=]() -> Config::Conf { return conf; });
+            c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+                TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
+                fun(pair.first, pair.second);
             });
-            assert(r);
+            c->getVariableUpdatedSignal().connect(fun);
         });
     }
 

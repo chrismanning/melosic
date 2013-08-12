@@ -68,9 +68,10 @@ private:
 
 class MELOSIC_EXPORT Conf final {
 public:
-    typedef std::map<std::string, Conf> ChildMap;
-    typedef std::map<std::string, VarType> NodeMap;
-    typedef std::function<Conf()> DefaultFunc;
+    using KeyType = const std::string;
+    using ChildType = Conf;
+    using NodeType = VarType;
+    using DefaultFunc = std::function<ChildType()>;
 
     Conf();
     explicit Conf(std::string name);
@@ -84,24 +85,22 @@ public:
     friend void swap(Conf&, Conf&) noexcept;
 
     const std::string& getName() const noexcept;
-    bool existsNode(std::string key) const;
-    bool existsChild(std::string key) const;
 
-    bool applyNode(std::string key, std::function<void(NodeMap::mapped_type&)>);
-    bool applyNode(std::string key, std::function<void(const NodeMap::mapped_type&)>) const;
-    bool applyChild(std::string key, std::function<void(Conf&)>);
-    bool applyChild(std::string key, std::function<void(const Conf&)>) const;
+    std::shared_ptr<std::pair<Conf::KeyType, VarType>> getNode(KeyType key);
+    std::shared_ptr<const std::pair<Conf::KeyType, VarType>> getNode(KeyType key) const;
+    std::shared_ptr<ChildType> getChild(KeyType key);
+    std::shared_ptr<const ChildType> getChild(KeyType key) const;
 
-    void putChild(std::string key, Conf child);
-    void putNode(std::string key, VarType value);
+    void putChild(Conf child);
+    void putNode(KeyType key, VarType value);
 
-    ChildMap::size_type childCount() const noexcept;
-    NodeMap::size_type nodeCount() const noexcept;
+    uint32_t childCount() const noexcept;
+    uint32_t nodeCount() const noexcept;
 
-    void iterateChildren(std::function<void(const Conf&)>) const;
-    void iterateChildren(std::function<void(Conf&)>);
-    void iterateNodes(std::function<void(const NodeMap::value_type&)>) const;
-    void iterateNodes(std::function<void(NodeMap::value_type&)>);
+    void iterateChildren(std::function<void(const ChildType&)>) const;
+    void iterateChildren(std::function<void(ChildType&)>);
+    void iterateNodes(std::function<void(const std::pair<Conf::KeyType, VarType>&)>) const;
+    void iterateNodes(std::function<void(std::pair<Conf::KeyType, VarType>&)>);
 
     void merge(const Conf& c);
 

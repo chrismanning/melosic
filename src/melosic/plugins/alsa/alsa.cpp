@@ -325,23 +325,25 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
             }
         };
 
-        if(!base.existsChild("Output"s))
-            base.putChild("Output"s, Config::Conf("Output"s));
-        auto ro = base.applyChild("Output"s, [&] (Config::Conf& c1) {
-            if(!c1.existsChild("ALSA"s))
-                c1.putChild("ALSA"s, ::conf);
-            auto r = c1.applyChild("ALSA"s, [&] (Config::Conf& c) {
-                c.merge(::conf);
-                c.addDefaultFunc([=]() -> Config::Conf { return ::conf; });
-                c.getVariableUpdatedSignal().connect(fun);
-                c.iterateNodes([&] (const Config::Conf::NodeMap::value_type& node) {
-                    TRACE_LOG(logject) << "Config: variable loaded: " << node.first;
-                    fun(node.first, node.second);
-                });
-            });
-            assert(r);
+        auto o = base.getChild("Output"s);
+        if(!o) {
+            base.putChild(Config::Conf("Output"s));
+            o = base.getChild("Output"s);
+        }
+        assert(o);
+        auto c = o->getChild("ALSA"s);
+        if(!c) {
+            o->putChild(::conf);
+            c = o->getChild("ALSA"s);
+        }
+        assert(c);
+        c->merge(::conf);
+        c->addDefaultFunc([=]() -> Config::Conf { return ::conf; });
+        c->getVariableUpdatedSignal().connect(fun);
+        c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
+            fun(pair.first, pair.second);
         });
-        assert(ro);
     });
 }
 
