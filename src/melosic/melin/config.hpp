@@ -84,7 +84,7 @@ public:
 
     friend void swap(Conf&, Conf&) noexcept;
 
-    const std::string& getName() const noexcept;
+    KeyType& getName() const noexcept;
 
     std::shared_ptr<std::pair<Conf::KeyType, VarType>> getNode(KeyType key);
     std::shared_ptr<const std::pair<Conf::KeyType, VarType>> getNode(KeyType key) const;

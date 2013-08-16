@@ -236,7 +236,7 @@ struct Conf::impl {
 
     threadsafe_list<Conf> children;
     threadsafe_list<std::pair<KeyType, VarType>> nodes;
-    const std::string name;
+    KeyType name;
     Conf::DefaultFunc resetDefault;
 
     void merge(impl& c);
@@ -283,24 +283,28 @@ Conf::KeyType& Conf::getName() const noexcept {
 }
 
 std::shared_ptr<std::pair<Conf::KeyType, VarType>> Conf::getNode(KeyType key) {
-    return pimpl->nodes.find_first_if([&] (std::pair<KeyType, VarType>& pair) {
+    TRACE_LOG(logject) << "Getting node: " << key;
+    return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
     });
 }
 
 std::shared_ptr<const std::pair<Conf::KeyType, VarType>> Conf::getNode(KeyType key) const {
+    TRACE_LOG(logject) << "Getting node: " << key;
     return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
     });
 }
 
 std::shared_ptr<Conf::ChildType> Conf::getChild(KeyType key) {
-    return pimpl->children.find_first_if([&] (Conf& c) {
+    TRACE_LOG(logject) << "Getting child: " << key;
+    return pimpl->children.find_first_if([&] (const Conf& c) {
         return c.getName() == key;
     });
 }
 
 std::shared_ptr<const Conf::ChildType> Conf::getChild(KeyType key) const {
+    TRACE_LOG(logject) << "Getting child: " << key;
     return pimpl->children.find_first_if([&] (const Conf& c) {
         return c.getName() == key;
     });
