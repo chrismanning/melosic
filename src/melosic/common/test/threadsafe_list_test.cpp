@@ -193,6 +193,50 @@ TEST_F(ListTest, CopyConstructor) {
     EXPECT_EQ(int_list, b_list);
 }
 
+TEST_F(ListTest, Assign) {
+    const int a = 123, b = 321, c = 4566578;
+    int_list.push_front(a);
+    int_list.push_front(b);
+    int_list.push_front(c);
+
+    decltype(int_list) b_list;
+    b_list.push_back(2);
+    b_list.push_back(4);
+    EXPECT_EQ(2u, b_list.size());
+
+    b_list = int_list;
+    EXPECT_EQ(int_list, b_list);
+}
+
+TEST_F(ListTest, MoveConstructor) {
+    const int a = 123, b = 321, c = 4566578;
+    int_list.push_front(a);
+    int_list.push_front(b);
+    int_list.push_front(c);
+
+    decltype(int_list) copy_list(int_list), b_list(std::move(int_list));
+    EXPECT_EQ(copy_list, b_list);
+    EXPECT_EQ(0u, int_list.size());
+}
+
+TEST_F(ListTest, MoveAssign) {
+    const int a = 123, b = 321, c = 4566578;
+    int_list.push_front(a);
+    int_list.push_front(b);
+    int_list.push_front(c);
+
+    decltype(int_list) b_list;
+    b_list.push_back(2);
+    b_list.push_back(4);
+    EXPECT_EQ(2u, b_list.size());
+
+    decltype(int_list) copy_list(int_list);
+
+    b_list = std::move(int_list);
+    EXPECT_EQ(copy_list, b_list);
+    EXPECT_EQ(0u, int_list.size());
+}
+
 TEST_F(ListTest, RemoveIf) {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);

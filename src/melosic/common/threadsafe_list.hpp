@@ -120,7 +120,17 @@ public:
         });
     }
 
-    threadsafe_list& operator=(const threadsafe_list&) = delete;
+    threadsafe_list(threadsafe_list&& other) noexcept :
+        head(std::move(other.head)),
+        tail(std::move(other.tail)),
+        m_size(other.m_size.exchange(0u))
+    {}
+
+    threadsafe_list& operator=(threadsafe_list other) {
+        using std::swap;
+        swap(*this, other);
+        return *this;
+    }
 
     uint32_t size() const {
         return m_size;
@@ -281,8 +291,12 @@ public:
         return true;
     }
 
-    template <typename Range>
-    friend bool operator==(const threadsafe_list&, Range);
+    void swap(threadsafe_list& b) noexcept {
+        using std::swap;
+        swap(head, b.head);
+        swap(tail, b.tail);
+        m_size = b.m_size.exchange(m_size);
+    }
 };
 
 template <typename T>
@@ -298,6 +312,11 @@ std::ostream& operator<<(std::ostream& os, const threadsafe_list<T>& l) {
     });
     os.seekp(-1, std::ios::cur) << ']';
     return os;
+}
+
+template <typename T>
+void swap(threadsafe_list<T>& a, threadsafe_list<T>& b) noexcept {
+    a.swap(b);
 }
 
 }// namespace Melosic
