@@ -47,40 +47,43 @@ class Manager::impl {
 public:
     impl(Config::Manager& confman) {
         conf.putNode("output device", "iec958:CARD=PCH,DEV=0"s);
-        confman.getLoadedSignal().connect([this] (Config::Conf& base) {
-            TRACE_LOG(logject) << "Output conf loaded";
-            auto fun = [this](const std::string& key, const Config::VarType& val) {
-                TRACE_LOG(logject) << "Config: variable updated: " << key;
-                try {
-                    if(key == "output device") {
-                        const auto& sn = boost::get<std::string>(val);
-                        if(sinkName == sn)
-                            LOG(logject) << "Chosen output same as current. Not reinitialising.";
-                        else
-                            setPlayerSink(sn);
-                    }
-                    else
-                        ERROR_LOG(logject) << "Config: Unknown key: " << key;
-                }
-                catch(boost::bad_get&) {
-                    ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
-                }
-            };
+        confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+    }
 
-            auto c = base.getChild("Output"s);
-            if(!c) {
-                base.putChild(conf);
-                c = base.getChild("Output"s);
-            }
-            assert(c);
-            c->merge(conf);
-            c->addDefaultFunc([=]() -> Config::Conf { return conf; });
-            c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
-                TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
-                fun(pair.first, pair.second);
-            });
-            c->getVariableUpdatedSignal().connect(fun);
+    void loadedSlot(Config::Conf& base) {
+        TRACE_LOG(logject) << "Output conf loaded";
+
+        auto c = base.getChild("Output"s);
+        if(!c) {
+            base.putChild(conf);
+            c = base.getChild("Output"s);
+        }
+        assert(c);
+        c->merge(conf);
+        c->addDefaultFunc([=]() -> Config::Conf { return conf; });
+        c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
+            variableUpdateSlot(pair.first, pair.second);
         });
+        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+    }
+
+    void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
+        TRACE_LOG(logject) << "Config: variable updated: " << key;
+        try {
+            if(key == "output device") {
+                const auto& sn = boost::get<std::string>(val);
+                if(sinkName == sn)
+                    LOG(logject) << "Chosen output same as current. Not reinitialising.";
+                else
+                    setPlayerSink(sn);
+            }
+            else
+                ERROR_LOG(logject) << "Config: Unknown key: " << key;
+        }
+        catch(boost::bad_get&) {
+            ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
+        }
     }
 
     void addOutputDevice(Factory fact, const DeviceName& device) {
@@ -107,7 +110,7 @@ public:
         return fact();
     }
 
-    void setPlayerSink(const std::string& sinkname) {
+    void setPlayerSink(std::string sinkname) {
         unique_lock l(mu);
         LOG(logject) << "Attempting to get player sink factory: " << sinkname;
         auto it = outputFactories.find(sinkname);
@@ -116,7 +119,7 @@ public:
             BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(sinkname));
         }
         sinkName = sinkname;
-        fact = std::bind(it->second, it->first);
+        fact = [=] () { return it->second(it->first); };
         l.unlock();
         playerSinkChanged();
     }

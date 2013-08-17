@@ -272,11 +272,6 @@ private:
     Output::DeviceState state_;
 };
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
-    *info = ::alsaInfo;
-    funs << registerOutput << registerConfig;
-}
-
 extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     //TODO: make this more C++-like
     void ** hints, ** n;
@@ -312,39 +307,46 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     outman->addOutputDevices([] (Output::DeviceName name) { return std::make_unique<AlsaOutput>(name); }, names);
 }
 
+void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
+    try {
+        if(key == "frames")
+            ::frames = boost::get<int64_t>(val);
+    }
+    catch(boost::bad_get&) {
+        ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
+    }
+}
+
+void loadedSlot(Config::Conf& base) {
+    auto o = base.getChild("Output"s);
+    if(!o) {
+        base.putChild(Config::Conf("Output"s));
+        o = base.getChild("Output"s);
+    }
+    assert(o);
+    auto c = o->getChild("ALSA"s);
+    if(!c) {
+        o->putChild(::conf);
+        c = o->getChild("ALSA"s);
+    }
+    assert(c);
+    c->merge(::conf);
+    c->addDefaultFunc([=]() -> Config::Conf { return ::conf; });
+    c->getVariableUpdatedSignal().connect(variableUpdateSlot);
+    c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+        TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
+        variableUpdateSlot(pair.first, pair.second);
+    });
+}
+
 extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", static_cast<int64_t>(1024));
-    confman->getLoadedSignal().connect([] (Config::Conf& base) {
-        auto fun = [&](const std::string& k, const Config::VarType& v) {
-            try {
-                if(k == "frames")
-                    ::frames = boost::get<int64_t>(v);
-            }
-            catch(boost::bad_get&) {
-                ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << k;
-            }
-        };
+    confman->getLoadedSignal().connect(loadedSlot);
+}
 
-        auto o = base.getChild("Output"s);
-        if(!o) {
-            base.putChild(Config::Conf("Output"s));
-            o = base.getChild("Output"s);
-        }
-        assert(o);
-        auto c = o->getChild("ALSA"s);
-        if(!c) {
-            o->putChild(::conf);
-            c = o->getChild("ALSA"s);
-        }
-        assert(c);
-        c->merge(::conf);
-        c->addDefaultFunc([=]() -> Config::Conf { return ::conf; });
-        c->getVariableUpdatedSignal().connect(fun);
-        c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
-            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
-            fun(pair.first, pair.second);
-        });
-    });
+extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+    *info = ::alsaInfo;
+    funs << registerOutput << registerConfig;
 }
 
 extern "C" MELOSIC_EXPORT void destroyPlugin() {

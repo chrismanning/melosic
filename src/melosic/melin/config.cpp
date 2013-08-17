@@ -24,8 +24,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
-#include <boost/exception/diagnostic_information.hpp>
-#include <boost/mpl/find.hpp>
+#include <boost/mpl/index_of.hpp>
 namespace { namespace mpl = boost::mpl; }
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
@@ -78,12 +77,18 @@ struct Manager::impl {
     VarType VarFromJson(json::Value& val) {
         if(val.IsString())
             return VarType(std::string(val.GetString()));
-        else if(val.IsInt64())
-            return VarType(val.GetInt64());
-        else if(val.IsDouble())
-            return VarType(val.GetDouble());
         else if(val.IsBool())
             return VarType(val.GetBool());
+        else if(val.IsInt())
+            return VarType(val.GetInt());
+        else if(val.IsUint())
+            return VarType(val.GetUint());
+        else if(val.IsInt64())
+            return VarType(val.GetInt64());
+        else if(val.IsUint64())
+            return VarType(val.GetUint64());
+        else if(val.IsDouble())
+            return VarType(val.GetDouble());
         assert(false);
     }
 
@@ -147,31 +152,51 @@ struct Manager::impl {
     template <typename T>
     static constexpr int TypeIndex = mpl::index_of<VarType::types, T>::type::value;
     json::Value JsonFromVar(const VarType& var) {
-        switch(var.which()) {
-            case TypeIndex<std::string>: {
-                const auto& tmp = boost::get<std::string>(var);
-                return json::Value(tmp.c_str(),
-                                   tmp.size(), poolAlloc);
+        try {
+            switch(var.which()) {
+                case TypeIndex<std::string>: {
+                    const auto& tmp = boost::get<std::string>(var);
+                    return json::Value(tmp.c_str(), tmp.size(), poolAlloc);
+                }
+                case TypeIndex<bool>:
+                    return json::Value(boost::get<bool>(var));
+                case TypeIndex<int32_t>:
+                    return json::Value(boost::get<int32_t>(var));
+                case TypeIndex<uint32_t>:
+                    return json::Value(boost::get<uint32_t>(var));
+                case TypeIndex<int64_t>:
+                    return json::Value(boost::get<int64_t>(var));
+                case TypeIndex<uint64_t>:
+                    return json::Value(boost::get<uint64_t>(var));
+                case TypeIndex<double>:
+                    return json::Value(boost::get<double>(var));
             }
-            case TypeIndex<bool>:
-                return json::Value(boost::get<bool>(var));
-            case TypeIndex<int64_t>:
-                return json::Value(boost::get<int64_t>(var));
-            case TypeIndex<double>:
-                return json::Value(boost::get<double>(var));
+            assert(false);
         }
-        assert(false);
+        catch(boost::bad_get& e) {
+            return {};
+        }
     }
 
     json::Value JsonFromConf(const Conf& c) {
         json::Value obj(json::kObjectType);
         c.iterateNodes([&] (const std::pair<Conf::KeyType, VarType>& pair) {
             TRACE_LOG(logject) << "adding node to json: " << pair.first;
-            obj.AddMember(pair.first.c_str(), std::move(JsonFromVar(pair.second)), poolAlloc);
+            auto val = JsonFromVar(pair.second);
+            if(val.IsNull()) {
+                TRACE_LOG(logject) << "node is null. skipping...";
+                return;
+            }
+            obj.AddMember(pair.first.c_str(), std::move(val), poolAlloc);
         });
         c.iterateChildren([&] (const Conf& childconf) {
             TRACE_LOG(logject) << "adding conf to json: " << childconf.getName();
-            obj.AddMember(childconf.getName().c_str(), std::move(JsonFromConf(childconf)), poolAlloc);
+            auto child = JsonFromConf(childconf);
+            if(std::distance(child.MemberBegin(), child.MemberEnd()) == 0) {
+                TRACE_LOG(logject) << "conf child is empty. skipping...";
+                return;
+            }
+            obj.AddMember(childconf.getName().c_str(), std::move(child), poolAlloc);
         });
         return obj;
     }
@@ -257,7 +282,7 @@ Conf Conf::impl::resetToDefault() {
 
 Conf::Conf() : Conf(""s) {}
 
-Conf::Conf(std::string name) :
+Conf::Conf(KeyType name) :
     pimpl(std::make_unique<impl>(std::move(name)))
 {}
 
@@ -278,7 +303,7 @@ Conf& Conf::operator=(Conf b) {
     return *this;
 }
 
-Conf::KeyType& Conf::getName() const noexcept {
+typename std::add_const<Conf::KeyType>::type& Conf::getName() const noexcept {
     return pimpl->name;
 }
 
@@ -327,6 +352,18 @@ void Conf::putNode(KeyType key, VarType value) {
         swap(c->second, pair.second);
     else
         pimpl->nodes.push_front(std::move(pair));
+}
+
+void Conf::removeChild(KeyType key) {
+    return pimpl->children.remove_if([&] (const Conf& c) {
+        return c.getName() == key;
+    });
+}
+
+void Conf::removeNode(KeyType key) {
+    return pimpl->nodes.remove_if([&] (const std::pair<KeyType, VarType>& pair) {
+        return pair.first == key;
+    });
 }
 
 uint32_t Conf::childCount() const noexcept {

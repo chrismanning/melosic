@@ -25,7 +25,7 @@
 
 namespace Melosic {
 namespace Config {
-typedef boost::variant<std::string, bool, int64_t, double> VarType;
+typedef boost::variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double> VarType;
 }
 }
 

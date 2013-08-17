@@ -74,7 +74,7 @@ public:
     using DefaultFunc = std::function<ChildType()>;
 
     Conf();
-    explicit Conf(std::string name);
+    explicit Conf(KeyType name);
 
     ~Conf();
 
@@ -84,7 +84,7 @@ public:
 
     friend void swap(Conf&, Conf&) noexcept;
 
-    KeyType& getName() const noexcept;
+    typename std::add_const<KeyType>::type& getName() const noexcept;
 
     std::shared_ptr<std::pair<Conf::KeyType, VarType>> getNode(KeyType key);
     std::shared_ptr<const std::pair<Conf::KeyType, VarType>> getNode(KeyType key) const;
@@ -93,6 +93,9 @@ public:
 
     void putChild(Conf child);
     void putNode(KeyType key, VarType value);
+
+    void removeChild(KeyType key);
+    void removeNode(KeyType key);
 
     uint32_t childCount() const noexcept;
     uint32_t nodeCount() const noexcept;
