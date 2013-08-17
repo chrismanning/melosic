@@ -129,6 +129,26 @@ TEST(ConfigTest, ConfMerge) {
     EXPECT_EQ(3, boost::get<int>(node->second));
 }
 
+TEST(ConfigTest, ConfDefault) {
+    Config::Conf c("root");
+    c.addDefaultFunc([=] () {
+        return c;
+    });
+
+    c.putChild(Config::Conf("child1"));
+    c.putChild(Config::Conf("child2"));
+    EXPECT_EQ(2u, c.childCount());
+
+    c.putNode("node1", 123);
+    c.putNode("node2", 456);
+    EXPECT_EQ(2u, c.nodeCount());
+
+    c.resetToDefault();
+
+    EXPECT_EQ(0u, c.childCount());
+    EXPECT_EQ(0u, c.nodeCount());
+}
+
 struct ConfigManagerTest : ::testing::Test {
     ~ConfigManagerTest() {
         fs::remove(confPath);
