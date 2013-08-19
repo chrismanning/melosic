@@ -17,10 +17,12 @@
 
 #include <boost/thread.hpp>
 #include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex; using boost::shared_lock_guard;
+using Mutex = boost::shared_mutex;
+using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <thread>
 #include <mutex>
-using std::unique_lock; using std::lock_guard;
+using unique_lock = std::unique_lock<Mutex>;
+using lock_guard = std::lock_guard<Mutex>;
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -38,7 +40,6 @@ namespace Core {
 
 static Logger::Logger logject(logging::keywords::channel = "Track");
 
-//TODO: tracks need a length to support multiple tracks per file
 class Track::impl {
 public:
     impl(Decoder::Manager& decman,
@@ -61,7 +62,7 @@ public:
     ~impl() {}
 
     bool isOpen() {
-        return input->isOpen() && bool(decoder);
+        return input->isOpen() && static_cast<bool>(decoder);
     }
 
     void reOpen() {
@@ -84,7 +85,6 @@ public:
         }
         try {
             auto difference = (end > start) ? (end - tell()).count() : 0;
-            lock_guard<Mutex> l(mu);
             return decoder->read(s, (difference < n) ? n : difference);
         }
         catch(AudioDataInvalidException& e) {
@@ -97,7 +97,6 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        lock_guard<Mutex> l(mu);
         decoder->seek(dur + start);
     }
 
@@ -105,18 +104,16 @@ public:
         if(!isOpen()) {
             reOpen();
         }
-        shared_lock_guard<Mutex> l(mu);
         return decoder->tell() - start;
     }
 
     void reset() {
         if(isOpen()) {
-            lock_guard<Mutex> l(mu);
             decoder->reset();
         }
     }
 
-    chrono::milliseconds duration() const {
+    chrono::milliseconds duration() {
         if(end > start) {
             return end - start;
         }
@@ -127,11 +124,8 @@ public:
     AudioSpecs& getAudioSpecs() {
         return as;
     }
-    const AudioSpecs& getAudioSpecs() const {
-        return as;
-    }
 
-    std::string getTag(const std::string& key) const {
+    std::string getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
 
@@ -144,7 +138,6 @@ public:
 
     void reloadDecoder() {
         try {
-            lock_guard<Mutex> l(mu);
             decoder = fileResolver.getDecoder(*input);
             as = decoder->getAudioSpecs();
         }
@@ -159,16 +152,13 @@ public:
             reOpen();
         }
         auto pos = tell();
-        boost::unique_lock<Mutex> l(mu);
         taglibfile = fileResolver.getTagReader(*input);
         tags = taglibfile->properties();
-        l.unlock();
         seek(pos);
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
-    explicit operator bool() {
-        shared_lock_guard<Mutex> l(mu);
+    bool valid() {
         if(decoder) {
             return bool(*decoder);
         }
@@ -176,7 +166,7 @@ public:
             return false;
     }
 
-    const std::string sourceName() const {
+    std::string sourceName() {
         return input->filename().string();
     }
 
@@ -194,7 +184,6 @@ private:
     Decoder::Manager& decman;
     TagLib::PropertyMap tags;
     AudioSpecs as;
-    typedef shared_mutex Mutex;
     Mutex mu;
 };
 
@@ -206,79 +195,95 @@ Track::Track(Decoder::Manager& decman,
 
 Track::~Track() {}
 
-Track::Track(const Track& b) {
-    auto filename = b.sourceName();
-    TRACE_LOG(logject) << "Copying " << filename;
-    pimpl.reset(b.pimpl->clone());
-}
+Track::Track(const Track& b) : pimpl(b.pimpl->clone()) {}
 
-Track& Track::operator=(const Track& b) {
-    auto filename = b.sourceName();
-    TRACE_LOG(logject) << "Assigning " << filename;
-    pimpl.reset(b.pimpl->clone());
+Track::Track(Track&&) = default;
+
+Track& Track::operator=(Track b) {
+    shared_lock_guard l1(pimpl->mu);
+    shared_lock_guard l2(b.pimpl->mu);
+    using std::swap;
+    swap(pimpl, b.pimpl);
     return *this;
 }
 
 bool Track::operator==(const Track& b) const {
+    shared_lock_guard l1(pimpl->mu);
+    shared_lock_guard l2(b.pimpl->mu);
     return pimpl == b.pimpl;
 }
 
 std::streamsize Track::read(char * s, std::streamsize n) {
+    lock_guard l(pimpl->mu);
     return pimpl->read(s, n);
 }
 
 void Track::close() {
+    lock_guard l(pimpl->mu);
     pimpl->close();
 }
 
 bool Track::isOpen() const {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->isOpen();
 }
 
 void Track::reOpen() {
+    lock_guard l(pimpl->mu);
     pimpl->reOpen();
 }
 
 void Track::seek(chrono::milliseconds dur) {
+    lock_guard l(pimpl->mu);
     pimpl->seek(dur);
 }
 
 chrono::milliseconds Track::tell() {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->tell();
 }
 
 void Track::reset() {
+    lock_guard l(pimpl->mu);
     pimpl->reset();
 }
 
 chrono::milliseconds Track::duration() const {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->duration();
 }
 
 Melosic::AudioSpecs& Track::getAudioSpecs() {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->getAudioSpecs();
 }
-const AudioSpecs& Track::getAudioSpecs() const {
+const Melosic::AudioSpecs& Track::getAudioSpecs() const {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->getAudioSpecs();
 }
 
 std::string Track::getTag(const std::string& key) const {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->getTag(key);
 }
 
 Track::operator bool() {
-    return bool(*pimpl);
+    shared_lock_guard l(pimpl->mu);
+    return pimpl->valid();
 }
 
-const std::string Track::sourceName() const {
+std::string Track::sourceName() const {
+    shared_lock_guard l(pimpl->mu);
     return pimpl->sourceName();
 }
 
 void Track::reloadTags() {
+    unique_lock l(pimpl->mu);
     pimpl->reloadTags();
 }
 
 void Track::reloadDecoder() {
+    lock_guard l(pimpl->mu);
     pimpl->reloadDecoder();
 }
 

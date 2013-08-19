@@ -43,23 +43,24 @@ public:
 
     virtual ~Track();
     Track(const Track&);
-    Track& operator=(const Track&);
+    Track(Track&&);
+    Track& operator=(Track);
 
     bool operator==(const Track&) const;
 
     virtual void reset();
-    virtual void seek(chrono::milliseconds dur);
-    virtual chrono::milliseconds tell();
-    virtual chrono::milliseconds duration() const;
-    virtual Melosic::AudioSpecs& getAudioSpecs();
-    virtual const Melosic::AudioSpecs& getAudioSpecs() const;
+    MELOSIC_EXPORT virtual void seek(chrono::milliseconds dur);
+    MELOSIC_EXPORT virtual chrono::milliseconds tell();
+    MELOSIC_EXPORT virtual chrono::milliseconds duration() const;
+    MELOSIC_EXPORT virtual Melosic::AudioSpecs& getAudioSpecs();
+    MELOSIC_EXPORT virtual const Melosic::AudioSpecs& getAudioSpecs() const;
     MELOSIC_EXPORT std::string getTag(const std::string& key) const;
-    virtual explicit operator bool();
+    MELOSIC_EXPORT virtual explicit operator bool();
     virtual std::streamsize read(char * s, std::streamsize n);
     virtual void close();
     virtual bool isOpen() const;
     virtual void reOpen();
-    const std::string sourceName() const;
+    MELOSIC_EXPORT std::string sourceName() const;
 
     void reloadTags();
     void reloadDecoder();

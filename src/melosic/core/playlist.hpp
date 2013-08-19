@@ -57,7 +57,7 @@ public:
     typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
-    Playlist(const std::string&, Decoder::Manager&);
+    Playlist(std::string, Decoder::Manager&);
     ~Playlist();
 
     MELOSIC_LOCAL std::streamsize read(char* s, std::streamsize n);
@@ -108,7 +108,7 @@ public:
     void swap(Playlist& b);
 
     const std::string& getName() const;
-    void setName(const std::string&);
+    void setName(std::string);
 
     static Signals::Playlist::TrackChanged& getTrackChangedSignal();
 
