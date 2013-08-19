@@ -25,7 +25,8 @@
 
 namespace Melosic {
 namespace Config {
-typedef boost::variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double> VarType;
+using KeyType = const std::string;
+using VarType = boost::variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double>;
 }
 }
 

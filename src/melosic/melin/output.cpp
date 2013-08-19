@@ -61,14 +61,14 @@ public:
         assert(c);
         c->merge(conf);
         c->addDefaultFunc([=]() -> Config::Conf { return conf; });
-        c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
             TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
             variableUpdateSlot(pair.first, pair.second);
         });
         c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
     }
 
-    void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
+    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
             if(key == "output device") {

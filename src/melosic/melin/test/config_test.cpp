@@ -20,6 +20,7 @@
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/mpl/index_of.hpp>
+#include <boost/variant.hpp>
 
 #include <melosic/melin/config.hpp>
 #include <melosic/common/directories.hpp>
@@ -144,7 +145,7 @@ TEST(ConfigTest, ConfDefault) {
     EXPECT_EQ(2u, c.nodeCount());
 
     c.resetToDefault();
-
+    EXPECT_EQ("root", c.getName());
     EXPECT_EQ(0u, c.childCount());
     EXPECT_EQ(0u, c.nodeCount());
 }

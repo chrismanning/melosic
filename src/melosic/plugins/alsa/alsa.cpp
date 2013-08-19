@@ -36,6 +36,7 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 #include <melosic/melin/output.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/config.hpp>
+#include <melosic/common/int_get.hpp>
 using namespace Melosic;
 
 Logger::Logger logject(logging::keywords::channel = "ALSA");
@@ -59,7 +60,8 @@ static constexpr snd_pcm_format_t formats[] = {
 static constexpr uint8_t bpss[] = {8, 16, 24, 24, 32};
 
 Config::Conf conf{"ALSA"};
-int64_t frames = 0;
+snd_pcm_uframes_t frames = 1024;
+bool resample = false;
 
 class AlsaOutput : public Output::PlayerSink {
 public:
@@ -72,9 +74,8 @@ public:
     {}
 
     virtual ~AlsaOutput() {
-        if(pdh != nullptr) {
+        if(pdh != nullptr)
             stop();
-        }
         if(params != nullptr)
             snd_pcm_hw_params_free(params);
     }
@@ -83,20 +84,19 @@ public:
         lock_guard<Mutex> l(mu);
         current = as;
         state_ = Output::DeviceState::Error;
-        if(pdh == nullptr) {
+        if(pdh == nullptr)
             ALSA_THROW_IF(DeviceOpenException, snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
-        }
 
-        if(params == nullptr) {
+        if(params == nullptr)
             snd_pcm_hw_params_malloc(&params);
-        }
+
         snd_pcm_hw_params_any(pdh, params);
 
         snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
         ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_channels(pdh, params, as.channels));
         int dir = 0;
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_resample(pdh, params, false));
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_resample(pdh, params, ::resample));
         unsigned rate = as.sample_rate;
         ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
         if(rate != as.sample_rate) {
@@ -104,10 +104,10 @@ public:
             as.target_sample_rate = rate;
         }
 
-        const int frames = ::frames;
-        snd_pcm_hw_params_set_period_size_near(pdh, params, (snd_pcm_uframes_t*)&frames, &dir);
-        const int buf = frames * 8;
-        snd_pcm_hw_params_set_buffer_size_near(pdh, params, (snd_pcm_uframes_t*)&buf);
+        auto frames = ::frames;
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_period_size_near(pdh, params, &frames, &dir));
+        auto buf = frames * 8;
+        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_buffer_size_near(pdh, params, &buf));
 
         snd_pcm_format_t fmt(SND_PCM_FORMAT_UNKNOWN);
 
@@ -140,16 +140,14 @@ public:
                     }
                     WARN_LOG(logject) << "unsupported format";
                 }
-                if(p == formats + sizeof(formats)) {
-                    ERROR_LOG(logject) << "couldnt set format";
-                    return;
-                }
+
+                if(p == formats + sizeof(formats))
+                    BOOST_THROW_EXCEPTION(DeviceParamException());
             }
         }
-        if(snd_pcm_hw_params_set_format(pdh, params, fmt) < 0) {
-            ERROR_LOG(logject) << "couldnt set format";
-            return;
-        }
+
+        if(snd_pcm_hw_params_set_format(pdh, params, fmt) < 0)
+            BOOST_THROW_EXCEPTION(DeviceParamException());
 
         ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params(pdh, params));
 
@@ -307,13 +305,19 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     outman->addOutputDevices([] (Output::DeviceName name) { return std::make_unique<AlsaOutput>(name); }, names);
 }
 
-void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
+void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+    using boost::get;
+    using Melosic::Config::get;
     try {
-        if(key == "frames")
-            ::frames = boost::get<int64_t>(val);
+        if(key == "frames") {
+            ::frames = get<snd_pcm_uframes_t>(val);
+        }
+        else if(key == "resample")
+            ::resample = get<bool>(val);
     }
-    catch(boost::bad_get&) {
+    catch(boost::bad_get& e) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
+        TRACE_LOG(logject) << e.what();
     }
 }
 
@@ -333,14 +337,15 @@ void loadedSlot(Config::Conf& base) {
     c->merge(::conf);
     c->addDefaultFunc([=]() -> Config::Conf { return ::conf; });
     c->getVariableUpdatedSignal().connect(variableUpdateSlot);
-    c->iterateNodes([&] (const std::pair<Config::Conf::KeyType, Config::VarType>& pair) {
+    c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
         TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
         variableUpdateSlot(pair.first, pair.second);
     });
 }
 
 extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
-    ::conf.putNode("frames", static_cast<int64_t>(1024));
+    ::conf.putNode("frames", ::frames);
+    ::conf.putNode("resample", ::resample);
     confman->getLoadedSignal().connect(loadedSlot);
 }
 

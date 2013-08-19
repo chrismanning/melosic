@@ -62,7 +62,7 @@ public:
         }
     }
 
-    MELOSIC_EXPORT const std::string& currentSinkName() const;
+    const std::string& currentSinkName() const;
 
     std::unique_ptr<PlayerSink> createPlayerSink();
     Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;

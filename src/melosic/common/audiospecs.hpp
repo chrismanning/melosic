@@ -44,7 +44,7 @@ struct AudioSpecs {
     uint8_t bps;
     uint8_t target_bps = 0;
     uint32_t sample_rate;
-    uint8_t target_sample_rate = 0;
+    uint32_t target_sample_rate = 0;
     uint64_t total_samples;
 };
 

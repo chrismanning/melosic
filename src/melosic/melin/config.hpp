@@ -23,12 +23,6 @@
 #include <string>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/range/sub_range.hpp>
-#include <boost/variant.hpp>
-#include <boost/range/adaptors.hpp>
-namespace {
-using namespace boost::adaptors;
-}
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/common.hpp>
@@ -68,7 +62,6 @@ private:
 
 class MELOSIC_EXPORT Conf final {
 public:
-    using KeyType = const std::string;
     using ChildType = Conf;
     using NodeType = VarType;
     using DefaultFunc = std::function<ChildType()>;
@@ -86,8 +79,8 @@ public:
 
     typename std::add_const<KeyType>::type& getName() const noexcept;
 
-    std::shared_ptr<std::pair<Conf::KeyType, VarType>> getNode(KeyType key);
-    std::shared_ptr<const std::pair<Conf::KeyType, VarType>> getNode(KeyType key) const;
+    std::shared_ptr<std::pair<KeyType, VarType>> getNode(KeyType key);
+    std::shared_ptr<const std::pair<KeyType, VarType>> getNode(KeyType key) const;
     std::shared_ptr<ChildType> getChild(KeyType key);
     std::shared_ptr<const ChildType> getChild(KeyType key) const;
 
@@ -102,8 +95,8 @@ public:
 
     void iterateChildren(std::function<void(const ChildType&)>) const;
     void iterateChildren(std::function<void(ChildType&)>);
-    void iterateNodes(std::function<void(const std::pair<Conf::KeyType, VarType>&)>) const;
-    void iterateNodes(std::function<void(std::pair<Conf::KeyType, VarType>&)>);
+    void iterateNodes(std::function<void(const std::pair<KeyType, VarType>&)>) const;
+    void iterateNodes(std::function<void(std::pair<KeyType, VarType>&)>);
 
     void merge(const Conf& c);
 

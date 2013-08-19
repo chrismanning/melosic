@@ -52,6 +52,7 @@ find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES})
 
 SET(PN ${PROJECT_NAME})
 #test stuff

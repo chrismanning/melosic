@@ -20,7 +20,7 @@
 #include <thread>
 #include <mutex>
 
-#include <melosic/common/configvar.hpp>
+#include <boost/variant.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
@@ -31,6 +31,7 @@ namespace { namespace mpl = boost::mpl; }
 #include <boost/format.hpp>
 namespace { using boost::format; }
 
+#include <melosic/common/configvar.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/config.hpp>
@@ -92,12 +93,12 @@ struct Manager::impl {
         assert(false);
     }
 
-    Conf ConfFromJson(json::Value& val, std::string name) {
+    Conf ConfFromJson(json::Value& val, KeyType name) {
         assert(val.IsObject());
         auto members = boost::make_iterator_range(val.MemberBegin(), val.MemberEnd());
         Conf c(name);
         for(auto& member : members) {
-            std::string name_str(member.name.GetString());
+            KeyType name_str(member.name.GetString());
             if(member.value.IsObject()) {
                 TRACE_LOG(logject) << "adding child conf from json: " << name_str;
                 c.putChild(ConfFromJson(member.value, std::move(name_str)));
@@ -180,7 +181,7 @@ struct Manager::impl {
 
     json::Value JsonFromConf(const Conf& c) {
         json::Value obj(json::kObjectType);
-        c.iterateNodes([&] (const std::pair<Conf::KeyType, VarType>& pair) {
+        c.iterateNodes([&] (const std::pair<KeyType, VarType>& pair) {
             TRACE_LOG(logject) << "adding node to json: " << pair.first;
             auto val = JsonFromVar(pair.second);
             if(val.IsNull()) {
@@ -303,18 +304,18 @@ Conf& Conf::operator=(Conf b) {
     return *this;
 }
 
-typename std::add_const<Conf::KeyType>::type& Conf::getName() const noexcept {
+typename std::add_const<KeyType>::type& Conf::getName() const noexcept {
     return pimpl->name;
 }
 
-std::shared_ptr<std::pair<Conf::KeyType, VarType>> Conf::getNode(KeyType key) {
+std::shared_ptr<std::pair<KeyType, VarType>> Conf::getNode(KeyType key) {
     TRACE_LOG(logject) << "Getting node: " << key;
     return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
     });
 }
 
-std::shared_ptr<const std::pair<Conf::KeyType, VarType>> Conf::getNode(KeyType key) const {
+std::shared_ptr<const std::pair<KeyType, VarType>> Conf::getNode(KeyType key) const {
     TRACE_LOG(logject) << "Getting node: " << key;
     return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
@@ -381,16 +382,16 @@ void Conf::iterateChildren(std::function<void(ChildType&)> fun) {
     pimpl->children.for_each(std::move(fun));
 }
 
-void Conf::iterateNodes(std::function<void(const std::pair<Conf::KeyType, VarType>&)> fun) const {
+void Conf::iterateNodes(std::function<void(const std::pair<KeyType, VarType>&)> fun) const {
     pimpl->nodes.for_each(std::move(fun));
 }
 
-void Conf::iterateNodes(std::function<void(std::pair<Conf::KeyType, VarType>&)> fun) {
+void Conf::iterateNodes(std::function<void(std::pair<KeyType, VarType>&)> fun) {
     pimpl->nodes.for_each(std::move(fun));
 }
 
 void Conf::merge(const Conf& c) {
-    c.iterateNodes([this] (const std::pair<Conf::KeyType, VarType>& pair) {
+    c.iterateNodes([this] (const std::pair<KeyType, VarType>& pair) {
         auto tmp = getNode(pair.first);
         if(!tmp) {
             putNode(pair.first, pair.second);
@@ -428,6 +429,4 @@ noexcept(noexcept(swap(a.pimpl, b.pimpl)))
 }
 
 } // namespace Config
-}
-
-// namespace Melosic
+} // namespace Melosic

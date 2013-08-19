@@ -39,145 +39,20 @@ struct StateChanged : Signals::Signal<Signals::Player::StateChanged> {
     using Super::Signal;
 };
 
-struct State {
-    explicit State(StateChanged& stateChanged) : stateChanged(stateChanged) {}
-    virtual ~State() {}
-
-    //default actions (do nothing)
-    virtual void play() {}
-    virtual void pause() {}
-    virtual void stop() {}
-
-    virtual chrono::milliseconds tell() const {
-        return chrono::milliseconds::zero();
-    }
-
-    virtual Output::DeviceState state() const {
-        return Output::DeviceState::Initial;
-    }
-
-    virtual void sinkChange();
-
-private:
-    static StateMachine::impl* stateMachine_;
-    static Melosic::Playlist::Manager* playman_;
-    static void setPlayer(StateMachine::impl* p) { stateMachine_ = p; }
-    static void setPlayMan(Melosic::Playlist::Manager* p) { playman_ = p; }
-    friend struct StateMachine::impl;
-
-protected:
-    decltype(stateMachine_) const& stateMachine = stateMachine_;
-    decltype(playman_) const& playman = playman_;
-    StateChanged& stateChanged;
-};
-StateMachine::impl* State::stateMachine_(nullptr);
-Melosic::Playlist::Manager* State::playman_(nullptr);
-
-struct Stopped;
-struct Error;
+struct State;
 
 struct StateMachine::impl {
-    explicit impl(Melosic::Playlist::Manager& playman, Output::Manager& outman) :
-        playman(playman),
-        outman(outman),
-        logject(logging::keywords::channel = "StateMachine"),
-        currentState_(new State(stateChanged))
-    {
-        State::stateMachine_ = this;
-        State::playman_ = &playman;
-    }
+    explicit impl(Melosic::Playlist::Manager& playman, Output::Manager& outman);
 
-    void play() {
-        unique_lock l(mu);
-        auto cs = currentState_;
-        assert(cs);
-        l.unlock();
-        cs->play();
-    }
-
-    void pause() {
-        unique_lock l(mu);
-        auto cs = currentState_;
-        assert(cs);
-        l.unlock();
-        cs->pause();
-    }
-
-    void stop() {
-        unique_lock l(mu);
-        auto cs = currentState_;
-        assert(cs);
-        l.unlock();
-        cs->stop();
-    }
-
-    chrono::milliseconds tell() {
-        unique_lock l(mu);
-        auto cs = currentState_;
-        assert(cs);
-        l.unlock();
-        return cs->tell();
-    }
-
-    Output::DeviceState state() {
-        lock_guard l(mu);
-        auto cs = currentState_;
-        assert(cs);
-        return cs->state();
-    }
-
-    Output::PlayerSink& sink() {
-        return sinkWrapper_;
-    }
-
-    void trackChangeSlot(const Track& track) {
-        auto cp = playman.currentPlaylist();
-        assert(cp);
-        try {
-            if(*cp && sinkWrapper_) {
-                assert(track == *cp->currentTrack());
-                if(sinkWrapper_.currentSpecs() != track.getAudioSpecs()) {
-                    LOG(logject) << "Changing sink specs for new track";
-                    sinkWrapper_.stop();
-                    this_thread::sleep_for(100ms);
-                    sinkWrapper_.prepareSink(const_cast<Track&>(track).getAudioSpecs());
-                    this_thread::sleep_for(100ms);
-                    sinkWrapper_.play();
-                }
-            }
-        }
-        catch(DeviceException& e) {
-            ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
-            changeState<Error>();
-        }
-        catch(...) {
-            ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
-            playman.currentPlaylist()->next();
-        }
-    }
-
-    void changeDevice() {
-        TRACE_LOG(logject) << "changeDevice()";
-        lock_guard l(sinkWrapper_.mu);
-        sinkWrapper_.device = std::move(outman.createPlayerSink());
-    }
-
-    void sinkChangeSlot() {
-        TRACE_LOG(logject) << "sinkChangeSlot()";
-        try {
-            unique_lock l(mu);
-            auto cs = currentState_;
-            assert(cs);
-            l.unlock();
-            cs->sinkChange();
-        }
-        catch(...) {
-            ERROR_LOG(logject) << boost::diagnostic_information(boost::current_exception());
-
-            stop();
-            changeState<Error>();
-        }
-    }
+    void play();
+    void pause();
+    void stop();
+    chrono::milliseconds tell();
+    Output::DeviceState state();
+    Output::PlayerSink& sink();
+    void trackChangeSlot(const Track& track);
+    void changeDevice();
+    void sinkChangeSlot();
 
     Melosic::Playlist::Manager& playman;
     struct SinkWrapper : Output::PlayerSink {
@@ -258,25 +133,78 @@ struct StateMachine::impl {
 
         auto r(currentState_);
         assert(r);
-        currentState_.reset(new S(r->stateChanged));
+        currentState_.reset(new S(stateChanged));
         assert(currentState_);
         return std::move(r);
     }
 };
 
-struct Stopped;
-struct Error;
+struct State {
+protected:
+    explicit State(StateChanged& stateChanged) : stateChanged(stateChanged) {}
 
-void State::sinkChange() {
-    stateMachine->changeDevice();
-    if(stateMachine->sinkWrapper_) {
-        auto ptr = stateMachine->changeState<Stopped>();
-        assert(ptr == this);
-        assert(stateMachine->state() == Output::DeviceState::Stopped);
+public:
+    virtual ~State() {}
+
+    //default actions (do nothing)
+    virtual void play() {}
+    virtual void pause() {}
+    virtual void stop() {}
+
+    virtual chrono::milliseconds tell() const {
+        return 0ms;
     }
-    else
-        stateMachine->changeState<Error>();
-}
+
+    virtual Output::DeviceState state() const = 0;
+
+    virtual void sinkChange() {}
+
+    static StateMachine::impl* stateMachine_;
+    static Melosic::Playlist::Manager* playman_;
+
+    StateChanged& stateChanged;
+
+protected:
+    decltype(stateMachine_) const& stateMachine = stateMachine_;
+    decltype(playman_) const& playman = playman_;
+};
+StateMachine::impl* State::stateMachine_(nullptr);
+Melosic::Playlist::Manager* State::playman_(nullptr);
+
+struct Error;
+struct Playing;
+
+struct Stopped : State {
+    explicit Stopped(StateChanged& sc) : State(sc) {
+        stateChanged(Output::DeviceState::Stopped);
+    }
+
+    void play() override {
+        assert(stateMachine);
+        assert(playman);
+        assert(playman->currentPlaylist());
+        if(!*playman->currentPlaylist())
+            return;
+
+        try {
+            stateMachine->changeDevice();
+            if(!stateMachine->sinkWrapper_)
+                BOOST_THROW_EXCEPTION(std::exception());
+            stateMachine->sink().prepareSink(playman->currentPlaylist()->currentTrack()->getAudioSpecs());
+            stateMachine->sink().play();
+            auto ptr = stateMachine->changeState<Playing>();
+            assert(ptr == this);
+        }
+        catch(...) {
+            ERROR_LOG(stateMachine->logject) << boost::current_exception_diagnostic_information();
+            stateMachine->changeState<Error>();
+        }
+    }
+
+    Output::DeviceState state() const override {
+        return Output::DeviceState::Stopped;
+    }
+};
 
 struct Error : State {
     explicit Error(StateChanged& sc) : State(sc) {
@@ -308,8 +236,11 @@ struct Error : State {
     void sinkChange() override {
         try {
             stateMachine->changeDevice();
-            if(stateMachine->sinkWrapper_)
-                stateMachine->changeState<Stopped>();
+            if(stateMachine->sinkWrapper_) {
+                auto ptr = stateMachine->changeState<Stopped>();
+                assert(ptr == this);
+                assert(stateMachine->state() == Output::DeviceState::Stopped);
+            }
         }
         catch(...) {
             ERROR_LOG(stateMachine->logject) << boost::current_exception_diagnostic_information();
@@ -356,8 +287,8 @@ struct Playing : virtual State, Stop, Tell {
     }
 
     Output::DeviceState state() const override {
-        assert(stateMachine);
-        assert(stateMachine->sink().state()==Output::DeviceState::Playing);
+//        assert(stateMachine);
+//        assert(stateMachine->sink().state()==Output::DeviceState::Playing);
         return Output::DeviceState::Playing;
     }
 
@@ -397,34 +328,107 @@ struct Paused : virtual State, Stop, Tell {
     }
 };
 
-struct Stopped : State {
-    explicit Stopped(StateChanged& sc) : State(sc) {
-        assert(stateMachine->sinkWrapper_);
-        stateChanged(Output::DeviceState::Stopped);
-    }
+StateMachine::impl::impl(Melosic::Playlist::Manager& playman, Output::Manager& outman) :
+    playman(playman),
+    outman(outman),
+    logject(logging::keywords::channel = "StateMachine")
+{
+    State::stateMachine_ = this;
+    State::playman_ = &playman;
+    currentState_ = std::make_shared<Stopped>(stateChanged);
+}
 
-    void play() override {
-        assert(stateMachine);
-        assert(playman);
-        assert(playman->currentPlaylist());
-        if(!*playman->currentPlaylist())
-            return;
-        try {
-            stateMachine->sink().prepareSink(playman->currentPlaylist()->currentTrack()->getAudioSpecs());
-            stateMachine->sink().play();
-            auto ptr = stateMachine->changeState<Playing>();
-            assert(ptr == this);
-        }
-        catch(...) {
-            ERROR_LOG(stateMachine->logject) << boost::diagnostic_information(boost::current_exception());
-            stateMachine->changeState<Error>();
-        }
-    }
+void StateMachine::impl::play() {
+    unique_lock l(mu);
+    auto cs = currentState_;
+    assert(cs);
+    l.unlock();
+    cs->play();
+}
 
-    Output::DeviceState state() const override {
-        return Output::DeviceState::Stopped;
+void StateMachine::impl::pause() {
+    unique_lock l(mu);
+    auto cs = currentState_;
+    assert(cs);
+    l.unlock();
+    cs->pause();
+}
+
+void StateMachine::impl::stop() {
+    unique_lock l(mu);
+    auto cs = currentState_;
+    assert(cs);
+    l.unlock();
+    cs->stop();
+}
+
+chrono::milliseconds StateMachine::impl::tell() {
+    unique_lock l(mu);
+    auto cs = currentState_;
+    assert(cs);
+    l.unlock();
+    return cs->tell();
+}
+
+Output::DeviceState StateMachine::impl::state() {
+    lock_guard l(mu);
+    auto cs = currentState_;
+    assert(cs);
+    return cs->state();
+}
+
+Output::PlayerSink& StateMachine::impl::sink() {
+    return sinkWrapper_;
+}
+
+void StateMachine::impl::trackChangeSlot(const Track& track) {
+    auto cp = playman.currentPlaylist();
+    assert(cp);
+    try {
+        if(*cp && sinkWrapper_) {
+            assert(track == *cp->currentTrack());
+            if(sinkWrapper_.currentSpecs() != track.getAudioSpecs()) {
+                LOG(logject) << "Changing sink specs for new track";
+                sinkWrapper_.stop();
+                this_thread::sleep_for(100ms);
+                sinkWrapper_.prepareSink(const_cast<Track&>(track).getAudioSpecs());
+                this_thread::sleep_for(100ms);
+                sinkWrapper_.play();
+            }
+        }
     }
-};
+    catch(DeviceException& e) {
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+        changeState<Error>();
+    }
+    catch(...) {
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+        playman.currentPlaylist()->next();
+    }
+}
+
+void StateMachine::impl::changeDevice() {
+    TRACE_LOG(logject) << "changeDevice()";
+    lock_guard l(sinkWrapper_.mu);
+    sinkWrapper_.device = std::move(outman.createPlayerSink());
+}
+
+void StateMachine::impl::sinkChangeSlot() {
+    TRACE_LOG(logject) << "sinkChangeSlot()";
+    try {
+        unique_lock l(mu);
+        auto cs = currentState_;
+        assert(cs);
+        l.unlock();
+        cs->sinkChange();
+    }
+    catch(...) {
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+
+        stop();
+        changeState<Error>();
+    }
+}
 
 StateMachine::StateMachine(Melosic::Playlist::Manager& playman, Output::Manager& outman) :
     pimpl(new impl(playman, outman)) {}
