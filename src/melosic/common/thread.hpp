@@ -53,7 +53,7 @@ private:
 
         void call() noexcept override {
             try {
-                call_impl<Result>::call(*this);
+                call_impl(*this);
             }
             catch(...) {
                 p.set_exception(std::current_exception());
@@ -61,20 +61,16 @@ private:
         }
 
     private:
-        template <typename T, typename D = void>
-        struct call_impl {
-            static void call(impl<Func>& i) {
-                i.p.set_value(i.f());
-            }
-        };
+        template <typename T = Result>
+        void call_impl(impl<Func>& i, typename std::enable_if<!std::is_void<T>::value, T>::type* = 0) {
+            i.p.set_value(i.f());
+        }
 
-        template <typename D>
-        struct call_impl<void, D> {
-            static void call(impl<Func>& i) {
-                i.f();
-                i.p.set_value();
-            }
-        };
+        template <typename T = Result>
+        void call_impl(impl<Func>& i, typename std::enable_if<std::is_void<T>::value, T>::type* = 0) {
+            i.f();
+            i.p.set_value();
+        }
 
         std::promise<Result> p;
         Func f;
