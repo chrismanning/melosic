@@ -39,11 +39,15 @@ namespace Signals {
 
 namespace {
 namespace mpl = boost::mpl;
-typedef std::mutex Mutex;
 
-template <typename Slot>
-using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
+using Mutex = std::mutex;
+using lock_guard = std::lock_guard<Mutex>;
+using unique_lock = std::unique_lock<Mutex>;
+
+template <typename Lock>
+using LockNoExcept = std::is_nothrow_constructible<Lock, typename Lock::mutex_type>;
 }
+
 template <typename Ret, typename ...Args>
 struct SignalCore<Ret (Args...)> {
     static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
@@ -57,24 +61,27 @@ struct SignalCore<Ret (Args...)> {
                   std::true_type>::type::value,
                   "Signal args must be copyable");
 
-    typedef std::function<Ret(Args...)> Slot;
+    using Slot = std::function<Ret(Args...)>;
+    using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
 
-    SignalCore() noexcept(std::is_nothrow_constructible<FunsType<Slot>>::value
-                          && std::is_nothrow_constructible<Mutex>::value) = default;
+    SignalCore() noexcept(std::is_nothrow_default_constructible<FunsType>::value
+                          && std::is_nothrow_default_constructible<Mutex>::value) = default;
 
     SignalCore(const SignalCore&) = delete;
     SignalCore& operator=(const SignalCore&) = delete;
 
     SignalCore(SignalCore&& b)
-            noexcept(std::is_nothrow_move_constructible<FunsType<Slot>>::value
+            noexcept(std::is_nothrow_move_constructible<FunsType>::value
                      && std::is_nothrow_constructible<Mutex>::value)
         : funs(std::move(b.funs))
     {}
 
-    SignalCore& operator=(SignalCore&& b)
-            noexcept(std::is_nothrow_move_assignable<FunsType<Slot>>::value)
+    SignalCore& operator=(SignalCore b)
+            noexcept(std::is_nothrow_move_constructible<SignalCore>::value
+                     && is_nothrow_swappable<SignalCore>::value)
     {
-        funs = std::move(b.funs);
+        using std::swap;
+        swap(*this, b);
         return *this;
     }
 
@@ -86,32 +93,35 @@ struct SignalCore<Ret (Args...)> {
     }
 
     Connection connect(Slot slot) {
-        std::lock_guard<Mutex> l(mu);
+        lock_guard l(mu);
         return funs.emplace(Connection(*this), slot).first->first;
     }
 
-    template <typename Fun, typename Obj,
-              class = typename std::enable_if<std::is_member_function_pointer<Fun>::value>::type>
-    Connection connect(Fun func, Obj&& obj) {
+    template <typename T, typename Obj>
+    Connection connect(Ret (T::* const func)(Args...), Obj&& obj) {
         auto bo = bindObj(std::forward<Obj>(obj));
-        static_assert(std::is_base_of<typename ObjFromMemFunPtr<Fun>::type,
-                      typename std::remove_pointer<decltype(bo())>::type>::value,
+        static_assert(std::is_base_of<T, typename decltype(bo)::object_type>::value,
                       "obj must have member function func");
-        auto mem = std::mem_fn(func);
-        static_assert(std::is_convertible<typename decltype(mem)::result_type, Ret>::value,
-                      "Return types incompatible");
-        return connect([=] (Args&&... as) mutable { return mem(*bo, std::forward<Args>(as)...); });
+        return connect([=] (Args&&... as) mutable { return (bo()->*func)(std::forward<Args>(as)...); });
     }
 
-    bool disconnect(const Connection& conn) {
-        std::lock_guard<Mutex> l(mu);
+    bool disconnect(const Connection& conn) noexcept(LockNoExcept<lock_guard>::value) {
+        lock_guard l(mu);
         auto s = funs.size();
         auto n = funs.erase(conn);
-        return(funs.size() == s-n);
+        return funs.size() == s-n;
     }
 
     size_t slotCount() const noexcept {
         return funs.size();
+    }
+
+    void swap(SignalCore& b) noexcept(is_nothrow_swappable<FunsType>::value) {
+        std::lock(mu, b.mu);
+        using std::swap;
+        swap(funs, b.funs);
+        b.mu.unlock();
+        mu.unlock();
     }
 
 protected:
@@ -125,7 +135,7 @@ protected:
 
         std::exception_ptr eptr;
 
-        std::unique_lock<Mutex> l{mu};
+        unique_lock l(mu);
         for(auto i(funs.begin()); i != funs.end();) {
             try {
                 l.unlock();
@@ -180,10 +190,15 @@ protected:
     }
 
 private:
-    FunsType<Slot> funs;
+    FunsType funs;
 
     Mutex mu;
 };
+
+template <typename Ret, typename ...Args>
+void swap(SignalCore<Ret (Args...)>& a, SignalCore<Ret (Args...)>& b) noexcept(noexcept(a.swap(b))) {
+    a.swap(b);
+}
 
 }
 }

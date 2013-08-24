@@ -37,6 +37,20 @@ struct ObjFromMemFunPtr<T U::*> {
     typedef U type;
 };
 
+namespace detail {
+template <typename T>
+constexpr bool is_nothrow_swappable_impl() {
+    using std::swap;
+    return noexcept(swap(std::declval<T&>(), std::declval<T&>()));
+}
+}
+
+template <typename T>
+struct is_nothrow_swappable {
+    typedef is_nothrow_swappable<T> type;
+    static constexpr bool value = detail::is_nothrow_swappable_impl<T>();
+};
+
 }
 
 #endif // MELOSIC_TRAITS_HPP

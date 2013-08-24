@@ -15,6 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/input.hpp>
@@ -24,8 +25,6 @@
 #include <melosic/common/thread.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/directories.hpp>
-
-#include "kernel.hpp"
 
 namespace Melosic {
 namespace Core {

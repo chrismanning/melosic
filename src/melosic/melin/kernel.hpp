@@ -69,7 +69,7 @@ public:
     MELOSIC_EXPORT Output::Manager& getOutputManager();
     MELOSIC_EXPORT Encoder::Manager& getEncoderManager();
     MELOSIC_EXPORT Thread::Manager& getThreadManager();
-    MELOSIC_EXPORT Melosic::Playlist::Manager& getPlaylistManager();
+    MELOSIC_EXPORT Playlist::Manager& getPlaylistManager();
 
 private:
     class impl;

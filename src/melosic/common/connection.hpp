@@ -45,12 +45,12 @@ private:
 
 public:
     void disconnect(Connection& conn) noexcept(noexcept(sig.disconnect(conn))) override {
-        if(connected)
-            connected = !sig.disconnect(conn);
+        if(connected.load())
+            connected.exchange(!sig.disconnect(conn));
     }
 
     bool isConnected() const noexcept override {
-        return connected;
+        return connected.load();
     }
 };
 

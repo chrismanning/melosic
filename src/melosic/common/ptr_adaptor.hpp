@@ -28,13 +28,6 @@
 namespace Melosic {
 
 template <typename T>
-struct isSharedPtr : std::false_type {};
-template <typename T>
-struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
-template <typename T>
-struct isSharedPtr<boost::shared_ptr<T>> : std::true_type {};
-
-template <typename T>
 struct isWeakPtr : std::false_type {};
 template <typename T>
 struct isWeakPtr<std::weak_ptr<T>> : std::true_type {};
@@ -43,63 +36,61 @@ struct isWeakPtr<boost::weak_ptr<T>> : std::true_type {};
 
 template <template<class> class Ptr, typename T>
 struct WeakPtrBind {
-    static_assert(isWeakPtr<Ptr<T>>::value, "WeakPtrBind is for binding weak pointers ONLY");
-    typedef T* result_type;
+    typedef T object_type;
+    static_assert(isWeakPtr<Ptr<object_type>>::value, "WeakPtrBind is for binding weak pointers ONLY");
 
-    explicit WeakPtrBind(const Ptr<T>& ptr) noexcept : ptr(ptr) {}
+    explicit WeakPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value) :
+        ptr(std::move(ptr)) {}
 
-    T* operator()() const {
+    object_type* operator()() const {
         if(ptr.expired())
             throw std::bad_weak_ptr();
         return ptr.lock().get();
     }
 
-    T& operator*() const {
+    object_type& operator*() const {
         return *(*this)();
     }
 
 private:
-    Ptr<T> ptr;
+    Ptr<object_type> ptr;
 };
 
 template <typename T>
 struct RefBind {
-    typedef T* result_type;
+    typedef T object_type;
 
-    explicit RefBind(const std::reference_wrapper<T>& wrapper) noexcept : wrapper(wrapper) {}
+    explicit RefBind(std::reference_wrapper<object_type> wrapper) noexcept : wrapper(wrapper) {}
 
-    T* operator()() const noexcept {
+    object_type* operator()() const noexcept {
         return &wrapper.get();
     }
 
-    T& operator*() const {
+    object_type& operator*() const noexcept {
         return *(*this)();
     }
 
 private:
-    std::reference_wrapper<T> wrapper;
+    std::reference_wrapper<object_type> wrapper;
 };
 
 template <typename T>
 struct PtrBind {
-    typedef T* result_type;
+    typedef T object_type;
 
-    explicit PtrBind(T* ptr) noexcept : ptr(ptr) {}
+    explicit PtrBind(object_type* ptr) noexcept : ptr(ptr) {}
 
-    T* operator()() const noexcept {
+    object_type* operator()() const noexcept {
         return ptr;
     }
 
-    T& operator*() const {
+    object_type& operator*() const noexcept {
         return *(*this)();
     }
 
 private:
-    T* ptr;
+    object_type* ptr;
 };
-
-template <typename>
-void bindObj();
 
 template <typename T, class DecayedT = typename std::decay<T>::type>
 auto bindObj(std::reference_wrapper<T> obj) {
@@ -116,13 +107,20 @@ auto bindObj(T& obj) {
 }
 
 template <typename T>
+auto bindObj(const T& obj) {
+    static_assert(std::is_class<typename std::decay<T>::type>::value,
+                  "bindObj must be called with a class object");
+    return bindObj(std::cref(obj));
+}
+
+template <typename T>
 auto bindObj(T* ptr) {
     return PtrBind<T>(ptr);
 }
 
 template <template<class> class Ptr, typename T, class = typename std::enable_if<isWeakPtr<Ptr<T>>::value>::type>
-auto bindObj(const Ptr<T>& ptr) {
-    return WeakPtrBind<Ptr, T>(ptr);
+auto bindObj(Ptr<T> ptr) {
+    return WeakPtrBind<Ptr, T>(std::move(ptr));
 }
 
 template <typename T>
