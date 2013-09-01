@@ -63,8 +63,8 @@ public:
 
     MELOSIC_EXPORT Signals::Player::StateChanged& stateChangedSignal() const;
 
+    struct impl;
 private:
-    class impl;
     std::unique_ptr<impl> pimpl;
 };
 
