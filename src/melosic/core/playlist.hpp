@@ -84,9 +84,7 @@ public:
     bool empty() const;
     size_type size() const;
     size_type max_size() const;
-    explicit operator bool() const {
-        return currentTrack() != end();
-    }
+    explicit operator bool() const;
 
     iterator insert(const_iterator pos, value_type&& value);
 

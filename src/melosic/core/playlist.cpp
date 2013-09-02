@@ -26,11 +26,6 @@ using Mutex = shared_mutex;
 using lock_guard = std::lock_guard<Mutex>;
 using unique_lock = std::unique_lock<Mutex>;
 using shared_lock_guard = boost::shared_lock_guard<Mutex>;
-#include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/range/algorithm_ext/insert.hpp>
-#include <boost/range/algorithm/find.hpp>
-#include <boost/range/adaptor/sliced.hpp>
-using namespace boost::adaptors;
 #include <boost/format.hpp>
 using boost::format;
 
@@ -209,12 +204,14 @@ public:
                 its.push_back(tracks.emplace(pos, decman, path));
             }
             catch(...) {
-                ERROR_LOG(logject) << format("Track couldn't be add to playlist \"%1%\" %2%:%3%") % name % __FILE__ % __LINE__;
+                ERROR_LOG(logject) << format("Track couldn't be added to playlist \"%1%\" %2%:%3%")
+                                      % name % __FILE__ % __LINE__;
                 ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
             }
         }
 
-        assert(its.size() > 0);
+        if(its.empty())
+            return Playlist::const_range(pos, pos);
         Playlist::const_range r(its.front(), pos);
         assert(std::distance(its.front(), pos) == boost::distance(r));
 
@@ -388,6 +385,11 @@ Playlist::size_type Playlist::size() const {
 
 Playlist::size_type Playlist::max_size() const {
     return std::numeric_limits<size_type>::max();
+}
+
+Playlist::operator bool() const {
+    shared_lock_guard l(pimpl->mu);
+    return pimpl->empty() ? false : pimpl->currentTrack() != pimpl->end();
 }
 
 Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
