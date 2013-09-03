@@ -20,9 +20,9 @@
 
 #include <string>
 #include <fstream>
-typedef std::ios_base::openmode openmode;
 #include <boost/iostreams/stream_buffer.hpp>
 #include <boost/iostreams/device/file_descriptor.hpp>
+#include <boost/iostreams/device/file.hpp>
 namespace io = boost::iostreams;
 #include <boost/filesystem.hpp>
 
@@ -33,18 +33,23 @@ namespace Melosic {
 
 namespace IO {
 
+typedef std::ios_base::openmode OpenMode;
 class File : public BiDirectionalClosableSeekable {
 public:
-    auto static const defaultMode = std::ios_base::binary | std::ios_base::in;
+    static constexpr OpenMode defaultMode = std::ios_base::binary | std::ios_base::in;
 
-    File(const boost::filesystem::path& filename, const openmode mode_ = defaultMode)
-        : filename_(filename), mode_(mode_)
+    File(boost::filesystem::path filename, OpenMode mode_ = defaultMode)
+        :
+          impl(filename, mode_),
+          filename_(std::move(filename)), mode_(mode_)
     {
-        impl.exceptions(impl.failbit | impl.badbit);
-        open(mode());
+//        impl.exceptions(impl.failbit | impl.badbit);
+//        open(mode());
     }
 
-    virtual ~File() {}
+    virtual ~File() {
+        impl.close();
+    }
 
     const boost::filesystem::path& filename() const {
         return filename_;
@@ -54,9 +59,9 @@ public:
         return impl.is_open();
     }
 
-    void open(const openmode mode = defaultMode) {
+    void open(OpenMode mode = defaultMode) {
         try {
-            impl.open(filename_.string(), mode);
+            impl.open(filename_, mode);
         }
         catch(...) {
             BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(filename_)
@@ -64,53 +69,57 @@ public:
         }
     }
 
-    virtual std::streamsize read(char * s, std::streamsize n) {
+    std::streamsize read(char * s, std::streamsize n) override {
         try {
             return io::read(impl, s, n);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileReadException() << ErrorTag::FilePath(filename_));
+            BOOST_THROW_EXCEPTION(FileReadException() << ErrorTag::FilePath(filename_)
+                                  << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
 
-    virtual std::streamsize write(const char * s, std::streamsize n) {
+    std::streamsize write(const char * s, std::streamsize n) override {
         try {
             return io::write(impl, s, n);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileWriteException() << ErrorTag::FilePath(filename_));
+            BOOST_THROW_EXCEPTION(FileWriteException() << ErrorTag::FilePath(filename_)
+                                  << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
 
-    virtual std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) {
+    std::streampos seekg(std::streamoff off, std::ios_base::seekdir way) override {
         try {
             return io::seek(impl, off, way, std::ios_base::in);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_));
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_)
+                                  << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
 
-    virtual std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) {
+    std::streampos seekp(std::streamoff off, std::ios_base::seekdir way) override {
         try {
             return io::seek(impl, off, way, std::ios_base::out);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_));
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_)
+                                  << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
 
-    virtual void close() {
+    void close() override {
         if(isOpen())
             impl.close();
     }
 
-    virtual bool isOpen() const {
+    bool isOpen() const override {
         return impl.is_open();
     }
 
-    virtual void reOpen() {
-        open();
+    void reOpen() override {
+        open(mode_);
     }
 
     std::ios_base::openmode mode() const {
@@ -118,13 +127,14 @@ public:
     }
 
     void clear() {
-        impl.clear();
+//        impl.clear();
     }
 
 private:
 //    io::stream_buffer<io::file> impl;
-//    io::file_descriptor impl;
-    std::fstream impl;
+    io::file_descriptor impl;
+//    io::file impl;
+//    std::fstream impl;
     boost::filesystem::path filename_;
     std::ios_base::openmode mode_;
 };
