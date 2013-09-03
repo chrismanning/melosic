@@ -46,7 +46,7 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 class Manager::impl {
 public:
     impl(Config::Manager& confman) {
-        conf.putNode("output device", "iec958:CARD=PCH,DEV=0"s);
+        conf.putNode("output device", "default"s);
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 

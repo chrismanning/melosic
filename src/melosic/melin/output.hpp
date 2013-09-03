@@ -97,6 +97,7 @@ public:
     virtual void pause() = 0;
     virtual void stop() = 0;
     virtual DeviceState state() = 0;
+    virtual int64_t waitWrite() = 0;
 };
 
 struct DeviceName {

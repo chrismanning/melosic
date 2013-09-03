@@ -16,6 +16,7 @@
 **************************************************************************/
 
 #include <alsa/asoundlib.h>
+#include <poll.h>
 
 #include <thread>
 #include <mutex>
@@ -27,6 +28,7 @@ using std::unique_lock; using std::lock_guard;
 #include <boost/thread/shared_lock_guard.hpp>
 using boost::shared_mutex; using boost::shared_lock_guard;
 #include <boost/variant.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
@@ -85,7 +87,7 @@ public:
         current = as;
         state_ = Output::DeviceState::Error;
         if(pdh == nullptr)
-            ALSA_THROW_IF(DeviceOpenException, snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, 0));
+            ALSA_THROW_IF(DeviceOpenException, snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK));
 
         if(params == nullptr)
             snd_pcm_hw_params_malloc(&params);
@@ -216,6 +218,29 @@ public:
     Output::DeviceState state() override {
         shared_lock_guard<Mutex> l(mu);
         return state_;
+    }
+
+    int64_t waitWrite() override {
+        if(pdh == nullptr)
+            BOOST_THROW_EXCEPTION(DeviceException());
+        pollfd pfds[snd_pcm_poll_descriptors_count(pdh)];
+        auto n = snd_pcm_poll_descriptors(pdh, pfds, sizeof(pfds));
+        if(n <= 0)
+            BOOST_THROW_EXCEPTION(DeviceException());
+
+        while(true) {
+            auto r = poll(pfds, sizeof(pfds), -1);
+            if(r <= 0)
+                continue;
+            uint16_t revents = 0;
+
+            snd_pcm_poll_descriptors_revents(pdh, pfds, sizeof(pfds), &revents);
+
+            if(revents & POLLERR)
+                return -EIO;
+            if(revents & POLLOUT)
+                return snd_pcm_frames_to_bytes(pdh, snd_pcm_avail_update(pdh));
+        }
     }
 
     std::streamsize write(const char* s, std::streamsize n) override {
