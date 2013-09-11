@@ -28,6 +28,7 @@ using unique_lock = std::unique_lock<Mutex>;
 using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/format.hpp>
 using boost::format;
+#include <boost/scope_exit.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
@@ -46,7 +47,7 @@ struct TrackChanged : Signals::Signal<Signals::Playlist::TrackChanged> {
     using Super::Signal;
 };
 
-static TrackChanged trackChanged;
+static TrackChanged trackChangedSignal;
 
 class Playlist::impl {
 public:
@@ -55,8 +56,14 @@ public:
         decman(decman)
     {}
 
+    void trackChanged(const Core::Track& t, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        trackChangedSignal(t);
+    }
+
     //IO
-    std::streamsize read(char* s, std::streamsize n) {
+    std::streamsize read(char* s, std::streamsize n, unique_lock& l) {
         if(currentTrack() == end()) {
             return -1;
         }
@@ -65,7 +72,7 @@ public:
             if(r < 0)
                 r = 0;
             currentTrack()->close();
-            next();
+            next(l);
             if(currentTrack() != end()) {
                 currentTrack()->reOpen();
                 currentTrack()->reset();
@@ -87,7 +94,7 @@ public:
                                [](chrono::milliseconds a, Track& b) { return a + b.duration(); });
     }
 
-    void previous() {
+    void previous(unique_lock& l) {
         if(currentTrack() == begin()) {
             seek(0ms);
         }
@@ -95,25 +102,24 @@ public:
             current_track_->reset();
             --current_track_;
         }
-        trackChanged(std::cref(*currentTrack()));
+        trackChanged(std::cref(*currentTrack()), l);
     }
 
-    void next() {
+    void next(unique_lock& l) {
         if(currentTrack() != end()) {
             current_track_->reset();
             ++current_track_;
         }
         if(currentTrack() != end())
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
     }
 
-    void jumpTo(size_type pos) {
-        {
-            if(current_track_ != tracks.end())
-                current_track_->reset();
-            current_track_ = std::begin(tracks) + pos;
-        }
-        trackChanged(std::cref(*currentTrack()));
+    void jumpTo(size_type pos, unique_lock& l) {
+        if(current_track_ != tracks.end())
+            current_track_->reset();
+        current_track_ = std::begin(tracks) + pos;
+        if(current_track_ != end())
+            trackChanged(std::cref(*currentTrack()), l);
     }
 
     Playlist::iterator currentTrack() {
@@ -159,8 +165,7 @@ public:
         auto r = tracks.insert(pos, std::move(value));
         if(size() == 1) {
             current_track_ = r;
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
         return r;
     }
@@ -169,8 +174,7 @@ public:
         auto r = tracks.insert(pos, std::make_move_iterator(first), std::make_move_iterator(last));
         if(size() == 1) {
             current_track_ = r;
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
     }
 
@@ -184,8 +188,7 @@ public:
 
         if(size() == 1) {
             current_track_ = std::begin(tracks);
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
 
         return r;
@@ -217,8 +220,7 @@ public:
 
         if(size() == 1) {
             current_track_ = std::begin(tracks);
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
 
         return r;
@@ -228,8 +230,7 @@ public:
         tracks.push_back(std::move(value));
         if(size() == 1) {
             current_track_ = std::begin(tracks);
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
     }
 
@@ -241,8 +242,7 @@ public:
         tracks.emplace_back(decman, filename, start, end);
         if(size() == 1) {
             current_track_ = std::begin(tracks);
-            l.unlock();
-            trackChanged(std::cref(*currentTrack()));
+            trackChanged(std::cref(*currentTrack()), l);
         }
     }
 
@@ -280,8 +280,8 @@ Playlist::~Playlist() {}
 
 //IO
 std::streamsize Playlist::read(char* s, std::streamsize n) {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->read(s, n);
+    unique_lock l(pimpl->mu);
+    return pimpl->read(s, n, l);
 }
 
 void Playlist::seek(chrono::milliseconds dur) {
@@ -296,18 +296,18 @@ chrono::milliseconds Playlist::duration() const {
 }
 
 void Playlist::previous() {
-    lock_guard l(pimpl->mu);
-    pimpl->previous();
+    unique_lock l(pimpl->mu);
+    pimpl->previous(l);
 }
 
 void Playlist::next() {
-    lock_guard l(pimpl->mu);
-    pimpl->next();
+    unique_lock l(pimpl->mu);
+    pimpl->next(l);
 }
 
 void Playlist::jumpTo(Playlist::size_type pos) {
-    lock_guard l(pimpl->mu);
-    pimpl->jumpTo(pos);
+    unique_lock l(pimpl->mu);
+    pimpl->jumpTo(pos, l);
 }
 
 Playlist::iterator Playlist::currentTrack() {
@@ -456,7 +456,7 @@ void Playlist::setName(std::string name) {
 }
 
 Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() {
-    return trackChanged;
+    return trackChangedSignal;
 }
 
 } // namespace Core

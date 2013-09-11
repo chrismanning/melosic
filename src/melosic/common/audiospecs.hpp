@@ -23,29 +23,29 @@
 namespace Melosic {
 
 struct AudioSpecs {
-    AudioSpecs() : channels(0), bps(0), sample_rate(0), total_samples(0) {}
-    AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples)
+    constexpr AudioSpecs() noexcept = default;
+    constexpr AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate, uint64_t total_samples) noexcept
         : channels(channels),
           bps(bps),
           sample_rate(sample_rate),
           target_sample_rate(sample_rate),
           total_samples(total_samples) {}
 
-    bool operator==(const AudioSpecs& b) const {
+    constexpr bool operator==(const AudioSpecs& b) const noexcept {
         return channels == b.channels &&
                bps == b.bps &&
                sample_rate == b.sample_rate;
     }
-    bool operator!=(const AudioSpecs& b) const {
+    constexpr bool operator!=(const AudioSpecs& b) const noexcept {
         return !((*this) == b);
     }
 
-    uint8_t channels;
-    uint8_t bps;
+    uint8_t channels = 0;
+    uint8_t bps = 0;
     uint8_t target_bps = 0;
-    uint32_t sample_rate;
+    uint32_t sample_rate = 0;
     uint32_t target_sample_rate = 0;
-    uint64_t total_samples;
+    uint64_t total_samples = 0;
 };
 
 } // end namespace Melosic

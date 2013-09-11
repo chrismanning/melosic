@@ -29,6 +29,8 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
 #include <boost/scope_exit.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/use_future.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/core/playlist.hpp>
@@ -42,6 +44,7 @@ namespace io = boost::iostreams;
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/smart_ptr_equality.hpp>
+#include <melosic/asio/audio_io.hpp>
 
 #include "player.hpp"
 
@@ -97,79 +100,14 @@ struct Player::impl {
     }
     Output::DeviceState state_impl();
 
-    Output::PlayerSink& sink();
     void trackChangeSlot(const Track& track);
     void changeDevice();
     void sinkChangeSlot();
 
     Melosic::Playlist::Manager& playman;
-    struct SinkWrapper : Output::PlayerSink {
-        std::streamsize write(const char* s, std::streamsize n) override {
-            lock_guard l(mu);
-            assert(device);
-            return device->write(s, n);
-        }
-        const std::string& getSinkName() override {
-            lock_guard l(mu);
-            assert(device);
-            return device->getSinkName();
-        }
-        void prepareSink(Melosic::AudioSpecs& as) override {
-            lock_guard l(mu);
-            assert(device);
-            device->prepareSink(as);
-        }
-        const Melosic::AudioSpecs& currentSpecs() override {
-            lock_guard l(mu);
-            assert(device);
-            return device->currentSpecs();
-        }
-        const std::string& getSinkDescription() override {
-            lock_guard l(mu);
-            assert(device);
-            return device->getSinkDescription();
-        }
-        void play() override {
-            lock_guard l(mu);
-            assert(device);
-            device->play();
-        }
-        void pause() override {
-            lock_guard l(mu);
-            assert(device);
-            device->pause();
-        }
-        void stop() override {
-            lock_guard l(mu);
-            assert(device);
-            device->stop();
-        }
-        Output::DeviceState state() override {
-            lock_guard l(mu);
-            assert(device);
-            return device->state();
-        }
-
-        int64_t waitWrite() override {
-            lock_guard l(mu);
-            assert(device);
-            return device->waitWrite();
-        }
-
-        explicit operator bool() {
-            lock_guard l(mu);
-            return static_cast<bool>(device);
-        }
-
-        mutex mu;
-
-        std::unique_ptr<PlayerSink> device;
-    } sinkWrapper_;
 
     Output::Manager& outman;
     mutex mu;
-
-    std::function<void()> restoreFun;
 
     StateChanged stateChanged;
 
@@ -195,12 +133,13 @@ struct Player::impl {
         return std::move(r);
     }
 
+    std::unique_ptr<ASIO::AudioOutputBase> asioOutput;
 private:
     void async_loop() {
         std::shared_ptr<Playlist> playlist;
         while(!end) {
-            if(state_impl() != DeviceState::Playing || !sinkWrapper_) {
-                this_thread::sleep_for(10ms);
+            if(state_impl() != DeviceState::Playing || !asioOutput) {
+                this_thread::sleep_for(50ms);
                 continue;
             }
             unique_lock l(mu);
@@ -215,113 +154,36 @@ private:
                 };
 
                 TRACE_LOG(logject) << "In play loop";
-                auto avail = sinkWrapper_.waitWrite();
-                TRACE_LOG(logject) << "avail: " << avail;
                 playlist = playman.currentPlaylist();
-                if(avail <= 0)
-                    continue;
-                int8_t buf[avail];
-                auto a = io::read(*playlist, (char*)buf, sizeof(buf));
 
-                if(a == -1) {//end-of-file
+                //TODO: 3200 is temp value
+                int8_t sbuf[3200];
+                auto a = io::read(*playlist, (char*)sbuf, sizeof(sbuf));
+
+                if(a == -1) {//end-of-playlist
                     stop_impl();
+                    l.unlock();
+                    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
                     playlist->jumpTo(0);
+                    continue;
                 }
-                auto r = io::write(sinkWrapper_, (const char*)buf, a);
-                assert(r == a);
+                boost::system::error_code ec;
+                auto r = ASIO::write(*asioOutput, ASIO::buffer(sbuf, a), ec);
+                if(ec)
+                    ERROR_LOG(logject) << ec.message();
+                else
+                    assert(r == static_cast<size_t>(a));
             }
             catch(...) {
                 ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 stop_impl();
+                l.unlock();
+                BOOST_SCOPE_EXIT_ALL(&l) { if(!l.owns_lock()) l.lock(); };
                 playman.currentPlaylist()->next();
+                l.lock();
                 play_impl();
             }
         }
-    }
-
-    void start() {
-        TRACE_LOG(logject) << "Thread starting";
-        std::array<uint8_t,16384> s;
-        std::streamsize n = 0;
-
-        std::shared_ptr<Playlist> playlist;
-
-        while(!end) {
-            this_thread::sleep_for(10ms);
-            try {
-                playlist = playman.currentPlaylist();
-                if(!playlist) {
-                    ERROR_LOG(logject) << "No playlist";
-                    continue;
-                }
-                switch(state()) {
-                    case DeviceState::Playing: {
-//                            std::clog << "play pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                        if(n < 1024) {
-                            auto a = io::read(*playlist, (char*)s.data(), s.size());
-                            if(static_cast<bool>(*playlist))
-                                notifyPlayPosition(playlist->currentTrack()->tell(),
-                                                   playlist->currentTrack()->duration());
-
-                            if(a == -1) {//end-of-file
-                                if(n == 0) {//end-of-playlist
-                                    stop();
-                                    playlist->jumpTo(0);
-                                }
-                                break;
-                            }
-                            else
-                                n += a;
-                        }
-                        TRACE_LOG(logject) << "playing... " << tell().count();
-                        unique_lock l(mu);
-                        n -= io::write(sink(), (char*)s.data()+s.size()-n, n);
-                        break;
-                    }
-                    case DeviceState::Error:
-//                            ERROR_LOG(logject) << "Irrecoverable error occured";
-//                            currentState()->device().reset();
-                        break;
-                    case DeviceState::Stopped:
-                        n = 0;
-                    case DeviceState::Paused:
-//                            std::clog << "paused pos: " << stream.seek(0, std::ios_base::cur) << std::endl;
-                    case DeviceState::Ready:
-                    default:
-                        break;
-                }
-            }
-            //TODO: copy caught exceptions to main thread
-            catch(AudioDataInvalidException& e) {
-                std::stringstream str;
-                str << "Decoder encountered error in data; ";
-                if(auto* file = boost::get_error_info<ErrorTag::FilePath>(e))
-                    str << "file: " << *file << ";";
-                ERROR_LOG(logject) << str.str();
-                stop();
-                playman.currentPlaylist()->next();
-                n = 0;
-                play();
-            }
-            catch(boost::exception& e) {
-                ERROR_LOG(logject) << "Exception caught; Diagnostics following";
-                ERROR_LOG(logject) << boost::diagnostic_information(e);
-                stop();
-                playman.currentPlaylist()->next();
-                n = 0;
-                play();
-            }
-            catch(std::exception& e) {
-                ERROR_LOG(logject) << e.what();
-                stop();
-                playman.currentPlaylist()->next();
-                n = 0;
-                play();
-            }
-        }
-
-        stop();
-        TRACE_LOG(logject) << "Thread ending";
     }
 };
 
@@ -368,10 +230,10 @@ struct Stopped : State {
 
         try {
             stateMachine->changeDevice();
-            if(!stateMachine->sinkWrapper_)
+            if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
-            stateMachine->sink().prepareSink(playman->currentPlaylist()->currentTrack()->getAudioSpecs());
-            stateMachine->sink().play();
+            stateMachine->asioOutput->prepare(playman->currentPlaylist()->currentTrack()->getAudioSpecs());
+            stateMachine->asioOutput->play();
             auto ptr = stateMachine->changeState<Playing>();
             assert(ptr == this);
         }
@@ -416,7 +278,7 @@ struct Error : State {
     void sinkChange() override {
         try {
             stateMachine->changeDevice();
-            if(stateMachine->sinkWrapper_) {
+            if(stateMachine->asioOutput) {
                 auto ptr = stateMachine->changeState<Stopped>();
                 assert(ptr == this);
                 assert(stateMachine->state_impl() == Output::DeviceState::Stopped);
@@ -431,7 +293,7 @@ struct Error : State {
 struct Stop : virtual State {
     explicit Stop(StateChanged& sc) : State(sc) {}
     virtual void stop() override {
-        stateMachine->sink().stop();
+        stateMachine->asioOutput->stop();
         auto ptr = stateMachine->changeState<Stopped>();
         assert(ptr == this);
     }
@@ -453,12 +315,12 @@ struct Paused;
 
 struct Playing : virtual State, Stop, Tell {
     explicit Playing(StateChanged& sc) : State(sc), Stop(sc), Tell(sc) {
-        assert(stateMachine->sinkWrapper_);
+        assert(stateMachine->asioOutput);
         stateChanged(Output::DeviceState::Playing);
     }
 
     void pause() override {
-        stateMachine->sink().pause();
+        stateMachine->asioOutput->pause();
         auto ptr = stateMachine->changeState<Paused>();
         assert(ptr == this);
     }
@@ -469,7 +331,7 @@ struct Playing : virtual State, Stop, Tell {
 
     void sinkChange() override {
         auto time(tell());
-        stateMachine->sink().stop();
+        stateMachine->asioOutput->stop();
         stateMachine->changeDevice();
         stateMachine->play();
         stateMachine->playman.currentPlaylist()->currentTrack()->seek(time);
@@ -478,12 +340,12 @@ struct Playing : virtual State, Stop, Tell {
 
 struct Paused : virtual State, Stop, Tell {
     explicit Paused(StateChanged& sc) : State(sc), Stop(sc), Tell(sc) {
-        assert(stateMachine->sinkWrapper_);
+        assert(stateMachine->asioOutput);
         stateChanged(Output::DeviceState::Paused);
     }
 
     void play() override {
-        stateMachine->sink().play();
+        stateMachine->asioOutput->play();
         auto ptr = stateMachine->changeState<Playing>();
         assert(ptr == this);
     }
@@ -494,7 +356,7 @@ struct Paused : virtual State, Stop, Tell {
 
     void sinkChange() override {
         auto time(tell());
-        stateMachine->sink().stop();
+        stateMachine->asioOutput->stop();
         stateMachine->changeDevice();
         stateMachine->play_impl();
         stateMachine->playman.currentPlaylist()->currentTrack()->seek(time);
@@ -557,23 +419,19 @@ Output::DeviceState Player::impl::state_impl() {
     return currentState_->state();
 }
 
-Output::PlayerSink& Player::impl::sink() {
-    return sinkWrapper_;
-}
-
 void Player::impl::trackChangeSlot(const Track& track) {
     auto cp = playman.currentPlaylist();
     assert(cp);
     try {
-        if(*cp && sinkWrapper_) {
+        if(*cp && asioOutput) {
             assert(track == *cp->currentTrack());
-            if(sinkWrapper_.currentSpecs() != track.getAudioSpecs()) {
+            if(asioOutput->currentSpecs() != track.getAudioSpecs()) {
                 LOG(logject) << "Changing sink specs for new track";
-                sinkWrapper_.stop();
+                asioOutput->stop();
                 this_thread::sleep_for(100ms);
-                sinkWrapper_.prepareSink(const_cast<Track&>(track).getAudioSpecs());
+                asioOutput->prepare(const_cast<Track&>(track).getAudioSpecs());
                 this_thread::sleep_for(100ms);
-                sinkWrapper_.play();
+                asioOutput->play();
             }
         }
     }
@@ -589,8 +447,12 @@ void Player::impl::trackChangeSlot(const Track& track) {
 
 void Player::impl::changeDevice() {
     TRACE_LOG(logject) << "changeDevice()";
-    lock_guard l(sinkWrapper_.mu);
-    sinkWrapper_.device = std::move(outman.createPlayerSink());
+    if(asioOutput) {
+        asioOutput->cancel();
+        asioOutput->stop();
+    }
+//    lock_guard l(sinkWrapper_.mu);
+    asioOutput = std::move(outman.createASIOSink());
 }
 
 void Player::impl::sinkChangeSlot() {

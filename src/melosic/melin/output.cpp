@@ -26,6 +26,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 #include <boost/variant.hpp>
+#include <boost/asio/io_service.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/signal.hpp>
@@ -33,6 +34,7 @@ using namespace boost::adaptors;
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/config.hpp>
+#include <melosic/asio/audio_io.hpp>
 
 #include "output.hpp"
 
@@ -45,7 +47,7 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 
 class Manager::impl {
 public:
-    impl(Config::Manager& confman) {
+    impl(Config::Manager& confman, ASIO::io_service& io_service) : io_service(io_service) {
         conf.putNode("output device", "default"s);
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
@@ -76,7 +78,7 @@ public:
                 if(sinkName == sn)
                     LOG(logject) << "Chosen output same as current. Not reinitialising.";
                 else
-                    setPlayerSink(sn);
+                    setASIOSink(sn);
             }
             else
                 ERROR_LOG(logject) << "Config: Unknown key: " << key;
@@ -86,11 +88,11 @@ public:
         }
     }
 
-    void addOutputDevice(Factory fact, const DeviceName& device) {
+    void addOutputDevice(ASIOFactory fact, const DeviceName& device) {
         lock_guard l(mu);
-        auto it = outputFactories.find(device);
-        if(it == outputFactories.end()) {
-            outputFactories.emplace(device, fact);
+        auto it = asioOutputFactories.find(device);
+        if(it == asioOutputFactories.end()) {
+            asioOutputFactories.emplace(device, fact);
         }
     }
 
@@ -99,27 +101,28 @@ public:
         return sinkName;
     }
 
-    std::unique_ptr<PlayerSink> createPlayerSink() {
+    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink() {
         TRACE_LOG(logject) << "Creating player sink";
         lock_guard l(mu);
-        if(!fact) {
+        if(!asiofact) {
             TRACE_LOG(logject) << "Sink factory not valid";
             return nullptr;
         }
 
-        return fact();
+        return asiofact(io_service);
     }
 
-    void setPlayerSink(std::string sinkname) {
+    void setASIOSink(std::string sinkname) {
         unique_lock l(mu);
         LOG(logject) << "Attempting to get player sink factory: " << sinkname;
-        auto it = outputFactories.find(sinkname);
+        auto it = asioOutputFactories.find(sinkname);
 
-        if(it == outputFactories.end()) {
+        if(it == asioOutputFactories.end()) {
             BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(sinkname));
         }
         sinkName = sinkname;
-        fact = [=] () { return it->second(it->first); };
+        auto f = it->second;
+        asiofact = [=] (ASIO::io_service& service) { return f(service, it->first); };
         l.unlock();
         playerSinkChanged();
     }
@@ -130,21 +133,22 @@ public:
 
 private:
     mutex mu;
+    ASIO::io_service& io_service;
     std::string sinkName;
-    std::function<std::unique_ptr<Melosic::Output::PlayerSink>()> fact;
-    std::map<DeviceName, Factory> outputFactories;
+    std::function<std::unique_ptr<Melosic::ASIO::AudioOutputBase>(ASIO::io_service&)> asiofact;
+    std::map<DeviceName, ASIOFactory> asioOutputFactories;
     Config::Conf conf{"Output"};
     PlayerSinkChanged playerSinkChanged;
     Logger::Logger logject{logging::keywords::channel = "Output::Manager"};
     friend class Manager;
 };
 
-Manager::Manager(Config::Manager& confman)
-    : pimpl(new impl(confman)) {}
+Manager::Manager(Config::Manager& confman, boost::asio::io_service& io_service)
+    : pimpl(new impl(confman, io_service)) {}
 
 Manager::~Manager() {}
 
-void Manager::addOutputDevice(Factory fact, const DeviceName& avail) {
+void Manager::addOutputDevice(ASIOFactory fact, const DeviceName& avail) {
     pimpl->addOutputDevice(fact, avail);
 }
 
@@ -152,8 +156,8 @@ const std::string& Manager::currentSinkName() const {
     return pimpl->currentSinkName();
 }
 
-std::unique_ptr<PlayerSink> Manager::createPlayerSink() {
-    return std::move(pimpl->createPlayerSink());
+std::unique_ptr<ASIO::AudioOutputBase> Manager::createASIOSink() {
+    return std::move(pimpl->createASIOSink());
 }
 
 Signals::Output::PlayerSinkChanged& Manager::getPlayerSinkChangedSignal() const {

@@ -15,6 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <boost/asio/io_service.hpp>
+namespace asio = boost::asio;
+
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/plugin.hpp>
@@ -32,12 +35,17 @@ namespace Core {
 class Kernel::impl {
     impl(Kernel& k)
         : plugman(k),
+          io_service(),
+          null_worker(io_service),
+          tman(&io_service),
           confman("melosic.conf"s),
-          outman(confman),
+          outman(confman, io_service),
           playlistman(decman)
     {}
 
     Plugin::Manager plugman;
+    asio::io_service io_service;
+    asio::io_service::work null_worker;
     Thread::Manager tman;
     Config::Manager confman;
     Input::Manager inman;
@@ -89,6 +97,10 @@ Thread::Manager& Kernel::getThreadManager() {
 
 Melosic::Playlist::Manager& Kernel::getPlaylistManager() {
     return pimpl->playlistman;
+}
+
+boost::asio::io_service& Kernel::getIOService() {
+    return pimpl->io_service;
 }
 
 } // namespace Core

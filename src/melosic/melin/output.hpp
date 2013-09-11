@@ -28,25 +28,29 @@
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/output_signals.hpp>
 
+namespace boost {
+namespace asio {
+class io_service;
+}
+}
+
 namespace Melosic {
 namespace Output {
 struct DeviceName;
-class PlayerSink;
-class Sink;
 }
 namespace Config {
 class Manager;
 }
-namespace Plugin {
-class Manager;
+namespace ASIO {
+struct AudioOutputBase;
 }
 
 namespace Output {
-typedef std::function<std::unique_ptr<PlayerSink>(const DeviceName&)> Factory;
+typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(boost::asio::io_service&, DeviceName)> ASIOFactory;
 
 class Manager {
 public:
-    explicit Manager(Config::Manager&);
+    explicit Manager(Config::Manager&, boost::asio::io_service&);
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -54,9 +58,9 @@ public:
     Manager& operator=(const Manager&) = delete;
     Manager& operator=(Manager&&) = delete;
 
-    MELOSIC_EXPORT void addOutputDevice(Factory fact, const Output::DeviceName& avail);
+    MELOSIC_EXPORT void addOutputDevice(ASIOFactory fact, const Output::DeviceName& avail);
     template <typename DeviceList>
-    void addOutputDevices(Factory fact, DeviceList avail) {
+    void addOutputDevices(ASIOFactory fact, DeviceList avail) {
         for(const DeviceName& device : avail) {
             addOutputDevice(fact, device);
         }
@@ -64,19 +68,12 @@ public:
 
     const std::string& currentSinkName() const;
 
-    std::unique_ptr<PlayerSink> createPlayerSink();
+    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink();
     Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
-};
-
-class Sink : public IO::Sink {
-public:
-    virtual ~Sink() {}
-    virtual const std::string& getSinkName() = 0;
-    virtual void prepareSink(Melosic::AudioSpecs& as) = 0;
 };
 
 enum class DeviceState {
@@ -86,18 +83,6 @@ enum class DeviceState {
     Paused,
     Stopped,
     Initial,
-};
-
-class PlayerSink : public Sink {
-public:
-    virtual ~PlayerSink() {}
-    virtual const Melosic::AudioSpecs& currentSpecs() = 0;
-    virtual const std::string& getSinkDescription() = 0;
-    virtual void play() = 0;
-    virtual void pause() = 0;
-    virtual void stop() = 0;
-    virtual DeviceState state() = 0;
-    virtual int64_t waitWrite() = 0;
 };
 
 struct DeviceName {

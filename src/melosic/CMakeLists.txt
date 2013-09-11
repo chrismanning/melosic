@@ -5,6 +5,7 @@ add_definitions(-DMELOSIC_EXPORTS)
 
 SET(SRC_LIST main.cpp)
 
+add_subdirectory(asio)
 set(CORE_SRC_LIST)
 add_subdirectory(core)
 add_subdirectory(common)

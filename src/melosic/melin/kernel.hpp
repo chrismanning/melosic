@@ -22,6 +22,12 @@
 
 #include <melosic/common/common.hpp>
 
+namespace boost {
+namespace asio {
+class io_service;
+}
+}
+
 namespace Melosic {
 
 namespace Plugin {
@@ -70,6 +76,8 @@ public:
     MELOSIC_EXPORT Encoder::Manager& getEncoderManager();
     MELOSIC_EXPORT Thread::Manager& getThreadManager();
     MELOSIC_EXPORT Playlist::Manager& getPlaylistManager();
+
+    MELOSIC_EXPORT boost::asio::io_service& getIOService();
 
 private:
     class impl;

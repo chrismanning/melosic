@@ -18,17 +18,12 @@
 #include <alsa/asoundlib.h>
 #include <poll.h>
 
-#include <thread>
-#include <mutex>
-using std::unique_lock; using std::lock_guard;
 #include <string>
 #include <memory>
 
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex; using boost::shared_lock_guard;
 #include <boost/variant.hpp>
 #include <boost/scope_exit.hpp>
+#include <boost/asio/posix/stream_descriptor.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
@@ -39,6 +34,8 @@ using boost::shared_mutex; using boost::shared_lock_guard;
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/int_get.hpp>
+#include <melosic/asio/audio_impl.hpp>
+#include <melosic/asio/audio_io.hpp>
 using namespace Melosic;
 
 Logger::Logger logject(logging::keywords::channel = "ALSA");
@@ -65,51 +62,76 @@ Config::Conf conf{"ALSA"};
 snd_pcm_uframes_t frames = 1024;
 bool resample = false;
 
-class AlsaOutput : public Output::PlayerSink {
-public:
-    explicit AlsaOutput(Output::DeviceName name)
-        : pdh(nullptr),
-          params(nullptr),
-          name(name.getName()),
-          desc(name.getDesc()),
-          state_(Output::DeviceState::Stopped)
-    {}
-
-    virtual ~AlsaOutput() {
-        if(pdh != nullptr)
-            stop();
-        if(params != nullptr)
-            snd_pcm_hw_params_free(params);
+struct alsa_category_ : boost::system::error_category {
+    const char* name() const noexcept override {
+        return "alsa";
     }
 
-    void prepareSink(AudioSpecs& as) override {
-        lock_guard<Mutex> l(mu);
-        current = as;
-        state_ = Output::DeviceState::Error;
-        if(pdh == nullptr)
-            ALSA_THROW_IF(DeviceOpenException, snd_pcm_open(&pdh, this->name.c_str(), SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK));
+    std::string message(int errnum) const override {
+        return snd_strerror(errnum);
+    }
+} alsa_category;
 
-        if(params == nullptr)
-            snd_pcm_hw_params_malloc(&params);
+struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
+    explicit AlsaOutputServiceImpl(ASIO::io_service& service) :
+        ASIO::AudioOutputServiceBase(service),
+        m_asio_fd(service)
+    {}
 
-        snd_pcm_hw_params_any(pdh, params);
+    void assign(Output::DeviceName dev_name, boost::system::error_code& ec) noexcept override {
+        if(m_pdh != nullptr) {
+            ec = {ASIO::error::already_open, ASIO::error::get_misc_category()};
+            return;
+        }
+        m_name = dev_name.getName();
+        m_desc = dev_name.getDesc();
+    }
 
-        snd_pcm_hw_params_set_access(pdh, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    void destroy() override {
+        boost::system::error_code ec;
+        if(m_pdh != nullptr)
+            stop(ec);
+        if(m_params != nullptr)
+            snd_pcm_hw_params_free(m_params);
+    }
 
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_channels(pdh, params, as.channels));
+    void cancel(boost::system::error_code& ec) noexcept override {
+        m_asio_fd.cancel(ec);
+    }
+
+    void prepare(AudioSpecs& as, boost::system::error_code& ec) noexcept override {
+        m_current_specs = as;
+        m_state = Output::DeviceState::Error;
+        if((m_pdh == nullptr) &&
+                (ec = {snd_pcm_open(&m_pdh, m_name.c_str(), SND_PCM_STREAM_PLAYBACK, m_non_blocking), alsa_category}))
+            return;
+
+        if((m_params == nullptr) && (ec = {snd_pcm_hw_params_malloc(&m_params), alsa_category}))
+            return;
+
+        snd_pcm_hw_params_any(m_pdh, m_params);
+
+        snd_pcm_hw_params_set_access(m_pdh, m_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+
+        if((ec = {snd_pcm_hw_params_set_channels(m_pdh, m_params, as.channels), alsa_category}))
+            return;
         int dir = 0;
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_resample(pdh, params, ::resample));
+        if((ec = {snd_pcm_hw_params_set_rate_resample(m_pdh, m_params, ::resample), alsa_category}))
+            return;
         unsigned rate = as.sample_rate;
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_rate_near(pdh, params, &rate, &dir));
+        if((ec = {snd_pcm_hw_params_set_rate_near(m_pdh, m_params, &rate, &dir), alsa_category}))
+            return;
         if(rate != as.sample_rate) {
             WARN_LOG(logject) << "Sample rate: " << as.sample_rate << " not supported. Using " << rate;
             as.target_sample_rate = rate;
         }
 
         auto frames = ::frames;
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_period_size_near(pdh, params, &frames, &dir));
+        if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
+            return;
         auto buf = frames * 8;
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params_set_buffer_size_near(pdh, params, &buf));
+        if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
+            return;
 
         snd_pcm_format_t fmt(SND_PCM_FORMAT_UNKNOWN);
 
@@ -129,13 +151,13 @@ public:
         }
         as.target_bps = as.bps;
 
-        if(snd_pcm_hw_params_test_format(pdh, params, fmt) < 0) {
+        if(snd_pcm_hw_params_test_format(m_pdh, m_params, fmt) < 0) {
             WARN_LOG(logject) << "unsupported format";
             auto p = std::find(formats, formats + sizeof(formats), fmt);
             if(p != formats + sizeof(formats)) {
                 while(++p != formats + sizeof(formats)) {
                     WARN_LOG(logject) << "trying higher bps";
-                    if(!snd_pcm_hw_params_test_format(pdh, params, *p)) {
+                    if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *p)) {
                         fmt = *p;
                         as.target_bps = bpss[p-formats];
                         break;
@@ -148,158 +170,209 @@ public:
             }
         }
 
-        if(snd_pcm_hw_params_set_format(pdh, params, fmt) < 0)
-            BOOST_THROW_EXCEPTION(DeviceParamException());
+        if((ec = {snd_pcm_hw_params_set_format(m_pdh, m_params, fmt), alsa_category}))
+            return;
 
-        ALSA_THROW_IF(DeviceParamException, snd_pcm_hw_params(pdh, params));
+        if((ec = {snd_pcm_hw_params(m_pdh, m_params), alsa_category}))
+            return;
 
-        current = as;
+        m_current_specs = as;
 
-        state_ = Output::DeviceState::Ready;
+        auto pcount = snd_pcm_poll_descriptors_count(m_pdh);
+        if((pcount <= 0) && (ec = {pcount, alsa_category}))
+            return;
+
+        m_pfds.clear();
+        m_pfds.resize(pcount);
+
+        auto n = snd_pcm_poll_descriptors(m_pdh, m_pfds.data(), m_pfds.size());
+        TRACE_LOG(logject) << "no. poll descriptors: " << m_pfds.size();
+        TRACE_LOG(logject) << "no. poll descriptors filled: " << n;
+        if((n <= 0) && (ec = {n, alsa_category}))
+            return;
+
+        if(m_asio_fd.is_open())
+            m_asio_fd.cancel();
+        m_asio_fd = ASIO::posix::stream_descriptor(get_io_service(), m_pfds.data()->fd);
+
+
+        {
+            auto events = m_pfds.data()->events;
+            if(events & POLLERR)
+                TRACE_LOG(logject) << "events: POLLERR";
+            if(events & POLLOUT)
+                TRACE_LOG(logject) << "events: POLLOUT";
+            if(events & POLLIN)
+                TRACE_LOG(logject) << "events: POLLIN";
+            if(events & POLLPRI)
+                TRACE_LOG(logject) << "events: POLLPRI";
+            if(events & POLLRDHUP)
+                TRACE_LOG(logject) << "events: POLLRDHUP";
+            if(events & POLLHUP)
+                TRACE_LOG(logject) << "events: POLLHUP";
+            if(events & POLLNVAL)
+                TRACE_LOG(logject) << "events: POLLNVAL";
+            if(events & POLLRDNORM)
+                TRACE_LOG(logject) << "events: POLLRDNORM";
+            if(events & POLLRDBAND)
+                TRACE_LOG(logject) << "events: POLLRDBAND";
+            if(events & POLLWRNORM)
+                TRACE_LOG(logject) << "events: POLLWRNORM";
+            if(events & POLLWRBAND)
+                TRACE_LOG(logject) << "events: POLLWRBAND";
+        }
+
+        m_state = Output::DeviceState::Ready;
+        assert(!ec);
     }
 
-    const Melosic::AudioSpecs& currentSpecs() override {
-        return current;
+    void play(boost::system::error_code& ec) noexcept override {
+        switch(m_state) {
+            case Output::DeviceState::Stopped:
+            case Output::DeviceState::Error:
+                prepare(m_current_specs, ec);
+                if(ec)
+                    return;
+                break;
+            case Output::DeviceState::Ready:
+                if((ec = {snd_pcm_prepare(m_pdh), alsa_category})) return;
+                m_state = Output::DeviceState::Playing;
+                break;
+            case Output::DeviceState::Paused:
+                unpause(ec);
+                if(ec) return;
+                break;
+            default:
+                break;
+        }
+        assert(!ec);
     }
 
-    void play() override {
-        unique_lock<Mutex> l(mu);
-        if(state_ == Output::DeviceState::Stopped || state_ == Output::DeviceState::Error) {
-            l.unlock();
-            prepareSink(current);
-            l.lock();
-        }
-        if(state_ == Output::DeviceState::Ready) {
-            ALSA_THROW_IF(DeviceOpenException, snd_pcm_prepare(pdh));
-            state_ = Output::DeviceState::Playing;
-        }
-        else if(state_ == Output::DeviceState::Paused) {
-            unpause();
-        }
-    }
-
-    void pause() override {
-        lock_guard<Mutex> l(mu);
-        if(state_ == Output::DeviceState::Playing) {
-            if(snd_pcm_hw_params_can_pause(params)) {
-                ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, true));
+    void pause(boost::system::error_code& ec) noexcept override {
+        if(m_state == Output::DeviceState::Playing) {
+            if(snd_pcm_hw_params_can_pause(m_params)) {
+                if((ec = {snd_pcm_pause(m_pdh, true), alsa_category})) return;
             }
             else {
-                ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
+                if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
             }
-            state_ = Output::DeviceState::Paused;
+            m_state = Output::DeviceState::Paused;
         }
-        else if(state_ == Output::DeviceState::Paused) {
-            unpause();
+        else if(m_state == Output::DeviceState::Paused) {
+            unpause(ec);
+            if(ec) return;
         }
+        assert(!ec);
     }
 
-    void unpause() {
-        if(snd_pcm_hw_params_can_pause(params)) {
-            ALSA_THROW_IF(DeviceException, snd_pcm_pause(pdh, false));
+    void unpause(boost::system::error_code& ec) noexcept override {
+        if(snd_pcm_hw_params_can_pause(m_params)) {
+            if((ec = {snd_pcm_pause(m_pdh, false), alsa_category})) return;
         }
         else {
-            snd_pcm_prepare(pdh);
-            snd_pcm_start(pdh);
+            snd_pcm_prepare(m_pdh);
+            snd_pcm_start(m_pdh);
         }
-        state_ = Output::DeviceState::Playing;
+        m_state = Output::DeviceState::Playing;
+        assert(!ec);
     }
 
-    void stop() override {
-        lock_guard<Mutex> l(mu);
-        if(state_ != Output::DeviceState::Stopped && state_ != Output::DeviceState::Error && pdh) {
-            ALSA_THROW_IF(DeviceException, snd_pcm_drop(pdh));
-            ALSA_THROW_IF(DeviceException, snd_pcm_close(pdh));
+    void stop(boost::system::error_code& ec) noexcept override {
+        if(m_state != Output::DeviceState::Stopped && m_state != Output::DeviceState::Error && m_pdh) {
+            if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
+            if((ec = {snd_pcm_close(m_pdh), alsa_category})) return;
         }
-        state_ = Output::DeviceState::Stopped;
-        pdh = nullptr;
+        m_state = Output::DeviceState::Stopped;
+        m_pdh = nullptr;
+        assert(!ec);
     }
 
-    Output::DeviceState state() override {
-        shared_lock_guard<Mutex> l(mu);
-        return state_;
-    }
+    size_t write_some(const ASIO::const_buffer& buf, boost::system::error_code& ec) noexcept override {
+        if(m_pdh == nullptr)
+            BOOST_THROW_EXCEPTION(DeviceWriteException());
 
-    int64_t waitWrite() override {
-        if(pdh == nullptr)
-            BOOST_THROW_EXCEPTION(DeviceException());
-        pollfd pfds[snd_pcm_poll_descriptors_count(pdh)];
-        auto n = snd_pcm_poll_descriptors(pdh, pfds, sizeof(pfds));
-        if(n <= 0)
-            BOOST_THROW_EXCEPTION(DeviceException());
+//        m_asio_fd.read_some(ASIO::null_buffers(), ec);
+        if(ec)
+            return 0;
+        const auto size = ASIO::buffer_size(buf);
+        auto ptr = ASIO::buffer_cast<const char*>(buf);
 
-        while(true) {
-            auto r = poll(pfds, sizeof(pfds), -1);
-            if(r <= 0)
-                continue;
-            uint16_t revents = 0;
+        auto frames = snd_pcm_bytes_to_frames(m_pdh, size);
+        auto r = snd_pcm_writei(m_pdh, ptr, frames);
 
-            snd_pcm_poll_descriptors_revents(pdh, pfds, sizeof(pfds), &revents);
-
-            if(revents & POLLERR)
-                return -EIO;
-            if(revents & POLLOUT)
-                return snd_pcm_frames_to_bytes(pdh, snd_pcm_avail_update(pdh));
+        if(r == -(int)std::errc::broken_pipe) {
+            if(m_pdh != nullptr)
+                snd_pcm_recover(m_pdh, r, false);
+            ec = {static_cast<int>(r), alsa_category};
+            return 0;
         }
-    }
-
-    std::streamsize write(const char* s, std::streamsize n) override {
-        unique_lock<Mutex> l(mu);
-        if(pdh != nullptr) {
-            auto frames = snd_pcm_bytes_to_frames(pdh, n);
-//            l.unlock();
-            auto r = snd_pcm_writei(pdh, s, frames);
-//            l.lock();
-
-            if(r == -EPIPE) {
-                if(pdh != nullptr) {
-                    snd_pcm_recover(pdh, r, false);
-                }
-                return n;
-            }
-            else if(r < 0) {
-                ERROR_LOG(logject) << "ALSA: write error";
-                ALSA_THROW_IF(DeviceWriteException, r);
-            }
-            else if(r != frames) {
-                ERROR_LOG(logject) << "ALSA: not all frames written";
-            }
-
-            if(pdh != nullptr) {
-                r = snd_pcm_frames_to_bytes(pdh, r);
-            }
-
-            return r;
+        else if(r < 0) {
+            ERROR_LOG(logject) << "write error";
+            ec = {static_cast<int>(r), alsa_category};
+            return 0;
         }
-        else {
-            return -1;
+        else if(r != frames)
+            ERROR_LOG(logject) << "not all frames written";
+
+        assert(m_pdh != nullptr);
+        r = snd_pcm_frames_to_bytes(m_pdh, r);
+
+        return r;
+    }
+
+    void asyncPrepare(AudioSpecs&, boost::system::error_code&) noexcept override {
+
+    }
+
+    void async_write_some(const ASIO::const_buffer& buf, WriteHandler handler) override {
+        m_asio_fd.async_read_some(ASIO::null_buffers(), [=] (boost::system::error_code ec, std::size_t n) {
+            if(!ec)
+                n = write_some(buf, ec);
+            handler(ec, n);
+        });
+    }
+
+    const AudioSpecs& currentSpecs() const noexcept override {
+        return m_current_specs;
+    }
+
+    Output::DeviceState state() const noexcept override {
+        return m_state;
+    }
+
+    bool non_blocking() const noexcept override {
+        return m_non_blocking;
+    }
+    void non_blocking(bool mode, boost::system::error_code& ec) noexcept override {
+        if(m_pdh != nullptr) {
+            ec = {ASIO::error::already_open, ASIO::error::misc_category};
+            return;
         }
+        ec = {snd_pcm_nonblock(m_pdh, mode), alsa_category};
+        m_non_blocking = !ec ? true : false;
     }
 
-    const std::string& getSinkDescription() override {
-        return desc;
-    }
-
-    const std::string& getSinkName() override {
-        return name;
-    }
-
-private:
-    snd_pcm_t * pdh;
-    snd_pcm_hw_params_t * params;
-    AudioSpecs current;
-    std::string name;
-    std::string desc;
-    typedef shared_mutex Mutex;
-    Mutex mu;
-    Output::DeviceState state_;
+    snd_pcm_t* m_pdh = nullptr;
+    snd_pcm_hw_params_t* m_params = nullptr;
+    std::vector<pollfd> m_pfds;
+    ASIO::posix::stream_descriptor m_asio_fd;
+    bool m_non_blocking = false;
+    AudioSpecs m_current_specs;
+    std::string m_name = "default"s;
+    std::string m_desc;
+    Output::DeviceState m_state;
 };
 
+typedef ASIO::AudioOutputService<AlsaOutputServiceImpl> AlsaOutputService;
+typedef ASIO::BasicAudioOutput<AlsaOutputService> AlsaAsioOutput;
+
 extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
+    ASIO::io_service io_service;
+    AlsaAsioOutput aao(io_service);
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
-    std::string filter = "Output";
+    const std::string filter = "Output";
 
     ALSA_THROW_IF(DeviceOpenException, snd_device_name_hint(-1, "pcm", &hints));
 
@@ -327,7 +400,9 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     }
     snd_device_name_free_hint(hints);
 
-    outman->addOutputDevices([] (Output::DeviceName name) { return std::make_unique<AlsaOutput>(name); }, names);
+    outman->addOutputDevices([] (ASIO::io_service& io_service, Output::DeviceName name) {
+        return std::make_unique<AlsaAsioOutput>(io_service, name);
+    }, names);
 }
 
 void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {

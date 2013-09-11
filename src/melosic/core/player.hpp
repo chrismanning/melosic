@@ -28,7 +28,6 @@ namespace chrono = std::chrono;
 
 namespace Melosic {
 namespace Output {
-class PlayerSink;
 enum class DeviceState;
 class Manager;
 }
