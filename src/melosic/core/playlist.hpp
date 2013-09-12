@@ -86,16 +86,16 @@ public:
     size_type max_size() const;
     explicit operator bool() const;
 
-    iterator insert(const_iterator pos, value_type&& value);
+    iterator insert(const_iterator pos, value_type value);
 
     iterator emplace(const_iterator pos,
-                     const boost::filesystem::path& filename,
+                     boost::filesystem::path filename,
                      chrono::milliseconds start = 0ms,
                      chrono::milliseconds end = 0ms);
     const_range emplace(const_iterator pos, ForwardRange<const boost::filesystem::path> values);
 
-    void push_back(value_type&& value);
-    void emplace_back(const boost::filesystem::path& filename,
+    void push_back(value_type value);
+    void emplace_back(boost::filesystem::path filename,
                       chrono::milliseconds start = 0ms,
                       chrono::milliseconds end = 0ms);
 

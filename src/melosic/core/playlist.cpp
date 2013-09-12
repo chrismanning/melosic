@@ -161,7 +161,7 @@ public:
         return std::numeric_limits<Playlist::size_type>::max();
     }
 
-    Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type&& value, unique_lock& l) {
+    Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type value, unique_lock& l) {
         auto r = tracks.insert(pos, std::move(value));
         if(size() == 1) {
             current_track_ = r;
@@ -184,7 +184,7 @@ public:
                                chrono::milliseconds end,
                                unique_lock& l)
     {
-        auto r = tracks.emplace(pos, decman, filename, start, end);
+        auto r = tracks.emplace(pos, decman, std::move(filename), start, end);
 
         if(size() == 1) {
             current_track_ = std::begin(tracks);
@@ -226,7 +226,7 @@ public:
         return r;
     }
 
-    void push_back(Playlist::value_type&& value, unique_lock& l) {
+    void push_back(Playlist::value_type value, unique_lock& l) {
         tracks.push_back(std::move(value));
         if(size() == 1) {
             current_track_ = std::begin(tracks);
@@ -234,12 +234,12 @@ public:
         }
     }
 
-    void emplace_back(const boost::filesystem::path& filename,
+    void emplace_back(boost::filesystem::path filename,
                       chrono::milliseconds start,
                       chrono::milliseconds end,
                       unique_lock& l)
     {
-        tracks.emplace_back(decman, filename, start, end);
+        tracks.emplace_back(decman, std::move(filename), start, end);
         if(size() == 1) {
             current_track_ = std::begin(tracks);
             trackChanged(std::cref(*currentTrack()), l);
@@ -392,18 +392,18 @@ Playlist::operator bool() const {
     return pimpl->empty() ? false : pimpl->currentTrack() != pimpl->end();
 }
 
-Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::value_type&& value) {
+Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::value_type value) {
     unique_lock l(pimpl->mu);
     return pimpl->insert(pos, std::move(value), l);
 }
 
 Playlist::iterator Playlist::emplace(Playlist::const_iterator pos,
-                                     const boost::filesystem::path& filename,
+                                     boost::filesystem::path filename,
                                      chrono::milliseconds start,
                                      chrono::milliseconds end)
 {
     unique_lock l(pimpl->mu);
-    return pimpl->emplace(pos, filename, start, end, l);
+    return pimpl->emplace(pos, std::move(filename), start, end, l);
 }
 
 Playlist::const_range Playlist::emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
@@ -411,17 +411,17 @@ Playlist::const_range Playlist::emplace(Playlist::const_iterator pos, ForwardRan
     return pimpl->emplace(pos, values, l);
 }
 
-void Playlist::push_back(Playlist::value_type&& value) {
+void Playlist::push_back(Playlist::value_type value) {
     unique_lock l(pimpl->mu);
     pimpl->push_back(std::move(value), l);
 }
 
-void Playlist::emplace_back(const boost::filesystem::path& filename,
+void Playlist::emplace_back(boost::filesystem::path filename,
                             chrono::milliseconds start,
                             chrono::milliseconds end)
 {
     unique_lock l(pimpl->mu);
-    pimpl->emplace_back(filename, start, end, l);
+    pimpl->emplace_back(std::move(filename), start, end, l);
 }
 
 Playlist::iterator Playlist::erase(const_iterator pos) {
