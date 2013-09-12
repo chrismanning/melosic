@@ -179,7 +179,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         m_current_specs = as;
 
         auto pcount = snd_pcm_poll_descriptors_count(m_pdh);
-        if((pcount <= 0) && (ec = {pcount, alsa_category}))
+        if((pcount < 0) && (ec = {pcount, alsa_category}))
             return;
 
         m_pfds.clear();
@@ -188,8 +188,11 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         auto n = snd_pcm_poll_descriptors(m_pdh, m_pfds.data(), m_pfds.size());
         TRACE_LOG(logject) << "no. poll descriptors: " << m_pfds.size();
         TRACE_LOG(logject) << "no. poll descriptors filled: " << n;
-        if((n <= 0) && (ec = {n, alsa_category}))
+        if((n < 0) && (ec = {n, alsa_category}))
             return;
+
+        m_mangled_revents = static_cast<bool>(m_pfds.data()->events & POLLIN);
+        m_pfds.clear();
 
         if(m_asio_fd.is_open())
             m_asio_fd.cancel();
@@ -291,7 +294,6 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         if(m_pdh == nullptr)
             BOOST_THROW_EXCEPTION(DeviceWriteException());
 
-//        m_asio_fd.read_some(ASIO::null_buffers(), ec);
         if(ec)
             return 0;
         const auto size = ASIO::buffer_size(buf);
@@ -321,15 +323,19 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     }
 
     void asyncPrepare(AudioSpecs&, boost::system::error_code&) noexcept override {
-
     }
 
     void async_write_some(const ASIO::const_buffer& buf, WriteHandler handler) override {
-        m_asio_fd.async_read_some(ASIO::null_buffers(), [=] (boost::system::error_code ec, std::size_t n) {
+        auto f = get_strand().wrap([=] (boost::system::error_code ec, std::size_t n) {
             if(!ec)
                 n = write_some(buf, ec);
             handler(ec, n);
         });
+
+        if(m_mangled_revents)
+            m_asio_fd.async_read_some(ASIO::null_buffers(), f);
+        else
+            m_asio_fd.async_write_some(ASIO::null_buffers(), f);
     }
 
     const AudioSpecs& currentSpecs() const noexcept override {
@@ -356,7 +362,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     snd_pcm_hw_params_t* m_params = nullptr;
     std::vector<pollfd> m_pfds;
     ASIO::posix::stream_descriptor m_asio_fd;
-    bool m_non_blocking = false;
+    bool m_non_blocking = true;
+    bool m_mangled_revents = true;
     AudioSpecs m_current_specs;
     std::string m_name = "default"s;
     std::string m_desc;

@@ -168,11 +168,14 @@ private:
                     continue;
                 }
                 boost::system::error_code ec;
-                auto r = ASIO::write(*asioOutput, ASIO::buffer(sbuf, a), ec);
+//                auto r = ASIO::write(*asioOutput, ASIO::buffer(sbuf, a), ec);
+
+                auto f = ASIO::async_write(*asioOutput, ASIO::buffer(sbuf, a), ASIO::use_future);
+                f.wait();
                 if(ec)
                     ERROR_LOG(logject) << ec.message();
-                else
-                    assert(r == static_cast<size_t>(a));
+//                else
+//                    assert(r == static_cast<size_t>(a));
             }
             catch(...) {
                 ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
