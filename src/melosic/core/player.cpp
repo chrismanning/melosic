@@ -258,20 +258,20 @@ struct Error : State {
 
     void play() override {
         sinkChange();
-        if(stateMachine->state() != Output::DeviceState::Error)
-            stateMachine->play();
+        if(stateMachine->state_impl() != Output::DeviceState::Error)
+            stateMachine->play_impl();
     }
     void pause() override {
         sinkChange();
-        if(stateMachine->state() != Output::DeviceState::Error) {
-            stateMachine->play();
-            stateMachine->pause();
+        if(stateMachine->state_impl() != Output::DeviceState::Error) {
+            stateMachine->play_impl();
+            stateMachine->pause_impl();
         }
     }
     void stop() override {
         sinkChange();
-        if(stateMachine->state() != Output::DeviceState::Error)
-            assert(stateMachine->state() == Output::DeviceState::Stopped);
+        if(stateMachine->state_impl() != Output::DeviceState::Error)
+            assert(stateMachine->state_impl() == Output::DeviceState::Stopped);
     }
 
     Output::DeviceState state() const override {
@@ -308,7 +308,7 @@ struct Tell : virtual State {
         assert(playman->currentPlaylist());
         auto playlist = playman->currentPlaylist();
         assert(playlist);
-        if(playlist->currentTrack() == playlist->end())
+        if(!*playlist)
             return 0ms;
         return playlist->currentTrack()->tell();
     }
@@ -336,7 +336,7 @@ struct Playing : virtual State, Stop, Tell {
         auto time(tell());
         stateMachine->asioOutput->stop();
         stateMachine->changeDevice();
-        stateMachine->play();
+        stateMachine->play_impl();
         stateMachine->playman.currentPlaylist()->currentTrack()->seek(time);
     }
 };

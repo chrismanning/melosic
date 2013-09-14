@@ -96,7 +96,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     }
 
     void cancel(boost::system::error_code& ec) noexcept override {
-        m_asio_fd.cancel(ec);
+        if(m_asio_fd.is_open())
+            m_asio_fd.cancel(ec);
     }
 
     void prepare(AudioSpecs& as, boost::system::error_code& ec) noexcept override {
