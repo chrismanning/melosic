@@ -132,7 +132,6 @@ struct MELOSIC_EXPORT AudioOutputBase {
     typedef AudioOutputService<AudioOutputServiceBase> service_type;
     typedef service_type::implementation_type implementation_type;
 
-protected:
     implementation_type& get_implementation() noexcept {
         return implementation;
     }
@@ -140,6 +139,7 @@ protected:
         return implementation;
     }
 
+protected:
     virtual service_type& get_service() noexcept = 0;
     virtual const service_type& get_service() const noexcept = 0;
 

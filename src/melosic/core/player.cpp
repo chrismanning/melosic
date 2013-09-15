@@ -19,7 +19,7 @@
 #include <thread>
 #include <mutex>
 namespace this_thread = std::this_thread;
-using std::thread; using std::mutex;
+using std::mutex;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <atomic>
@@ -126,7 +126,6 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     NotifyPlayPos notifyPlayPosition;
     std::atomic_bool end;
-    thread playerThread;
     Logger::Logger logject{logging::keywords::channel = "Player"};
     friend class Player;
 
@@ -150,70 +149,86 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     void write_handler(boost::system::error_code ec, std::size_t n) {
         TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
         if(ec) {
-            ERROR_LOG(logject) << "write error: " << ec.message();
-            if(ec.value() != boost::system::errc::operation_canceled)
-                stop();
-            else
-                stop_impl();
-            return;
-        }
-
-        n = buffer_size;
-        ASIO::mutable_buffer tmp{::operator new(n), n};
-        in_buf.emplace_back(tmp);
-        auto playlist = playman.currentPlaylist();
-
-        if(!playlist)
-            return;
-
-        try {
-            auto n_ = playlist->read(ASIO::buffer_cast<char*>(tmp), n);
-            if(n_ > 0 && static_cast<std::size_t>(n_) < n)
-                ec = ASIO::error::make_error_code(ASIO::error::eof);
-
-            if(n_ <= 0) {
-                stop();
-                playlist->jumpTo(0);
+            if(ec.value() == boost::system::errc::operation_canceled)
                 return;
-            }
-        }
-        catch(...) {
-            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+            ERROR_LOG(logject) << "write error: " << ec.message();
             stop_impl();
-            playman.currentPlaylist()->next();
-            play_impl();
+            return;
         }
+        ec.clear();
 
-        read_handler(ec, n);
+        auto& strand = asioOutput->get_implementation()->get_strand();
+        strand.post([this, n, ec, strand] () mutable {
+            auto playlist = playman.currentPlaylist();
+
+            if(!playlist) {
+                ec = ASIO::error::make_error_code(ASIO::error::no_data);
+                n = 0;
+                stop_impl();
+            }
+            else if(!*playlist) {
+                ec = ASIO::error::make_error_code(ASIO::error::eof);
+                n = 0;
+                stop_impl();
+                playlist->jumpTo(0);
+            }
+            else try {
+                n = buffer_size;
+                ASIO::mutable_buffer tmp{::operator new(n), n};
+                in_buf.emplace_back(tmp);
+                auto n_ = playlist->read(ASIO::buffer_cast<char*>(tmp), n);
+                if(n_ <= 0) {
+                    ec = ASIO::error::make_error_code(ASIO::error::eof);
+                    n = 0;
+                    stop_impl();
+                    playlist->jumpTo(0);
+                }
+                n = static_cast<std::size_t>(n_);
+            }
+            catch(...) {
+                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+                stop_impl();
+                playlist->next();
+                play_impl();
+            }
+            strand.post([this, ec, n] () {
+                read_handler(ec, n);
+            });
+        });
     }
 
     void read_handler(boost::system::error_code ec, std::size_t n) {
         TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
-        if(ec || in_buf.empty())
+        if(ec) {
+            if(ec.value() == boost::system::errc::operation_canceled)
+                return;
+            ERROR_LOG(logject) << "write error: " << ec.message();
+            stop_impl();
             return;
+        }
+        if(in_buf.empty()) {
+            ERROR_LOG(logject) << "buffer is empty, abandon ship";
+            stop_impl();
+            return;
+        }
 
         ASIO::mutable_buffer tmp{std::move(in_buf.front())};
         in_buf.pop_front();
         ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
         [this, tmp] (boost::system::error_code ec, std::size_t n) {
             if(n < ASIO::buffer_size(tmp)) {
-                if(ec.value() != ASIO::error::eof) {
-                    ASIO::mutable_buffer tmp2;
-                    ASIO::buffer_copy(tmp2, tmp + n);
-                    in_buf.push_front(tmp2);
-                }
-                ::operator delete(ASIO::buffer_cast<void*>(tmp));
-                ec.clear();
+                ASIO::mutable_buffer tmp2;
+                ASIO::buffer_copy(tmp2, tmp + n);
+                in_buf.push_front(tmp2);
             }
-            if(n == 0 || ec)
-                return;
+            ::operator delete(ASIO::buffer_cast<void*>(tmp));
 
             write_handler(ec, n);
         });
     }
 
     Config::Conf conf{"Player"};
-    std::size_t buffer_size = 8192;
+    std::atomic<std::size_t> buffer_size{8192};
 
     void loadedSlot(Config::Conf& base) {
         TRACE_LOG(logject) << "Player conf loaded";
@@ -437,7 +452,6 @@ Player::impl::impl(Kernel &kernel) :
                    State::playman = &playman, //dirty comma operator usage
                    std::make_shared<Stopped>(stateChanged))),
     end(false),
-//    playerThread(&impl::async_loop, this),
     logject(logging::keywords::channel = "StateMachine")
 {
     conf.putNode("buffer size", buffer_size);
@@ -449,10 +463,6 @@ Player::impl::impl(Kernel &kernel) :
 Player::impl::~impl() {
     stop();
     end = true;
-    if(playerThread.joinable()) {
-        TRACE_LOG(logject) << "Closing thread";
-        playerThread.join();
-    }
 }
 
 void Player::impl::play_impl() {
