@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 
 //        QQmlDebuggingEnabler enabler;
 
-        Core::Player player(kernel.getPlaylistManager(), kernel.getOutputManager());
+        Core::Player player(kernel);
 
         MainWindow win(kernel, player);
 

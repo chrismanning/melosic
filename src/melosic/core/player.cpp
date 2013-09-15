@@ -31,6 +31,7 @@ namespace io = boost::iostreams;
 #include <boost/scope_exit.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/use_future.hpp>
+#include <boost/variant.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/core/playlist.hpp>
@@ -45,6 +46,9 @@ namespace io = boost::iostreams;
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/smart_ptr_equality.hpp>
 #include <melosic/asio/audio_io.hpp>
+#include <melosic/melin/kernel.hpp>
+#include <melosic/melin/config.hpp>
+#include <melosic/common/int_get.hpp>
 
 #include "player.hpp"
 
@@ -63,14 +67,16 @@ struct StateChanged : Signals::Signal<Signals::Player::StateChanged> {
 
 struct State;
 
-struct Player::impl {
-    explicit impl(Melosic::Playlist::Manager& playman, Output::Manager& outman);
+struct Player::impl : std::enable_shared_from_this<Player::impl> {
+    explicit impl(Core::Kernel& kernel);
 
     ~impl();
 
     void play() {
         unique_lock l(mu);
         play_impl();
+        if(state_impl() == DeviceState::Playing)
+            write_handler(boost::system::error_code(), buffer_size);
     }
     void play_impl();
 
@@ -83,6 +89,9 @@ struct Player::impl {
     void stop() {
         unique_lock l(mu);
         stop_impl();
+        for(auto& buf : in_buf)
+            ::operator delete(ASIO::buffer_cast<void*>(buf));
+        in_buf.clear();
     }
     void stop_impl();
 
@@ -105,8 +114,9 @@ struct Player::impl {
     void sinkChangeSlot();
 
     Melosic::Playlist::Manager& playman;
-
     Output::Manager& outman;
+    Config::Manager& confman;
+
     mutex mu;
 
     StateChanged stateChanged;
@@ -134,58 +144,108 @@ struct Player::impl {
     }
 
     std::unique_ptr<ASIO::AudioOutputBase> asioOutput;
-private:
-    void async_loop() {
-        std::shared_ptr<Playlist> playlist;
-        while(!end) {
-            if(state_impl() != DeviceState::Playing || !asioOutput) {
-                this_thread::sleep_for(50ms);
-                continue;
-            }
-            unique_lock l(mu);
-            try {
-                BOOST_SCOPE_EXIT_ALL(&) {
-                    if(static_cast<bool>(*playlist)) {
-                        l.unlock();
-                        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-                        notifyPlayPosition(playlist->currentTrack()->tell(),
-                                           playlist->currentTrack()->duration());
-                    }
-                };
 
-                TRACE_LOG(logject) << "In play loop";
-                playlist = playman.currentPlaylist();
+    std::list<ASIO::mutable_buffer> in_buf;
 
-                //TODO: 3200 is temp value
-                int8_t sbuf[3200];
-                auto a = io::read(*playlist, (char*)sbuf, sizeof(sbuf));
-
-                if(a == -1) {//end-of-playlist
-                    stop_impl();
-                    l.unlock();
-                    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-                    playlist->jumpTo(0);
-                    continue;
-                }
-                boost::system::error_code ec;
-//                auto r = ASIO::write(*asioOutput, ASIO::buffer(sbuf, a), ec);
-
-                auto f = ASIO::async_write(*asioOutput, ASIO::buffer(sbuf, a), ASIO::use_future);
-                f.wait();
-                if(ec)
-                    ERROR_LOG(logject) << ec.message();
-//                else
-//                    assert(r == static_cast<size_t>(a));
-            }
-            catch(...) {
-                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+    void write_handler(boost::system::error_code ec, std::size_t n) {
+        TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
+        if(ec) {
+            ERROR_LOG(logject) << "write error: " << ec.message();
+            if(ec.value() != boost::system::errc::operation_canceled)
+                stop();
+            else
                 stop_impl();
-                l.unlock();
-                BOOST_SCOPE_EXIT_ALL(&l) { if(!l.owns_lock()) l.lock(); };
-                playman.currentPlaylist()->next();
-                l.lock();
-                play_impl();
+            return;
+        }
+
+        n = buffer_size;
+        ASIO::mutable_buffer tmp{::operator new(n), n};
+        in_buf.emplace_back(tmp);
+        auto playlist = playman.currentPlaylist();
+
+        if(!playlist)
+            return;
+
+        try {
+            auto n_ = playlist->read(ASIO::buffer_cast<char*>(tmp), n);
+            if(n_ > 0 && static_cast<std::size_t>(n_) < n)
+                ec = ASIO::error::make_error_code(ASIO::error::eof);
+
+            if(n_ <= 0) {
+                stop();
+                playlist->jumpTo(0);
+                return;
             }
+        }
+        catch(...) {
+            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+            stop_impl();
+            playman.currentPlaylist()->next();
+            play_impl();
+        }
+
+        read_handler(ec, n);
+    }
+
+    void read_handler(boost::system::error_code ec, std::size_t n) {
+        TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
+        if(ec || in_buf.empty())
+            return;
+
+        ASIO::mutable_buffer tmp{std::move(in_buf.front())};
+        in_buf.pop_front();
+        ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
+        [this, tmp] (boost::system::error_code ec, std::size_t n) {
+            if(n < ASIO::buffer_size(tmp)) {
+                if(ec.value() != ASIO::error::eof) {
+                    ASIO::mutable_buffer tmp2;
+                    ASIO::buffer_copy(tmp2, tmp + n);
+                    in_buf.push_front(tmp2);
+                }
+                ::operator delete(ASIO::buffer_cast<void*>(tmp));
+                ec.clear();
+            }
+            if(n == 0 || ec)
+                return;
+
+            write_handler(ec, n);
+        });
+    }
+
+    Config::Conf conf{"Player"};
+    std::size_t buffer_size = 8192;
+
+    void loadedSlot(Config::Conf& base) {
+        TRACE_LOG(logject) << "Player conf loaded";
+
+        auto c = base.getChild("Player");
+        if(!c) {
+            base.putChild(conf);
+            c = base.getChild("Player");
+        }
+        assert(c);
+        c->merge(conf);
+        c->addDefaultFunc([=]() -> Config::Conf { return conf; });
+        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
+            variableUpdateSlot(pair.first, pair.second);
+        });
+        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+    }
+
+    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+        using boost::get;
+        using Config::get;
+        TRACE_LOG(logject) << "Config: variable updated: " << key;
+        try {
+            if(key == "buffer size") {
+                buffer_size = get<size_t>(val);
+            }
+            else
+                ERROR_LOG(logject) << "Config: Unknown key: " << key;
+        }
+        catch(boost::bad_get&) {
+            ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
         }
     }
 };
@@ -367,23 +427,27 @@ struct Paused : virtual State, Stop, Tell {
     }
 };
 
-Player::impl::impl(Melosic::Playlist::Manager& playman, Output::Manager& outman) :
-    playman(playman),
-    outman(outman),
+Player::impl::impl(Kernel &kernel) :
+    playman(kernel.getPlaylistManager()),
+    outman(kernel.getOutputManager()),
+    confman(kernel.getConfigManager()),
     mu(),
     stateChanged(),
     currentState_((State::stateMachine = this, //init statics before first construction
                    State::playman = &playman, //dirty comma operator usage
                    std::make_shared<Stopped>(stateChanged))),
     end(false),
-    playerThread(&impl::async_loop, this),
+//    playerThread(&impl::async_loop, this),
     logject(logging::keywords::channel = "StateMachine")
 {
+    conf.putNode("buffer size", buffer_size);
     playman.getTrackChangedSignal().connect(&impl::trackChangeSlot, this);
     outman.getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
+    confman.getLoadedSignal().connect(&impl::loadedSlot, this);
 }
 
 Player::impl::~impl() {
+    stop();
     end = true;
     if(playerThread.joinable()) {
         TRACE_LOG(logject) << "Closing thread";
@@ -472,8 +536,8 @@ void Player::impl::sinkChangeSlot() {
     }
 }
 
-Player::Player(Melosic::Playlist::Manager& playlistman, Output::Manager& outman) :
-    pimpl(new impl(playlistman, outman))
+Player::Player(Kernel& kernel) :
+    pimpl(new impl(kernel))
 {}
 
 Player::~Player() {}

@@ -29,22 +29,18 @@ namespace chrono = std::chrono;
 namespace Melosic {
 namespace Output {
 enum class DeviceState;
-class Manager;
-}
-
-namespace Playlist {
-class Manager;
 }
 
 using Output::DeviceState;
 
 namespace Core {
 
+class Kernel;
 class Playlist;
 
 class Player {
 public:
-    Player(Melosic::Playlist::Manager&, Output::Manager&);
+    Player(Core::Kernel&);
 
     ~Player();
 

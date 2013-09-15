@@ -260,6 +260,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             else {
                 if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
             }
+            cancel(ec);
             m_state = Output::DeviceState::Paused;
         }
         else if(m_state == Output::DeviceState::Paused) {
@@ -283,6 +284,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
     void stop(boost::system::error_code& ec) noexcept override {
         if(m_state != Output::DeviceState::Stopped && m_state != Output::DeviceState::Error && m_pdh) {
+            cancel(ec);
             if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
             if((ec = {snd_pcm_close(m_pdh), alsa_category})) return;
         }
@@ -310,12 +312,11 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             return 0;
         }
         else if(r < 0) {
-            ERROR_LOG(logject) << "write error";
             ec = {static_cast<int>(r), alsa_category};
             return 0;
         }
         else if(r != frames)
-            ERROR_LOG(logject) << "not all frames written";
+            WARN_LOG(logject) << "not all frames written";
 
         assert(m_pdh != nullptr);
         r = snd_pcm_frames_to_bytes(m_pdh, r);
