@@ -18,7 +18,7 @@
 #include <memory>
 
 #include <boost/log/sinks.hpp>
-#include <boost/log/utility/empty_deleter.hpp>
+#include <boost/utility/empty_deleter.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
@@ -33,7 +33,7 @@ void init() {
     typedef sinks::synchronous_sink<sinks::text_ostream_backend > text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
 
-    boost::shared_ptr<std::ostream> stream(&std::clog, logging::empty_deleter());
+    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
 //    boost::shared_ptr<std::ostream> stream(boost::make_shared<nullstream>());
     sink->locked_backend()->add_stream(stream);
 

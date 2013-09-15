@@ -34,4 +34,4 @@ SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES} ${Boost_L
 
 target_link_libraries(${PN} ${LINK_LIBS} qt-gui -lc++abi)
 target_link_libraries(${PN}lib ${LINK_LIBS} -lc++abi)
-target_link_libraries(${PN}_test_main ${LINK_LIBS} -lc++abi gmock gtest)
+target_link_libraries(${PN}_test_main -lc++abi gmock gtest ${Boost_LIBRARIES} ${TAGLIB_LIBRARIES})

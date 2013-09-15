@@ -200,8 +200,7 @@ Track::Track(const Track& b) : pimpl(b.pimpl->clone()) {}
 Track::Track(Track&&) = default;
 
 Track& Track::operator=(Track b) {
-    shared_lock_guard l1(pimpl->mu);
-    shared_lock_guard l2(b.pimpl->mu);
+    lock_guard l1(pimpl->mu);
     using std::swap;
     swap(pimpl, b.pimpl);
     return *this;
