@@ -161,11 +161,10 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
 bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
     TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
 
-    Core::Playlist::const_range range;
     auto beg = ++row > playlist->size() ? playlist->size() : row;
     auto first(std::next(playlist->begin(), beg));
 
-    range = playlist->emplace(first, filenames);
+    auto range = playlist->emplace(first, filenames);
 
     TRACE_LOG(logject) << boost::distance(range) << " tracks inserted";
 

@@ -105,7 +105,7 @@ public:
         TRACE_LOG(logject) << "Creating player sink";
         lock_guard l(mu);
         if(!asiofact) {
-            TRACE_LOG(logject) << "Sink factory not valid";
+            ERROR_LOG(logject) << "Sink factory not valid";
             return nullptr;
         }
 

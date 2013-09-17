@@ -19,6 +19,7 @@
 #define MELOSIC_CATEGORYPROXYMODEL_HPP
 
 #include <QIdentityProxyModel>
+#include <QSharedPointer>
 #include <qqml.h>
 
 namespace Melosic {
