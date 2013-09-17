@@ -90,6 +90,13 @@ struct Manager::impl {
             return VarType(val.GetUint64());
         else if(val.IsDouble())
             return VarType(val.GetDouble());
+        else if(val.IsArray()) {
+            std::vector<VarType> vec;
+            vec.reserve(val.Size());
+            for(auto& v : boost::make_iterator_range(val.Begin(), val.End()))
+                vec.push_back(VarFromJson(v));
+            return VarType(std::move(vec));
+        }
         assert(false);
     }
 
@@ -171,6 +178,14 @@ struct Manager::impl {
                     return json::Value(boost::get<uint64_t>(var));
                 case TypeIndex<double>:
                     return json::Value(boost::get<double>(var));
+                case TypeIndex<std::vector<VarType>>: {
+                    auto& vec = boost::get<std::vector<VarType>>(var);
+                    json::Value val(json::kArrayType);
+                    val.Reserve(vec.size(), poolAlloc);
+                    for(auto& v : vec)
+                        val.PushBack(JsonFromVar(v), poolAlloc);
+                    return std::move(val);
+                }
             }
             assert(false);
         }
@@ -220,6 +235,11 @@ struct Manager::impl {
         ofs << stringified << std::endl;
     }
 
+    std::tuple<Conf&, unique_lock&&> getConfigRoot() {
+        unique_lock l(mu);
+        return std::forward_as_tuple(conf, std::move(l));
+    }
+
     Mutex mu;
     json::Value::AllocatorType poolAlloc;
     fs::path confPath;
@@ -237,6 +257,10 @@ void Manager::loadConfig() {
 
 void Manager::saveConfig() {
     pimpl->saveConfig();
+}
+
+std::tuple<Conf&, std::unique_lock<std::mutex>&&> Manager::getConfigRoot() {
+    return pimpl->getConfigRoot();
 }
 
 Signals::Config::Loaded& Manager::getLoadedSignal() const {
@@ -261,7 +285,7 @@ struct Conf::impl {
     impl(impl&&) = default;
 
     threadsafe_list<Conf> children;
-    threadsafe_list<std::pair<KeyType, VarType>> nodes;
+    threadsafe_list<std::pair<std::add_const<KeyType>::type, VarType>> nodes;
     KeyType name;
     Conf::DefaultFunc resetDefault;
 
@@ -308,28 +332,28 @@ typename std::add_const<KeyType>::type& Conf::getName() const noexcept {
     return pimpl->name;
 }
 
-std::shared_ptr<std::pair<KeyType, VarType>> Conf::getNode(KeyType key) {
+std::shared_ptr<std::pair<KeyType, VarType>> Conf::getNode(std::add_const<KeyType>::type& key) {
     TRACE_LOG(logject) << "Getting node: " << key;
     return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
     });
 }
 
-std::shared_ptr<const std::pair<KeyType, VarType>> Conf::getNode(KeyType key) const {
+std::shared_ptr<const std::pair<KeyType, VarType>> Conf::getNode(std::add_const<KeyType>::type& key) const {
     TRACE_LOG(logject) << "Getting node: " << key;
     return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
         return pair.first == key;
     });
 }
 
-std::shared_ptr<Conf::ChildType> Conf::getChild(KeyType key) {
+std::shared_ptr<Conf::ChildType> Conf::getChild(std::add_const<KeyType>::type& key) {
     TRACE_LOG(logject) << "Getting child: " << key;
     return pimpl->children.find_first_if([&] (const Conf& c) {
         return c.getName() == key;
     });
 }
 
-std::shared_ptr<const Conf::ChildType> Conf::getChild(KeyType key) const {
+std::shared_ptr<const Conf::ChildType> Conf::getChild(std::add_const<KeyType>::type& key) const {
     TRACE_LOG(logject) << "Getting child: " << key;
     return pimpl->children.find_first_if([&] (const Conf& c) {
         return c.getName() == key;
@@ -355,14 +379,14 @@ void Conf::putNode(KeyType key, VarType value) {
         pimpl->nodes.push_front(std::move(pair));
 }
 
-void Conf::removeChild(KeyType key) {
+void Conf::removeChild(std::add_const<KeyType>::type& key) {
     return pimpl->children.remove_if([&] (const Conf& c) {
         return c.getName() == key;
     });
 }
 
-void Conf::removeNode(KeyType key) {
-    return pimpl->nodes.remove_if([&] (const std::pair<KeyType, VarType>& pair) {
+void Conf::removeNode(std::add_const<KeyType>::type& key) {
+    return pimpl->nodes.remove_if([&] (const std::pair<std::add_const<KeyType>::type, VarType>& pair) {
         return pair.first == key;
     });
 }

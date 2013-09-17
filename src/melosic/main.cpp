@@ -54,14 +54,9 @@ int main(int argc, char* argv[]) {
         Core::Kernel kernel;
         Plugin::Manager& plugman = kernel.getPluginManager();
 
-        plugman.addSearchPaths({fs::canonical("../bin"), fs::canonical("../lib")});
-        plugman.loadPlugin("flac.melin");
-#if __linux
-        plugman.loadPlugin("alsa.melin");
-#endif
-        plugman.loadPlugin("lastfm.melin");
+        kernel.getConfigManager().loadConfig();
 
-        plugman.initialise();
+        plugman.loadPlugins(kernel);
 
 //        QQmlDebuggingEnabler enabler;
 
@@ -69,35 +64,9 @@ int main(int argc, char* argv[]) {
 
         MainWindow win(kernel, player);
 
-        kernel.getConfigManager().loadConfig();
-
         return app.exec();
     }
-    catch(PluginVersionMismatchException& e) {
-        auto* info = boost::get_error_info<ErrorTag::Plugin::Info>(e);
-        assert(info != nullptr);
-        std::stringstream str;
-        str << info->name << " Plugin API version mismatch. Expected: ";
-        str << Plugin::expectedAPIVersion() << "; Got: ";
-        str << info->APIVersion;
-        ERROR_LOG(logject) << str.str();
-        TRACE_LOG(logject) << boost::diagnostic_information(e);
-        TRACE_LOG(logject) << info;
-        return -1;
-    }
-    catch(PluginException& e) {
-        std::string str("Plugin error");
-        if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
-            str += ": " + path->string();
-        }
-        if(auto* symbol = boost::get_error_info<ErrorTag::Plugin::Symbol>(e)) {
-            str += ": undefined symbol: " + *symbol;
-        }
-        ERROR_LOG(logject) << str;
-        TRACE_LOG(logject) << boost::diagnostic_information(e);
-        return -1;
-    }
     catch(...) {
-        TRACE_LOG(logject) << boost::diagnostic_information(boost::current_exception());
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
     }
 }

@@ -8,9 +8,10 @@
 namespace Melosic {
 
 template <typename T>
-class threadsafe_list {
+struct threadsafe_list {
     using value_type = typename std::decay<T>::type;
 
+private:
     struct node {
         mutable std::mutex m;
         std::shared_ptr<value_type> data;

@@ -42,23 +42,12 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_EXPORT void addSearchPath(const boost::filesystem::path& pluginpath);
-
-    void addSearchPaths(std::initializer_list<boost::filesystem::path> paths) {
-        for(auto&& p : paths)
-            addSearchPath(p);
-    }
-
-    MELOSIC_EXPORT void loadPlugin(const boost::filesystem::path& filepath);
-    MELOSIC_EXPORT void loadPlugins();
-
-    MELOSIC_EXPORT void initialise();
-    MELOSIC_EXPORT bool initialised() const;
+    void loadPlugins(Core::Kernel& kernel);
 
     MELOSIC_EXPORT ForwardRange<const Info> getPlugins() const;
 
 private:
-    explicit Manager(Core::Kernel& kernel);
+    explicit Manager(Config::Manager& confman);
     friend class Core::Kernel;
     class impl;
     std::unique_ptr<impl> pimpl;

@@ -23,6 +23,11 @@
 #include <string>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/range/concepts.hpp>
+#include <boost/range/algorithm/copy.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/metafunctions.hpp>
+#include <boost/mpl/contains.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/common.hpp>
@@ -53,6 +58,8 @@ public:
     void loadConfig();
     void saveConfig();
 
+    std::tuple<Conf&, std::unique_lock<std::mutex>&&> getConfigRoot();
+
     Signals::Config::Loaded& getLoadedSignal() const;
 
 private:
@@ -79,24 +86,58 @@ public:
 
     typename std::add_const<KeyType>::type& getName() const noexcept;
 
-    std::shared_ptr<std::pair<KeyType, VarType>> getNode(KeyType key);
-    std::shared_ptr<const std::pair<KeyType, VarType>> getNode(KeyType key) const;
-    std::shared_ptr<ChildType> getChild(KeyType key);
-    std::shared_ptr<const ChildType> getChild(KeyType key) const;
+    std::shared_ptr<std::pair<KeyType, VarType>> getNode(std::add_const<KeyType>::type& key);
+    std::shared_ptr<const std::pair<KeyType, VarType>> getNode(std::add_const<KeyType>::type& key) const;
+    std::shared_ptr<ChildType> getChild(std::add_const<KeyType>::type& key);
+    std::shared_ptr<const ChildType> getChild(std::add_const<KeyType>::type& key) const;
 
     void putChild(Conf child);
     void putNode(KeyType key, VarType value);
 
-    void removeChild(KeyType key);
-    void removeNode(KeyType key);
+    template <typename T>
+    void putNode(KeyType key, const T& value,
+                 typename std::enable_if<boost::mpl::contains<VarType::types, T>::value>::type* = 0) {
+        putNode(std::move(key), VarType(value));
+    }
+
+    template <typename Range>
+    void putNode(KeyType key, const Range& range,
+                 typename std::enable_if<!boost::mpl::contains<VarType::types, Range>::value>::type* = 0,
+                 typename std::enable_if<boost::has_range_const_iterator<Range>::value>::type* = 0,
+                 typename std::enable_if<boost::mpl::contains<VarType::types,
+                                               typename boost::range_value<Range>::type>::value>::type* = 0)
+    {
+        if(boost::empty(range))
+            return;
+        std::vector<VarType> varRange{boost::distance(range)};
+        boost::copy(range, varRange.begin());
+        putNode(std::move(key), VarType(varRange));
+    }
+
+    template <typename Range>
+    void putNode(KeyType key, const Range& range,
+                 typename std::enable_if<boost::has_range_const_iterator<Range>::type::value>::type* = 0,
+                 typename std::enable_if<std::is_same<typename boost::range_value<Range>::type,
+                                         boost::filesystem::path>::value>::type* = 0)
+    {
+        if(boost::empty(range))
+            return;
+        using boost::adaptors::transformed;
+        std::vector<Config::VarType> varRange{boost::distance(range)};
+        boost::copy(range | transformed([] (boost::filesystem::path p) { return p.string(); }), varRange.begin());
+        putNode(std::move(key), VarType(std::move(varRange)));
+    }
+
+    void removeChild(std::add_const<KeyType>::type& key);
+    void removeNode(std::add_const<KeyType>::type& key);
 
     uint32_t childCount() const noexcept;
     uint32_t nodeCount() const noexcept;
 
     void iterateChildren(std::function<void(const ChildType&)>) const;
     void iterateChildren(std::function<void(ChildType&)>);
-    void iterateNodes(std::function<void(const std::pair<KeyType, VarType>&)>) const;
-    void iterateNodes(std::function<void(std::pair<KeyType, VarType>&)>);
+    void iterateNodes(std::function<void(const std::pair<std::add_const<KeyType>::type, VarType>&)>) const;
+    void iterateNodes(std::function<void(std::pair<std::add_const<KeyType>::type, VarType>&)>);
 
     void merge(const Conf& c);
 

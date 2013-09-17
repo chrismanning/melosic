@@ -52,24 +52,23 @@ inline const char * DLError() {
 #include <string>
 #include <list>
 #include <functional>
-#include <thread>
-#include <mutex>
-using std::mutex; using std::unique_lock; using std::lock_guard;
-namespace this_thread = std::this_thread;
-#include <future>
-#include <chrono>
-namespace chrono = std::chrono;
+#include <regex>
 
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
+#include <boost/variant.hpp>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/config.hpp>
+#include <melosic/common/configvar.hpp>
+#include <melosic/common/signal_core.hpp>
 
 #include "plugin.hpp"
 
@@ -132,11 +131,6 @@ public:
         for(auto& fun : regFuns) {
             fun();
         }
-        init_ = true;
-    }
-
-    bool initialised() const {
-        return init_;
     }
 
 private:
@@ -161,7 +155,6 @@ private:
         return reinterpret_cast<T*>(sym);
     }
 
-    bool init_ = false;
     boost::filesystem::path pluginPath;
     destroyPlugin_T destroyPlugin_;
     std::list<std::function<void()>> regFuns;
@@ -174,21 +167,62 @@ Logger::Logger Plugin::logject(logging::keywords::channel = "Plugin");
 
 class Manager::impl {
 public:
-    impl(Core::Kernel& kernel)
-        : kernel(kernel)
-    {}
+    impl(Config::Manager& confman) : confman(confman) {
+        addSearchPath(fs::current_path().parent_path()/"lib");
+        conf.putNode("search paths", searchPaths);
+        confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+    }
 
-    void addSearchPath(const boost::filesystem::path& pluginpath) {
-        lock_guard<Mutex> l(mu);
-        if(fs::exists(pluginpath) && fs::is_directory(pluginpath) && pluginpath.is_absolute()) {
-            searchPaths.push_back(pluginpath);
-            searchPaths.sort();
+    void loadedSlot(Config::Conf& base) {
+        TRACE_LOG(logject) << "Plugin conf loaded";
+
+        auto c = base.getChild("Plugins");
+        if(!c) {
+            base.putChild(conf);
+            c = base.getChild("Plugins");
         }
+        assert(c);
+        c->merge(conf);
+        c->addDefaultFunc([=]() -> Config::Conf { return conf; });
+        c->iterateNodes([this] (const std::pair<Config::KeyType, Config::VarType>& pair) {
+            variableUpdateSlot(pair.first, pair.second);
+        });
+        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+    }
+
+    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+        TRACE_LOG(logject) << "Config: variable updated: " << key;
+        try {
+            if(key == "search paths") {
+                searchPaths.clear();
+                for(auto& path : boost::get<std::vector<Config::VarType>>(val))
+                    searchPaths.emplace_back(boost::get<std::string>(path));
+                if(searchPaths.empty()) {
+                    for(auto& path : boost::get<std::vector<Config::VarType>>(conf.getNode("search paths")->second))
+                        searchPaths.emplace_back(boost::get<std::string>(path));
+                }
+            }
+            else if(key == "blacklist") {
+                blackList.clear();
+                for(auto& path : boost::get<std::vector<Config::VarType>>(val))
+                    blackList.push_back(boost::get<std::string>(path));
+            }
+            else
+                ERROR_LOG(logject) << "Config: Unknown key: " << key;
+        }
+        catch(boost::bad_get&) {
+            ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
+        }
+    }
+
+    void addSearchPath(const fs::path& pluginpath) {
+        if(fs::exists(pluginpath) && fs::is_directory(pluginpath) && pluginpath.is_absolute())
+            searchPaths.push_back(pluginpath);
         else
             ERROR_LOG(logject) << pluginpath << " not a directory";
     }
 
-    void loadPlugin(fs::path filepath) {
+    void loadPlugin(fs::path filepath, Core::Kernel& kernel) {
         if(!filepath.is_absolute()) {
             TRACE_LOG(logject) << "plugin path relative";
             for(const fs::path& searchpath : searchPaths) {
@@ -201,23 +235,40 @@ public:
             }
         }
 
-        if(!fs::exists(filepath) && !fs::is_regular_file(filepath)) {
-            BOOST_THROW_EXCEPTION(FileNotFoundException() << ErrorTag::FilePath(filepath));
-        }
-
-        if(filepath.extension() != ".melin") {
-            BOOST_THROW_EXCEPTION(PluginInvalidException() << ErrorTag::FilePath(filepath));
-        }
-
         auto filename = filepath.filename().string();
 
-        unique_lock<Mutex> l(mu);
-        if(loadedPlugins.find(filename) != loadedPlugins.end()) {
-            ERROR_LOG(logject) << "Plugin already loaded: " << filepath;
-            return;
-        }
+        if(loadedPlugins.find(filename) != loadedPlugins.end())
+            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() <<
+                                  ErrorTag::FilePath(filename) <<
+                                  ErrorTag::Plugin::Msg("plugin already loaded"));
 
         loadedPlugins.emplace(filename, Plugin(filepath, kernel));
+    }
+
+    void loadPlugins(Core::Kernel& kernel) {
+        TRACE_LOG(logject) << "Loading plugins...";
+        std::regex filter{boost::algorithm::join(blackList, "|")};
+        for(const fs::path& dir : searchPaths) {
+            if(!fs::exists(dir))
+                continue;
+            TRACE_LOG(logject) << "In search path: " << dir;
+
+            for(const fs::path& file : fs::recursive_directory_iterator(dir)) {
+                try {
+                    if(std::regex_match(file.string(), filter)) {
+                        WARN_LOG(logject) << file << " matches blacklist";
+                        continue;
+                    }
+                    if(fs::is_regular_file(file) && file.extension() == ".melin")
+                        loadPlugin(file, kernel);
+                }
+                catch(...) {
+                    ERROR_LOG(logject) << "Plugin " << file << " not loaded";
+                    ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+                }
+            }
+        }
+        initialise();
     }
 
     ForwardRange<const Info> getPlugins() {
@@ -230,49 +281,29 @@ public:
             TRACE_LOG(logject) << "Initialising plugin " << plugin.getInfo().name;
             plugin.init();
         }
-        lock_guard<Mutex> l(mu);
-        initialised_ = true;
-    }
-
-    bool initialised() {
-        lock_guard<Mutex> l(mu);
-        return initialised_;
     }
 
 private:
-    Core::Kernel& kernel;
+    Config::Manager& confman;
+    Config::Conf conf{"Plugins"};
     std::map<std::string, Plugin> loadedPlugins;
     Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
-    typedef mutex Mutex;
-    Mutex mu;
-    bool initialised_ = false;
     std::list<fs::path> searchPaths;
+    std::list<std::string> blackList;
     friend class Manager;
     friend struct RegisterFuncsInserter;
 };
 
-Manager::Manager(Core::Kernel& kernel) : pimpl(new impl(kernel)) {}
+Manager::Manager(Config::Manager& confman) : pimpl(new impl(confman)) {}
 
 Manager::~Manager() {}
 
-void Manager::loadPlugin(const boost::filesystem::path& filepath) {
-    pimpl->loadPlugin(filepath);
+void Manager::loadPlugins(Core::Kernel& kernel) {
+    pimpl->loadPlugins(kernel);
 }
 
 ForwardRange<const Info> Manager::getPlugins() const {
     return pimpl->getPlugins();
-}
-
-void Manager::initialise() {
-    pimpl->initialise();
-}
-
-bool Manager::initialised() const {
-    return pimpl->initialised();
-}
-
-void Manager::addSearchPath(const boost::filesystem::path& pluginpath) {
-    pimpl->addSearchPath(pluginpath);
 }
 
 } // namespace Plugin

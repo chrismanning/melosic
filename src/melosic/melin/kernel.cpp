@@ -34,20 +34,20 @@ namespace Core {
 
 class Kernel::impl {
     impl(Kernel& k)
-        : plugman(k),
-          io_service(),
+        : io_service(),
           null_worker(io_service),
           tman(&io_service),
-          confman("melosic.conf"s),
+          confman("melosic.conf"),
+          plugman(confman),
           outman(confman, io_service),
           playlistman(decman)
     {}
 
-    Plugin::Manager plugman;
     asio::io_service io_service;
     asio::io_service::work null_worker;
     Thread::Manager tman;
     Config::Manager confman;
+    Plugin::Manager plugman;
     Input::Manager inman;
     Decoder::Manager decman;
     Output::Manager outman;

@@ -20,13 +20,15 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
-#include <boost/variant/variant_fwd.hpp>
+#include <boost/variant/recursive_variant.hpp>
 
 namespace Melosic {
 namespace Config {
 using KeyType = const std::string;
-using VarType = boost::variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double>;
+using VarType = boost::make_recursive_variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double,
+                               std::vector<boost::recursive_variant_>>::type;
 }
 }
 
