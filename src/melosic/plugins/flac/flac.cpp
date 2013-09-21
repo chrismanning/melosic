@@ -17,8 +17,6 @@
 
 #include <FLAC++/decoder.h>
 
-#include <boost/format.hpp>
-using boost::format;
 #include <boost/iostreams/read.hpp>
 #include <boost/iostreams/positioning.hpp>
 namespace io = boost::iostreams;
@@ -34,11 +32,11 @@ namespace io = boost::iostreams;
 using namespace Melosic;
 using Logger::Severity;
 
-static Logger::Logger logject(logging::keywords::channel = "FLAC");
+static Logger::Logger logject{logging::keywords::channel = "FLAC"};
 
-static constexpr Plugin::Info flacInfo("FLAC",
-                                   Plugin::Type::decode,
-                                   {1,0,0});
+static constexpr Plugin::Info flacInfo{"FLAC",
+                                       Plugin::Type::decode,
+                                       {1,0,0}};
 
 #define FLAC_THROW_IF(Exc, cond, flacptr) if(!(cond)) {\
     BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Plugin::Info(::flacInfo)\
@@ -94,40 +92,33 @@ public:
         lastSample += frame->header.blocksize * as.channels;
         switch(frame->header.bits_per_sample) {
             case 8:
-                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
-                    for(unsigned j=0; j<frame->header.channels; j++,u++) {
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++)
+                    for(unsigned j=0; j<frame->header.channels; j++,u++)
                         buf.push_back((char)(buffer[j][i]));
-                    }
-                }
                 break;
             case 16:
-                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++)
                     for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                     }
-                }
                 break;
             case 24:
-                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++)
                     for(unsigned j=0; j<frame->header.channels; j++,u++) {
-                        if(as.target_bps == 32)
-                            buf.push_back(0);
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
                     }
-                }
                 break;
             case 32:
-                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++) {
+                for(unsigned i=0,u=0; i<frame->header.blocksize && u<(frame->header.blocksize*as.channels); i++)
                     for(unsigned j=0; j<frame->header.channels; j++,u++) {
                         buf.push_back((char)(buffer[j][i]));
                         buf.push_back((char)(buffer[j][i] >> 8));
                         buf.push_back((char)(buffer[j][i] >> 16));
                         buf.push_back((char)(buffer[j][i] >> 24));
                     }
-                }
                 break;
             default:
                 BOOST_THROW_EXCEPTION(AudioDataUnsupported()
@@ -152,22 +143,16 @@ public:
 
             as = AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
 
-            TRACE_LOG(logject) << format("sample rate    : %u Hz") % as.sample_rate;
-            TRACE_LOG(logject) << format("channels       : %u") % (uint16_t)as.channels;
-            TRACE_LOG(logject) << format("bits per sample: %u") % (uint16_t)as.bps;
-            TRACE_LOG(logject) << format("total samples  : %u") % as.total_samples;
+            TRACE_LOG(logject) << as;
         }
     }
 
     virtual ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) {
         auto off = io::position_to_offset(input.seekg(absolute_byte_offset, std::ios_base::beg));
-        if(off == (int64_t)absolute_byte_offset) {
-//            std::clog << "In seek callback: " << input.seek(0, std::ios_base::cur, std::ios_base::in) << std::endl;
+        if(off == (int64_t)absolute_byte_offset)
             return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
-        }
-        else {
+        else
             return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
-        }
     }
 
     virtual ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) {
@@ -189,9 +174,6 @@ public:
             WARN_LOG(logject) << "Seek to " << dur.count() << "ms failed";
             TRACE_LOG(logject) << "Position is " << tell().count() << "ms";
         }
-//        else if(tell() != dur) {
-//            std::clog << "Seek missed\nRequested: " << dur.count() << "; Got: " << tell().count() << std::endl;
-//        }
     }
 
     chrono::milliseconds tell() {
@@ -211,14 +193,16 @@ private:
 class FlacDecoder : public Decoder::Playable {
 public:
     FlacDecoder(IO::SeekableSource& input) :
-        pimpl(new FlacDecoderImpl(input, buf, as))
+        as(),
+        buf(),
+        impl(input, buf, as)
     {}
 
     virtual ~FlacDecoder() {}
 
     virtual std::streamsize read(char * s, std::streamsize n) {
         while(static_cast<std::streamsize>(buf.size()) < n && *this) {
-            FLAC_THROW_IF(AudioDataInvalidException, pimpl->process_single() && !buf.empty(), pimpl.get());
+            FLAC_THROW_IF(AudioDataInvalidException, impl.process_single() && !buf.empty(), (&impl));
         }
 
         auto min = std::min(n, static_cast<std::streamsize>(buf.size()));
@@ -230,15 +214,15 @@ public:
     }
 
     virtual void seek(chrono::milliseconds dur) {
-        pimpl->seek(dur);
+        impl.seek(dur);
     }
 
     chrono::milliseconds tell() {
-        return pimpl->tell();
+        return impl.tell();
     }
 
     virtual void reset() {
-        pimpl->reset();
+        impl.reset();
         seek(0ms);
         buf.clear();
     }
@@ -248,13 +232,13 @@ public:
     }
 
     virtual explicit operator bool() {
-        return !pimpl->end();
+        return !impl.end();
     }
 
 private:
     AudioSpecs as;
     std::deque<char> buf;
-    std::unique_ptr<FlacDecoderImpl> pimpl;
+    FlacDecoderImpl impl;
 };
 
 extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {

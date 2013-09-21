@@ -47,7 +47,7 @@ public:
     typedef boost::iterator_range<iterator> Range;
     typedef boost::iterator_range<const_iterator> ConstRange;
 
-    explicit Manager(Decoder::Manager&);
+    explicit Manager();
     ~Manager();
 
     Manager(Manager&&) = delete;

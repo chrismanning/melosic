@@ -142,19 +142,14 @@ public:
                     t.destroy();
                 }
                 else {
-                    if(asio_service) {
-                        try {
-                            if(asio_service->stopped())
-                                asio_service->reset();
-                            if(!asio_service->stopped()) {
-                                boost::system::error_code ec;
-                                asio_service->poll_one(ec);
-                            }
+                    if(asio_service && !asio_service->stopped()) {
+                        boost::system::error_code ec;
+                        auto n = asio_service->poll_one(ec);
+                        if(n == 0) {
+                            std::this_thread::sleep_for(10ms);
+                            std::this_thread::yield();
                         }
-                        catch(...) {}
                     }
-                    std::this_thread::sleep_for(10ms);
-                    std::this_thread::yield();
                 }
             }
         };
@@ -162,14 +157,8 @@ public:
             threads.emplace_back(f);
         if(asio_service)
             threads.emplace_back([this] () {
-                while(!done.load()) {
-                    try {
-                        if(asio_service->stopped())
-                            asio_service->reset();
-                        asio_service->run();
-                    }
-                    catch(...) {}
-                }
+                boost::system::error_code ec;
+                asio_service->run(ec);
             });
     }
 
@@ -189,8 +178,6 @@ public:
 
     ~Manager() {
         done.store(true);
-        if(asio_service)
-            asio_service->stop();
         for(auto& t : threads)
             if(t.joinable())
                 t.join();

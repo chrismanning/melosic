@@ -29,12 +29,15 @@ using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <boost/format.hpp>
 using boost::format;
 #include <boost/scope_exit.hpp>
+#include <boost/iostreams/read.hpp>
+namespace io = boost::iostreams;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/decoder.hpp>
+#include <melosic/common/audiospecs.hpp>
 
 #include "playlist.hpp"
 
@@ -51,9 +54,8 @@ static TrackChanged trackChangedSignal;
 
 class Playlist::impl {
 public:
-    impl(std::string name, Decoder::Manager& decman) :
-        name(name),
-        decman(decman)
+    impl(std::string name) :
+        name(name)
     {}
 
     void trackChanged(const Core::Track& t, unique_lock& l) {
@@ -64,28 +66,30 @@ public:
 
     //IO
     std::streamsize read(char* s, std::streamsize n, unique_lock& l) {
-        if(currentTrack() == end()) {
+        if(currentTrack() == end())
             return -1;
-        }
-        auto r = currentTrack()->read(s, n);
+
+        auto r = io::read(*currentTrack(), s, n);
         if(r < n) {
             if(r < 0)
                 r = 0;
+            const AudioSpecs& as = currentTrack()->getAudioSpecs();
             currentTrack()->close();
             next(l);
             if(currentTrack() != end()) {
+                if(currentTrack()->getAudioSpecs() != as)
+                    return r;
                 currentTrack()->reOpen();
                 currentTrack()->reset();
-                r += currentTrack()->read(s + r, n - r);
+                r += io::read(*currentTrack(), s + r, n - r);
             }
         }
         return r;
     }
 
     void seek(chrono::milliseconds dur) {
-        if(currentTrack() != end()) {
+        if(currentTrack() != end())
             currentTrack()->seek(dur);
-        }
     }
 
     //playlist controls
@@ -95,9 +99,8 @@ public:
     }
 
     void previous(unique_lock& l) {
-        if(currentTrack() == begin()) {
+        if(currentTrack() == begin())
             seek(0ms);
-        }
         else if(size() >= 1) {
             current_track_->reset();
             --current_track_;
@@ -184,7 +187,7 @@ public:
                                chrono::milliseconds end,
                                unique_lock& l)
     {
-        auto r = tracks.emplace(pos, decman, std::move(filename), start, end);
+        auto r = tracks.emplace(pos, std::move(filename), start, end);
 
         if(size() == 1) {
             current_track_ = std::begin(tracks);
@@ -204,7 +207,7 @@ public:
         std::list<Playlist::const_iterator> its;
         for(const auto& path : values) {
             try {
-                its.push_back(tracks.emplace(pos, decman, path));
+                its.push_back(tracks.emplace(pos, path));
             }
             catch(...) {
                 ERROR_LOG(logject) << format("Track couldn't be added to playlist \"%1%\" %2%:%3%")
@@ -239,7 +242,7 @@ public:
                       chrono::milliseconds end,
                       unique_lock& l)
     {
-        tracks.emplace_back(decman, std::move(filename), start, end);
+        tracks.emplace_back(std::move(filename), start, end);
         if(size() == 1) {
             current_track_ = std::begin(tracks);
             trackChanged(std::cref(*currentTrack()), l);
@@ -270,11 +273,10 @@ public:
     Playlist::list_type tracks;
     Playlist::iterator current_track_;
     std::string name;
-    Decoder::Manager& decman;
 };
 
-Playlist::Playlist(std::string name, Decoder::Manager& decman) :
-    pimpl(new impl(std::move(name), decman)) {}
+Playlist::Playlist(std::string name) :
+    pimpl(new impl(std::move(name))) {}
 
 Playlist::~Playlist() {}
 

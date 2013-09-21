@@ -36,8 +36,9 @@ namespace Core {
 
 class MELOSIC_EXPORT Track : public Input::Playable, public IO::Closable {
 public:
-    Track(Melosic::Decoder::Manager& decman,
-          const boost::filesystem::path& filename,
+    typedef char char_type;
+
+    Track(boost::filesystem::path filename,
           chrono::milliseconds start = 0ms,
           chrono::milliseconds end = 0ms);
 
@@ -60,10 +61,12 @@ public:
     virtual void close();
     virtual bool isOpen() const;
     virtual void reOpen();
-    MELOSIC_EXPORT std::string sourceName() const;
+    MELOSIC_EXPORT const std::string& sourceName() const;
 
     void reloadTags();
     void reloadDecoder();
+
+    static void setDecoderManager(const Decoder::Manager*) noexcept;
 
 private:
     class impl;

@@ -60,7 +60,7 @@ public:
 
     struct impl;
 private:
-    std::unique_ptr<impl> pimpl;
+    std::shared_ptr<impl> pimpl;
 };
 
 } // namespace Core

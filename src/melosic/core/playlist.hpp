@@ -44,7 +44,8 @@ class Track;
 
 class MELOSIC_EXPORT Playlist {
 public:
-    typedef boost::iostreams::input_seekable category;
+    struct category : boost::iostreams::input, boost::iostreams::device_tag
+    {};
     typedef char char_type;
 
     typedef Track value_type;
@@ -57,7 +58,7 @@ public:
     typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
-    Playlist(std::string, Decoder::Manager&);
+    Playlist(std::string);
     ~Playlist();
 
     MELOSIC_LOCAL std::streamsize read(char* s, std::streamsize n);

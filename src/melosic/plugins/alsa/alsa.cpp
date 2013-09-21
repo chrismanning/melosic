@@ -22,7 +22,6 @@
 #include <memory>
 
 #include <boost/variant.hpp>
-#include <boost/scope_exit.hpp>
 #include <boost/asio/posix/stream_descriptor.hpp>
 
 #include <melosic/common/error.hpp>
@@ -49,14 +48,14 @@ static constexpr Plugin::Info alsaInfo("ALSA",
     << ErrorTag::Plugin::Info(::alsaInfo));\
 }
 
-static constexpr snd_pcm_format_t formats[] = {
+static constexpr std::array<snd_pcm_format_t, 5> formats{{
     SND_PCM_FORMAT_S8,
     SND_PCM_FORMAT_S16_LE,
     SND_PCM_FORMAT_S24_3LE,
     SND_PCM_FORMAT_S24_LE,
     SND_PCM_FORMAT_S32_LE
-};
-static constexpr uint8_t bpss[] = {8, 16, 24, 24, 32};
+}};
+static constexpr std::array<uint8_t, 5> bpss{{8, 16, 24, 24, 32}};
 
 Config::Conf conf{"ALSA"};
 snd_pcm_uframes_t frames = 1024;
@@ -154,20 +153,35 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
         if(snd_pcm_hw_params_test_format(m_pdh, m_params, fmt) < 0) {
             WARN_LOG(logject) << "unsupported format";
-            auto p = std::find(formats, formats + sizeof(formats), fmt);
-            if(p != formats + sizeof(formats)) {
-                while(++p != formats + sizeof(formats)) {
-                    WARN_LOG(logject) << "trying higher bps";
-                    if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *p)) {
-                        fmt = *p;
-                        as.target_bps = bpss[p-formats];
+
+            auto p = std::find(formats.begin(), formats.end(), fmt);
+            auto bps = &bpss[std::distance(formats.begin(), p)];
+            for(; p < formats.end(); p++, bps++) {
+                WARN_LOG(logject) << "trying higher bps of " << static_cast<unsigned>(*bps);
+                if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *p)) {
+                    fmt = *p;
+                    as.target_bps = *bps;
+                    WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(as.target_bps);
+                    break;
+                }
+            }
+
+            if(p == formats.end()) {
+                auto rp = std::find(formats.rbegin(), formats.rend(), fmt);
+                bps = &bpss[std::distance(formats.rbegin(), rp)];
+                for(; rp < formats.rend(); rp++, bps--) {
+                    WARN_LOG(logject) << "trying lower bps of " << static_cast<unsigned>(*bps);
+                    if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *rp)) {
+                        fmt = *rp;
+                        as.target_bps = *bps;
+                        WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(as.target_bps);
                         break;
                     }
-                    WARN_LOG(logject) << "unsupported format";
                 }
-
-                if(p == formats + sizeof(formats))
-                    BOOST_THROW_EXCEPTION(DeviceParamException());
+                if(rp == formats.rend()) {
+                    ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
+                    return;
+                }
             }
         }
 
@@ -189,16 +203,17 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         auto n = snd_pcm_poll_descriptors(m_pdh, m_pfds.data(), m_pfds.size());
         TRACE_LOG(logject) << "no. poll descriptors: " << m_pfds.size();
         TRACE_LOG(logject) << "no. poll descriptors filled: " << n;
+        assert(!m_pfds.empty());
         if((n < 0) && (ec = {n, alsa_category}))
             return;
 
         m_mangled_revents = static_cast<bool>(m_pfds.data()->events & POLLIN);
-        m_pfds.clear();
 
-        if(m_asio_fd.is_open())
+        if(m_asio_fd.is_open()) {
             m_asio_fd.cancel();
-        m_asio_fd = ASIO::posix::stream_descriptor(get_io_service(), m_pfds.data()->fd);
-
+            m_asio_fd.close();
+        }
+        if(m_asio_fd.assign(m_pfds.data()->fd, ec)) return;
 
         {
             auto events = m_pfds.data()->events;
@@ -225,6 +240,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             if(events & POLLWRBAND)
                 TRACE_LOG(logject) << "events: POLLWRBAND";
         }
+        m_pfds.clear();
 
         m_state = Output::DeviceState::Ready;
         assert(!ec);
@@ -288,6 +304,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
             if((ec = {snd_pcm_close(m_pdh), alsa_category})) return;
         }
+        m_pfds.clear();
+        m_asio_fd.release();
         m_state = Output::DeviceState::Stopped;
         m_pdh = nullptr;
         assert(!ec);
@@ -305,13 +323,9 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         auto frames = snd_pcm_bytes_to_frames(m_pdh, size);
         auto r = snd_pcm_writei(m_pdh, ptr, frames);
 
-        if(r == -(int)std::errc::broken_pipe) {
+        if(r < 0) {
             if(m_pdh != nullptr)
-                snd_pcm_recover(m_pdh, r, false);
-            ec = {static_cast<int>(r), alsa_category};
-            return 0;
-        }
-        else if(r < 0) {
+                r = snd_pcm_recover(m_pdh, r, false);
             ec = {static_cast<int>(r), alsa_category};
             return 0;
         }
@@ -367,7 +381,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     bool m_non_blocking = true;
     bool m_mangled_revents = true;
     AudioSpecs m_current_specs;
-    std::string m_name = "default"s;
+    std::string m_name{"default"};
     std::string m_desc;
     Output::DeviceState m_state;
 };
@@ -376,8 +390,6 @@ typedef ASIO::AudioOutputService<AlsaOutputServiceImpl> AlsaOutputService;
 typedef ASIO::BasicAudioOutput<AlsaOutputService> AlsaAsioOutput;
 
 extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
-    ASIO::io_service io_service;
-    AlsaAsioOutput aao(io_service);
     //TODO: make this more C++-like
     void ** hints, ** n;
     char * name, * desc, * io;
@@ -393,11 +405,9 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
         name = snd_device_name_get_hint(*n, "NAME");
         desc = snd_device_name_get_hint(*n, "DESC");
         io = snd_device_name_get_hint(*n, "IOID");
-        if(io == nullptr || filter == io) {
-            if(name && desc) {
-                names.emplace_back(name, desc);
-                TRACE_LOG(logject) << names.back();
-            }
+        if((io == nullptr || filter == io) && (name && desc)) {
+            names.emplace_back(name, desc);
+            TRACE_LOG(logject) << names.back();
         }
         if(name != nullptr)
             free(name);
@@ -418,9 +428,8 @@ void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) 
     using boost::get;
     using Melosic::Config::get;
     try {
-        if(key == "frames") {
+        if(key == "frames")
             ::frames = get<snd_pcm_uframes_t>(val);
-        }
         else if(key == "resample")
             ::resample = get<bool>(val);
     }
@@ -460,7 +469,6 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     std::unique_lock<std::mutex> l;
     std::tie(base, l) = confman->getConfigRoot();
     loadedSlot(base, l);
-//    confman->getLoadedSignal().connect(loadedSlot);
 }
 
 extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {

@@ -140,6 +140,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     }
 
 protected:
+    AudioOutputBase() = default;
+
     virtual service_type& get_service() noexcept = 0;
     virtual const service_type& get_service() const noexcept = 0;
 
@@ -168,7 +170,11 @@ struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
 
-    BasicAudioOutput(BasicAudioOutput&&) = default;
+    BasicAudioOutput(BasicAudioOutput&&) = delete;
+
+    ~BasicAudioOutput() {
+        m_service.destroy(get_implementation());
+    }
 
     service_type& get_service() noexcept override {
         return reinterpret_cast<AudioOutputService<AudioOutputServiceBase>&>(m_service);

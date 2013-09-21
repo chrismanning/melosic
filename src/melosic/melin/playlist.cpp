@@ -44,22 +44,20 @@ struct PlaylistChanged : Signals::Signal<Signals::Playlist::PlaylistChanged> {
 
 class Manager::impl {
 public:
-    impl(Decoder::Manager& decman) :
-        decman(decman)
+    impl()
     {}
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, const std::string& name) {
         lock_guard l(mu);
-        return playlists.insert(pos, std::make_shared<Core::Playlist>(name, decman));
+        return playlists.insert(pos, std::make_shared<Core::Playlist>(name));
     }
 
     Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
         lock_guard l(mu);
         if(count_ == 0)
             return pos;
-        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++) {
-            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "s + std::to_string(i+beg), decman));
-        }
+        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++)
+            playlists.insert(pos + i, std::make_shared<Core::Playlist>("Playlist "s + std::to_string(i+beg)));
         return ++pos;
     }
 
@@ -129,7 +127,6 @@ public:
 private:
     mutex mu;
 
-    Decoder::Manager& decman;
     PlaylistChanged playlistChanged;
     PlaylistType current;
     Manager::list playlists;
@@ -137,7 +134,7 @@ private:
     friend class Manager;
 };
 
-Manager::Manager(Decoder::Manager& decman) : pimpl(new impl(decman)) {}
+Manager::Manager() : pimpl(new impl) {}
 
 Manager::~Manager() {}
 

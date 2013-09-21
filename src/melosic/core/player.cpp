@@ -25,12 +25,11 @@ using lock_guard = std::lock_guard<mutex>;
 #include <atomic>
 #include <functional>
 
-#include <boost/iostreams/write.hpp>
 #include <boost/iostreams/read.hpp>
+#include <boost/iostreams/compose.hpp>
 namespace io = boost::iostreams;
 #include <boost/scope_exit.hpp>
 #include <boost/asio.hpp>
-#include <boost/asio/use_future.hpp>
 #include <boost/variant.hpp>
 
 #include <melosic/common/error.hpp>
@@ -75,8 +74,10 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     void play() {
         unique_lock l(mu);
         play_impl();
-        if(state_impl() == DeviceState::Playing)
+        if(state_impl() == DeviceState::Playing) {
+            l.unlock();
             write_handler(boost::system::error_code(), buffer_size);
+        }
     }
     void play_impl();
 
@@ -125,7 +126,6 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     friend struct State;
 
     NotifyPlayPos notifyPlayPosition;
-    std::atomic_bool end;
     Logger::Logger logject{logging::keywords::channel = "Player"};
     friend class Player;
 
@@ -146,63 +146,127 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     std::list<ASIO::mutable_buffer> in_buf;
 
+    struct Widener : io::multichar_input_filter {
+        struct category : io::multichar_input_filter::category, io::optimally_buffered_tag {};
+
+        Widener(std::size_t buffer_size, uint16_t from, uint16_t to) noexcept :
+            buffer_size(buffer_size),
+            from(from),
+            to(to)
+        {
+            assert(!(to % 8));
+            assert(!(from % 8));
+        }
+
+        template<typename Source>
+        std::streamsize read(Source& src, char* s, std::streamsize n) {
+            if(to == from)
+                return io::read(src, s, n);
+
+            assert(!(n % (to/8)));
+            const auto tbytes = (to/8);
+            const auto fbytes = (from/8);
+
+            std::streamsize i;
+            for(i = 0; i < n; i += tbytes) {
+                std::streamsize r;
+                if(to > from) {
+                    for(int j = 0; j < (tbytes - fbytes); j++)
+                        *s++ = 0;
+                    r = io::read(src, s, fbytes);
+                    if(r <= 0)
+                        return r;
+                    s += r;
+                }
+                else if(to < from) {
+                    char c[fbytes - tbytes];
+                    r = io::read(src, c, fbytes - tbytes);
+                    assert(r == fbytes - tbytes);
+                    r = io::read(src, s, tbytes);
+                    if(r <= 0)
+                        return r;
+                    s += tbytes;
+                }
+                else assert(false);
+            }
+            return i;
+        }
+
+        std::streamsize optimal_buffer_size() const noexcept {
+            return buffer_size;
+        }
+
+    private:
+        const std::size_t buffer_size;
+        const uint16_t from, to;
+    };
+
     void write_handler(boost::system::error_code ec, std::size_t n) {
+        unique_lock l(mu);
         TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
         if(ec) {
-            if(ec.value() == boost::system::errc::operation_canceled)
+            if(ec.value() == boost::system::errc::operation_canceled) {
+                TRACE_LOG(logject) << "write error: " << ec.message();
                 return;
+            }
             ERROR_LOG(logject) << "write error: " << ec.message();
             stop_impl();
             return;
         }
         ec.clear();
 
-        auto& strand = asioOutput->get_implementation()->get_strand();
-        strand.post([this, n, ec, strand] () mutable {
-            auto playlist = playman.currentPlaylist();
+        auto playlist = playman.currentPlaylist();
 
-            if(!playlist) {
-                ec = ASIO::error::make_error_code(ASIO::error::no_data);
-                n = 0;
-                stop_impl();
-            }
-            else if(!*playlist) {
+        if(!playlist) {
+            ec = ASIO::error::make_error_code(ASIO::error::no_data);
+            n = 0;
+            stop_impl();
+        }
+        else if(!*playlist) {
+            ec = ASIO::error::make_error_code(ASIO::error::eof);
+            n = 0;
+            stop_impl();
+            playlist->jumpTo(0);
+        }
+        else try {
+            n = buffer_size;
+            ASIO::mutable_buffer tmp{::operator new(n), n};
+            in_buf.emplace_back(tmp);
+
+            const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
+            Widener widen{buffer_size, as.bps, as.target_bps};
+            TRACE_LOG(logject) << "widening from " << (unsigned)as.bps << " to " << (unsigned)as.target_bps;
+
+            auto composite = io::compose(widen, boost::ref(*playlist));
+
+            auto n_ = io::read(composite, ASIO::buffer_cast<char*>(tmp), n);
+            if(n_ <= 0) {
                 ec = ASIO::error::make_error_code(ASIO::error::eof);
-                n = 0;
+                n_ = 0;
                 stop_impl();
                 playlist->jumpTo(0);
             }
-            else try {
-                n = buffer_size;
-                ASIO::mutable_buffer tmp{::operator new(n), n};
-                in_buf.emplace_back(tmp);
-                auto n_ = playlist->read(ASIO::buffer_cast<char*>(tmp), n);
-                if(n_ <= 0) {
-                    ec = ASIO::error::make_error_code(ASIO::error::eof);
-                    n = 0;
-                    stop_impl();
-                    playlist->jumpTo(0);
-                }
-                n = static_cast<std::size_t>(n_);
-            }
-            catch(...) {
-                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
-                stop_impl();
-                playlist->next();
-                play_impl();
-            }
-            strand.post([this, ec, n] () {
-                read_handler(ec, n);
-            });
-        });
+            n = static_cast<std::size_t>(n_);
+        }
+        catch(...) {
+            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+            stop_impl();
+            playlist->next();
+            play_impl();
+        }
+        l.unlock();
+        read_handler(ec, n);
     }
 
     void read_handler(boost::system::error_code ec, std::size_t n) {
+        unique_lock l(mu);
         TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
         if(ec) {
-            if(ec.value() == boost::system::errc::operation_canceled)
+            if(ec.value() == boost::system::errc::operation_canceled || ec.value() == ASIO::error::eof) {
+                TRACE_LOG(logject) << "read error: " << ec.message();
                 return;
-            ERROR_LOG(logject) << "write error: " << ec.message();
+            }
+            ERROR_LOG(logject) << "read error: " << ec.message();
             stop_impl();
             return;
         }
@@ -212,10 +276,13 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             return;
         }
 
-        ASIO::mutable_buffer tmp{std::move(in_buf.front())};
+        ASIO::mutable_buffer tmp{in_buf.front()};
         in_buf.pop_front();
+        l.unlock();
+        assert(asioOutput);
+        auto self = shared_from_this();
         ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
-        [this, tmp] (boost::system::error_code ec, std::size_t n) {
+        [this, tmp, self] (boost::system::error_code ec, std::size_t n) {
             if(n < ASIO::buffer_size(tmp)) {
                 ASIO::mutable_buffer tmp2;
                 ASIO::buffer_copy(tmp2, tmp + n);
@@ -310,7 +377,9 @@ struct Stopped : State {
             stateMachine->changeDevice();
             if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
-            stateMachine->asioOutput->prepare(playman->currentPlaylist()->currentTrack()->getAudioSpecs());
+            auto& as = playman->currentPlaylist()->currentTrack()->getAudioSpecs();
+            stateMachine->asioOutput->prepare(as);
+            TRACE_LOG(stateMachine->logject) << "sink prepared with specs:\n" << as;
             stateMachine->asioOutput->play();
             auto ptr = stateMachine->changeState<Playing>();
             assert(ptr == this);
@@ -394,6 +463,7 @@ struct Paused;
 struct Playing : virtual State, Stop, Tell {
     explicit Playing(StateChanged& sc) : State(sc), Stop(sc), Tell(sc) {
         assert(stateMachine->asioOutput);
+        assert(stateMachine->asioOutput->state() == Output::DeviceState::Playing);
         stateChanged(Output::DeviceState::Playing);
     }
 
@@ -442,7 +512,7 @@ struct Paused : virtual State, Stop, Tell {
     }
 };
 
-Player::impl::impl(Kernel &kernel) :
+Player::impl::impl(Kernel& kernel) :
     playman(kernel.getPlaylistManager()),
     outman(kernel.getOutputManager()),
     confman(kernel.getConfigManager()),
@@ -451,7 +521,6 @@ Player::impl::impl(Kernel &kernel) :
     currentState_((State::stateMachine = this, //init statics before first construction
                    State::playman = &playman, //dirty comma operator usage
                    std::make_shared<Stopped>(stateChanged))),
-    end(false),
     logject(logging::keywords::channel = "StateMachine")
 {
     conf.putNode("buffer size", buffer_size);
@@ -462,7 +531,10 @@ Player::impl::impl(Kernel &kernel) :
 
 Player::impl::~impl() {
     stop();
-    end = true;
+    lock_guard l(mu);
+    if(asioOutput)
+        asioOutput->cancel();
+    asioOutput.reset();
 }
 
 void Player::impl::play_impl() {
@@ -483,9 +555,8 @@ void Player::impl::stop_impl() {
 
 void Player::impl::seek(chrono::milliseconds dur) {
     TRACE_LOG(logject) << "Seek...";
-    if(playman.currentPlaylist()) {
+    if(playman.currentPlaylist())
         playman.currentPlaylist()->seek(dur);
-    }
 }
 
 chrono::milliseconds Player::impl::tell_impl() {
@@ -504,9 +575,11 @@ void Player::impl::trackChangeSlot(const Track& track) {
             assert(track == *cp->currentTrack());
             if(asioOutput->currentSpecs() != track.getAudioSpecs()) {
                 LOG(logject) << "Changing sink specs for new track";
+                TRACE_LOG(logject) << "new track specs: " << track.getAudioSpecs();
                 asioOutput->stop();
                 this_thread::sleep_for(100ms);
                 asioOutput->prepare(const_cast<Track&>(track).getAudioSpecs());
+                TRACE_LOG(logject) << "prepared track specs: " << track.getAudioSpecs();
                 this_thread::sleep_for(100ms);
                 asioOutput->play();
             }
@@ -528,7 +601,6 @@ void Player::impl::changeDevice() {
         asioOutput->cancel();
         asioOutput->stop();
     }
-//    lock_guard l(sinkWrapper_.mu);
     asioOutput = std::move(outman.createASIOSink());
 }
 
@@ -550,7 +622,9 @@ Player::Player(Kernel& kernel) :
     pimpl(new impl(kernel))
 {}
 
-Player::~Player() {}
+Player::~Player() {
+    pimpl->stop();
+}
 
 void Player::play() {
     pimpl->play();

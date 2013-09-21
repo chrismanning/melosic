@@ -102,27 +102,22 @@ public:
     }
 
     std::unique_ptr<ASIO::AudioOutputBase> createASIOSink() {
-        TRACE_LOG(logject) << "Creating player sink";
+        TRACE_LOG(logject) << "Creating player sink " << sinkName;
         lock_guard l(mu);
-        if(!asiofact) {
-            ERROR_LOG(logject) << "Sink factory not valid";
+
+        auto it = asioOutputFactories.find(sinkName);
+
+        if(it == asioOutputFactories.end()) {
+            BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(sinkName));
             return nullptr;
         }
 
-        return asiofact(io_service);
+        return it->second(io_service, sinkName);
     }
 
     void setASIOSink(std::string sinkname) {
         unique_lock l(mu);
-        LOG(logject) << "Attempting to get player sink factory: " << sinkname;
-        auto it = asioOutputFactories.find(sinkname);
-
-        if(it == asioOutputFactories.end()) {
-            BOOST_THROW_EXCEPTION(DeviceNotFoundException() << ErrorTag::DeviceName(sinkname));
-        }
-        sinkName = sinkname;
-        auto f = it->second;
-        asiofact = [=] (ASIO::io_service& service) { return f(service, it->first); };
+        sinkName = std::move(sinkname);
         l.unlock();
         playerSinkChanged();
     }
@@ -135,7 +130,6 @@ private:
     mutex mu;
     ASIO::io_service& io_service;
     std::string sinkName;
-    std::function<std::unique_ptr<Melosic::ASIO::AudioOutputBase>(ASIO::io_service&)> asiofact;
     std::map<DeviceName, ASIOFactory> asioOutputFactories;
     Config::Conf conf{"Output"};
     PlayerSinkChanged playerSinkChanged;
@@ -156,7 +150,7 @@ const std::string& Manager::currentSinkName() const {
     return pimpl->currentSinkName();
 }
 
-std::unique_ptr<ASIO::AudioOutputBase> Manager::createASIOSink() {
+std::unique_ptr<ASIO::AudioOutputBase> Manager::createASIOSink() const {
     return std::move(pimpl->createASIOSink());
 }
 

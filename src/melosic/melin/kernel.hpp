@@ -80,7 +80,7 @@ public:
     MELOSIC_EXPORT boost::asio::io_service& getIOService();
 
 private:
-    class impl;
+    struct impl;
     std::unique_ptr<impl> pimpl;
 };
 

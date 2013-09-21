@@ -44,7 +44,7 @@ typedef std::function<std::unique_ptr<Playable>(IO::BiDirectionalClosableSeekabl
 class Manager;
 
 struct FileTypeResolver {
-    FileTypeResolver(Manager& decman, std::string ext);
+    FileTypeResolver(const Manager& decman, std::string ext);
 
     FileTypeResolver(const FileTypeResolver&) = delete;
     FileTypeResolver(FileTypeResolver&&) = default;
@@ -84,7 +84,7 @@ public:
         addAudioFormat(fact, std::list<std::string>{std::move(extensions)...});
     }
 
-    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path);
+    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path) const;
 
 private:
     class impl;

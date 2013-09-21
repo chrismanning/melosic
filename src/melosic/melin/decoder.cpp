@@ -93,13 +93,13 @@ void Manager::addAudioFormat(Factory fact, std::string extension) {
 
 decltype(FileTypeResolver::chan) FileTypeResolver::chan;
 
-FileTypeResolver Manager::getFileTypeResolver(const boost::filesystem::path& path) {
+FileTypeResolver Manager::getFileTypeResolver(const boost::filesystem::path& path) const {
     if(!path.has_extension())
         BOOST_THROW_EXCEPTION(UnsupportedTypeException() << ErrorTag::FilePath(path));
     return FileTypeResolver(*this, path.extension().string());
 }
 
-FileTypeResolver::FileTypeResolver(Manager& decman, std::string ext) {
+FileTypeResolver::FileTypeResolver(const Manager& decman, std::string ext) {
     CHAN_TRACE_LOG(logject, chan) << "Trying to open file with extension " << ext;
     auto& inputFactories = decman.pimpl->inputFactories;
     boost::to_lower(ext);

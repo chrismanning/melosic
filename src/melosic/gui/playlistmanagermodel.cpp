@@ -57,10 +57,10 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
             if(playlists.contains(ptr.get()))
                 return QVariant::fromValue(playlists[ptr.get()]);
             auto nthis = const_cast<PlaylistManagerModel*>(this);
+            auto np = new PlaylistModel(ptr, nthis);
+            nthis->playlists.insert(ptr.get(), np);
 
-            return QVariant::fromValue(nthis->playlists[ptr.get()] = new PlaylistModel(ptr, nthis));
-//            auto it = playlists.find(QString::fromStdString(playman.range()[index.row()]->getName()));
-//            return *it ? QVariant::fromValue(*it) : QVariant();
+            return QVariant::fromValue(np);
         }
         default:
             return QVariant();

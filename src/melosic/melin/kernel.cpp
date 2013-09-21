@@ -28,35 +28,38 @@ namespace asio = boost::asio;
 #include <melosic/common/thread.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/directories.hpp>
+#include <melosic/core/track.hpp>
 
 namespace Melosic {
 namespace Core {
 
-class Kernel::impl {
-    impl(Kernel& k)
-        : io_service(),
-          null_worker(io_service),
-          tman(&io_service),
-          confman("melosic.conf"),
-          plugman(confman),
-          outman(confman, io_service),
-          playlistman(decman)
-    {}
+struct Kernel::impl {
+    impl() :
+        confman("melosic.conf"),
+        plugman(confman),
+        io_service(),
+        outman(confman, io_service),
+        null_worker(new asio::io_service::work(io_service)),
+        tman(&io_service),
+        null_worker_(std::move(null_worker))
+    {
+        Track::setDecoderManager(&decman);
+    }
 
-    asio::io_service io_service;
-    asio::io_service::work null_worker;
-    Thread::Manager tman;
+    Melosic::Playlist::Manager playlistman;
     Config::Manager confman;
     Plugin::Manager plugman;
     Input::Manager inman;
     Decoder::Manager decman;
-    Output::Manager outman;
     Encoder::Manager encman;
-    Melosic::Playlist::Manager playlistman;
-    friend class Kernel;
+    asio::io_service io_service;
+    Output::Manager outman;
+    std::unique_ptr<asio::io_service::work> null_worker;
+    Thread::Manager tman;
+    std::unique_ptr<asio::io_service::work> null_worker_;
 };
 
-Kernel::Kernel() : pimpl(new impl(*this)) {}
+Kernel::Kernel() : pimpl(new impl) {}
 
 Kernel::~Kernel() {
     try {

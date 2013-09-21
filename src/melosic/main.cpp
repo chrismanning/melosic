@@ -54,13 +54,13 @@ int main(int argc, char* argv[]) {
         Core::Kernel kernel;
         Plugin::Manager& plugman = kernel.getPluginManager();
 
+        Core::Player player(kernel);
+
         kernel.getConfigManager().loadConfig();
 
         plugman.loadPlugins(kernel);
 
 //        QQmlDebuggingEnabler enabler;
-
-        Core::Player player(kernel);
 
         MainWindow win(kernel, player);
 
@@ -69,4 +69,5 @@ int main(int argc, char* argv[]) {
     catch(...) {
         ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
     }
+    return -1;
 }

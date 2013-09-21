@@ -68,7 +68,7 @@ public:
 
     const std::string& currentSinkName() const;
 
-    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink();
+    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink() const;
     Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;
 
 private:

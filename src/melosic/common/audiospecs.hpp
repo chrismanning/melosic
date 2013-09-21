@@ -48,6 +48,16 @@ struct AudioSpecs {
     uint64_t total_samples = 0;
 };
 
+inline std::ostream& operator<<(std::ostream& os, const AudioSpecs& as) {
+    os << "channels: " << static_cast<unsigned>(as.channels);
+    os << "; bps: " << static_cast<unsigned>(as.bps);
+    os << "; target_bps: " << static_cast<unsigned>(as.target_bps);
+    os << "; sample_rate: " << as.sample_rate;
+    os << "; target_sample_rate: " << as.target_sample_rate;
+    os << "; total_samples: " << as.total_samples;
+    return os;
+}
+
 } // end namespace Melosic
 
 #endif // MELOSIC_AUDIOSPECS_HPP
