@@ -146,10 +146,10 @@ public:
                         boost::system::error_code ec;
                         auto n = asio_service->poll_one(ec);
                         if(n == 0) {
-                            std::this_thread::sleep_for(10ms);
-                            std::this_thread::yield();
                         }
                     }
+                    std::this_thread::sleep_for(10ms);
+                    std::this_thread::yield();
                 }
             }
         };
