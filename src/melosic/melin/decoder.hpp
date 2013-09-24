@@ -21,9 +21,9 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
+#include <optional>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/range/iterator_range.hpp>
 #include <boost/mpl/lambda.hpp>
 namespace { namespace mpl = boost::mpl; }
 
@@ -37,27 +37,13 @@ namespace IO {
 class File;
 }
 
+namespace Core {
+class Track;
+}
+
 namespace Decoder {
 typedef Input::Playable Playable;
 typedef std::function<std::unique_ptr<Playable>(IO::BiDirectionalClosableSeekable&)> Factory;
-
-class Manager;
-
-struct FileTypeResolver {
-    FileTypeResolver(const Manager& decman, std::string ext);
-
-    FileTypeResolver(const FileTypeResolver&) = delete;
-    FileTypeResolver(FileTypeResolver&&) = default;
-
-    std::unique_ptr<Decoder::Playable> getDecoder(IO::File& file);
-    std::unique_ptr<TagLib::File> getTagReader(IO::File& file);
-
-private:
-    Factory decoderFactory;
-    std::unique_ptr<TagLib::IOStream> taglibFile;
-    std::function<TagLib::File*(TagLib::IOStream*)> tagFactory;
-    static constexpr auto chan = "FileTypeResolver";
-};
 
 class Manager {
 public:
@@ -81,15 +67,16 @@ public:
     void addAudioFormat(Factory fact, Strings&&... extensions) {
         static_assert(MultiArgsTrait<mpl::lambda<std::is_same<std::string, mpl::_1>>::type, Strings...>::value,
                       "extensions must be std::strings or convertible to");
-        addAudioFormat(fact, std::list<std::string>{std::move(extensions)...});
+        addAudioFormat(fact, {std::move(extensions)...});
     }
 
-    FileTypeResolver getFileTypeResolver(const boost::filesystem::path& path) const;
+    std::optional<Core::Track> openTrack(boost::filesystem::path filepath,
+                            chrono::milliseconds start = 0ms,
+                            chrono::milliseconds end = 0ms) const noexcept;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
-    friend struct FileTypeResolver;
 };
 
 } // namespace Decoder

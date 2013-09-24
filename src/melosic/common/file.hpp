@@ -38,10 +38,12 @@ class File : public BiDirectionalClosableSeekable {
 public:
     static constexpr OpenMode defaultMode = std::ios_base::binary | std::ios_base::in;
 
-    File(boost::filesystem::path filename, OpenMode mode_ = defaultMode)
+    File() = default;
+
+    explicit File(boost::filesystem::path filename, OpenMode mode_ = defaultMode)
         :
-          impl(filename, mode_),
-          filename_(std::move(filename)), mode_(mode_)
+          impl(filename.string(), mode_),
+          m_filename(std::move(filename)), m_mode(mode_)
     {
 //        impl.exceptions(impl.failbit | impl.badbit);
 //        open(mode());
@@ -52,21 +54,27 @@ public:
     }
 
     const boost::filesystem::path& filename() const {
-        return filename_;
+        return m_filename;
     }
 
     explicit operator bool() const {
         return impl.is_open();
     }
 
-    void open(OpenMode mode = defaultMode) {
+    void open(const boost::filesystem::path& filename, OpenMode mode = defaultMode) {
         try {
-            impl.open(filename_, mode);
+            impl.close();
+            m_filename = filename;
+            impl.open(m_filename.string(), mode);
         }
         catch(...) {
-            BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(filename_)
+            BOOST_THROW_EXCEPTION(FileOpenException() << ErrorTag::FilePath(m_filename)
                                   << boost::errinfo_nested_exception(boost::current_exception()));
         }
+    }
+
+    void open(OpenMode mode = defaultMode) {
+        open(m_filename, mode);
     }
 
     std::streamsize read(char * s, std::streamsize n) override {
@@ -74,7 +82,7 @@ public:
             return io::read(impl, s, n);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileReadException() << ErrorTag::FilePath(filename_)
+            BOOST_THROW_EXCEPTION(FileReadException() << ErrorTag::FilePath(m_filename)
                                   << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
@@ -84,7 +92,7 @@ public:
             return io::write(impl, s, n);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileWriteException() << ErrorTag::FilePath(filename_)
+            BOOST_THROW_EXCEPTION(FileWriteException() << ErrorTag::FilePath(m_filename)
                                   << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
@@ -94,7 +102,7 @@ public:
             return io::seek(impl, off, way, std::ios_base::in);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_)
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(m_filename)
                                   << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
@@ -104,7 +112,7 @@ public:
             return io::seek(impl, off, way, std::ios_base::out);
         }
         catch(std::ios_base::failure& e) {
-            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(filename_)
+            BOOST_THROW_EXCEPTION(FileSeekException() << ErrorTag::FilePath(m_filename)
                                   << boost::errinfo_nested_exception(boost::current_exception()));
         }
     }
@@ -119,11 +127,11 @@ public:
     }
 
     void reOpen() override {
-        open(mode_);
+        open(m_mode);
     }
 
     std::ios_base::openmode mode() const {
-        return mode_;
+        return m_mode;
     }
 
     void clear() {
@@ -135,8 +143,8 @@ private:
     io::file_descriptor impl;
 //    io::file impl;
 //    std::fstream impl;
-    boost::filesystem::path filename_;
-    std::ios_base::openmode mode_;
+    boost::filesystem::path m_filename;
+    std::ios_base::openmode m_mode;
 };
 
 } // IO

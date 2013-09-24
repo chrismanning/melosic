@@ -54,7 +54,8 @@ static TrackChanged trackChangedSignal;
 
 class Playlist::impl {
 public:
-    impl(std::string name) :
+    impl(Decoder::Manager& decman, std::string name) :
+        decman(decman),
         name(name)
     {}
 
@@ -187,7 +188,10 @@ public:
                                chrono::milliseconds end,
                                unique_lock& l)
     {
-        auto r = tracks.emplace(pos, std::move(filename), start, end);
+        auto v = decman.openTrack(std::move(filename), start, end);
+        if(!v)
+            return pos;
+        auto r = tracks.emplace(pos, *v);
 
         if(size() == 1) {
             current_track_ = std::begin(tracks);
@@ -207,7 +211,10 @@ public:
         std::list<Playlist::const_iterator> its;
         for(const auto& path : values) {
             try {
-                its.push_back(tracks.emplace(pos, path));
+                auto v = decman.openTrack(path);
+                if(!v)
+                    continue;
+                its.push_back(tracks.emplace(pos, *v));
             }
             catch(...) {
                 ERROR_LOG(logject) << format("Track couldn't be added to playlist \"%1%\" %2%:%3%")
@@ -242,7 +249,10 @@ public:
                       chrono::milliseconds end,
                       unique_lock& l)
     {
-        tracks.emplace_back(std::move(filename), start, end);
+        auto v = decman.openTrack(std::move(filename), start, end);
+        if(!v)
+            return;
+        tracks.emplace_back(*v);
         if(size() == 1) {
             current_track_ = std::begin(tracks);
             trackChanged(std::cref(*currentTrack()), l);
@@ -272,11 +282,12 @@ public:
     Mutex mu;
     Playlist::list_type tracks;
     Playlist::iterator current_track_;
+    Decoder::Manager& decman;
     std::string name;
 };
 
-Playlist::Playlist(std::string name) :
-    pimpl(new impl(std::move(name))) {}
+Playlist::Playlist(Decoder::Manager& decman, std::string name) :
+    pimpl(new impl(decman, std::move(name))) {}
 
 Playlist::~Playlist() {}
 

@@ -26,6 +26,7 @@ using lock_guard = std::lock_guard<Mutex>;
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
+#include <taglib/fileref.h>
 
 #include "track.hpp"
 #include <melosic/common/stream.hpp>
@@ -40,40 +41,42 @@ namespace Core {
 
 static Logger::Logger logject(logging::keywords::channel = "Track");
 
-class Track::impl {
+class Track::impl : public std::enable_shared_from_this<impl> {
 public:
-    impl(boost::filesystem::path filepath,
-         chrono::milliseconds start,
-         chrono::milliseconds end)
-        : input(new IO::File(filepath)),
-          start(start),
-          end(end),
-          fileResolver(decman->getFileTypeResolver(filepath))
+    impl(boost::filesystem::path filename, Decoder::Factory factory,
+         chrono::milliseconds start, chrono::milliseconds end)
+        : filepath(std::move(filename)), decoder_factory(std::move(factory)), start(start), end(end)
     {
-        input->seek(0, std::ios_base::beg, std::ios_base::in);
-        reloadDecoder();
-        reloadTags();
-        taglibfile.reset();
-        close();
+//        open(filename, start, end);
     }
 
     ~impl() {}
 
+    void open(boost::filesystem::path filename, chrono::milliseconds start, chrono::milliseconds end) {
+        using std::swap;
+
+        close();
+        swap(filepath, filename);
+        swap(this->start, start);
+        swap(this->end, end);
+        input.open(filepath);
+        reloadDecoder();
+        reloadTags();
+        seek(0ms);
+    }
+
     bool isOpen() {
-        return input->isOpen() && static_cast<bool>(decoder);
+        return input.isOpen() && static_cast<bool>(decoder);
     }
 
     void reOpen() {
-        if(!input->isOpen())
-            input->reOpen();
-        assert(input->isOpen());
-        reloadDecoder();
-        seek(start-start);
+        open(filepath, start, end);
     }
 
     void close() {
+        taglibfile.reset();
         decoder.reset();
-        input->close();
+        input.close();
     }
 
     std::streamsize read(char * s, std::streamsize n) {
@@ -109,6 +112,8 @@ public:
     chrono::milliseconds duration() {
         if(end > start)
             return end - start;
+        if(end == start)
+            return 0ms;
 
         return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
@@ -129,25 +134,25 @@ public:
 
     void reloadDecoder() {
         try {
-            decoder = fileResolver.getDecoder(*input);
+            decoder = decoder_factory(input);
             if(as == decoder->getAudioSpecs())
                 decoder->getAudioSpecs() = as;
             else
                 as = decoder->getAudioSpecs();
         }
         catch(DecoderException& e) {
-            e << ErrorTag::FilePath(input->filename());
+            e << ErrorTag::FilePath(input.filename());
             throw;
         }
     }
 
     void reloadTags() {
-        if(!isOpen())
-            reOpen();
-        auto pos = tell();
-        taglibfile = fileResolver.getTagReader(*input);
+        tags.clear();
+        taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
+        assert(taglibfile);
+        if(!taglibfile)
+            return;
         tags = taglibfile->properties();
-        seek(pos);
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
@@ -159,50 +164,44 @@ public:
     }
 
     const std::string& sourceName() {
-        return input->filename().string();
+        return input.filename().string();
     }
 
     impl* clone() {
-        return new impl(input->filename(), start, end);
+        return new impl(filepath, decoder_factory, start, end);
     }
 
 private:
     friend class Track;
-    std::unique_ptr<IO::File> input;
+    boost::filesystem::path filepath;
+    Decoder::Factory decoder_factory;
+    IO::File input;
     chrono::milliseconds start, end;
-    Decoder::FileTypeResolver fileResolver;
     std::unique_ptr<Decoder::Playable> decoder;
     std::unique_ptr<TagLib::File> taglibfile;
     TagLib::PropertyMap tags;
     AudioSpecs as;
     Mutex mu;
-
-    static const Decoder::Manager* decman;
 };
-const Decoder::Manager* Track::impl::decman{nullptr};
 
 Track::Track(boost::filesystem::path filename,
+             Decoder::Factory factory,
              chrono::milliseconds start,
              chrono::milliseconds end)
-    : pimpl(new impl(std::move(filename), start, end)) {}
+    : pimpl(std::make_shared<impl>(std::move(filename), std::move(factory), start, end)) {}
 
 Track::~Track() {}
-
-Track::Track(const Track& b) : pimpl(b.pimpl->clone()) {}
-
-Track::Track(Track&&) = default;
-
-Track& Track::operator=(Track b) {
-    lock_guard l(pimpl->mu);
-    using std::swap;
-    swap(pimpl, b.pimpl);
-    return *this;
-}
 
 bool Track::operator==(const Track& b) const {
     shared_lock_guard l1(pimpl->mu);
     shared_lock_guard l2(b.pimpl->mu);
     return pimpl == b.pimpl;
+}
+
+void Track::setTimePoints(chrono::milliseconds start, chrono::milliseconds end) {
+    lock_guard l(pimpl->mu);
+    pimpl->start = start;
+    pimpl->end = end;
 }
 
 std::streamsize Track::read(char * s, std::streamsize n) {
@@ -277,10 +276,6 @@ void Track::reloadTags() {
 void Track::reloadDecoder() {
     lock_guard l(pimpl->mu);
     pimpl->reloadDecoder();
-}
-
-void Track::setDecoderManager(const Decoder::Manager* decman) noexcept {
-    impl::decman = decman;
 }
 
 } // namespace Core

@@ -25,29 +25,27 @@
 #include <melosic/common/common.hpp>
 #include <melosic/common/stream.hpp>
 #include <melosic/melin/input.hpp>
+#include <melosic/melin/decoder.hpp>
 
 namespace Melosic {
-
-namespace Decoder {
-class Manager;
-}
-
 namespace Core {
 
 class MELOSIC_EXPORT Track : public Input::Playable, public IO::Closable {
+    explicit Track(boost::filesystem::path filename,
+                   Decoder::Factory,
+                   chrono::milliseconds start = 0ms,
+                   chrono::milliseconds end = 0ms);
+    friend class Decoder::Manager;
+
 public:
     typedef char char_type;
 
-    Track(boost::filesystem::path filename,
-          chrono::milliseconds start = 0ms,
-          chrono::milliseconds end = 0ms);
-
     virtual ~Track();
-    Track(const Track&);
-    Track(Track&&);
-    Track& operator=(Track);
 
     bool operator==(const Track&) const;
+
+    void setTimePoints(chrono::milliseconds start,
+                       chrono::milliseconds end);
 
     virtual void reset();
     MELOSIC_EXPORT virtual void seek(chrono::milliseconds dur);
@@ -70,7 +68,7 @@ public:
 
 private:
     class impl;
-    std::unique_ptr<impl> pimpl;
+    std::shared_ptr<impl> pimpl;
 };
 
 } // namespace Core

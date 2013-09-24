@@ -58,7 +58,7 @@ public:
     typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
-    Playlist(std::string);
+    Playlist(Decoder::Manager&, std::string);
     ~Playlist();
 
     MELOSIC_LOCAL std::streamsize read(char* s, std::streamsize n);

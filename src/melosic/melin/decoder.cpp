@@ -50,6 +50,7 @@ using namespace boost::adaptors;
 #include <melosic/common/file.hpp>
 #include <melosic/common/string.hpp>
 #include <melosic/core/taglibfile.hpp>
+#include <melosic/core/track.hpp>
 
 #include "decoder.hpp"
 
@@ -78,9 +79,12 @@ public:
         }
     }
 
+    std::optional<Core::Track> openTrack(boost::filesystem::path,
+                                         chrono::milliseconds,
+                                         chrono::milliseconds) noexcept;
+
 private:
     std::unordered_map<std::string, Factory> inputFactories;
-    friend struct FileTypeResolver;
 };
 
 Manager::Manager() : pimpl(new impl) {}
@@ -91,89 +95,39 @@ void Manager::addAudioFormat(Factory fact, std::string extension) {
     pimpl->addAudioFormat(fact, extension);
 }
 
-decltype(FileTypeResolver::chan) FileTypeResolver::chan;
-
-FileTypeResolver Manager::getFileTypeResolver(const boost::filesystem::path& path) const {
-    if(!path.has_extension())
-        BOOST_THROW_EXCEPTION(UnsupportedTypeException() << ErrorTag::FilePath(path));
-    return FileTypeResolver(*this, path.extension().string());
-}
-
-FileTypeResolver::FileTypeResolver(const Manager& decman, std::string ext) {
-    CHAN_TRACE_LOG(logject, chan) << "Trying to open file with extension " << ext;
-    auto& inputFactories = decman.pimpl->inputFactories;
+std::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path filepath,
+                                     chrono::milliseconds start,
+                                     chrono::milliseconds end) noexcept
+{
+    auto ext = filepath.extension().string();
+    if(ext.empty())
+        return {};
     boost::to_lower(ext);
-    CHAN_TRACE_LOG(logject, chan) << "lowered extension: " << ext;
+    TRACE_LOG(logject) << "Trying to open file with extension " << ext;
     auto fact = inputFactories.find(ext);
 
-    if(fact != inputFactories.end())
+    Factory decoderFactory;
+    TRACE_LOG(logject) << "Factory decoderFactory;";
+    if(fact != inputFactories.end()) {
+        TRACE_LOG(logject) << "fact != inputFactories.end()";
         decoderFactory = fact->second;
+    }
     else {
-        CHAN_WARN_LOG(logject, chan) << "Cannot open file with extension " << ext;
-        CHAN_WARN_LOG(logject, chan) << "An exception will be thrown when attempting to open";
-        decoderFactory = [=](Factory::argument_type a) -> Factory::result_type {
+        ERROR_LOG(logject) << "Cannot decode file with extension " << ext;
+        decoderFactory = [=](Factory::argument_type) -> Factory::result_type {
             BOOST_THROW_EXCEPTION(UnsupportedTypeException() << ErrorTag::FileExtension(ext));
         };
     }
 
-    if(ext == ".mp3")
-        tagFactory = [] (IOStream* a) { return new MPEG::File(a, nullptr); };
-    else if(ext == ".ogg")
-        tagFactory = [] (IOStream* a) { return new Ogg::Vorbis::File(a); };
-    else if(ext == ".oga")
-      /* .oga can be any audio in the Ogg container. First try FLAC, then Vorbis. */
-        tagFactory = [] (IOStream* a) {
-            TagLib::File* ptr = new Ogg::FLAC::File(a);
-            return ptr->isValid() ? ptr : new Ogg::Vorbis::File(a);
-        };
-    else if(ext == ".flac")
-        tagFactory = [] (IOStream* a) { return new FLAC::File(a, nullptr); };
-    else if(ext == ".mpc")
-        tagFactory = [] (IOStream* a) { return new MPC::File(a); };
-    else if(ext == ".wv")
-        tagFactory = [] (IOStream* a) { return new WavPack::File(a); };
-    else if(ext == ".spx")
-        tagFactory = [] (IOStream* a) { return new Ogg::Speex::File(a); };
-    else if(ext == ".opus")
-        tagFactory = [] (IOStream* a) { return new Ogg::Opus::File(a); };
-    else if(ext == ".tta")
-        tagFactory = [] (IOStream* a) { return new TrueAudio::File(a); };
-    else if(ext == ".m4a" || ext == ".m4r" || ext == ".m4b" || ext == ".m4p" || ext == ".mp4" || ext == ".3g2")
-        tagFactory = [] (IOStream* a) { return new MP4::File(a); };
-    else if(ext == ".wma" || ext == ".asf")
-        tagFactory = [] (IOStream* a) { return new ASF::File(a); };
-    else if(ext == ".aif" || ext == ".aiff" || ext == ".afc" || ext == ".aifc")
-        tagFactory = [] (IOStream* a) { return new RIFF::AIFF::File(a); };
-    else if(ext == ".wav")
-        tagFactory = [] (IOStream* a) { return new RIFF::WAV::File(a); };
-    else if(ext == ".ape")
-        tagFactory = [] (IOStream* a) { return new APE::File(a); };
-    // module, nst and wow are possible but uncommon extensions
-    else if(ext == ".mod" || ext == ".module" || ext == ".nst" || ext == ".wow")
-        tagFactory = [] (IOStream* a) { return new Mod::File(a); };
-    else if(ext == ".s3m")
-        tagFactory = [] (IOStream* a) { return new S3M::File(a); };
-    else if(ext == ".it")
-        tagFactory = [] (IOStream* a) { return new IT::File(a); };
-    else if(ext == ".xm")
-        tagFactory = [] (IOStream* a) { return new XM::File(a); };
-    else {
-        CHAN_WARN_LOG(logject, chan) << "Cannot open file with extension " << ext;
-        CHAN_WARN_LOG(logject, chan) << "An exception will be thrown when attempting to read tags";
-        tagFactory = [=](IOStream*) -> File* {
-            BOOST_THROW_EXCEPTION(MetadataUnsupportedException() <<
-                                  ErrorTag::FileExtension(ext));
-        };
-    }
+    Core::Track t{std::move(filepath), std::move(decoderFactory), start, end};
+    t.reOpen();
+    return t;
 }
-
-std::unique_ptr<Decoder::Playable> FileTypeResolver::getDecoder(IO::File& file) {
-    return decoderFactory(file);
-}
-
-std::unique_ptr<File> FileTypeResolver::getTagReader(IO::File& file) {
-    taglibFile.reset(new IO::TagLibFile(file));
-    return std::unique_ptr<File>(tagFactory(taglibFile.get()));
+std::optional<Core::Track> Manager::openTrack(boost::filesystem::path filepath,
+                                                chrono::milliseconds start,
+                                                chrono::milliseconds end) const noexcept
+{
+    return pimpl->openTrack(std::move(filepath), start, end);
 }
 
 } // namespace Decoder
