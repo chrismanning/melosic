@@ -1,9 +1,9 @@
 import QtQuick 2.1
 import QtQml.Models 2.1
 
-import QtQuick.Controls 1.0
+import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
-import QtQuick.Controls.Styles 1.0
+import QtQuick.Controls.Styles 1.1
 
 import Melosic.Playlist 1.0
 
@@ -32,20 +32,22 @@ DelegateModel {
             property bool selected: chooserItem.ListView.isCurrentItem
 
             property int hpadding: lv.padding
-            property int vpadding: horizontal ? Math.ceil((lv.height - lbl.height) / 2) : 0
+            property int vpadding: horizontal ? Math.ceil((lv.height - addbtn.height) / 2) : 0
             property bool hovered: false
-            height: horizontal ? lv.height : lbl.height + (chooserItem.vpadding * 2)
-            width: horizontal ? lbl.width + (chooserItem.hpadding * 2) : lv.width
+
+            property string title: model["display"]
+//            height: horizontal ? lv.height : lbl.height + (chooserItem.vpadding * 2)
+//            width: horizontal ? lbl.width + (chooserItem.hpadding * 2) : lv.width
 
             Loader {
                 id: loader
-                anchors.fill: parent
+//                anchors.fill: parent
                 sourceComponent: !chooserItem.lv.tabs ? si : tabstyleloader.item ? tabstyleloader.item.tab : null
 
                 property Item styleData: chooserItem
                 property bool nextSelected: chooserItem.lv.currentIndex === index + 1
                 property bool previousSelected: chooserItem.lv.currentIndex === index - 1
-                property string title: ""
+                property string title: model["display"]
                 property int count: chooserItem.lv.count
 
                 property Item control: Item {
@@ -54,38 +56,29 @@ DelegateModel {
                 }
 
                 Loader {
-                    id: tabloader
-                    property Item control: loader.control
-                    Component {
-                        id: t_
-                        TabView {
-                            visible: false
-                            height: 0
-                            width: 0
-                        }
-                    }
-                    sourceComponent: chooserItem.lv.tabs ? t_ : null
-                }
-                Loader {
                     id: tabstyleloader
-                    property Item control: loader.control
-                    sourceComponent: tabloader.item ? tabloader.item.style : null
-                    property alias __control: tabloader
+                    property alias control: loader.control
+                    sourceComponent: Qt.createComponent(Settings.style + "/TabViewStyle.qml", chooserItem)
+                    property alias __control: loader.control
+                    property var tabbarItem: Item {
+                        property bool elide: true
+                    }
                 }
 
                 property int index: model.index
 
-                Label {
-                    z: loader.z + 1
-                    id: lbl
-                    x: chooserItem.hpadding
-                    y: chooserItem.vpadding + (chooserItem.lv.tabs * !chooserItem.ListView.isCurrentItem * 2)
-                    text: model["display"]
-                    color: chooserItem.lv.tabs ? pal.text : chooserItem.ListView.isCurrentItem ? pal.highlightedText : pal.text
-                }
+//                Label {
+//                    z: loader.z + 1
+//                    visible: false
+//                    id: lbl
+//                    x: chooserItem.hpadding
+//                    y: chooserItem.vpadding + (chooserItem.lv.tabs * !chooserItem.ListView.isCurrentItem * 2)
+//                    text: model["display"]
+//                    color: chooserItem.lv.tabs ? pal.text : chooserItem.ListView.isCurrentItem ? pal.highlightedText : pal.text
+//                }
 
                 MouseArea {
-                    z: lbl.z+1
+                    z: 10
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton
                     onClicked: chooserItem.lv.currentIndex = model.index
