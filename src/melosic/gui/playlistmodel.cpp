@@ -43,58 +43,56 @@ namespace Melosic {
 
 Logger::Logger PlaylistModel::logject(logging::keywords::channel = "PlaylistModel");
 
-PlaylistModel::PlaylistModel(std::shared_ptr<Core::Playlist> playlist, QObject* parent)
+PlaylistModel::PlaylistModel(Core::Playlist playlist, QObject* parent)
     : QAbstractListModel(parent),
       playlist(playlist) {}
 
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
-    return playlist->size();
+    return playlist.size();
 }
 
 QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
     if(!index.isValid())
-        return QVariant();
+        return {};
 
     assert(playlist);
-    if(index.row() >= playlist->size())
-        return QVariant();
+    if(index.row() >= playlist.size())
+        return {};
 
     try {
-        const auto& track = (*playlist)[index.row()];
+        auto track = playlist.getTrack(index.row());
+        if(!track)
+            return {};
         switch(role) {
             case Qt::DisplayRole:
                 return data(index, TrackRoles::SourceName);
             case TrackRoles::SourceName:
-                return QString::fromStdString(track.sourceName());
-//            case TrackRoles::Category:
-//                return data(index, TrackRoles::AlbumArtist).toString() + " - "
-//                        + data(index, TrackRoles::Album).toString() + " - "
-//                        + data(index, TrackRoles::Date).toString();
+                return QString::fromStdString(track->sourceName());
             case TrackRoles::Title:
-                return QString::fromStdString(track.getTag("title"));
+                return QString::fromStdString(*track->getTag("title"));
             case TrackRoles::Artist:
-                return QString::fromStdString(track.getTag("artist"));
+                return QString::fromStdString(*track->getTag("artist"));
             case TrackRoles::Album:
-                return QString::fromStdString(track.getTag("album"));
+                return QString::fromStdString(*track->getTag("album"));
             case TrackRoles::AlbumArtist: {
-                std::string aa = track.getTag("albumartist");
-                return QString::fromStdString(aa == "?" ? track.getTag("artist") : aa);
+                auto aa = track->getTag("albumartist");
+                return QString::fromStdString(!aa ? *track->getTag("artist") : *aa);
             }
             case TrackRoles::TrackNumber:
-                return QString::fromStdString(track.getTag("tracknumber"));
+                return QString::fromStdString(*track->getTag("tracknumber"));
             case TrackRoles::Genre:
-                return QString::fromStdString(track.getTag("genre"));
+                return QString::fromStdString(*track->getTag("genre"));
             case TrackRoles::Date:
-                return QString::fromStdString(track.getTag("date"));
+                return QString::fromStdString(*track->getTag("date"));
             case TrackRoles::Duration: {
-                return QVariant::fromValue(chrono::duration_cast<chrono::seconds>(track.duration()).count());
+                return QVariant::fromValue(chrono::duration_cast<chrono::seconds>(track->duration()).count());
             }
             default:
-                return QVariant();
+                return {};
         }
     }
     catch(...) {
-        return QVariant();
+        return {};
     }
 }
 
@@ -161,72 +159,18 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
 bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
     TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
 
-    auto beg = ++row > playlist->size() ? playlist->size() : row;
-    auto first(std::next(playlist->begin(), beg));
+    auto beg = ++row > playlist.size() ? playlist.size() : row;
 
-    auto range = playlist->emplace(first, filenames);
+    beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
 
-    TRACE_LOG(logject) << boost::distance(range) << " tracks inserted";
+    auto n = playlist.emplace(beg, filenames);
+    assert(n == boost::distance(filenames));
 
-    beginInsertRows(QModelIndex(), beg, beg + boost::distance(range) -1);
+    TRACE_LOG(logject) << n << " tracks inserted";
 
     endInsertRows();
-    return boost::distance(range) == boost::distance(filenames);
+    return n == boost::distance(filenames);
 }
-
-//QStringList PlaylistModel::appendFiles(const ForwardRange<const boost::filesystem::path>& filenames) {
-//    QStringList failList;
-//    if(filenames.empty())
-//        return failList;
-//    auto beg = playlist->size();
-//    beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
-//    for(const auto& filename : filenames) {
-//        try {
-//            TRACE_LOG(logject) << "in appendFiles: " << filename;
-//            playlist->emplace_back(filename);
-//        }
-//        catch(FileException& e) {
-//            if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
-//                std::string tmp(path->string());
-//                ERROR_LOG(logject) << (tmp += ": file error");
-//                failList << QString::fromStdString(tmp);
-//            }
-//        }
-//        catch(FileNotFoundException& e) {
-//            if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
-//                std::string tmp(path->string());
-//                ERROR_LOG(logject) << (tmp += ": file not found");
-//                failList << QString::fromStdString(tmp);
-//            }
-//        }
-//        catch(UnsupportedFileTypeException& e) {
-//            if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
-//                std::string tmp(path->string());
-//                ERROR_LOG(logject) << (tmp += ": file type unsupported");
-//                failList << QString::fromStdString(tmp);
-//            }
-//        }
-//        catch(DecoderException& e) {
-//            if(auto* path = boost::get_error_info<ErrorTag::FilePath>(e)) {
-//                failList << QString::fromStdString(path->string()) + ": file could not be decoded";
-//            }
-//        }
-//    }
-//    endInsertRows();
-//    LOG(logject) << "Inserted " << playlist->size() - beg << " files as tracks.";
-//    return failList;
-//}
-
-//QStringList PlaylistModel::appendFiles(QList<QUrl> filenames) {
-//    TRACE_LOG(logject) << "QML filenames count: " << filenames.size();
-//    std::forward_list<boost::filesystem::path> paths;
-//    for(QUrl v : filenames) {
-//        assert(v.isLocalFile());
-//        paths.emplace_after(paths.before_begin(), v.toLocalFile().toStdString());
-//    }
-
-//    return appendFiles(paths);
-//}
 
 bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
                                  int row, int column, const QModelIndex& parent)
@@ -244,14 +188,14 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     if(column > 0)
         return false;
 
-    auto begin = playlist->begin();
+//    auto begin = playlist.begin();
 
-    if(row != -1)
-        begin += row;
-    else if(parent.isValid())
-        begin += parent.row();
-    else
-        begin += rowCount(QModelIndex());
+//    if(row != -1)
+//        begin += row;
+//    else if(parent.isValid())
+//        begin += parent.row();
+//    else
+//        begin += rowCount(QModelIndex());
 
     QByteArray encodedData = data->data("application/vnd.text.list");
     QDataStream stream(&encodedData, QIODevice::ReadOnly);
@@ -280,21 +224,18 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
         return false;
     if(destinationChild > rowCount())
         destinationChild = rowCount();
-    auto beg = playlist->begin();
-    auto dest = std::next(beg, destinationChild);
-    const auto s = playlist->size();
+
     if(!beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild))
         return false;
-    std::vector<Core::Playlist::value_type> tmp(std::make_move_iterator(std::next(beg, sourceRow)),
-                                                std::make_move_iterator(std::next(beg, sourceRow + count)));
-    playlist->erase(std::next(playlist->begin(), sourceRow), std::next(playlist->begin(), sourceRow + count));
 
-    std::move(tmp.begin(), tmp.end(), std::inserter(*playlist, dest));
+    std::vector<Core::Playlist::value_type> tmp(playlist.getTracks(sourceRow, sourceRow + count));
+
+    playlist.erase(sourceRow, sourceRow + count);
+    auto s = playlist.insert(destinationChild, tmp);
 
     endMoveRows();
-    assert(playlist->size() == s);
 
-    return playlist->size() == s;
+    return count == s;
 }
 
 bool PlaylistModel::moveRows(int sourceRow, int count, int destinationChild) {
@@ -305,13 +246,13 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     if(row < 0 && (count + row) > rowCount())
         return false;
 
-    const auto s = playlist->size();
+    const auto s = playlist.size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
-    playlist->erase(std::next(playlist->begin(), row), std::next(playlist->begin(), row + count));
+    playlist.erase(row, row + count);
     endRemoveRows();
-    assert(playlist->size() == s - count);
+    assert(playlist.size() == s - count);
 
-    return playlist->size() == s - count;
+    return playlist.size() == s - count;
 }
 
 } // namespace Melosic

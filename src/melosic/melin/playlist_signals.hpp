@@ -19,6 +19,7 @@
 #define MELOSIC_PLAYLIST_SIGNALS_HPP
 
 #include <memory>
+#include <optional>
 
 #include <melosic/common/signal_fwd.hpp>
 
@@ -31,10 +32,17 @@ class Track;
 
 namespace Signals {
 namespace Playlist {
-typedef SignalCore<void(std::shared_ptr<Core::Playlist>)> PlaylistChanged;
-typedef SignalCore<void(const Core::Track&)> TrackChanged;
-}
-}
-}
+
+typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistAdded;
+typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistRemoved;
+typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistChanged;
+
+typedef SignalCore<void(std::optional<Core::Track>)> TrackAdded;
+typedef SignalCore<void(std::optional<Core::Track>)> TrackRemoved;
+typedef SignalCore<void(std::optional<Core::Track>)> TrackChanged;
+
+}//Playlist
+}//Signals
+}//Melosic
 
 #endif // MELOSIC_PLAYLIST_SIGNALS_HPP

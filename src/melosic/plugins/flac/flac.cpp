@@ -65,7 +65,7 @@ public:
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
     }
 
-    virtual ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) {
+    ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) override {
         try {
             *bytes = io::read(input, (char*)buffer, *bytes);
 
@@ -85,8 +85,8 @@ public:
         }
     }
 
-    virtual ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
-                                                            const FLAC__int32 * const buffer[]) {
+    ::FLAC__StreamDecoderWriteStatus write_callback(const ::FLAC__Frame *frame,
+                                                    const FLAC__int32 * const buffer[]) override {
         lastSample = frame->header.number_type == FLAC__FRAME_NUMBER_TYPE_FRAME_NUMBER
                      ? frame->header.number.frame_number : frame->header.number.sample_number;
         lastSample += frame->header.blocksize * as.channels;
@@ -130,13 +130,13 @@ public:
         return FLAC__STREAM_DECODER_WRITE_STATUS_CONTINUE;
     }
 
-    virtual void error_callback(::FLAC__StreamDecoderErrorStatus status) {
+    void error_callback(::FLAC__StreamDecoderErrorStatus status) override {
         BOOST_THROW_EXCEPTION(DecoderException()
                               << ErrorTag::Plugin::Info(::flacInfo)
                               << ErrorTag::DecodeErrStr(FLAC__StreamDecoderErrorStatusString[status]));
     }
 
-    virtual void metadata_callback(const ::FLAC__StreamMetadata *metadata) {
+    void metadata_callback(const ::FLAC__StreamMetadata *metadata) override {
         if(metadata->type == FLAC__METADATA_TYPE_STREAMINFO) {
             //the get*() functions don't seem to work at this point
             FLAC__StreamMetadata_StreamInfo m = metadata->data.stream_info;
@@ -147,7 +147,7 @@ public:
         }
     }
 
-    virtual ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) {
+    ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) override {
         auto off = io::position_to_offset(input.seekg(absolute_byte_offset, std::ios_base::beg));
         if(off == (int64_t)absolute_byte_offset)
             return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
@@ -155,12 +155,12 @@ public:
             return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;
     }
 
-    virtual ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) {
+    ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) override {
         *absolute_byte_offset = io::position_to_offset(input.tellg());
         return FLAC__STREAM_DECODER_TELL_STATUS_OK;
     }
 
-    virtual ::FLAC__StreamDecoderLengthStatus length_callback(FLAC__uint64 *stream_length) {
+    ::FLAC__StreamDecoderLengthStatus length_callback(FLAC__uint64* stream_length) override {
         auto cur = io::position_to_offset(input.tellg());
         *stream_length = io::position_to_offset(input.seekg(0, std::ios_base::end));
         input.seekg(cur, std::ios_base::beg);
@@ -200,7 +200,7 @@ public:
 
     virtual ~FlacDecoder() {}
 
-    virtual std::streamsize read(char * s, std::streamsize n) {
+    std::streamsize read(char * s, std::streamsize n) override {
         while(static_cast<std::streamsize>(buf.size()) < n && *this) {
             FLAC_THROW_IF(AudioDataInvalidException, impl.process_single() && !buf.empty(), (&impl));
         }
@@ -213,25 +213,25 @@ public:
         return d == 0 && !(*this) ? -1 : d;
     }
 
-    virtual void seek(chrono::milliseconds dur) {
+    void seek(chrono::milliseconds dur) override {
         impl.seek(dur);
     }
 
-    chrono::milliseconds tell() {
+    chrono::milliseconds tell() override {
         return impl.tell();
     }
 
-    virtual void reset() {
+    void reset() override {
         impl.reset();
         seek(0ms);
         buf.clear();
     }
 
-    virtual AudioSpecs& getAudioSpecs() {
+    AudioSpecs& getAudioSpecs() override {
         return as;
     }
 
-    virtual explicit operator bool() {
+    explicit operator bool() override {
         return !impl.end();
     }
 

@@ -19,6 +19,7 @@
 #define MELOSIC_TRACK_HPP
 
 #include <memory>
+#include <optional>
 
 #include <boost/filesystem/path.hpp>
 
@@ -30,45 +31,50 @@
 namespace Melosic {
 namespace Core {
 
-class MELOSIC_EXPORT Track : public Input::Playable, public IO::Closable {
-    explicit Track(boost::filesystem::path filename,
-                   Decoder::Factory,
+class MELOSIC_EXPORT Track {
+    explicit Track(Decoder::Factory,
+                   boost::filesystem::path filename,
                    chrono::milliseconds start = 0ms,
                    chrono::milliseconds end = 0ms);
     friend class Decoder::Manager;
 
 public:
     typedef char char_type;
+    typedef io::source_tag category;
 
     virtual ~Track();
 
-    bool operator==(const Track&) const;
+    bool operator==(const Track&) const noexcept;
 
-    void setTimePoints(chrono::milliseconds start,
-                       chrono::milliseconds end);
+    void setTimePoints(chrono::milliseconds start, chrono::milliseconds end);
 
-    virtual void reset();
-    MELOSIC_EXPORT virtual void seek(chrono::milliseconds dur);
-    MELOSIC_EXPORT virtual chrono::milliseconds tell();
-    MELOSIC_EXPORT virtual chrono::milliseconds duration() const;
-    MELOSIC_EXPORT virtual Melosic::AudioSpecs& getAudioSpecs();
-    MELOSIC_EXPORT virtual const Melosic::AudioSpecs& getAudioSpecs() const;
-    MELOSIC_EXPORT std::string getTag(const std::string& key) const;
-    MELOSIC_EXPORT virtual explicit operator bool();
-    virtual std::streamsize read(char * s, std::streamsize n);
-    virtual void close();
-    virtual bool isOpen() const;
-    virtual void reOpen();
-    MELOSIC_EXPORT const std::string& sourceName() const;
+    std::streamsize read(char * s, std::streamsize n);
+    void reset();
+    void seek(chrono::milliseconds dur);
+    void close();
+    bool isOpen() const;
+    void reOpen();
+
+    chrono::milliseconds tell();
+    chrono::milliseconds duration() const;
+    Melosic::AudioSpecs& getAudioSpecs();
+    const Melosic::AudioSpecs& getAudioSpecs() const;
+    const std::string& sourceName() const;
+    std::optional<std::string> getTag(const std::string& key) const;
 
     void reloadTags();
+    bool taggable() const;
     void reloadDecoder();
+    bool decodable() const;
 
-    static void setDecoderManager(const Decoder::Manager*) noexcept;
+    bool valid() const;
+    explicit operator bool() const;
+    Track clone() const;
 
 private:
     class impl;
     std::shared_ptr<impl> pimpl;
+    explicit Track(decltype(pimpl));
 };
 
 } // namespace Core

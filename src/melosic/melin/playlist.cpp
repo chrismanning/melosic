@@ -18,20 +18,19 @@
 #include <list>
 #include <string>
 #include <mutex>
-using std::mutex;
+
+#include <boost/thread/shared_mutex.hpp>
+using mutex = boost::shared_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
-
-#include <boost/range/algorithm_ext.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/range/irange.hpp>
-#include <boost/range/adaptors.hpp>
-using namespace boost::adaptors;
+using shared_lock = boost::shared_lock<mutex>;
+#include <boost/scope_exit.hpp>
 
 #include <melosic/core/playlist.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/string.hpp>
 #include <melosic/melin/playlist_signals.hpp>
+#include <melosic/melin/logging.hpp>
 
 #include "playlist.hpp"
 
@@ -42,97 +41,111 @@ struct PlaylistChanged : Signals::Signal<Signals::Playlist::PlaylistChanged> {
     using Super::Signal;
 };
 
+struct PlaylistAdded : Signals::Signal<Signals::Playlist::PlaylistAdded> {
+    using Super::Signal;
+};
+
+struct PlaylistRemoved : Signals::Signal<Signals::Playlist::PlaylistRemoved> {
+    using Super::Signal;
+};
+
 class Manager::impl {
 public:
     impl(Decoder::Manager& decman) : decman(decman)
     {}
 
-    Manager::Range::iterator insert(Manager::Range::iterator pos, const std::string& name) {
-        lock_guard l(mu);
-        return playlists.insert(pos, std::make_shared<Core::Playlist>(decman, name));
+    std::optional<Core::Playlist> insert(size_type pos, const std::string& name, unique_lock& l) {
+        assert(pos >= 0);
+        TRACE_LOG(logject) << "inserting playlist \"" << name << "\" at position " << pos;
+        auto it = playlists.emplace(std::next(std::begin(playlists), pos), decman, name);
+        assert(!playlists.empty());
+        playlistAdded(*it, l);
+        if(size() == 1)
+            setCurrent(*it, l);
+        return *it;
     }
 
-    Manager::Range::iterator insert(Manager::Range::iterator pos, int count_) {
-        lock_guard l(mu);
+    size_type insert(size_type pos, size_type count_, unique_lock& l) {
+        assert(pos >= 0);
+        assert(count_ >= 0);
         if(count_ == 0)
-            return pos;
-        for(int beg = std::distance(playlists.begin(), pos), i = 0; i < count_; i++)
-            playlists.insert(pos + i, std::make_shared<Core::Playlist>(decman,
-                                                                       "Playlist "s + std::to_string(i+beg)));
-        return ++pos;
+            return 0;
+        TRACE_LOG(logject) << "inserting " << count_ << " playlists at position " << pos;
+
+        size_type s{count_};
+        for(int i = 0; i < count_; i++, pos++)
+            if(!insert(pos, "Playlist "s + std::to_string(pos), l))
+                s--;
+        return s;
     }
 
-    void erase(Manager::Range r) {
-        lock_guard l(mu);
-        boost::range::erase(playlists, r);
+    void erase(size_type pos, unique_lock& l) {
+        assert(pos >= 0);
+        TRACE_LOG(logject) << "erasing playlist at position " << pos;
+        auto old = playlists[pos];
+        playlists.erase(std::next(std::begin(playlists), pos));
+        playlistRemoved(old, l);
     }
 
-    int count() {
-        lock_guard l(mu);
+    void erase(size_type start, size_type end, unique_lock& l) {
+        assert(end > start);
+        TRACE_LOG(logject) << "erasing playlists from positions " << start << " to " << end;
+        for(size_type i = --end; i >= start; i--)
+            erase(i, l);
+    }
+
+    size_type size() {
         return playlists.size();
     }
 
     bool empty() {
-        lock_guard l(mu);
         return playlists.empty();
     }
 
-    Manager::iterator begin() {
-        lock_guard l(mu);
-        return playlists.begin();
-    }
-
-    Manager::iterator end() {
-        lock_guard l(mu);
-        return playlists.end();
-    }
-
-    PlaylistType& front() {
-        lock_guard l(mu);
-        return playlists.front();
-    }
-
-    PlaylistType& back() {
-        lock_guard l(mu);
-        return playlists.back();
-    }
-
-    PlaylistType currentPlaylist() {
-        unique_lock l(mu);
-
-        if(current)
-            return current;
-
-        if(!playlists.empty()) {
-            l.unlock();
-            setCurrent(front());
-        }
-        else {
-            l.unlock();
-            setCurrent(*insert(begin(), "Default"));
-        }
-        assert(current);
+    std::optional<Core::Playlist> currentPlaylist() {
         return current;
     }
 
-    void setCurrent(PlaylistType p) {
-        lock_guard l(mu);
+    void setCurrent(std::optional<Core::Playlist> p, unique_lock& l) {
         current = p;
-        playlistChanged(p);
+        playlistChanged(current, l);
     }
 
-    Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() {
-        return playlistChanged;
+    void setCurrent(size_type p, unique_lock& l) {
+        TRACE_LOG(logject) << "setting current playlist to position " << p;
+        current = playlists[p];
+        playlistChanged(current, l);
+    }
+
+    void playlistChanged(std::optional<Core::Playlist> p, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        playlistChangedSignal(p);
+    }
+
+    void playlistAdded(std::optional<Core::Playlist> p, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        playlistAddedSignal(p);
+    }
+
+    void playlistRemoved(std::optional<Core::Playlist> p, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        playlistRemovedSignal(p);
     }
 
 private:
     Decoder::Manager& decman;
 
     mutex mu;
+    Logger::Logger logject{logging::keywords::channel = "PlaylistManagerModel"};
 
-    PlaylistChanged playlistChanged;
-    PlaylistType current;
-    Manager::list playlists;
+    PlaylistChanged playlistChangedSignal;
+    PlaylistAdded playlistAddedSignal;
+    PlaylistRemoved playlistRemovedSignal;
+    std::optional<Core::Playlist> current;
+    boost::container::stable_vector<Core::Playlist> playlists;
 
     friend class Manager;
 };
@@ -141,44 +154,75 @@ Manager::Manager(Decoder::Manager& decman) : pimpl(new impl(decman)) {}
 
 Manager::~Manager() {}
 
-Manager::Range::iterator Manager::insert(Range::iterator pos, const std::string& name) {
-    return pimpl->insert(pos, name);
+std::optional<Core::Playlist> Manager::insert(size_type pos, std::string name) {
+    unique_lock l(pimpl->mu);
+    return pimpl->insert(pos, name, l);
 }
 
-Manager::Range::iterator Manager::insert(Range::iterator pos, int count) {
-    return pimpl->insert(pos, count);
+Manager::size_type Manager::insert(size_type pos, int count) {
+    unique_lock l(pimpl->mu);
+    return pimpl->insert(pos, count, l);
 }
 
-void Manager::erase(Manager::Range r) {
-    pimpl->erase(r);
+void Manager::erase(size_type start, size_type end) {
+    unique_lock l(pimpl->mu);
+    pimpl->erase(start, end, l);
 }
 
-int Manager::count() const {
-    return pimpl->count();
+std::optional<Core::Playlist> Manager::getPlaylist(size_type pos) {
+    assert(pos >= 0);
+    shared_lock l(pimpl->mu);
+    if(pos >= size()) {
+        TRACE_LOG(pimpl->logject) << "no playlist at position " << pos;
+        return {};
+    }
+    TRACE_LOG(pimpl->logject) << "getting playlists at position " << pos;
+    return pimpl->playlists[pos];
+}
+
+const std::optional<Core::Playlist> Manager::getPlaylist(size_type pos) const {
+    return const_cast<Manager*>(this)->getPlaylist(pos);
+}
+
+int Manager::size() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->size();
 }
 
 bool Manager::empty() const {
+    shared_lock l(pimpl->mu);
     return pimpl->empty();
 }
 
-PlaylistType Manager::currentPlaylist() const {
+std::optional<Core::Playlist> Manager::currentPlaylist() const {
+    shared_lock l(pimpl->mu);
     return pimpl->currentPlaylist();
 }
 
-void Manager::setCurrent(PlaylistType p) const {
-    pimpl->setCurrent(p);
+void Manager::setCurrent(std::optional<Core::Playlist> p) const {
+    unique_lock l(pimpl->mu);
+    pimpl->setCurrent(p, l);
+}
+
+void Manager::setCurrent(size_type idx) const {
+    unique_lock l(pimpl->mu);
+    pimpl->setCurrent(idx, l);
 }
 
 Signals::Playlist::PlaylistChanged& Manager::getPlaylistChangedSignal() const {
-    return pimpl->getPlaylistChangedSignal();
+    return pimpl->playlistChangedSignal;
+}
+
+Signals::Playlist::PlaylistAdded& Manager::getPlaylistAddedSignal() const {
+    return pimpl->playlistAddedSignal;
+}
+
+Signals::Playlist::PlaylistRemoved& Manager::getPlaylistRemovedSignal() const {
+    return pimpl->playlistRemovedSignal;
 }
 
 Signals::Playlist::TrackChanged& Manager::getTrackChangedSignal() const {
     return Core::Playlist::getTrackChangedSignal();
-}
-
-Manager::Range Manager::range() const {
-    return pimpl->playlists;
 }
 
 } // namespace Playlist

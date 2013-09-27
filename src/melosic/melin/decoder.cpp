@@ -119,7 +119,7 @@ std::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path file
         };
     }
 
-    Core::Track t{std::move(filepath), std::move(decoderFactory), start, end};
+    Core::Track t{std::move(decoderFactory), std::move(filepath), start, end};
     t.reOpen();
     return t;
 }

@@ -19,9 +19,7 @@
 #define MELOSIC_PLAYLIST_MANAGER_HPP
 
 #include <memory>
-
-#include <boost/range/iterator_range.hpp>
-#include <boost/container/stable_vector.hpp>
+#include <optional>
 
 #include <melosic/common/common.hpp>
 #include <melosic/melin/playlist_signals.hpp>
@@ -37,15 +35,9 @@ class Manager;
 
 namespace Playlist {
 
-typedef std::shared_ptr<Core::Playlist> PlaylistType;
-
 class Manager {
 public:
-    typedef boost::container::stable_vector<PlaylistType> list;
-    typedef list::iterator iterator;
-    typedef list::const_iterator const_iterator;
-    typedef boost::iterator_range<iterator> Range;
-    typedef boost::iterator_range<const_iterator> ConstRange;
+    typedef int size_type;
 
     explicit Manager(Decoder::Manager&);
     ~Manager();
@@ -55,17 +47,24 @@ public:
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_EXPORT Range range() const;
-    MELOSIC_EXPORT Range::iterator insert(Range::iterator pos, const std::string& name);
-    MELOSIC_EXPORT Range::iterator insert(Range::iterator pos, int count);
-    MELOSIC_EXPORT void erase(Range r);
-    MELOSIC_EXPORT int count() const;
-    MELOSIC_EXPORT bool empty() const;
-    MELOSIC_EXPORT PlaylistType currentPlaylist() const;
-    MELOSIC_EXPORT void setCurrent(PlaylistType p) const;
+    MELOSIC_EXPORT std::optional<Core::Playlist> insert(size_type pos, std::string name);
+    MELOSIC_EXPORT size_type insert(size_type pos, int size);
+    MELOSIC_EXPORT void erase(size_type, size_type);
 
-    Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() const;
-    Signals::Playlist::TrackChanged& getTrackChangedSignal() const;
+    MELOSIC_EXPORT std::optional<Core::Playlist> getPlaylist(size_type pos);
+    MELOSIC_EXPORT const std::optional<Core::Playlist> getPlaylist(size_type pos) const;
+
+    MELOSIC_EXPORT size_type size() const;
+    MELOSIC_EXPORT bool empty() const;
+    MELOSIC_EXPORT std::optional<Core::Playlist> currentPlaylist() const;
+    MELOSIC_EXPORT void setCurrent(std::optional<Core::Playlist>) const;
+    MELOSIC_EXPORT void setCurrent(size_type) const;
+
+    MELOSIC_EXPORT Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() const;
+    MELOSIC_EXPORT Signals::Playlist::PlaylistAdded& getPlaylistAddedSignal() const;
+    MELOSIC_EXPORT Signals::Playlist::PlaylistRemoved& getPlaylistRemovedSignal() const;
+
+    MELOSIC_EXPORT Signals::Playlist::TrackChanged& getTrackChangedSignal() const;
 
 private:
     class impl;

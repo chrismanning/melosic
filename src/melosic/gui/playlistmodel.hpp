@@ -55,11 +55,11 @@ class Playlist;
 
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
-    std::shared_ptr<Core::Playlist> playlist;
+    Core::Playlist playlist;
     static Logger::Logger logject;
 
 public:
-    explicit PlaylistModel(std::shared_ptr<Core::Playlist> playlist,
+    explicit PlaylistModel(Core::Playlist playlist,
                            QObject* parent = nullptr);
 
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;

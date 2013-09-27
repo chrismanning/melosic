@@ -15,18 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <thread>
-#include <mutex>
-#include <boost/thread.hpp>
-#include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex;
-
 #include <melosic/melin/kernel.hpp>
 
 #include "exports.hpp"
-
-template class std::lock_guard<shared_mutex>;
-template class boost::shared_lock_guard<shared_mutex>;
 
 namespace Melosic {
 

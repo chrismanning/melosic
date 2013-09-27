@@ -15,14 +15,14 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/thread.hpp>
-#include <boost/thread/shared_lock_guard.hpp>
-using Mutex = boost::shared_mutex;
-using shared_lock_guard = boost::shared_lock_guard<Mutex>;
 #include <thread>
 #include <mutex>
-using unique_lock = std::unique_lock<Mutex>;
-using lock_guard = std::lock_guard<Mutex>;
+
+#include <boost/thread/shared_mutex.hpp>
+using mutex = boost::shared_mutex;
+using shared_lock = boost::shared_lock<mutex>;
+using unique_lock = std::unique_lock<mutex>;
+using lock_guard = std::lock_guard<mutex>;
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -43,7 +43,7 @@ static Logger::Logger logject(logging::keywords::channel = "Track");
 
 class Track::impl : public std::enable_shared_from_this<impl> {
 public:
-    impl(boost::filesystem::path filename, Decoder::Factory factory,
+    impl(Decoder::Factory factory, boost::filesystem::path filename,
          chrono::milliseconds start, chrono::milliseconds end)
         : filepath(std::move(filename)), decoder_factory(std::move(factory)), start(start), end(end)
     {
@@ -122,14 +122,11 @@ public:
         return as;
     }
 
-    std::string getTag(const std::string& key) {
+    std::optional<std::string> getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
 
-        if(val != tags.end())
-            return val->second.front().to8Bit(true);
-        static std::string str("?");
-        return str;
+        return val != tags.end() ? val->second.front().to8Bit(true) : std::optional<std::string>{};
     }
 
     void reloadDecoder() {
@@ -146,6 +143,10 @@ public:
         }
     }
 
+    bool decodable() {
+        return static_cast<bool>(decoder_factory);
+    }
+
     void reloadTags() {
         tags.clear();
         taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
@@ -156,19 +157,20 @@ public:
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
+    bool taggable() {
+        return false;
+    }
+
     bool valid() {
-        if(decoder)
-            return bool(*decoder);
-        else
-            return false;
+        return decoder_factory && decoder && *decoder;
     }
 
     const std::string& sourceName() {
-        return input.filename().string();
+        return filepath.string();
     }
 
-    impl* clone() {
-        return new impl(filepath, decoder_factory, start, end);
+    std::shared_ptr<impl> clone() {
+        return std::make_shared<impl>(decoder_factory, filepath, start, end);
     }
 
 private:
@@ -181,20 +183,21 @@ private:
     std::unique_ptr<TagLib::File> taglibfile;
     TagLib::PropertyMap tags;
     AudioSpecs as;
-    Mutex mu;
+    mutex mu;
 };
 
-Track::Track(boost::filesystem::path filename,
-             Decoder::Factory factory,
+Track::Track(Decoder::Factory factory,
+             boost::filesystem::path filename,
              chrono::milliseconds start,
              chrono::milliseconds end)
-    : pimpl(std::make_shared<impl>(std::move(filename), std::move(factory), start, end)) {}
+    : pimpl(std::make_shared<impl>(std::move(factory),
+                                   std::move(filename),
+                                   start, end))
+{}
 
 Track::~Track() {}
 
-bool Track::operator==(const Track& b) const {
-    shared_lock_guard l1(pimpl->mu);
-    shared_lock_guard l2(b.pimpl->mu);
+bool Track::operator==(const Track& b) const noexcept {
     return pimpl == b.pimpl;
 }
 
@@ -215,7 +218,7 @@ void Track::close() {
 }
 
 bool Track::isOpen() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->isOpen();
 }
 
@@ -230,7 +233,7 @@ void Track::seek(chrono::milliseconds dur) {
 }
 
 chrono::milliseconds Track::tell() {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->tell();
 }
 
@@ -240,31 +243,31 @@ void Track::reset() {
 }
 
 chrono::milliseconds Track::duration() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->duration();
 }
 
 Melosic::AudioSpecs& Track::getAudioSpecs() {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->getAudioSpecs();
 }
 const Melosic::AudioSpecs& Track::getAudioSpecs() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->getAudioSpecs();
 }
 
-std::string Track::getTag(const std::string& key) const {
-    shared_lock_guard l(pimpl->mu);
+std::optional<std::string> Track::getTag(const std::string& key) const {
+    shared_lock l(pimpl->mu);
     return pimpl->getTag(key);
 }
 
-Track::operator bool() {
-    shared_lock_guard l(pimpl->mu);
+Track::operator bool() const {
+    shared_lock l(pimpl->mu);
     return pimpl->valid();
 }
 
 const std::string& Track::sourceName() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->sourceName();
 }
 
@@ -273,10 +276,32 @@ void Track::reloadTags() {
     pimpl->reloadTags();
 }
 
+bool Track::taggable() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->taggable();
+}
+
 void Track::reloadDecoder() {
     lock_guard l(pimpl->mu);
     pimpl->reloadDecoder();
 }
+
+bool Track::decodable() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->decodable();
+}
+
+bool Track::valid() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->valid();
+}
+
+Track Track::clone() const {
+    lock_guard l(pimpl->mu);
+    return Track(pimpl->clone());
+}
+
+Track::Track(decltype(pimpl) p) : pimpl(p) {}
 
 } // namespace Core
 } // namespace Melosic

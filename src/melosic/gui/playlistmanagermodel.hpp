@@ -18,9 +18,14 @@
 #ifndef MELOSIC_PLAYLISTMANAGERMODEL_HPP
 #define MELOSIC_PLAYLISTMANAGERMODEL_HPP
 
+#include <unordered_map>
+#include <mutex>
+
 #include <QAbstractListModel>
 
 #include <melosic/melin/logging.hpp>
+#include <melosic/core/playlist.hpp>
+#include <melosic/common/connection.hpp>
 
 namespace Melosic {
 
@@ -28,17 +33,15 @@ namespace Playlist {
 class Manager;
 }
 
-namespace Core {
-class Playlist;
-}
-
 class PlaylistModel;
 
 class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
-    QMap<Core::Playlist*, PlaylistModel*> playlists;
+    std::unordered_map<Core::Playlist, PlaylistModel*> playlists;
+    std::list<Signals::ScopedConnection> conns;
     Logger::Logger logject;
+    mutable std::mutex mu;
 
 public:
     explicit PlaylistManagerModel(Playlist::Manager&, QObject* parent = nullptr);

@@ -20,17 +20,16 @@
 #include <mutex>
 
 #include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex;
-using Mutex = shared_mutex;
-using lock_guard = std::lock_guard<Mutex>;
-using unique_lock = std::unique_lock<Mutex>;
-using shared_lock_guard = boost::shared_lock_guard<Mutex>;
+using mutex = boost::shared_mutex;
+using lock_guard = std::lock_guard<mutex>;
+using unique_lock = std::unique_lock<mutex>;
+using shared_lock = boost::shared_lock<mutex>;
 #include <boost/format.hpp>
 using boost::format;
 #include <boost/scope_exit.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
+#include <boost/range/adaptor/sliced.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
@@ -52,6 +51,12 @@ struct TrackChanged : Signals::Signal<Signals::Playlist::TrackChanged> {
 
 static TrackChanged trackChangedSignal;
 
+void trackChanged(std::optional<Core::Track> t, unique_lock& l) {
+    l.unlock();
+    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+    trackChangedSignal(t);
+}
+
 class Playlist::impl {
 public:
     impl(Decoder::Manager& decman, std::string name) :
@@ -59,97 +64,71 @@ public:
         name(name)
     {}
 
-    void trackChanged(const Core::Track& t, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-        trackChangedSignal(t);
-    }
-
     //IO
     std::streamsize read(char* s, std::streamsize n, unique_lock& l) {
-        if(currentTrack() == end())
+        if(!m_current_track)
             return -1;
 
-        auto r = io::read(*currentTrack(), s, n);
+        auto r = io::read(*m_current_track, s, n);
         if(r < n) {
             if(r < 0)
                 r = 0;
-            const AudioSpecs& as = currentTrack()->getAudioSpecs();
-            currentTrack()->close();
+            const AudioSpecs& as = m_current_track->getAudioSpecs();
+            m_current_track->close();
             next(l);
-            if(currentTrack() != end()) {
-                if(currentTrack()->getAudioSpecs() != as)
+            if(m_current_track) {
+                if(m_current_track->getAudioSpecs() != as)
                     return r;
-                currentTrack()->reOpen();
-                currentTrack()->reset();
-                r += io::read(*currentTrack(), s + r, n - r);
+                m_current_track->reOpen();
+                m_current_track->reset();
+                r += io::read(*m_current_track, s + r, n - r);
             }
         }
         return r;
     }
 
     void seek(chrono::milliseconds dur) {
-        if(currentTrack() != end())
-            currentTrack()->seek(dur);
+        if(m_current_track)
+            m_current_track->seek(dur);
     }
 
     //playlist controls
     chrono::milliseconds duration() {
-        return std::accumulate(begin(), end(), 0ms,
+        return std::accumulate(std::begin(tracks), std::end(tracks), 0ms,
                                [](chrono::milliseconds a, Track& b) { return a + b.duration(); });
     }
 
     void previous(unique_lock& l) {
-        if(currentTrack() == begin())
+        if(!m_current_track)
+            return;
+        if(m_current_pos == 0) {
+            jumpTo(m_current_pos, l);
             seek(0ms);
-        else if(size() >= 1) {
-            current_track_->reset();
-            --current_track_;
         }
-        trackChanged(std::cref(*currentTrack()), l);
+        m_current_track->reset();
+        jumpTo(--m_current_pos, l);
     }
 
     void next(unique_lock& l) {
-        if(currentTrack() != end()) {
-            current_track_->reset();
-            ++current_track_;
-        }
-        if(currentTrack() != end())
-            trackChanged(std::cref(*currentTrack()), l);
+        if(!m_current_track)
+            return;
+        m_current_track->reset();
+        jumpTo(++m_current_pos, l);
     }
 
-    void jumpTo(size_type pos, unique_lock& l) {
-        if(current_track_ != tracks.end())
-            current_track_->reset();
-        current_track_ = std::begin(tracks) + pos;
-        if(current_track_ != end())
-            trackChanged(std::cref(*currentTrack()), l);
+    void jumpTo(Playlist::size_type pos, unique_lock& l) {
+        if(m_current_track)
+            m_current_track->reset();
+
+        if(pos > size())
+            m_current_track = std::nullopt;
+        m_current_pos = pos;
+        m_current_track = *std::next(std::begin(tracks), m_current_pos);
+        trackChanged(m_current_track, l);
     }
 
-    Playlist::iterator currentTrack() {
-        return current_track_;
-    }
-
-    //element access
-    Playlist::reference front() {
-        return tracks.front();
-    }
-
-    Playlist::reference back() {
-        return tracks.back();
-    }
-
-    Playlist::reference get(size_type pos) {
-        return tracks[pos];
-    }
-
-    //iterators
-    Playlist::iterator begin() {
-        return std::begin(tracks);
-    }
-
-    Playlist::iterator end() {
-        return std::end(tracks);
+    auto currentTrack() {
+        return m_current_track;
     }
 
     //capacity
@@ -165,56 +144,55 @@ public:
         return std::numeric_limits<Playlist::size_type>::max();
     }
 
-    Playlist::iterator insert(Playlist::const_iterator pos, Playlist::value_type value, unique_lock& l) {
-        auto r = tracks.insert(pos, std::move(value));
+    auto insert(Playlist::size_type pos, Playlist::value_type value, unique_lock& l) {
+        if(pos > size())
+            pos = size();
+        auto r = tracks.insert(std::next(std::begin(tracks), pos), std::move(value));
         if(size() == 1) {
-            current_track_ = r;
-            trackChanged(std::cref(*currentTrack()), l);
+            m_current_track = *r;
+            trackChanged(m_current_track, l);
         }
-        return r;
+        return *r;
     }
 
-    void insert(Playlist::const_iterator pos, Playlist::iterator first, Playlist::iterator last, unique_lock& l) {
-        auto r = tracks.insert(pos, std::make_move_iterator(first), std::make_move_iterator(last));
-        if(size() == 1) {
-            current_track_ = r;
-            trackChanged(std::cref(*currentTrack()), l);
-        }
-    }
-
-    Playlist::iterator emplace(Playlist::const_iterator pos,
-                               boost::filesystem::path filename,
-                               chrono::milliseconds start,
-                               chrono::milliseconds end,
-                               unique_lock& l)
+    std::optional<Core::Track> emplace(Playlist::size_type pos, boost::filesystem::path filename,
+                                       chrono::milliseconds start, chrono::milliseconds end,
+                                       unique_lock& l)
     {
+        if(pos > size())
+            pos = size();
         auto v = decman.openTrack(std::move(filename), start, end);
         if(!v)
-            return pos;
-        auto r = tracks.emplace(pos, *v);
+            return {};
+        auto r = tracks.emplace(std::next(std::begin(tracks), pos), *v);
 
         if(size() == 1) {
-            current_track_ = std::begin(tracks);
-            trackChanged(std::cref(*currentTrack()), l);
+            m_current_track = *r;
+            trackChanged(m_current_track, l);
         }
 
-        return r;
+        return *r;
     }
 
-    Playlist::const_range emplace(Playlist::const_iterator pos,
-                                  ForwardRange<const boost::filesystem::path> values,
-                                  unique_lock& l)
+    Playlist::size_type emplace(Playlist::size_type pos,
+                                ForwardRange<const boost::filesystem::path> values,
+                                unique_lock& l)
     {
-        if(values.empty())
-            return Playlist::const_range(pos, pos);
+        if(pos > size())
+            pos = size();
 
-        std::list<Playlist::const_iterator> its;
+        Playlist::size_type s{0};
+
+        if(values.empty())
+            return s;
+
         for(const auto& path : values) {
             try {
                 auto v = decman.openTrack(path);
                 if(!v)
                     continue;
-                its.push_back(tracks.emplace(pos, *v));
+                tracks.emplace(std::next(std::begin(tracks), pos), *v);
+                s++;
             }
             catch(...) {
                 ERROR_LOG(logject) << format("Track couldn't be added to playlist \"%1%\" %2%:%3%")
@@ -223,24 +201,19 @@ public:
             }
         }
 
-        if(its.empty())
-            return Playlist::const_range(pos, pos);
-        Playlist::const_range r(its.front(), pos);
-        assert(std::distance(its.front(), pos) == boost::distance(r));
-
         if(size() == 1) {
-            current_track_ = std::begin(tracks);
-            trackChanged(std::cref(*currentTrack()), l);
+            m_current_track = tracks.front();
+            trackChanged(m_current_track, l);
         }
 
-        return r;
+        return s;
     }
 
     void push_back(Playlist::value_type value, unique_lock& l) {
         tracks.push_back(std::move(value));
         if(size() == 1) {
-            current_track_ = std::begin(tracks);
-            trackChanged(std::cref(*currentTrack()), l);
+            m_current_track = tracks.back();
+            trackChanged(m_current_track, l);
         }
     }
 
@@ -254,17 +227,19 @@ public:
             return;
         tracks.emplace_back(*v);
         if(size() == 1) {
-            current_track_ = std::begin(tracks);
-            trackChanged(std::cref(*currentTrack()), l);
+            m_current_track = tracks.back();
+            trackChanged(m_current_track, l);
         }
     }
 
-    Playlist::iterator erase(Playlist::const_iterator pos) {
-        return tracks.erase(pos);
+    void erase(Playlist::size_type pos) {
+        if(pos >= size())
+            return;
+        tracks.erase(std::next(std::begin(tracks), pos));
     }
 
-    Playlist::iterator erase(Playlist::const_iterator start, Playlist::const_iterator end) {
-        return tracks.erase(start, end);
+    void erase(Playlist::size_type start, Playlist::size_type end) {
+        tracks.erase(std::next(std::begin(tracks), start), std::next(std::begin(tracks), end));
     }
 
     void clear() {
@@ -279,9 +254,10 @@ public:
         this->name = name;
     }
 
-    Mutex mu;
+    mutex mu;
     Playlist::list_type tracks;
-    Playlist::iterator current_track_;
+    std::optional<Playlist::value_type> m_current_track;
+    Playlist::size_type m_current_pos{0};
     Decoder::Manager& decman;
     std::string name;
 };
@@ -304,8 +280,8 @@ void Playlist::seek(chrono::milliseconds dur) {
 
 //playlist controls
 chrono::milliseconds Playlist::duration() const {
-    shared_lock_guard l(pimpl->mu);
-    return std::move(pimpl->duration());
+    shared_lock l(pimpl->mu);
+    return pimpl->duration();
 }
 
 void Playlist::previous() {
@@ -323,76 +299,50 @@ void Playlist::jumpTo(Playlist::size_type pos) {
     pimpl->jumpTo(pos, l);
 }
 
-Playlist::iterator Playlist::currentTrack() {
-    shared_lock_guard l(pimpl->mu);
+std::optional<Playlist::value_type> Playlist::currentTrack() {
+    shared_lock l(pimpl->mu);
     return pimpl->currentTrack();
 }
 
-Playlist::const_iterator Playlist::currentTrack() const {
-    shared_lock_guard l(pimpl->mu);
+const std::optional<Playlist::value_type> Playlist::currentTrack() const {
+    shared_lock l(pimpl->mu);
     return pimpl->currentTrack();
 }
 
-Playlist::reference Playlist::operator[](size_type pos) {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->get(pos);
+std::optional<Playlist::value_type> Playlist::getTrack(size_type pos) {
+    shared_lock l(pimpl->mu);
+    if(pos >= pimpl->size())
+        return {};
+    return {pimpl->tracks[pos]};
 }
 
-Playlist::const_reference Playlist::operator[](size_type pos) const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->get(pos);
+const std::optional<Playlist::value_type> Playlist::getTrack(size_type pos) const {
+    shared_lock l(pimpl->mu);
+    if(pos >= pimpl->size())
+        return {};
+    return {pimpl->tracks[pos]};
 }
 
-//element access
-Playlist::reference Playlist::front() {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->front();
+std::vector<Playlist::value_type> Playlist::getTracks(Playlist::size_type start, Playlist::size_type end) {
+    shared_lock l(pimpl->mu);
+    auto range = boost::adaptors::slice(pimpl->tracks, start, end);
+    return {range.begin(), range.end()};
 }
 
-Playlist::const_reference Playlist::front() const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->front();
-}
-
-Playlist::reference Playlist::back() {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->back();
-}
-
-Playlist::const_reference Playlist::back() const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->back();
-}
-
-//iterators
-Playlist::iterator Playlist::begin() {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->begin();
-}
-
-Playlist::const_iterator Playlist::begin() const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->begin();
-}
-
-Playlist::iterator Playlist::end() {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->end();
-}
-
-Playlist::const_iterator Playlist::end() const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->end();
+const std::vector<Playlist::value_type> Playlist::getTracks(Playlist::size_type start, Playlist::size_type end) const {
+    shared_lock l(pimpl->mu);
+    auto range = boost::adaptors::slice(pimpl->tracks, start, end);
+    return {range.begin(), range.end()};
 }
 
 //capacity
 bool Playlist::empty() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->empty();
 }
 
 Playlist::size_type Playlist::size() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->size();
 }
 
@@ -401,25 +351,35 @@ Playlist::size_type Playlist::max_size() const {
 }
 
 Playlist::operator bool() const {
-    shared_lock_guard l(pimpl->mu);
-    return pimpl->empty() ? false : pimpl->currentTrack() != pimpl->end();
+    shared_lock l(pimpl->mu);
+    return pimpl->empty() ? false : static_cast<bool>(pimpl->currentTrack());
 }
 
-Playlist::iterator Playlist::insert(Playlist::const_iterator pos, Playlist::value_type value) {
+std::optional<Playlist::value_type> Playlist::insert(size_type pos, Playlist::value_type value) {
     unique_lock l(pimpl->mu);
     return pimpl->insert(pos, std::move(value), l);
 }
 
-Playlist::iterator Playlist::emplace(Playlist::const_iterator pos,
-                                     boost::filesystem::path filename,
-                                     chrono::milliseconds start,
-                                     chrono::milliseconds end)
+std::optional<Playlist::value_type> Playlist::emplace(size_type pos,
+                                                      boost::filesystem::path filename,
+                                                      chrono::milliseconds start,
+                                                      chrono::milliseconds end)
 {
     unique_lock l(pimpl->mu);
     return pimpl->emplace(pos, std::move(filename), start, end, l);
 }
 
-Playlist::const_range Playlist::emplace(Playlist::const_iterator pos, ForwardRange<const boost::filesystem::path> values) {
+Playlist::size_type Playlist::insert(size_type pos, ForwardRange<value_type> values) {
+    unique_lock l(pimpl->mu);
+    size_type s{0};
+    for(auto v : values) {
+        pimpl->insert(pos++, v, l);
+        ++s;
+    }
+    return s;
+}
+
+Playlist::size_type Playlist::emplace(size_type pos, ForwardRange<const boost::filesystem::path> values) {
     unique_lock l(pimpl->mu);
     return pimpl->emplace(pos, values, l);
 }
@@ -437,12 +397,12 @@ void Playlist::emplace_back(boost::filesystem::path filename,
     pimpl->emplace_back(std::move(filename), start, end, l);
 }
 
-Playlist::iterator Playlist::erase(const_iterator pos) {
+void Playlist::erase(size_type pos) {
     lock_guard l(pimpl->mu);
-    return pimpl->erase(pos);
+    pimpl->erase(pos);
 }
 
-Playlist::iterator Playlist::erase(Playlist::const_iterator start, Playlist::const_iterator end) {
+void Playlist::erase(size_type start, size_type end) {
     lock_guard l(pimpl->mu);
     return pimpl->erase(start, end);
 }
@@ -459,13 +419,17 @@ void Playlist::swap(Playlist& b)  {
 }
 
 const std::string& Playlist::getName() const {
-    shared_lock_guard l(pimpl->mu);
+    shared_lock l(pimpl->mu);
     return pimpl->getName();
 }
 
 void Playlist::setName(std::string name) {
     lock_guard l(pimpl->mu);
     pimpl->setName(std::move(name));
+}
+
+bool Playlist::operator==(const Playlist& b) const {
+    return pimpl == b.pimpl;
 }
 
 Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() {

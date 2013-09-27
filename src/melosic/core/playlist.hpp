@@ -22,6 +22,7 @@
 #include <chrono>
 namespace chrono = std::chrono;
 using namespace std::literals;
+#include <optional>
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
@@ -49,13 +50,7 @@ public:
     typedef char char_type;
 
     typedef Track value_type;
-    typedef value_type& reference;
-    typedef const value_type& const_reference;
     typedef boost::container::stable_vector<value_type> list_type;
-    typedef list_type::iterator iterator;
-    typedef list_type::const_iterator const_iterator;
-    typedef boost::iterator_range<iterator> range;
-    typedef boost::iterator_range<const_iterator> const_range;
     typedef int size_type;
 
     Playlist(Decoder::Manager&, std::string);
@@ -67,41 +62,36 @@ public:
     void previous();
     void next();
     void jumpTo(size_type pos);
-    iterator currentTrack();
-    const_iterator currentTrack() const;
 
-    reference operator[](size_type pos);
-    const_reference operator[](size_type pos) const;
-    reference front();
-    const_reference front() const;
-    reference back();
-    const_reference back() const;
+    std::optional<value_type> currentTrack();
+    const std::optional<value_type> currentTrack() const;
 
-    iterator begin();
-    const_iterator begin() const;
-    iterator end();
-    const_iterator end() const;
+    std::optional<value_type> getTrack(size_type);
+    const std::optional<value_type> getTrack(size_type) const;
+
+    std::vector<value_type> getTracks(size_type, size_type);
+    const std::vector<value_type> getTracks(size_type, size_type) const;
 
     bool empty() const;
     size_type size() const;
     size_type max_size() const;
     explicit operator bool() const;
 
-    iterator insert(const_iterator pos, value_type value);
-
-    iterator emplace(const_iterator pos,
-                     boost::filesystem::path filename,
-                     chrono::milliseconds start = 0ms,
-                     chrono::milliseconds end = 0ms);
-    const_range emplace(const_iterator pos, ForwardRange<const boost::filesystem::path> values);
+    size_type insert(size_type pos, ForwardRange<value_type> values);
+    size_type emplace(size_type pos, ForwardRange<const boost::filesystem::path> values);
+    std::optional<value_type> insert(size_type pos, value_type value);
+    std::optional<value_type> emplace(size_type pos,
+                                      boost::filesystem::path filename,
+                                      chrono::milliseconds start = 0ms,
+                                      chrono::milliseconds end = 0ms);
 
     void push_back(value_type value);
     void emplace_back(boost::filesystem::path filename,
                       chrono::milliseconds start = 0ms,
                       chrono::milliseconds end = 0ms);
 
-    iterator erase(const_iterator pos);
-    iterator erase(const_iterator start, const_iterator end);
+    void erase(size_type pos);
+    void erase(size_type start, size_type end);
 
     void clear();
     void swap(Playlist& b);
@@ -109,14 +99,27 @@ public:
     const std::string& getName() const;
     void setName(std::string);
 
+    bool operator==(const Playlist&) const;
+
     static Signals::Playlist::TrackChanged& getTrackChangedSignal();
 
 private:
     class impl;
-    std::unique_ptr<impl> pimpl;
+    std::shared_ptr<impl> pimpl;
+    template <typename>
+    friend struct std::hash;
 };
 
 } // namespace Core
 } // namespace Melosic
+
+namespace std {
+    template <>
+    struct hash<Melosic::Core::Playlist> {
+        std::size_t operator()(Melosic::Core::Playlist const& s) const {
+            return std::hash<std::shared_ptr<Melosic::Core::Playlist::impl>>()(s.pimpl);
+        }
+    };
+}
 
 #endif // MELOSIC_PLAYLIST_HPP

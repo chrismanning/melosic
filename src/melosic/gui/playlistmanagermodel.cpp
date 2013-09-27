@@ -15,14 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <QSharedPointer>
-
-#include <boost/range/adaptors.hpp>
-using namespace boost::adaptors;
+#include <mutex>
+using mutex = std::mutex;
+using lock_guard = std::lock_guard<mutex>;
+using unique_lock = std::unique_lock<mutex>;
 
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/gui/playlistmodel.hpp>
+#include <melosic/common/signal_core.hpp>
 
 #include "playlistmanagermodel.hpp"
 
@@ -32,7 +33,25 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, QObject* 
     : QAbstractListModel(parent),
       playman(playman),
       logject(logging::keywords::channel = "PlaylistManagerModel")
-{}
+{
+    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (std::optional<Core::Playlist> p) {
+        lock_guard l(mu);
+        TRACE_LOG(logject) << "Playlist added: " << !!p;
+        if(p)
+            playlists.emplace(*p, new PlaylistModel(*p));
+    }));
+    conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (std::optional<Core::Playlist> p) {
+        lock_guard l(mu);
+        TRACE_LOG(logject) << "Playlist removed: " << !!p;
+        if(!p)
+            return;
+        auto it = playlists.find(*p);
+        if(it != playlists.end())
+            playlists.erase(it);
+    }));
+
+    playman.insert(0, "Default");
+}
 
 Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
     Qt::ItemFlags defaultFlags = QAbstractListModel::flags(index);
@@ -43,31 +62,33 @@ Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
 }
 
 QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
-    if(!index.isValid() || index.row() >= playman.count())
+    lock_guard l(mu);
+    assert(playman.size() == static_cast<Playlist::Manager::size_type>(playlists.size()));
+    if(!index.isValid() || index.row() >= playman.size())
         return QVariant();
 
-    Q_ASSERT(playman.range()[index.row()] != nullptr);
-
+    assert(!playman.empty());
     switch(role) {
         case Qt::DisplayRole:
-        case Qt::EditRole:
-            return QString::fromStdString(playman.range()[index.row()]->getName());
+        case Qt::EditRole: {
+            auto v = playman.getPlaylist(index.row());
+            assert(v);
+            return QString::fromStdString(v->getName());
+        }
         case PlaylistModelRole: {
-            auto ptr = playman.range()[index.row()];
-            if(playlists.contains(ptr.get()))
-                return QVariant::fromValue(playlists[ptr.get()]);
-            auto nthis = const_cast<PlaylistManagerModel*>(this);
-            auto np = new PlaylistModel(ptr, nthis);
-            nthis->playlists.insert(ptr.get(), np);
+            auto v = playman.getPlaylist(index.row());
+            assert(v);
+            auto it = playlists.find(*v);
+            assert(playlists.end() != it);
 
-            return QVariant::fromValue(np);
+            return QVariant::fromValue(it->second);
         }
         default:
             return QVariant();
     }
 }
 
-QVariant PlaylistManagerModel::headerData(int /*section*/, Qt::Orientation /*orientation*/, int /*role*/) const {
+QVariant PlaylistManagerModel::headerData(int, Qt::Orientation, int) const {
     return tr("Playlists");
 }
 
@@ -78,43 +99,33 @@ QHash<int, QByteArray> PlaylistManagerModel::roleNames() const {
 }
 
 int PlaylistManagerModel::rowCount(const QModelIndex& /*parent*/) const {
-    return playman.count();
+    lock_guard l(mu);
+    return playlists.size();
 }
 
 bool PlaylistManagerModel::setData(const QModelIndex& index, const QVariant& value, int role) {
-    if(!index.isValid() || index.row() >= playman.count() || !(role & Qt::EditRole) || !value.isValid())
+    if(!index.isValid() || index.row() >= playman.size() || !(role & Qt::EditRole) || !value.isValid())
         return false;
 
-    playman.range()[index.row()]->setName(value.toString().toStdString());
+    auto v = playman.getPlaylist(index.row());
+    assert(v);
+    v->setName(value.toString().toStdString());
     return true;
 }
 
 bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {
-    if(row > playman.count())
+    if(row > playman.size())
         return false;
 
     TRACE_LOG(logject) << "row: " << row << "; count: " << count;
     beginInsertRows(QModelIndex(), row, row+count-1);
-//    for(int i = row; i < row+count; i++) {
-//        auto it = playman.insert(std::next(playman.range().begin(), row), count);
-//        if(it != playman.range().end()) {
-//            if(auto ptr = playman.range()[i]) {
-//                playlists[QString::fromStdString(ptr->getName())] = new PlaylistModel(ptr);
-//            }
-//        }
-//        else {
-//            ERROR_LOG(logject) << "Failed to add playlist";
-//            return false;
-//        }
-//        TRACE_LOG(logject) << "Playlists: " << playman.count();
-//    }
-    playman.insert(std::next(playman.range().begin(), row), count);
+    playman.insert(row, count);
     endInsertRows();
     return true;
 }
 
 bool PlaylistManagerModel::removeRows(int row, int count, const QModelIndex&) {
-    playman.erase(playman.range() | sliced(row, count));
+    playman.erase(row, count);
     return true;
 }
 

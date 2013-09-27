@@ -110,7 +110,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     }
     Output::DeviceState state_impl();
 
-    void trackChangeSlot(const Track& track);
+    void trackChangeSlot(std::optional<Track>);
     void changeDevice();
     void sinkChangeSlot();
 
@@ -167,10 +167,9 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             const auto tbytes = (to/8);
             const auto fbytes = (from/8);
 
-            std::streamsize i;
-            for(i = 0; i < n; i += tbytes) {
-                std::streamsize r;
-                if(to > from) {
+            std::streamsize i, r;
+            if(to > from)
+                for(i = 0; i < n; i += tbytes) {
                     for(int j = 0; j < (tbytes - fbytes); j++)
                         *s++ = 0;
                     r = io::read(src, s, fbytes);
@@ -178,7 +177,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                         return r;
                     s += r;
                 }
-                else if(to < from) {
+            else if(to < from)
+                for(i = 0; i < n; i += tbytes) {
                     char c[fbytes - tbytes];
                     r = io::read(src, c, fbytes - tbytes);
                     assert(r == fbytes - tbytes);
@@ -187,8 +187,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                         return r;
                     s += tbytes;
                 }
-                else assert(false);
-            }
+            else assert(false);
+
             return i;
         }
 
@@ -567,19 +567,21 @@ Output::DeviceState Player::impl::state_impl() {
     return currentState_->state();
 }
 
-void Player::impl::trackChangeSlot(const Track& track) {
+void Player::impl::trackChangeSlot(std::optional<Track> track) {
+    if(!track)
+        return;
     auto cp = playman.currentPlaylist();
     assert(cp);
     try {
         if(*cp && asioOutput) {
             assert(track == *cp->currentTrack());
-            if(asioOutput->currentSpecs() != track.getAudioSpecs()) {
+            if(asioOutput->currentSpecs() != track->getAudioSpecs()) {
                 LOG(logject) << "Changing sink specs for new track";
-                TRACE_LOG(logject) << "new track specs: " << track.getAudioSpecs();
+                TRACE_LOG(logject) << "new track specs: " << track->getAudioSpecs();
                 asioOutput->stop();
                 this_thread::sleep_for(100ms);
-                asioOutput->prepare(const_cast<Track&>(track).getAudioSpecs());
-                TRACE_LOG(logject) << "prepared track specs: " << track.getAudioSpecs();
+                asioOutput->prepare(track->getAudioSpecs());
+                TRACE_LOG(logject) << "prepared track specs: " << track->getAudioSpecs();
                 this_thread::sleep_for(100ms);
                 asioOutput->play();
             }
