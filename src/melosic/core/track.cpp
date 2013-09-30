@@ -112,8 +112,6 @@ public:
     chrono::milliseconds duration() {
         if(end > start)
             return end - start;
-        if(end == start)
-            return 0ms;
 
         return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
