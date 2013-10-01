@@ -23,10 +23,13 @@ Rectangle {
     property PlaylistManager manager
     property alias tabs: lv.tabs
 
+    ScrollView {
+        anchors.fill: parent
     ListView {
         id: lv
 
         focus: true
+        interactive: false
         anchors.fill: parent
 
         property int padding: 3
@@ -40,25 +43,16 @@ Rectangle {
             property var lv: ListView.view
             property bool horizontal: lv.orientation === Qt.Horizontal
             property bool selected: loader.ListView.isCurrentItem
-            property int hpadding: lv.padding
-            property int vpadding: horizontal ? Math.ceil((lv.height - lbl.height) / 2) : 0
             sourceComponent: !loader.lv.tabs ? si : tabstyleloader.item ? tabstyleloader.item.tab : undefined
 
-            Binding on height {
-                when: !loader.lv.tabs
-                value: loader.horizontal ? loader.lv.height : lbl.height + (loader.vpadding * 2)
-            }
-            Binding on width {
-                when: !loader.lv.tabs
-                value: loader.horizontal ? lbl.width + (loader.hpadding * 2) : loader.lv.width
-            }
-
             property int index: model.index
+
+            property string text: model["display"]
 
             property QtObject styleData: QtObject {
                 readonly property alias index: loader.index
                 readonly property alias selected: loader.selected
-                readonly property alias title: lbl.text
+                readonly property alias title: loader.text
                 readonly property bool nextSelected: loader.lv.currentIndex === index + 1
                 readonly property bool previousSelected: loader.lv.currentIndex === index - 1
                 readonly property alias hovered: mouseItem.containsMouse
@@ -72,9 +66,10 @@ Rectangle {
             Component {
                 id: si
                 StyleItem {
-                    elementType: "itemrow"
+                    elementType: "item"
                     horizontal: loader.horizontal
                     selected: loader.selected
+                    text: loader.text
                 }
             }
 
@@ -96,23 +91,14 @@ Rectangle {
                 property var __control: loader.lv
             }
 
-            Label {
-                z: loader.z + 1
-                id: lbl
-                x: loader.hpadding
-                y: loader.vpadding + (loader.lv.tabs * !loader.ListView.isCurrentItem * 2)
-                visible: !loader.lv.tabs
-                text: model["display"]
-                color: loader.lv.tabs ? pal.text : loader.ListView.isCurrentItem ? pal.highlightedText : pal.text
-            }
-
             MouseArea {
                 id: mouseItem
-                z: lbl.z+1
+                z: loader.z+2
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton
                 onClicked: manager.currentIndex = model.index
             }
         }
+    }
     }
 }

@@ -1,8 +1,8 @@
 Array.prototype.naturalSort= function(){
     var a, b, a1, b1, rx=/(\d+)|(\D+)/g, rd=/\d+/;
-    return this.sort(function(as, bs){
-        a= String(as).toLowerCase().match(rx);
-        b= String(bs).toLowerCase().match(rx);
+    return this.sort(function(__a, __b){
+        a= String(__a).toLowerCase().match(rx);
+        b= String(__b).toLowerCase().match(rx);
         while(a.length && b.length){
             a1= a.shift();
             b1= b.shift();

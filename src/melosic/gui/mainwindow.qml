@@ -166,7 +166,9 @@ ApplicationWindow {
         modality: Qt.WindowModal
     }
 
-    SystemPalette { id: pal }
+    SystemPalette {
+        id: pal
+    }
 
     Component.onCompleted: {
         if(!playlistManagerModel.rowCount())
@@ -178,16 +180,19 @@ ApplicationWindow {
         id: playlistManager
     }
 
-    RowLayout {
+    SplitView {
         anchors.fill: parent
+        orientation: Qt.Horizontal
+
         PlaylistChooser {
             id: playlistChooser
-            Layout.preferredWidth: 100
-            Layout.fillHeight: true
-            Layout.alignment: Qt.AlignLeft// | Qt.AlignTop
+            Layout.minimumWidth: 100
+            Layout.alignment: Qt.AlignLeft
+            background: pal.base
             manager: playlistManager
             orientation: Qt.Vertical
         }
+
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
