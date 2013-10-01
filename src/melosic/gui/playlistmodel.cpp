@@ -55,7 +55,6 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
     if(!index.isValid())
         return {};
 
-    assert(playlist);
     if(index.row() >= playlist.size())
         return {};
 
