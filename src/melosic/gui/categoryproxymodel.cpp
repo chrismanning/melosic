@@ -267,8 +267,7 @@ CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObjec
         return;
     index = model->index(i, 0);
     Q_ASSERT(index.isValid());
-    if(model->hasBlock(index))
-        block_ = model->blockForIndex_(index);
+    block_ = model->blockForIndex_(index);
 }
 
 CategoryProxyModelAttached::~CategoryProxyModelAttached() {

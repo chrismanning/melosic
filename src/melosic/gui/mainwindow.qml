@@ -137,6 +137,15 @@ ApplicationWindow {
             Label {
                 id: playlistDuration
                 Connections {
+                    target: playlistManager
+                    onCurrentPlaylistChanged: {
+                        var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
+                            return parseInt(previousValue) + parseInt(currentValue.duration);
+                        }, 0)
+                        playlistDuration.text = '[' + SecsToMins.secsToMins(dur) + ']'
+                    }
+                }
+                Connections {
                     target: currentPlaylist
                     onCountChanged: {
                         var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
@@ -169,38 +178,50 @@ ApplicationWindow {
         id: playlistManager
     }
 
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
-        spacing: 0
-        RowLayout {
-            spacing: 0
-
-            PlaylistChooser {
-                id: playlistChooser
-                Layout.preferredHeight: 28
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignBottom
-                tabs: true
-                spacing: -2
-                manager: playlistManager
-                orientation: Qt.Horizontal
-            }
-
-            Button {
-                id: addbtn
-                z: 1
-                text: "Add"
-                onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
-            }
-        }
-
-        PlaylistView {
-            id: playlistView
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+        PlaylistChooser {
+            id: playlistChooser
             Layout.preferredWidth: 100
-            Layout.preferredHeight: 100
+            Layout.fillHeight: true
+            Layout.alignment: Qt.AlignLeft// | Qt.AlignTop
             manager: playlistManager
+            orientation: Qt.Vertical
+        }
+        ColumnLayout {
+            Layout.fillHeight: true
+            Layout.fillWidth: true
+            spacing: 0
+            RowLayout {
+                spacing: 0
+
+                PlaylistChooser {
+                    id: playlistTabs
+                    Layout.preferredHeight: 28
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignBottom
+                    tabs: true
+                    spacing: -2
+                    manager: playlistManager
+                    orientation: Qt.Horizontal
+                }
+
+                Button {
+                    id: addbtn
+                    z: 1
+                    text: "Add"
+                    onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
+                }
+            }
+
+            PlaylistView {
+                id: playlistView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                Layout.minimumWidth: 100
+                Layout.minimumHeight: 100
+                manager: playlistManager
+            }
         }
     }
 
