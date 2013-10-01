@@ -151,7 +151,7 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
         TRACE_LOG(logject) << v;
 
     std::deque<boost::filesystem::path> tmp;
-    boost::range::push_back(tmp, filenames | transformed(fun));
+    boost::range::push_back(tmp, filenames | transformed(fun) | reversed);
     return insertTracks(row, tmp);
 }
 
