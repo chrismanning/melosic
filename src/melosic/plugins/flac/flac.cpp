@@ -201,8 +201,16 @@ public:
     virtual ~FlacDecoder() {}
 
     std::streamsize read(char * s, std::streamsize n) override {
-        while(static_cast<std::streamsize>(buf.size()) < n && *this) {
-            FLAC_THROW_IF(AudioDataInvalidException, impl.process_single() && !buf.empty(), (&impl));
+        while(static_cast<std::streamsize>(buf.size()) < n && !impl.end()) {
+            auto r = impl.process_single();
+            if(!r || FLAC__STREAM_DECODER_END_OF_STREAM == static_cast<FLAC__StreamDecoderState>(impl.get_state())) {
+                if(buf.empty())
+                    return -1;
+                else
+                    break;
+            }
+
+            FLAC_THROW_IF(AudioDataInvalidException, r && !buf.empty(), (&impl));
         }
 
         auto min = std::min(n, static_cast<std::streamsize>(buf.size()));

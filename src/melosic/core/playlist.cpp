@@ -120,10 +120,14 @@ public:
         if(m_current_track)
             m_current_track->reset();
 
-        if(pos > size())
+        if(pos >= size() || pos < 0) {
+            m_current_pos = -1;
             m_current_track = std::nullopt;
-        m_current_pos = pos;
-        m_current_track = *std::next(std::begin(tracks), m_current_pos);
+        }
+        else {
+            m_current_pos = pos;
+            m_current_track = *std::next(std::begin(tracks), m_current_pos);
+        }
         trackChanged(m_current_track, l);
     }
 
@@ -148,10 +152,8 @@ public:
         if(pos > size())
             pos = size();
         auto r = tracks.insert(std::next(std::begin(tracks), pos), std::move(value));
-        if(size() == 1) {
-            m_current_track = *r;
-            trackChanged(m_current_track, l);
-        }
+        if(size() == 1)
+            jumpTo(0, l);
         return *r;
     }
 
@@ -166,10 +168,8 @@ public:
             return {};
         auto r = tracks.emplace(std::next(std::begin(tracks), pos), *v);
 
-        if(size() == 1) {
-            m_current_track = *r;
-            trackChanged(m_current_track, l);
-        }
+        if(size() == 1)
+            jumpTo(0, l);
 
         return *r;
     }
@@ -201,20 +201,16 @@ public:
             }
         }
 
-        if(size() == 1) {
-            m_current_track = tracks.front();
-            trackChanged(m_current_track, l);
-        }
+        if(size() == 1)
+            jumpTo(0, l);
 
         return s;
     }
 
     void push_back(Playlist::value_type value, unique_lock& l) {
         tracks.push_back(std::move(value));
-        if(size() == 1) {
-            m_current_track = tracks.back();
-            trackChanged(m_current_track, l);
-        }
+        if(size() == 1)
+            jumpTo(0, l);
     }
 
     void emplace_back(boost::filesystem::path filename,
@@ -226,10 +222,8 @@ public:
         if(!v)
             return;
         tracks.emplace_back(*v);
-        if(size() == 1) {
-            m_current_track = tracks.back();
-            trackChanged(m_current_track, l);
-        }
+        if(size() == 1)
+            jumpTo(0, l);
     }
 
     void erase(Playlist::size_type pos) {
@@ -257,7 +251,7 @@ public:
     mutex mu;
     Playlist::list_type tracks;
     std::optional<Playlist::value_type> m_current_track;
-    Playlist::size_type m_current_pos{0};
+    Playlist::size_type m_current_pos{-1};
     Decoder::Manager& decman;
     std::string name;
 };

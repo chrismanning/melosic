@@ -167,14 +167,14 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             const auto tbytes = (to/8);
             const auto fbytes = (from/8);
 
-            std::streamsize i, r;
+            std::streamsize i{0}, r;
             if(to > from)
                 for(i = 0; i < n; i += tbytes) {
                     for(int j = 0; j < (tbytes - fbytes); j++)
                         *s++ = 0;
                     r = io::read(src, s, fbytes);
                     if(r <= 0)
-                        return r;
+                        return -1;
                     s += r;
                 }
             else if(to < from)
@@ -184,7 +184,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                     assert(r == fbytes - tbytes);
                     r = io::read(src, s, tbytes);
                     if(r <= 0)
-                        return r;
+                        return -1;
                     s += tbytes;
                 }
             else assert(false);
