@@ -1,9 +1,9 @@
 import QtQuick 2.1
 import QtQml.Models 2.1
 
-import QtQuick.Controls 1.1
+import QtQuick.Controls 1.0
 import QtQuick.Controls.Private 1.0
-import QtQuick.Controls.Styles 1.1
+import QtQuick.Controls.Styles 1.0
 
 import Melosic.Playlist 1.0
 
@@ -20,71 +20,73 @@ DelegateModel {
     delegate: Package {
         property Component si: StyleItem {
             elementType: "itemrow"
-            horizontal: chooserItem.horizontal
-            selected: chooserItem.selected
+            horizontal: loader.horizontal
+            selected: loader.selected
         }
 
-        Item {
+        Loader {
+            id: loader
             Package.name: 'chooser'
-            id: chooserItem
             property var lv: ListView.view
             property bool horizontal: lv.orientation === Qt.Horizontal
-            property bool selected: chooserItem.ListView.isCurrentItem
-
+            property bool selected: loader.ListView.isCurrentItem
             property int hpadding: lv.padding
-            property int vpadding: horizontal ? Math.ceil((lv.height - addbtn.height) / 2) : 0
-            property bool hovered: false
+            property int vpadding: horizontal ? Math.ceil((lv.height - lbl.height) / 2) : 0
+            sourceComponent: !loader.lv.tabs ? si : tabstyleloader.item ? tabstyleloader.item.tab : undefined
 
-            property string title: model["display"]
-//            height: horizontal ? lv.height : lbl.height + (chooserItem.vpadding * 2)
-//            width: horizontal ? lbl.width + (chooserItem.hpadding * 2) : lv.width
+            property int index: model.index
+
+            property QtObject styleData: QtObject {
+                readonly property alias index: loader.index
+                readonly property alias selected: loader.selected
+                readonly property alias title: lbl.text
+                readonly property bool nextSelected: loader.lv.currentIndex === index + 1
+                readonly property bool previousSelected: loader.lv.currentIndex === index - 1
+                readonly property alias hovered: mouseItem.containsMouse
+                readonly property bool activeFocus: loader.lv.activeFocus
+//                readonly property real availableWidth: loader.availableWidth
+            }
+
+            property var __control: loader.lv
+            z: __control.z +1
 
             Loader {
-                id: loader
-//                anchors.fill: parent
-                sourceComponent: !chooserItem.lv.tabs ? si : tabstyleloader.item ? tabstyleloader.item.tab : null
-
-                property Item styleData: chooserItem
-                property bool nextSelected: chooserItem.lv.currentIndex === index + 1
-                property bool previousSelected: chooserItem.lv.currentIndex === index - 1
-                property string title: model["display"]
-                property int count: chooserItem.lv.count
-
-                property Item control: Item {
-                    property int tabPosition: Qt.TopEdge
-                    property int count: loader.count
-                }
-
-                Loader {
-                    id: tabstyleloader
-                    property alias control: loader.control
-                    sourceComponent: Qt.createComponent(Settings.style + "/TabViewStyle.qml", chooserItem)
-                    property alias __control: loader.control
-                    property var tabbarItem: Item {
-                        property bool elide: true
+                id: tabloader
+                Component {
+                    id: t_
+                    TabView {
+                        visible: false
+                        height: 0
+                        width: 0
                     }
                 }
+                sourceComponent: loader.lv.tabs ? t_ : undefined
+            }
+            Loader {
+                id: tabstyleloader
+                sourceComponent: tabloader.item ? tabloader.item.style : undefined
+                property var __control: loader.lv
+            }
 
-                property int index: model.index
+            Label {
+                z: loader.z + 1
+                id: lbl
+                x: loader.hpadding
+                y: loader.vpadding + (loader.lv.tabs * !loader.ListView.isCurrentItem * 2)
+                visible: !loader.lv.tabs
+                text: model["display"]
+                color: loader.lv.tabs ? pal.text : loader.ListView.isCurrentItem ? pal.highlightedText : pal.text
+            }
 
-//                Label {
-//                    z: loader.z + 1
-//                    visible: false
-//                    id: lbl
-//                    x: chooserItem.hpadding
-//                    y: chooserItem.vpadding + (chooserItem.lv.tabs * !chooserItem.ListView.isCurrentItem * 2)
-//                    text: model["display"]
-//                    color: chooserItem.lv.tabs ? pal.text : chooserItem.ListView.isCurrentItem ? pal.highlightedText : pal.text
-//                }
-
-                MouseArea {
-                    z: 10
-                    anchors.fill: parent
-                    acceptedButtons: Qt.LeftButton
-                    onClicked: chooserItem.lv.currentIndex = model.index
-                }
+            MouseArea {
+                id: mouseItem
+                z: lbl.z+1
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                onClicked: loader.lv.currentIndex = model.index
             }
         }
+
         Item {
             Package.name: 'viewer'
             id: viewerItem

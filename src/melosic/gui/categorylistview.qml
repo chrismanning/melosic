@@ -4,7 +4,7 @@ import QtQuick.Controls 1.0
 import QtQuick.Controls.Private 1.0
 
 import Melosic.Playlist 1.0
-//import "naturalsort.js" as NaturalSort
+import "naturalsort.js" as NaturalSort
 
 ScrollView {
     id: root
@@ -85,7 +85,7 @@ ScrollView {
         for(var i = 0, j = 0; i < selected.count; i++) {
             if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex && groups[j].length > 0) {
                 groups.push(new Array)
-                groups[j].sort()
+                groups[j].naturalSort()
                 ++j
             }
             groups[j].push(selected.get(i).itemsIndex)

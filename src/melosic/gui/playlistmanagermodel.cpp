@@ -69,6 +69,7 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
 
     assert(!playman.empty());
     switch(role) {
+        case PlaylistTitleRole:
         case Qt::DisplayRole:
         case Qt::EditRole: {
             auto v = playman.getPlaylist(index.row());
@@ -95,6 +96,7 @@ QVariant PlaylistManagerModel::headerData(int, Qt::Orientation, int) const {
 QHash<int, QByteArray> PlaylistManagerModel::roleNames() const {
     QHash<int, QByteArray> roles = QAbstractListModel::roleNames();
     roles[PlaylistModelRole] = "playlistModel";
+    roles[PlaylistTitleRole] = "title";
     return roles;
 }
 

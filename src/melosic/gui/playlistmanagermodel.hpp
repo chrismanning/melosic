@@ -47,7 +47,8 @@ public:
     explicit PlaylistManagerModel(Playlist::Manager&, QObject* parent = nullptr);
 
     enum {
-        PlaylistModelRole = Qt::UserRole * 12
+        PlaylistModelRole = Qt::UserRole * 12,
+        PlaylistTitleRole
     };
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;

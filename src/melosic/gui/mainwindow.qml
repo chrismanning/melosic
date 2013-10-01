@@ -1,7 +1,7 @@
 import QtQuick 2.1
-import QtQuick.Dialogs 1.1
-import QtQuick.Controls 1.1
-import QtQuick.Layouts 1.1
+import QtQuick.Dialogs 1.0
+import QtQuick.Controls 1.0
+import QtQuick.Layouts 1.0
 
 import Melosic.Playlist 1.0
 
@@ -119,7 +119,7 @@ ApplicationWindow {
         }
     }
 
-    property var currentPlaylist: playlistManager.currentPlaylist
+    property alias currentPlaylist: playlistManager.currentPlaylist
 
     statusBar: StatusBar {
         id: status
@@ -162,7 +162,7 @@ ApplicationWindow {
     Component.onCompleted: {
         if(!playlistManagerModel.rowCount())
             playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
-        playlistChooser.currentIndex = 0
+        playlistManager.currentIndex = 0
     }
 
     PlaylistManager {
@@ -172,26 +172,22 @@ ApplicationWindow {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
-
         RowLayout {
-            Layout.preferredHeight: 30
-            Layout.fillWidth: true
+            spacing: 0
 
             PlaylistChooser {
-                Layout.fillWidth: true
                 id: playlistChooser
-                Layout.preferredHeight: parent.Layout.preferredHeight
-//                Layout.preferredWidth: 200
-//                tabs: true
-                padding: 15
+                Layout.preferredHeight: 28
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignBottom
+                tabs: true
+                spacing: -2
                 manager: playlistManager
                 orientation: Qt.Horizontal
             }
 
             Button {
                 id: addbtn
-                Layout.preferredHeight: parent.Layout.preferredHeight
-                Layout.alignment: Qt.AlignRight
                 z: 1
                 text: "Add"
                 onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
@@ -199,7 +195,7 @@ ApplicationWindow {
         }
 
         PlaylistView {
-            id: playlist
+            id: playlistView
             Layout.fillWidth: true
             Layout.fillHeight: true
             Layout.preferredWidth: 100

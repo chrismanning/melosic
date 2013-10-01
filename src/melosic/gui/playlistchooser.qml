@@ -1,5 +1,4 @@
 import QtQuick 2.1
-import QtQuick.Controls.Private 1.0
 
 import Melosic.Playlist 1.0
 
@@ -17,28 +16,11 @@ Rectangle {
     property alias padding: lv.padding
     property PlaylistManager manager
     property alias tabs: lv.tabs
-    property bool tabsVisible: true
 
     Binding {
         target: manager
         property: "currentIndex"
-        value: root.currentIndex
-    }
-
-    TabBar {
-        id: tabbarItem
-        objectName: "tabbar"
-        tabView: root
-        style: loader.item
-        anchors.top: parent.top
-        anchors.left: root.left
-        anchors.right: root.right
-    }
-
-    Loader {
-        id: loader
-        sourceComponent: Qt.createComponent(Settings.style + "/TabViewStyle.qml", root)
-        property var __control: root
+        value: lv.currentIndex
     }
 
     ListView {
@@ -49,5 +31,6 @@ Rectangle {
 
         property int padding: 3
         property bool tabs: false
+        property int tabPosition: Qt.TopEdge
     }
 }
