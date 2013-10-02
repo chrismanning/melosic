@@ -154,6 +154,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             from(from),
             to(to)
         {
+            assert(from);
+            assert(to);
             assert(!(to % 8));
             assert(!(from % 8));
         }
@@ -370,14 +372,21 @@ struct Stopped : State {
 
     void play() override {
         assert(playman->currentPlaylist());
-        if(!*playman->currentPlaylist())
-            return;
 
         try {
+            auto ct = playman->currentPlaylist()->currentTrack();
+            if(!ct) {
+                playman->currentPlaylist()->jumpTo(0);
+                ct = playman->currentPlaylist()->currentTrack();
+            }
+            if(!ct)
+                return;
+
             stateMachine->changeDevice();
             if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
-            auto& as = playman->currentPlaylist()->currentTrack()->getAudioSpecs();
+
+            auto& as = ct->getAudioSpecs();
             stateMachine->asioOutput->prepare(as);
             TRACE_LOG(stateMachine->logject) << "sink prepared with specs:\n" << as;
             stateMachine->asioOutput->play();
@@ -584,6 +593,12 @@ void Player::impl::trackChangeSlot(std::optional<Track> track) {
                 TRACE_LOG(logject) << "prepared track specs: " << track->getAudioSpecs();
                 this_thread::sleep_for(100ms);
                 asioOutput->play();
+            }
+            else {
+                auto& as1 = track->getAudioSpecs();
+                auto& as2 = asioOutput->currentSpecs();
+                as1.target_bps = as2.target_bps;
+                as1.target_sample_rate = as2.target_sample_rate;
             }
         }
     }
