@@ -32,19 +32,23 @@ namespace Melosic {
 namespace Playlist {
 class Manager;
 }
+namespace Thread {
+class Manager;
+}
 
 class PlaylistModel;
 
 class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
+    Thread::Manager& tman;
     std::unordered_map<Core::Playlist, PlaylistModel*> playlists;
     std::list<Signals::ScopedConnection> conns;
     Logger::Logger logject;
     mutable std::mutex mu;
 
 public:
-    explicit PlaylistManagerModel(Playlist::Manager&, QObject* parent = nullptr);
+    explicit PlaylistManagerModel(Playlist::Manager&, Thread::Manager&, QObject* parent = nullptr);
 
     enum {
         PlaylistModelRole = Qt::UserRole * 12,

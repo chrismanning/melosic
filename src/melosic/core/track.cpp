@@ -35,11 +35,16 @@ using lock_guard = std::lock_guard<mutex>;
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
+#include <melosic/common/signal.hpp>
 
 namespace Melosic {
 namespace Core {
 
 static Logger::Logger logject(logging::keywords::channel = "Track");
+
+struct TagsChanged : Signals::Signal<Signals::Track::TagsChanged> {
+    using Super::Signal;
+};
 
 class Track::impl : public std::enable_shared_from_this<impl> {
 public:
@@ -87,7 +92,7 @@ public:
             return decoder->read(s, (difference < n) ? n : difference);
         }
         catch(AudioDataInvalidException& e) {
-            e << ErrorTag::FilePath(sourceName());
+            e << ErrorTag::FilePath(filePath());
             throw;
         }
     }
@@ -112,6 +117,9 @@ public:
     chrono::milliseconds duration() {
         if(end > start)
             return end - start;
+
+        if(!m_tags_readable)
+            return 0ms;
 
         return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
     }
@@ -148,23 +156,25 @@ public:
     void reloadTags() {
         tags.clear();
         taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
-        assert(taglibfile);
         if(!taglibfile)
             return;
         tags = taglibfile->properties();
+        taglibfile.reset();
+        m_tags_readable = true;
+        tagsChanged(std::cref(tags));
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
     bool taggable() {
-        return false;
+        return static_cast<bool>(taglibfile);
     }
 
     bool valid() {
         return decoder_factory && decoder && *decoder;
     }
 
-    const std::string& sourceName() {
-        return filepath.string();
+    const boost::filesystem::path& filePath() {
+        return filepath;
     }
 
     std::shared_ptr<impl> clone() {
@@ -181,6 +191,8 @@ private:
     std::unique_ptr<TagLib::File> taglibfile;
     TagLib::PropertyMap tags;
     AudioSpecs as;
+    bool m_tags_readable{false};
+    TagsChanged tagsChanged;
     mutex mu;
 };
 
@@ -264,9 +276,9 @@ Track::operator bool() const {
     return pimpl->valid();
 }
 
-const std::string& Track::sourceName() const {
+const boost::filesystem::path& Track::filePath() const {
     shared_lock l(pimpl->mu);
-    return pimpl->sourceName();
+    return pimpl->filePath();
 }
 
 void Track::reloadTags() {
@@ -277,6 +289,11 @@ void Track::reloadTags() {
 bool Track::taggable() const {
     shared_lock l(pimpl->mu);
     return pimpl->taggable();
+}
+
+bool Track::tagsReadable() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->m_tags_readable;
 }
 
 void Track::reloadDecoder() {
@@ -297,6 +314,10 @@ bool Track::valid() const {
 Track Track::clone() const {
     lock_guard l(pimpl->mu);
     return Track(pimpl->clone());
+}
+
+Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept {
+    return pimpl->tagsChanged;
 }
 
 Track::Track(decltype(pimpl) p) : pimpl(p) {}

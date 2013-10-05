@@ -50,7 +50,7 @@ public:
     static CategoryProxyModelAttached* qmlAttachedProperties(QObject *object);
 
 Q_SIGNALS:
-    void categoryChanged(const Category& category);
+    void categoryChanged(Melosic::Category* category);
     void blocksNeedUpdating(int start, int end);
 
 private Q_SLOTS:
@@ -60,6 +60,8 @@ private Q_SLOTS:
                               const QModelIndex&, int destinationRow);
     void onRowsRemoved(const QModelIndex&, int start, int end);
     void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
+
+    void onDataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&);
 };
 
 class CategoryProxyModelAttached : public QObject {
@@ -126,6 +128,8 @@ public:
     }
 
     void setFirstIndex(QPersistentModelIndex index) {
+        if(!index.isValid())
+            return;
         firstIndex_ = index;
         if(category.size() == 0)
             category = qobject_cast<CategoryProxyModel*>(const_cast<QAbstractItemModel*>(index.model()))->

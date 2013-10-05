@@ -56,8 +56,6 @@ public:
     void onStateChangeSlot(DeviceState state);
 
 private:
-    Core::Kernel& kernel;
-    Core::Player& player;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     QScopedPointer<PlayerControls> playerControls;

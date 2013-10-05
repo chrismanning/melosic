@@ -17,14 +17,18 @@ ScrollView {
     property alias currentIndex: listView.currentIndex
     property alias count: listView.count
     property int padding: 0
-    property alias categoryModel: categoryModel_
     property int itemHeight: 14
     property var removeItems
     property var moveItems
 
     property DelegateModelGroup selected: selectedGroup
 
-    property alias category: categoryModel_.category
+    property CategoryProxyModel categoryModel: typeof root.model == 'CategoryProxyModel' ? root.model : proxyLoader.item
+
+    property Category category
+    Component.onCompleted: {
+        categoryModel.category = category
+    }
 
     Keys.onUpPressed: {
         listView.decrementCurrentIndex()
@@ -117,25 +121,33 @@ ScrollView {
         anchors.fill: parent
         interactive: false
         boundsBehavior: Flickable.StopAtBounds
+        Component.onDestruction: console.debug("Playlist view being destroyed")
 
         Binding {
-            target: categoryModel_.category
+            target: root.categoryModel.category
             property: "model"
             when: category !== null
-            value: categoryModel_
+            value: root.categoryModel
+        }
+
+        Loader {
+            id: proxyLoader
+
+            Component {
+                id: categoryModelComponent
+                CategoryProxyModel {
+                    sourceModel: root.model
+                }
+            }
+
+            sourceComponent: typeof root.model == 'CategoryProxyModel' ?  undefined : categoryModelComponent
         }
 
         model: DelegateModel {
             id: delegateModel
             groups: [ DelegateModelGroup { id: selectedGroup; name: "selected" } ]
 
-            model: CategoryProxyModel {
-                id: categoryModel_
-                Binding on sourceModel {
-                    when: root.model !== null
-                    value: root.model
-                }
-            }
+            model: root.categoryModel
 
             property Component itemDelegate
             delegate: Item {
@@ -159,7 +171,7 @@ ScrollView {
 
                 property int rowIndex: model.index
                 property var itemModel: model
-                property CategoryProxyModel categoryModel: categoryModel_
+                property CategoryProxyModel categoryModel: root.categoryModel
                 property Block block: CategoryProxyModel.block
 
                 Item {
@@ -202,7 +214,7 @@ ScrollView {
                         property bool itemSelected: rowitem.DelegateModel.inSelected
                         property int rowIndex: rowitem.rowIndex
                         property int itemWidth: width
-                        property color textColor: itemSelected ? palette.highlightedText : palette.text
+                        property color textColor: rowitem.DelegateModel.inSelected ? palette.highlightedText : palette.text
                     }
 
                     MouseArea {

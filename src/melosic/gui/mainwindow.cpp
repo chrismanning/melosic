@@ -22,6 +22,7 @@
 #include <QQmlComponent>
 #include <QQuickWindow>
 #include <QApplication>
+#include <QVector>
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
@@ -44,12 +45,10 @@
 namespace Melosic {
 
 MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
-    kernel(kernel),
-    player(player),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
-    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager())),
+    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager())),
     modelTest(playlistManagerModel)
 {
 //    Slots::Manager& slotman = this->kernel.getSlotManager();
@@ -62,6 +61,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterType<QAbstractItemModel>();
     qmlRegisterType<PlaylistModel>();
+    qRegisterMetaType<QVector<int>>();
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");
     qmlRegisterUncreatableType<Criteria>("Melosic.Playlist", 1, 0, "CategoryCriteria", "abstract");
     qmlRegisterType<Role>("Melosic.Playlist", 1, 0, "CategoryRole");

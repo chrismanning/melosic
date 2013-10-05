@@ -23,6 +23,7 @@ namespace ph = std::placeholders;
 #include <boost/range/adaptor/map.hpp>
 using namespace boost::adaptors;
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <taglib/aifffile.h>
 #include <taglib/mpcfile.h>
@@ -120,7 +121,7 @@ std::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path file
     }
 
     Core::Track t{std::move(decoderFactory), std::move(filepath), start, end};
-    t.reOpen();
+
     return t;
 }
 std::optional<Core::Track> Manager::openTrack(boost::filesystem::path filepath,

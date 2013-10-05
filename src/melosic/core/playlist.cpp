@@ -31,6 +31,8 @@ using boost::format;
 namespace io = boost::iostreams;
 #include <boost/range/adaptor/sliced.hpp>
 
+#include <taglib/tpropertymap.h>
+
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal_fwd.hpp>
@@ -45,16 +47,32 @@ namespace Core {
 
 static Logger::Logger logject(logging::keywords::channel = "Playlist");
 
+struct TrackAdded : Signals::Signal<Signals::Playlist::TrackAdded> {
+    using Super::Signal;
+};
+
+struct TrackRemoved : Signals::Signal<Signals::Playlist::TrackRemoved> {
+    using Super::Signal;
+};
+
+struct TagsChanged : Signals::Signal<Signals::Playlist::TagsChanged> {
+    using Super::Signal;
+};
+
+struct MultiTagsChanged : Signals::Signal<Signals::Playlist::MultiTagsChanged> {
+    using Super::Signal;
+};
+
 struct TrackChanged : Signals::Signal<Signals::Playlist::TrackChanged> {
     using Super::Signal;
 };
 
 static TrackChanged trackChangedSignal;
 
-void trackChanged(std::optional<Core::Track> t, unique_lock& l) {
+static void trackChanged(int i, std::optional<Core::Track> t, unique_lock& l) {
     l.unlock();
     BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-    trackChangedSignal(t);
+    trackChangedSignal(i, t);
 }
 
 class Playlist::impl {
@@ -85,6 +103,30 @@ public:
             }
         }
         return r;
+    }
+
+    void trackAdded(int i, std::optional<Core::Track> t, unique_lock& l) {
+        if(i < 0 || !t)
+            return;
+        t->getTagsChangedSignal().connect([it=std::next(std::begin(tracks), i), this]
+                                          (const TagLib::PropertyMap& tags) mutable {
+            tagsChangedSignal(+std::distance(std::begin(tracks), it), std::cref(tags));
+        });
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        trackAddedSignal(i, t);
+    }
+
+    void trackRemoved(int i, std::optional<Core::Track> t, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        trackRemovedSignal(i, t);
+    }
+
+    void tagsChanged(int i, const TagLib::PropertyMap& tags, unique_lock& l) {
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        tagsChangedSignal(i, std::cref(tags));
     }
 
     void seek(chrono::milliseconds dur) {
@@ -128,7 +170,7 @@ public:
             m_current_pos = pos;
             m_current_track = *std::next(std::begin(tracks), m_current_pos);
         }
-        trackChanged(m_current_track, l);
+        trackChanged(m_current_pos, m_current_track, l);
     }
 
     auto currentTrack() {
@@ -152,6 +194,9 @@ public:
         if(pos > size())
             pos = size();
         auto r = tracks.insert(std::next(std::begin(tracks), pos), std::move(value));
+
+        trackAdded(pos, *r, l);
+
         if(size() == 1)
             jumpTo(0, l);
         return *r;
@@ -167,6 +212,8 @@ public:
         if(!v)
             return {};
         auto r = tracks.emplace(std::next(std::begin(tracks), pos), *v);
+
+        trackAdded(pos, *r, l);
 
         if(size() == 1)
             jumpTo(0, l);
@@ -191,7 +238,10 @@ public:
                 auto v = decman.openTrack(path);
                 if(!v)
                     continue;
-                tracks.emplace(std::next(std::begin(tracks), pos), *v);
+                tracks.emplace(std::next(std::begin(tracks), pos+s), *v);
+
+                trackAdded(pos, v, l);
+
                 s++;
             }
             catch(...) {
@@ -209,6 +259,9 @@ public:
 
     void push_back(Playlist::value_type value, unique_lock& l) {
         tracks.push_back(std::move(value));
+
+        trackAdded(tracks.size()-1, tracks.back(), l);
+
         if(size() == 1)
             jumpTo(0, l);
     }
@@ -222,6 +275,9 @@ public:
         if(!v)
             return;
         tracks.emplace_back(*v);
+
+        trackAdded(tracks.size()-1, tracks.back(), l);
+
         if(size() == 1)
             jumpTo(0, l);
     }
@@ -252,6 +308,11 @@ public:
     Playlist::list_type tracks;
     std::optional<Playlist::value_type> m_current_track;
     Playlist::size_type m_current_pos{-1};
+    TrackAdded trackAddedSignal;
+    TrackRemoved trackRemovedSignal;
+    TagsChanged tagsChangedSignal;
+    MultiTagsChanged multiTagsChangedSignal;
+
     Decoder::Manager& decman;
     std::string name;
 };
@@ -327,6 +388,20 @@ const std::vector<Playlist::value_type> Playlist::getTracks(Playlist::size_type 
     shared_lock l(pimpl->mu);
     auto range = boost::adaptors::slice(pimpl->tracks, start, end);
     return {range.begin(), range.end()};
+}
+
+void Playlist::refreshTracks(Playlist::size_type start, Playlist::size_type end) {
+    unique_lock l(pimpl->mu);
+    auto range = boost::adaptors::slice(pimpl->tracks, start, end);
+    for(auto& t : range) {
+        try {
+            t.reOpen();
+            t.close();
+        }
+        catch(...) {}
+    }
+    l.unlock();
+    pimpl->multiTagsChangedSignal(start, end);
 }
 
 //capacity
@@ -426,7 +501,15 @@ bool Playlist::operator==(const Playlist& b) const {
     return pimpl == b.pimpl;
 }
 
-Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() {
+Signals::Playlist::TagsChanged& Playlist::getTagsChangedSignal() const noexcept {
+    return pimpl->tagsChangedSignal;
+}
+
+Signals::Playlist::MultiTagsChanged& Playlist::getMutlipleTagsChangedSignal() const noexcept {
+    return pimpl->multiTagsChangedSignal;
+}
+
+Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() noexcept {
     return trackChangedSignal;
 }
 

@@ -110,7 +110,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     }
     Output::DeviceState state_impl();
 
-    void trackChangeSlot(std::optional<Track>);
+    void trackChangeSlot(int, std::optional<Track>);
     void changeDevice();
     void sinkChangeSlot();
 
@@ -576,7 +576,7 @@ Output::DeviceState Player::impl::state_impl() {
     return currentState_->state();
 }
 
-void Player::impl::trackChangeSlot(std::optional<Track> track) {
+void Player::impl::trackChangeSlot(int, std::optional<Track> track) {
     if(!track)
         return;
     auto cp = playman.currentPlaylist();

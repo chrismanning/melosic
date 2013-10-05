@@ -53,57 +53,79 @@ ListView {
                 CategoryRole { role: "artist" }
                 CategoryRole { role: "album" }
 
-                delegate: Column {
-                    spacing: clv.lv.padding
+                delegate: Loader {
+                    Component {
+                        id: tagCategoryComponent
+                        Column {
+                            spacing: clv.lv.padding
 
-                    y: spacing
-                    x: spacing
-                    height: childrenRect.height + spacing*(children.length)
-                    width: clv.lv.width
-                    Label {
-                        text: model.artist + " - " + model.album
-                        elide: Text.ElideRight
-                        color: textColor
-                        width: parent.width
+                            y: spacing
+                            x: spacing
+                            height: childrenRect.height + spacing*(children.length)
+                            width: clv.lv.width
+                            Label {
+                                text: model.artist + " - " + model.album
+                                elide: Text.ElideRight
+                                color: textColor
+                                width: parent.width
+                            }
+                            Label {
+                                text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
+                                elide: Text.ElideRight
+                                color: textColor
+                                width: parent.width
+                            }
+                        }
                     }
-                    Label {
-                        text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
-                        elide: Text.ElideRight
-                        color: textColor
-                        width: parent.width
-                    }
+                    sourceComponent: model.tags_readable ? tagCategoryComponent : undefined
                 }
             }
 
-            delegate: Row {
-                id: track
-                spacing: clv.lv.padding
-                x: spacing
-                Row {
-                    spacing: parent.spacing
-                    width: itemWidth - durationLbl.width - (spacing*3)
-                    Label {
-                        id: trackno
-                        elide: Text.ElideRight
-                        color: textColor
-                        text: model.tracknumber
-                        width: 15
-                    }
-                    Label {
+            delegate: Loader {
+                Component {
+                    id: tagComponent
+                    Row {
+                        id: track
+                        spacing: clv.lv.padding
                         x: spacing
-                        elide: Text.ElideRight
-                        color: textColor
-                        text: model.title
-                        width: parent.width - trackno.width - spacing
+                        Row {
+                            spacing: parent.spacing
+                            width: itemWidth - durationLbl.width - (spacing*3)
+                            Label {
+                                id: trackno
+                                elide: Text.ElideRight
+                                color: textColor
+                                text: model.tracknumber
+                                width: 15
+                            }
+                            Label {
+                                x: spacing
+                                elide: Text.ElideRight
+                                color: textColor
+                                text: model.title
+                                width: parent.width - trackno.width - spacing
+                            }
+                        }
+                        Label {
+                            id: durationLbl
+                            width: contentWidth
+
+                            color: textColor
+                            text: SecsToMins.secsToMins(model.duration)
+                        }
                     }
                 }
-                Label {
-                    id: durationLbl
-                    width: contentWidth
-
-                    color: textColor
-                    text: SecsToMins.secsToMins(model.duration)
+                Component {
+                    id: fileComponent
+                    Label {
+                        x: padding
+                        elide: Text.ElideRight
+                        color: textColor
+                        text: model.filepath
+                    }
                 }
+
+                sourceComponent: model.tags_readable ? tagComponent : fileComponent
             }
         }
     }

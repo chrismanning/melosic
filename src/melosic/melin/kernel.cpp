@@ -37,28 +37,28 @@ struct Kernel::impl {
     impl() :
         confman("melosic.conf"),
         plugman(confman),
-        inman(),
-        decman(),
-        encman(),
-        playlistman(decman),
         io_service(),
         outman(confman, io_service),
         null_worker(new asio::io_service::work(io_service)),
         tman(&io_service),
-        null_worker_(std::move(null_worker))
+        null_worker_(std::move(null_worker)),
+        inman(),
+        decman(),
+        encman(),
+        playlistman(decman)
     {}
 
     Config::Manager confman;
     Plugin::Manager plugman;
-    Input::Manager inman;
-    Decoder::Manager decman;
-    Encoder::Manager encman;
-    Melosic::Playlist::Manager playlistman;
     asio::io_service io_service;
     Output::Manager outman;
     std::unique_ptr<asio::io_service::work> null_worker;
     Thread::Manager tman;
     std::unique_ptr<asio::io_service::work> null_worker_;
+    Input::Manager inman;
+    Decoder::Manager decman;
+    Encoder::Manager encman;
+    Melosic::Playlist::Manager playlistman;
 };
 
 Kernel::Kernel() : pimpl(new impl) {}

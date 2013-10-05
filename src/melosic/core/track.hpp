@@ -27,6 +27,7 @@
 #include <melosic/common/stream.hpp>
 #include <melosic/melin/input.hpp>
 #include <melosic/melin/decoder.hpp>
+#include <melosic/core/track_signals.hpp>
 
 namespace Melosic {
 namespace Core {
@@ -59,17 +60,20 @@ public:
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs& getAudioSpecs();
     const Melosic::AudioSpecs& getAudioSpecs() const;
-    const std::string& sourceName() const;
+    const boost::filesystem::path& filePath() const;
     std::optional<std::string> getTag(const std::string& key) const;
 
     void reloadTags();
     bool taggable() const;
+    bool tagsReadable() const;
     void reloadDecoder();
     bool decodable() const;
 
     bool valid() const;
     explicit operator bool() const;
     Track clone() const;
+
+    Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
 
 private:
     class impl;

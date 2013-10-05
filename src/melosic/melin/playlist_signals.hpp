@@ -18,10 +18,13 @@
 #ifndef MELOSIC_PLAYLIST_SIGNALS_HPP
 #define MELOSIC_PLAYLIST_SIGNALS_HPP
 
-#include <memory>
 #include <optional>
 
 #include <melosic/common/signal_fwd.hpp>
+
+namespace TagLib {
+class PropertyMap;
+}
 
 namespace Melosic {
 
@@ -37,9 +40,12 @@ typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistAdded;
 typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistRemoved;
 typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistChanged;
 
-typedef SignalCore<void(std::optional<Core::Track>)> TrackAdded;
-typedef SignalCore<void(std::optional<Core::Track>)> TrackRemoved;
-typedef SignalCore<void(std::optional<Core::Track>)> TrackChanged;
+typedef SignalCore<void(int, std::optional<Core::Track>)> TrackAdded;
+typedef SignalCore<void(int, std::optional<Core::Track>)> TrackRemoved;
+typedef SignalCore<void(int, std::optional<Core::Track>)> TrackChanged;
+
+typedef SignalCore<void(int, const TagLib::PropertyMap&)> TagsChanged;
+typedef SignalCore<void(int, int)> MultiTagsChanged;
 
 }//Playlist
 }//Signals

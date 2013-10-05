@@ -32,12 +32,17 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
+#include <melosic/common/connection.hpp>
 
 namespace Melosic {
 
 struct TrackRoles {
     enum {
-        SourceName = Qt::UserRole + 1,
+        FileName = Qt::UserRole + 1,
+        FilePath,
+        FileExtension,
+        TagsReadable,
+        Current,
         Title,
         Artist,
         Album,
@@ -52,14 +57,18 @@ struct TrackRoles {
 namespace Core {
 class Playlist;
 }
+namespace Thread {
+class Manager;
+}
 
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     Core::Playlist playlist;
+    Thread::Manager& tman;
     static Logger::Logger logject;
 
 public:
-    explicit PlaylistModel(Core::Playlist playlist,
+    explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
                            QObject* parent = nullptr);
 
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;
@@ -78,6 +87,8 @@ public:
     bool insertTracks(int row, std::initializer_list<const boost::filesystem::path> filenames) {
         return insertTracks(row, std::move(ForwardRange<const boost::filesystem::path>(filenames)));
     }
+
+    Q_INVOKABLE void refreshTags(int start, int end = -1);
 
     Q_INVOKABLE bool moveRows(const QModelIndex&, int sourceRow, int count,
                               const QModelIndex&, int destinationChild) override;

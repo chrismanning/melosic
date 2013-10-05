@@ -28,14 +28,19 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/adaptors.hpp>
+using namespace boost::adaptors;
 #include <boost/format.hpp>
 using boost::format;
-using namespace boost::adaptors;
+#include <boost/scope_exit.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
+#include <melosic/common/signal_core.hpp>
+#include <melosic/common/thread.hpp>
+
+#include <taglib/tpropertymap.h>
 
 #include "playlistmodel.hpp"
 
@@ -43,9 +48,15 @@ namespace Melosic {
 
 Logger::Logger PlaylistModel::logject(logging::keywords::channel = "PlaylistModel");
 
-PlaylistModel::PlaylistModel(Core::Playlist playlist, QObject* parent)
+PlaylistModel::PlaylistModel(Core::Playlist playlist, Thread::Manager& tman, QObject* parent)
     : QAbstractListModel(parent),
-      playlist(playlist) {}
+      playlist(playlist),
+      tman(tman)
+{
+    this->playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
+        Q_EMIT dataChanged(index(start), index(end-1));
+    });
+}
 
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
     return playlist.size();
@@ -64,9 +75,15 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
             return {};
         switch(role) {
             case Qt::DisplayRole:
-                return data(index, TrackRoles::SourceName);
-            case TrackRoles::SourceName:
-                return QString::fromStdString(track->sourceName());
+                return data(index, TrackRoles::FileName);
+            case TrackRoles::FileName:
+                return QString::fromStdString(track->filePath().filename().string());
+            case TrackRoles::FilePath:
+                return QString::fromStdString(track->filePath().string());
+            case TrackRoles::FileExtension:
+                return QString::fromStdString(track->filePath().extension().string());
+            case TrackRoles::TagsReadable:
+                return QVariant::fromValue(track->tagsReadable());
             case TrackRoles::Title:
                 return QString::fromStdString(*track->getTag("title"));
             case TrackRoles::Artist:
@@ -118,7 +135,7 @@ QMimeData* PlaylistModel::mimeData(const QModelIndexList& indexes) const {
 
     for(const QModelIndex& index : indexes) {
         if(index.isValid()) {
-            auto text = data(index, (int)TrackRoles::SourceName).toString();
+            auto text = data(index, (int)TrackRoles::FileName).toString();
             stream << text;
         }
     }
@@ -129,7 +146,11 @@ QMimeData* PlaylistModel::mimeData(const QModelIndexList& indexes) const {
 
 QHash<int, QByteArray> PlaylistModel::roleNames() const {
     QHash<int, QByteArray> roles;
-    roles[TrackRoles::SourceName] = "source";
+    roles[TrackRoles::FileName] = "file";
+    roles[TrackRoles::FilePath] = "filepath";
+    roles[TrackRoles::FileExtension] = "extension";
+    roles[TrackRoles::TagsReadable] = "tags_readable";
+    roles[TrackRoles::Current] = "is_current";
     roles[TrackRoles::Title] = "title";
     roles[TrackRoles::Artist] = "artist";
     roles[TrackRoles::Album] = "album";
@@ -151,24 +172,42 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
         TRACE_LOG(logject) << v;
 
     std::deque<boost::filesystem::path> tmp;
-    boost::range::push_back(tmp, filenames | transformed(fun) | reversed);
+    boost::range::push_back(tmp, filenames | transformed(fun));
     return insertTracks(row, tmp);
 }
 
 bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
     TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
 
-    auto beg = ++row > playlist.size() ? playlist.size() : row;
+    row = ++row > playlist.size() ? playlist.size() : row;
 
-    beginInsertRows(QModelIndex(), beg, beg + boost::distance(filenames) -1);
+    beginInsertRows(QModelIndex(), row, row + boost::distance(filenames) -1);
 
-    auto n = playlist.emplace(beg, filenames);
-    assert(n == boost::distance(filenames));
+    auto n = playlist.emplace(row, filenames);
 
     TRACE_LOG(logject) << n << " tracks inserted";
 
     endInsertRows();
+
+    tman.enqueue([this, row, n] () mutable {
+        std::this_thread::sleep_for(1s);
+        playlist.refreshTracks(row, row+n);
+    });
+
     return n == boost::distance(filenames);
+}
+
+void PlaylistModel::refreshTags(int start, int end) {
+    Q_ASSERT(start >= 0);
+    end = end < start ? playlist.size() : end+1;
+    for(auto& t : playlist.getTracks(start, end)) {
+        try {
+            t.reOpen();
+            t.close();
+        }
+        catch(...) {}
+    }
+    Q_EMIT dataChanged(index(start), index(end-1));
 }
 
 bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,

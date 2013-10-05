@@ -29,6 +29,12 @@ CategoryProxyModel::CategoryProxyModel(QObject* parent) : QIdentityProxyModel(pa
     connect(this, &CategoryProxyModel::rowsAboutToBeMoved, this, &CategoryProxyModel::onRowsAboutToBeMoved);
     connect(this, &CategoryProxyModel::rowsRemoved, this, &CategoryProxyModel::onRowsRemoved);
     connect(this, &CategoryProxyModel::rowsAboutToBeRemoved, this, &CategoryProxyModel::onRowsAboutToBeRemoved);
+    connect(this, &CategoryProxyModel::dataChanged, this, &CategoryProxyModel::onDataChanged);
+    connect(this, &CategoryProxyModel::categoryChanged, [this] (Category* c) {
+        qDebug() << "Category changed";
+        Q_ASSERT(c);
+        onDataChanged(index(0,0), index(sourceModel()->rowCount() - 1, 0), {});
+    });
 }
 
 QSharedPointer<Block> CategoryProxyModel::blockForIndex_(const QModelIndex& index) {
@@ -104,68 +110,9 @@ QString CategoryProxyModel::indexCategory(const QModelIndex& index) const {
     return cat;
 }
 
-void CategoryProxyModel::onRowsInserted(const QModelIndex& parent, int start, int end) {
+void CategoryProxyModel::onRowsInserted(const QModelIndex&, int, int) {
     if(!category)
         return;
-
-    QModelIndex prev;
-    QString prevCategory;
-    QSharedPointer<Block> prevBlock;
-    int end_ = end;
-
-    if(start > 0) {
-        prev = index(start-1, 0);
-        Q_ASSERT(prev.isValid());
-        prevBlock = blockForIndex_(prev);
-        Q_ASSERT(prevBlock);
-        prevCategory = indexCategory(prev);
-        auto d = prevBlock->firstRow() + prevBlock->count();
-        if(d > start) {
-            qDebug() << "split block";
-            auto c = prevBlock->count();
-            auto c2 = d - start;
-            prevBlock->setCount(c - c2);
-            auto b = blockForIndex_(index(end+1, 0));
-            b->setCount(c2);
-            Q_ASSERT((d-prevBlock->firstRow()) == (b->count() + prevBlock->count()));
-            end_ += b->count() + 1;
-        }
-    }
-
-    for(int i = start; i <= end; i++) {
-        const QModelIndex cur(index(i, 0));
-        Q_ASSERT(cur.isValid());
-        const QString curCategory(indexCategory(cur));
-
-        if(prevBlock && curCategory == prevCategory) {
-            if(hasBlock(cur)) {
-                auto b = blockForIndex_(cur);
-                blocks.remove(curCategory, b);
-            }
-            prevBlock->setCount(prevBlock->count() + 1);
-        }
-
-        prev = cur;
-        prevCategory = curCategory;
-        prevBlock = blockForIndex_(cur);
-    }
-
-    if(end + 1 < rowCount(parent)) {
-        const QModelIndex epo(index(end + 1, 0));
-        if(prevCategory == indexCategory(epo)) {
-            qDebug() << "merging at end of inserted";
-            auto epob = blockForIndex_(epo);
-            Q_ASSERT(epob);
-            Q_ASSERT(epob != prevBlock);
-            prevBlock->setCount(prevBlock->count() + epob->count());
-            blocks.remove(prevCategory, epob);
-            Q_EMIT blocksNeedUpdating(end+1, end+1+epob->count());
-        }
-        else {
-
-        }
-    }
-    Q_EMIT blocksNeedUpdating(start, end_);
 }
 
 void CategoryProxyModel::onRowsMoved(const QModelIndex& parent, int sourceStart,
@@ -231,6 +178,72 @@ void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex&, int start, i
             b->setFirstIndex(index(i+n, 0));
         }
     }
+}
+
+void CategoryProxyModel::onDataChanged(const QModelIndex& istart, const QModelIndex& iend, const QVector<int>&) {
+    if(!istart.isValid() || !iend.isValid())
+        return;
+
+    auto start = istart.row(), end = iend.row();
+    QModelIndex prev;
+    QString prevCategory;
+    QSharedPointer<Block> prevBlock;
+    int end_ = end;
+
+    if(start > 0) {
+        prev = index(start-1, 0);
+        Q_ASSERT(prev.isValid());
+        prevBlock = blockForIndex_(prev);
+        Q_ASSERT(prevBlock);
+        prevCategory = indexCategory(prev);
+        auto d = prevBlock->firstRow() + prevBlock->count();
+        if(d > start) {
+            qDebug() << "split block";
+            auto c = prevBlock->count();
+            auto c2 = d - start;
+            prevBlock->setCount(c - c2);
+            auto b = blockForIndex_(index(end+1, 0));
+            b->setCount(c2);
+            Q_ASSERT((d-prevBlock->firstRow()) == (b->count() + prevBlock->count()));
+            end_ += b->count() + 1;
+        }
+    }
+
+    for(int i = start; i <= end; i++) {
+        const QModelIndex cur(index(i, 0));
+        Q_ASSERT(cur.isValid());
+        const QString curCategory(indexCategory(cur));
+
+        if(prevBlock && curCategory == prevCategory) {
+            if(hasBlock(cur)) {
+                auto b = blockForIndex_(cur);
+                blocks.remove(curCategory, b);
+            }
+            prevBlock->setCount(prevBlock->count() + 1);
+        }
+
+        prev = cur;
+        prevCategory = curCategory;
+        prevBlock = blockForIndex_(cur);
+    }
+
+    if(end + 1 < rowCount(QModelIndex())) {
+        const QModelIndex epo(index(end + 1, 0));
+        if(prevCategory == indexCategory(epo)) {
+            qDebug() << "merging at end of inserted";
+            auto epob = blockForIndex_(epo);
+            Q_ASSERT(epob);
+//            Q_ASSERT(epob != prevBlock);
+            prevBlock->setCount(prevBlock->count() + epob->count());
+            blocks.remove(prevCategory, epob);
+            Q_EMIT blocksNeedUpdating(end+1, end+1+epob->count());
+        }
+        else {
+
+        }
+    }
+
+    Q_EMIT blocksNeedUpdating(start, end_);
 }
 
 CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* object) {

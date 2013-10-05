@@ -39,6 +39,7 @@ ApplicationWindow {
             MenuItem { action: clearSelectionAction }
             MenuSeparator {}
             MenuItem { action: removeTracksAction }
+            MenuItem { action: refreshTracksAction }
         }
     }
 
@@ -116,6 +117,28 @@ ApplicationWindow {
                 currentPlaylist.removeSelected()
             else
                 console.debug("Cannot remove tracks: invalid playlist")
+        }
+    }
+
+    Action {
+        id: refreshTracksAction
+        text: "Refresh Tags of selected/all"
+        onTriggered: {
+            var pm = playlistManager.currentModel
+            if(pm == null)
+                return;
+            if(currentPlaylist.selected.count <= 0) {
+                pm.refreshTags(0,-1)
+                return
+            }
+
+            var groups = currentPlaylist.contiguousSelected().reverse()
+            for(var i = 0; i < groups.length; i++) {
+                var g = groups[i]
+                if(g.length <= 0)
+                    continue
+                pm.refreshTags(g[0], g[g.length-1])
+            }
         }
     }
 

@@ -72,6 +72,8 @@ public:
     std::vector<value_type> getTracks(size_type, size_type);
     const std::vector<value_type> getTracks(size_type, size_type) const;
 
+    void refreshTracks(size_type, size_type);
+
     bool empty() const;
     size_type size() const;
     size_type max_size() const;
@@ -101,7 +103,10 @@ public:
 
     bool operator==(const Playlist&) const;
 
-    static Signals::Playlist::TrackChanged& getTrackChangedSignal();
+    Signals::Playlist::TagsChanged& getTagsChangedSignal() const noexcept;
+    Signals::Playlist::MultiTagsChanged& getMutlipleTagsChangedSignal() const noexcept;
+
+    static Signals::Playlist::TrackChanged& getTrackChangedSignal() noexcept;
 
 private:
     class impl;

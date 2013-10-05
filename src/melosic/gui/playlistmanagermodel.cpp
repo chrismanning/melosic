@@ -29,16 +29,17 @@ using unique_lock = std::unique_lock<mutex>;
 
 namespace Melosic {
 
-PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, QObject* parent)
+PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::Manager& tman, QObject* parent)
     : QAbstractListModel(parent),
       playman(playman),
+      tman(tman),
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {
     conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (std::optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p)
-            playlists.emplace(*p, new PlaylistModel(*p));
+            playlists.emplace(*p, new PlaylistModel(*p, this->tman));
     }));
     conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (std::optional<Core::Playlist> p) {
         lock_guard l(mu);
