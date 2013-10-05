@@ -50,7 +50,7 @@ typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(boost::asio::io_ser
 
 class Manager {
 public:
-    explicit Manager(Config::Manager&, std::shared_ptr<boost::asio::io_service>);
+    explicit Manager(Config::Manager&, boost::asio::io_service&);
     ~Manager();
 
     Manager(Manager&&) = delete;
