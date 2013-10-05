@@ -128,9 +128,9 @@ namespace mpl = boost::mpl;
 class Manager {
 public:
     Manager(size_t numThreads, TaskQueue::size_type numTasks,
-            boost::asio::io_service* io_service) :
+            std::shared_ptr<boost::asio::io_service> io_service) :
         tasks(numTasks),
-        asio_service(io_service)
+        asio_service(std::move(io_service))
     {
         assert(numThreads > 0);
 
@@ -163,12 +163,12 @@ public:
     }
 
     explicit Manager(size_t numThreads = std::thread::hardware_concurrency() + 1,
-                     boost::asio::io_service* io_service = nullptr) :
-        Manager(numThreads, numThreads * 2, io_service)
+                     std::shared_ptr<boost::asio::io_service> io_service = nullptr) :
+        Manager(numThreads, numThreads * 2, std::move(io_service))
     {}
 
-    explicit Manager(boost::asio::io_service* io_service) :
-        Manager(std::thread::hardware_concurrency() + 1, io_service)
+    explicit Manager(std::shared_ptr<boost::asio::io_service> io_service) :
+        Manager(std::thread::hardware_concurrency() + 1, std::move(io_service))
     {}
 
     Manager(const Manager&) = delete;
@@ -217,7 +217,7 @@ private:
     std::vector<std::thread> threads;
     TaskQueue tasks;
     std::atomic_bool done{false};
-    boost::asio::io_service* const asio_service;
+    const std::shared_ptr<boost::asio::io_service> asio_service;
 };
 
 } // namespace Thread

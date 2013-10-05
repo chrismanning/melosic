@@ -47,7 +47,10 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 
 class Manager::impl {
 public:
-    impl(Config::Manager& confman, ASIO::io_service& io_service) : io_service(io_service) {
+    impl(Config::Manager& confman, std::shared_ptr<ASIO::io_service> io_service)
+        :
+          io_service(std::move(io_service))
+    {
         conf.putNode("output device", "default"s);
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
@@ -112,7 +115,7 @@ public:
             return nullptr;
         }
 
-        return it->second(io_service, sinkName);
+        return it->second(*io_service, sinkName);
     }
 
     void setASIOSink(std::string sinkname) {
@@ -128,7 +131,7 @@ public:
 
 private:
     mutex mu;
-    ASIO::io_service& io_service;
+    const std::shared_ptr<ASIO::io_service> io_service;
     std::string sinkName;
     std::map<DeviceName, ASIOFactory> asioOutputFactories;
     Config::Conf conf{"Output"};
@@ -137,8 +140,8 @@ private:
     friend class Manager;
 };
 
-Manager::Manager(Config::Manager& confman, boost::asio::io_service& io_service)
-    : pimpl(new impl(confman, io_service)) {}
+Manager::Manager(Config::Manager& confman, std::shared_ptr<boost::asio::io_service> io_service)
+    : pimpl(new impl(confman, std::move(io_service))) {}
 
 Manager::~Manager() {}
 

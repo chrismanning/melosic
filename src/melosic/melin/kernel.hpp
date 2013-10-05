@@ -77,7 +77,7 @@ public:
     MELOSIC_EXPORT Thread::Manager& getThreadManager();
     MELOSIC_EXPORT Melosic::Playlist::Manager& getPlaylistManager();
 
-    MELOSIC_EXPORT boost::asio::io_service& getIOService();
+    MELOSIC_EXPORT std::shared_ptr<boost::asio::io_service> getIOService();
 
 private:
     struct impl;

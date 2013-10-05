@@ -37,10 +37,10 @@ struct Kernel::impl {
     impl() :
         confman("melosic.conf"),
         plugman(confman),
-        io_service(),
+        io_service(std::make_shared<asio::io_service>()),
         outman(confman, io_service),
-        null_worker(new asio::io_service::work(io_service)),
-        tman(&io_service),
+        null_worker(new asio::io_service::work(*io_service)),
+        tman(io_service),
         null_worker_(std::move(null_worker)),
         inman(),
         decman(),
@@ -50,7 +50,7 @@ struct Kernel::impl {
 
     Config::Manager confman;
     Plugin::Manager plugman;
-    asio::io_service io_service;
+    std::shared_ptr<asio::io_service> io_service;
     Output::Manager outman;
     std::unique_ptr<asio::io_service::work> null_worker;
     Thread::Manager tman;
@@ -104,7 +104,7 @@ Melosic::Playlist::Manager& Kernel::getPlaylistManager() {
     return pimpl->playlistman;
 }
 
-boost::asio::io_service& Kernel::getIOService() {
+std::shared_ptr<boost::asio::io_service> Kernel::getIOService() {
     return pimpl->io_service;
 }
 
