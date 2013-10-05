@@ -121,7 +121,7 @@ public:
 };
 
 namespace {
-using TaskQueue = boost::lockfree::queue<Task, boost::lockfree::fixed_sized<true>>;
+using TaskQueue = boost::lockfree::queue<Task>;
 namespace mpl = boost::mpl;
 }
 
@@ -198,7 +198,7 @@ public:
         assert(fut.valid());
 
         Task t(std::move(p), std::forward<Func>(f), std::forward<Args>(args)...);
-        if(!tasks.bounded_push(t)) {
+        if(!tasks.push(t)) {
             BOOST_THROW_EXCEPTION(TaskQueueError());
         }
 
