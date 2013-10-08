@@ -9,5 +9,6 @@
         <file>playlistmanager.qml</file>
         <file>naturalsort.js</file>
         <file>secstomins.js</file>
+        <file>tooltip.qml</file>
     </qresource>
 </RCC>

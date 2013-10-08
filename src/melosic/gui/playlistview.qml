@@ -81,6 +81,12 @@ ListView {
                 }
             }
 
+            tooltip: ToolTip {
+                text: model.tags_readable ? model.title : model.filepath
+                fadeInDelay: 500
+                fadeOutDelay: 700
+            }
+
             delegate: Loader {
                 Component {
                     id: tagComponent
