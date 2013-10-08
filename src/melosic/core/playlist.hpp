@@ -106,7 +106,7 @@ public:
     Signals::Playlist::TagsChanged& getTagsChangedSignal() const noexcept;
     Signals::Playlist::MultiTagsChanged& getMutlipleTagsChangedSignal() const noexcept;
 
-    static Signals::Playlist::TrackChanged& getTrackChangedSignal() noexcept;
+    static Signals::Playlist::CurrentTrackChanged& getCurrentTrackChangedSignal() noexcept;
 
 private:
     class impl;

@@ -51,8 +51,6 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager())),
     modelTest(playlistManagerModel)
 {
-//    Slots::Manager& slotman = this->kernel.getSlotManager();
-
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
     playerControls.reset(new PlayerControls(player));

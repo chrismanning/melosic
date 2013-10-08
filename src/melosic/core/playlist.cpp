@@ -63,16 +63,16 @@ struct MultiTagsChanged : Signals::Signal<Signals::Playlist::MultiTagsChanged> {
     using Super::Signal;
 };
 
-struct TrackChanged : Signals::Signal<Signals::Playlist::TrackChanged> {
+struct CurrentTrackChanged : Signals::Signal<Signals::Playlist::CurrentTrackChanged> {
     using Super::Signal;
 };
 
-static TrackChanged trackChangedSignal;
+static CurrentTrackChanged currentTrackChangedSignal;
 
-static void trackChanged(int i, std::optional<Core::Track> t, unique_lock& l) {
+static void currentTrackChanged(int i, std::optional<Core::Track> t, unique_lock& l) {
     l.unlock();
     BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-    trackChangedSignal(i, t);
+    currentTrackChangedSignal(i, t);
 }
 
 class Playlist::impl {
@@ -170,7 +170,7 @@ public:
             m_current_pos = pos;
             m_current_track = *std::next(std::begin(tracks), m_current_pos);
         }
-        trackChanged(m_current_pos, m_current_track, l);
+        currentTrackChanged(m_current_pos, m_current_track, l);
     }
 
     auto currentTrack() {
@@ -509,8 +509,8 @@ Signals::Playlist::MultiTagsChanged& Playlist::getMutlipleTagsChangedSignal() co
     return pimpl->multiTagsChangedSignal;
 }
 
-Signals::Playlist::TrackChanged& Playlist::getTrackChangedSignal() noexcept {
-    return trackChangedSignal;
+Signals::Playlist::CurrentTrackChanged& Playlist::getCurrentTrackChangedSignal() noexcept {
+    return currentTrackChangedSignal;
 }
 
 } // namespace Core

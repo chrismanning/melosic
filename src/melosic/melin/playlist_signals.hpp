@@ -38,11 +38,11 @@ namespace Playlist {
 
 typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistAdded;
 typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistRemoved;
-typedef SignalCore<void(std::optional<Core::Playlist>)> PlaylistChanged;
+typedef SignalCore<void(std::optional<Core::Playlist>)> CurrentPlaylistChanged;
 
 typedef SignalCore<void(int, std::optional<Core::Track>)> TrackAdded;
 typedef SignalCore<void(int, std::optional<Core::Track>)> TrackRemoved;
-typedef SignalCore<void(int, std::optional<Core::Track>)> TrackChanged;
+typedef SignalCore<void(int, std::optional<Core::Track>)> CurrentTrackChanged;
 
 typedef SignalCore<void(int, const TagLib::PropertyMap&)> TagsChanged;
 typedef SignalCore<void(int, int)> MultiTagsChanged;

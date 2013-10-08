@@ -24,10 +24,12 @@
 namespace Melosic {
 
 Category::Category(QObject* parent) : QObject(parent) {
+    for(Criteria* c : criteria_)
+        c->model = model();
+
     connect(this, &Category::modelChanged, [this] (CategoryProxyModel* m) {
-        for(Criteria* c : criteria_) {
+        for(Criteria* c : criteria_)
             c->model = m;
-        }
     });
 }
 
@@ -40,9 +42,6 @@ CategoryProxyModel* Category::model() const {
 }
 
 void Category::setModel(CategoryProxyModel* m) {
-    qDebug() << "setting model";
-    if(!m)
-        qDebug() << "model is null";
     model_ = m;
     Q_EMIT modelChanged(model_);
 }
@@ -79,12 +78,8 @@ void Role::setRole(QString str) {
 }
 
 QString Role::result(const QModelIndex& index) const {
+    Q_ASSERT(index.isValid());
     if(!model) {
-        qDebug() << "model not set";
-        return role_;
-    }
-    if(!index.isValid()) {
-        qDebug() << "invalid index";
         return role_;
     }
 

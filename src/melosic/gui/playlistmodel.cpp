@@ -171,10 +171,39 @@ bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
     for(auto&& v : filenames | transformed(fun))
         TRACE_LOG(logject) << v;
 
-    std::deque<boost::filesystem::path> tmp;
-    boost::range::push_back(tmp, filenames | transformed(fun));
+    auto range = filenames | transformed(fun);
+    std::vector<boost::filesystem::path> tmp{range.begin(), range.end()};
+    Q_ASSERT(static_cast<int>(tmp.size()) == filenames.size());
     return insertTracks(row, tmp);
 }
+
+struct Refresher {
+    Refresher(Core::Playlist p, Thread::Manager& tman, int start, int end, int stride = 1) noexcept
+        :
+          p(p),
+          tman(tman),
+          start(start),
+          end(end),
+          stride(stride)
+    {
+        assert(stride > 0);
+    }
+
+    void operator()() {
+        while(start+stride > end)
+            --stride;
+        p.refreshTracks(start, start+stride);
+        start += stride;
+        if(start < end)
+            tman.enqueue(Refresher(p, tman, start, end, stride));
+    }
+
+    Core::Playlist p;
+    Thread::Manager& tman;
+    int start;
+    int end;
+    int stride;
+};
 
 bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
     TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
@@ -189,10 +218,7 @@ bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::
 
     endInsertRows();
 
-    tman.enqueue([this, row, n] () mutable {
-        std::this_thread::sleep_for(1s);
-        playlist.refreshTracks(row, row+n);
-    });
+    tman.enqueue(Refresher(playlist, tman, row, row+n, 1));
 
     return n == boost::distance(filenames);
 }

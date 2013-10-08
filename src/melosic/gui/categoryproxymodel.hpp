@@ -21,6 +21,7 @@
 #include <QIdentityProxyModel>
 #include <QSharedPointer>
 #include <qqml.h>
+#include <optional>
 
 namespace Melosic {
 
@@ -31,21 +32,19 @@ class CategoryProxyModelAttached;
 
 class CategoryProxyModel : public QIdentityProxyModel {
     Q_OBJECT
-    QMultiHash<QString, QSharedPointer<Block>> blocks;
 
-    QSharedPointer<Block> blockForIndex_(const QModelIndex&);
-    bool hasBlock(const QModelIndex&);
-    QSharedPointer<Block> merge(QSharedPointer<Block> a, QSharedPointer<Block> b);
-
-    Q_PROPERTY(Melosic::Category* category MEMBER category NOTIFY categoryChanged)
-    Category* category = nullptr;
+    Q_PROPERTY(Melosic::Category* category READ category WRITE setCategory NOTIFY categoryChanged)
 
     friend class CategoryProxyModelAttached;
 
 public:
     explicit CategoryProxyModel(QObject* parent = nullptr);
+    ~CategoryProxyModel();
 
     QString indexCategory(const QModelIndex& index) const;
+
+    Category* category() const;
+    void setCategory(Category*);
 
     static CategoryProxyModelAttached* qmlAttachedProperties(QObject *object);
 
@@ -53,7 +52,7 @@ Q_SIGNALS:
     void categoryChanged(Melosic::Category* category);
     void blocksNeedUpdating(int start, int end);
 
-private Q_SLOTS:
+private:
     void onRowsInserted(const QModelIndex&, int start, int end);
     void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow);
     void onRowsAboutToBeMoved(const QModelIndex&, int sourceStart, int sourceEnd,
@@ -62,6 +61,11 @@ private Q_SLOTS:
     void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
 
     void onDataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&);
+
+private:
+    struct impl;
+    QScopedPointer<impl> pimpl;
+    friend class Block;
 };
 
 class CategoryProxyModelAttached : public QObject {
@@ -137,6 +141,9 @@ public:
         Q_EMIT firstIndexChanged(firstIndex_);
         Q_EMIT firstRowChanged(firstIndex_.row());
     }
+
+    template <typename UpgradeableLock>
+    void setFirstIndex(QPersistentModelIndex index, UpgradeableLock& l);
 
     int firstRow() const {
         return firstIndex_.row();

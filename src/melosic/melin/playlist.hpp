@@ -60,11 +60,11 @@ public:
     MELOSIC_EXPORT void setCurrent(std::optional<Core::Playlist>) const;
     MELOSIC_EXPORT void setCurrent(size_type) const;
 
-    MELOSIC_EXPORT Signals::Playlist::PlaylistChanged& getPlaylistChangedSignal() const;
+    MELOSIC_EXPORT Signals::Playlist::CurrentPlaylistChanged& getCurrentPlaylistChangedSignal() const;
     MELOSIC_EXPORT Signals::Playlist::PlaylistAdded& getPlaylistAddedSignal() const;
     MELOSIC_EXPORT Signals::Playlist::PlaylistRemoved& getPlaylistRemovedSignal() const;
 
-    MELOSIC_EXPORT Signals::Playlist::TrackChanged& getTrackChangedSignal() const;
+    MELOSIC_EXPORT Signals::Playlist::CurrentTrackChanged& getTrackChangedSignal() const;
 
 private:
     class impl;

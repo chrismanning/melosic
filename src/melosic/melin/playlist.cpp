@@ -37,7 +37,7 @@ using shared_lock = boost::shared_lock<mutex>;
 namespace Melosic {
 namespace Playlist {
 
-struct PlaylistChanged : Signals::Signal<Signals::Playlist::PlaylistChanged> {
+struct CurrentPlaylistChanged : Signals::Signal<Signals::Playlist::CurrentPlaylistChanged> {
     using Super::Signal;
 };
 
@@ -108,19 +108,19 @@ public:
 
     void setCurrent(std::optional<Core::Playlist> p, unique_lock& l) {
         current = p;
-        playlistChanged(current, l);
+        currentPlaylistChanged(current, l);
     }
 
     void setCurrent(size_type p, unique_lock& l) {
         TRACE_LOG(logject) << "setting current playlist to position " << p;
         current = playlists[p];
-        playlistChanged(current, l);
+        currentPlaylistChanged(current, l);
     }
 
-    void playlistChanged(std::optional<Core::Playlist> p, unique_lock& l) {
+    void currentPlaylistChanged(std::optional<Core::Playlist> p, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-        playlistChangedSignal(p);
+        currentPlaylistChangedSignal(p);
     }
 
     void playlistAdded(std::optional<Core::Playlist> p, unique_lock& l) {
@@ -141,7 +141,7 @@ private:
     mutex mu;
     Logger::Logger logject{logging::keywords::channel = "PlaylistManagerModel"};
 
-    PlaylistChanged playlistChangedSignal;
+    CurrentPlaylistChanged currentPlaylistChangedSignal;
     PlaylistAdded playlistAddedSignal;
     PlaylistRemoved playlistRemovedSignal;
     std::optional<Core::Playlist> current;
@@ -209,8 +209,8 @@ void Manager::setCurrent(size_type idx) const {
     pimpl->setCurrent(idx, l);
 }
 
-Signals::Playlist::PlaylistChanged& Manager::getPlaylistChangedSignal() const {
-    return pimpl->playlistChangedSignal;
+Signals::Playlist::CurrentPlaylistChanged& Manager::getCurrentPlaylistChangedSignal() const {
+    return pimpl->currentPlaylistChangedSignal;
 }
 
 Signals::Playlist::PlaylistAdded& Manager::getPlaylistAddedSignal() const {
@@ -221,8 +221,8 @@ Signals::Playlist::PlaylistRemoved& Manager::getPlaylistRemovedSignal() const {
     return pimpl->playlistRemovedSignal;
 }
 
-Signals::Playlist::TrackChanged& Manager::getTrackChangedSignal() const {
-    return Core::Playlist::getTrackChangedSignal();
+Signals::Playlist::CurrentTrackChanged& Manager::getTrackChangedSignal() const {
+    return Core::Playlist::getCurrentTrackChangedSignal();
 }
 
 } // namespace Playlist
