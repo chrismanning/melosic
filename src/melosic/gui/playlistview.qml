@@ -1,8 +1,9 @@
 import QtQuick 2.1
 
-import QtQuick.Controls 1.0
+import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
 import QtQuick.Controls.Styles 1.0
+import QtQuick.Layouts 1.1
 
 import Melosic.Playlist 1.0
 
@@ -82,9 +83,30 @@ ListView {
             }
 
             tooltip: ToolTip {
-                text: model.tags_readable ? model.title : model.filepath
+                width: rowId.width + 20
+                height: rowId.height + 10
+                radius: 3
                 fadeInDelay: 500
                 fadeOutDelay: 700
+
+                RowLayout {
+                    id: rowId
+                    spacing: 10
+                    x: spacing
+                    anchors.centerIn: parent
+
+                    Rectangle {
+                        height: 10
+                        width: 10
+                        color: "red"
+                    }
+
+                    Label {
+                        id: txt
+                        color: pal.highlightedText
+                        text: model.tags_readable ? model.title : model.filepath
+                    }
+                }
             }
 
             delegate: Loader {

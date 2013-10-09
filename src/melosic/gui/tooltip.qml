@@ -3,14 +3,9 @@ import QtQuick.Controls 1.1
 
 Rectangle {
     id: tooltip
-    width: txt.width + 20
-    height: txt.height + 10
-    radius: 4
 
     property int fadeInDelay
     property int fadeOutDelay
-
-    property alias text: txt.text
 
     color: pal.text
     border.color: pal.highlightedText
@@ -19,12 +14,6 @@ Rectangle {
 
     SystemPalette {
         id: pal
-    }
-
-    Label {
-        id: txt
-        color: pal.highlightedText
-        anchors.centerIn: parent
     }
 
     states: [

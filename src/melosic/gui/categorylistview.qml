@@ -224,24 +224,24 @@ ScrollView {
                         active: false
                         property var model: itemModel
                         sourceComponent: root.tooltip
-                    }
 
-                    Timer {
-                        id: tooltipTimer
-                        interval: 500
-                        onTriggered: {
-                            tooltipLoader.active = true
-                            tooltipLoader.item.state = "poppedUp"
-                            stop()
-                            tooltipDestructionTimer.restart()
+                        Timer {
+                            id: tooltipTimer
+                            interval: 500
+                            onTriggered: {
+                                tooltipLoader.active = true
+                                tooltipLoader.item.state = "poppedUp"
+                                stop()
+                                tooltipDestructionTimer.restart()
+                            }
                         }
-                    }
-                    Timer {
-                        id: tooltipDestructionTimer
-                        interval: 3000
-                        onTriggered: {
-                            tooltipLoader.item.state = "poppedDown"
-                            stop()
+                        Timer {
+                            id: tooltipDestructionTimer
+                            interval: 3000
+                            onTriggered: {
+                                tooltipLoader.item.state = "poppedDown"
+                                stop()
+                            }
                         }
                     }
 
