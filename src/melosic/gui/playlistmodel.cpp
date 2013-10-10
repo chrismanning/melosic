@@ -225,6 +225,7 @@ bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::
 
 void PlaylistModel::refreshTags(int start, int end) {
     Q_ASSERT(start >= 0);
+    TRACE_LOG(logject) << "refreshing tags of tracks " << start << " - " << end;
     end = end < start ? playlist.size() : end+1;
     for(auto& t : playlist.getTracks(start, end)) {
         try {
@@ -286,8 +287,7 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
 {
     if(sourceRow == destinationChild)
         return false;
-    if(destinationChild > rowCount())
-        destinationChild = rowCount();
+    Q_ASSERT(destinationChild >= 0);
 
     if(!beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild))
         return false;
@@ -295,7 +295,7 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
     std::vector<Core::Playlist::value_type> tmp(playlist.getTracks(sourceRow, sourceRow + count));
 
     playlist.erase(sourceRow, sourceRow + count);
-    auto s = playlist.insert(destinationChild, tmp);
+    auto s = playlist.insert(destinationChild < sourceRow ? destinationChild : destinationChild - count, tmp);
 
     endMoveRows();
 

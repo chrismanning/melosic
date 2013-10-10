@@ -118,6 +118,10 @@ public:
         Q_EMIT collapsedChanged(c);
     }
 
+    bool contains(const QModelIndex& idx) {
+        return firstRow() <= idx.row() && firstRow() + count() > idx.row();
+    }
+
     int count() const {
         return count_;
     }

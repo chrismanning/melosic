@@ -21,6 +21,7 @@
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
 
+#include <boost/scope_exit.hpp>
 #include <boost/thread/shared_mutex.hpp>
 using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
@@ -150,6 +151,7 @@ CategoryProxyModel::impl::blockForIndex_(const QModelIndex& index, upgrade_lock&
     const QString category_(indexCategory(index, l));
     for(const QSharedPointer<Block>& block : blocks.values(category_)) {
         if(block->count() == 0 || !block->firstIndex().isValid()) {
+            TRACE_LOG(logject) << (block->count() == 0 ? "block empty" : "block has invalid first index");
             {
                 boost::upgrade_to_unique_lock<mutex> ul(l);
                 blocks.remove(category_, block);
@@ -157,12 +159,15 @@ CategoryProxyModel::impl::blockForIndex_(const QModelIndex& index, upgrade_lock&
             return blockForIndex_(index, l);
         }
 
+        TRACE_LOG(logject) << "block->count(): " << block->count();
         //in the middle of block
-        if(block->firstRow() <= index.row() && block->firstRow() + block->count() > index.row()) {
+        if(block->contains(index)) {
             Q_ASSERT(block->count() > 0);
             return block;
         }
     }
+
+    TRACE_LOG(logject) << "creating new block for index " << index.row();
 
     //create new block
     QSharedPointer<Block> empty(new Block);
@@ -238,16 +243,11 @@ void CategoryProxyModel::impl::onRowsMoved(const QModelIndex& parent, int source
                                            int sourceEnd, const QModelIndex&,
                                            int destinationRow, upgrade_lock& l)
 {
+    Q_ASSERT(sourceEnd >= sourceStart);
     auto s = sourceEnd - sourceStart;
     auto dest = destinationRow < sourceStart ? destinationRow : destinationRow - (s + 1);
-    if(dest == destinationRow) {
-        onRowsInserted(parent, dest, dest + s, l);
-        onRowsRemoved(parent, sourceStart + s, sourceEnd, l);
-    }
-    else {
-        onRowsRemoved(parent, sourceStart, sourceEnd, l);
-        onRowsInserted(parent, dest, dest + s, l);
-    }
+
+    onDataChanged(this->parent.index(dest, 0), this->parent.index(dest+s, 0), {}, l);
 }
 
 void CategoryProxyModel::impl::onRowsAboutToBeMoved(const QModelIndex& parent, int sourceStart, int sourceEnd,
@@ -256,13 +256,14 @@ void CategoryProxyModel::impl::onRowsAboutToBeMoved(const QModelIndex& parent, i
 }
 
 void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&,
-                                             int start, int /*end*/,
+                                             int start, int end,
                                              upgrade_lock& l)
 {
     if(!m_category || parent.rowCount() == 0) {
         blocks.clear();
         return;
     }
+    TRACE_LOG(logject) << "Rows removed: " << start << " - " << end;
     QSharedPointer<Block> a,b;
     if(start > 0 && start < parent.rowCount()) {
         a = blockForIndex_(parent.index(start - 1, 0), l);
@@ -281,7 +282,7 @@ void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&,
 void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end, upgrade_lock& l) {
     if(!m_category)
         return;
-    TRACE_LOG(logject) << "Rows removed: " << start << " - " << end;
+    TRACE_LOG(logject) << "Rows about to be removed: " << start << " - " << end;
 
     for(int i = end; i >= start; i--) {
         auto cur = parent.index(i, 0);
@@ -349,35 +350,36 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
         const QModelIndex cur(parent.index(i, 0));
         Q_ASSERT(cur.isValid());
         const QString curCategory(indexCategory(cur, l));
+        QSharedPointer<Block> curBlock;
 
-        if(prevBlock && curCategory == prevCategory) {
+        if(prevBlock && curCategory == prevCategory && !prevBlock->contains(cur)) {
             if(hasBlock(cur, l)) {
-                auto b = blockForIndex_(cur, l);
+                TRACE_LOG(logject) << "removing block";
                 boost::upgrade_to_unique_lock<mutex> ul(l);
-                blocks.remove(curCategory, b);
+                blocks.remove(curCategory, curBlock = blockForIndex_(cur, l));
             }
             boost::upgrade_to_unique_lock<mutex> ul(l);
             prevBlock->setCount(prevBlock->count() + 1);
         }
+        if(!curBlock)
+            curBlock = blockForIndex_(cur, l);
 
         prev = cur;
         prevCategory = curCategory;
-        prevBlock = blockForIndex_(cur, l);
+        prevBlock = curBlock;
     }
 
     if(end + 1 < parent.rowCount(QModelIndex()) && hasBlock(parent.index(end + 1, 0), l)) {
         const QModelIndex epo(parent.index(end + 1, 0));
         if(hasBlock(epo, l) && prevCategory == indexCategory(epo, l)) {
             TRACE_LOG(logject) << "merging at end of inserted";
-            auto epob = blockForIndex_(epo, l);
+            const auto epob = blockForIndex_(epo, l);
             Q_ASSERT(epob);
-//            Q_ASSERT(epob != prevBlock);
+            Q_ASSERT(epob != prevBlock);
             boost::upgrade_to_unique_lock<mutex> ul(l);
             prevBlock->setCount(prevBlock->count() + epob->count());
             blocks.remove(prevCategory, epob);
-            start = end+1;
-            end_ = end+1+epob->count();
-//            Q_EMIT parent.blocksNeedUpdating(end+1, end+1+epob->count());
+            end_ += 1+epob->count();
         }
         else {
 
@@ -385,6 +387,7 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
     }
 
     l.unlock();
+    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
     Q_EMIT parent.blocksNeedUpdating(start, end_);
 }
 
