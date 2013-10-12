@@ -13,6 +13,7 @@ SET(qt-gui_SOURCES ${qt-gui_SOURCES} playlistmanagermodel.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} playercontrols.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} categoryproxymodel.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} category.cpp)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} categorytag.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} modeltest.cpp modeltest.h)
 SET(qt-gui_HEADERS mainwindow.hpp playlistmodel.hpp)
 

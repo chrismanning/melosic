@@ -20,9 +20,10 @@
 
 #include <QObject>
 #include <QQmlListProperty>
-#include <QList>
 #include <QQmlComponent>
+#include <QList>
 #include <qqml.h>
+#include <QRegularExpression>
 
 namespace Melosic {
 
@@ -62,30 +63,36 @@ Q_SIGNALS:
 
 class Criteria : public QObject {
     Q_OBJECT
-    Q_PROPERTY(QVariant pattern READ pattern WRITE setPattern NOTIFY patternChanged FINAL)
-    QVariant pattern_;
+    Q_PROPERTY(QString pattern READ pattern WRITE setPattern NOTIFY patternChanged)
+    QString m_pattern;
     friend class Category;
 
 protected:
-    CategoryProxyModel* model = nullptr;
+    CategoryProxyModel* m_category_model = nullptr;
+    Q_PROPERTY(Melosic::CategoryProxyModel* model READ model WRITE setModel NOTIFY modelChanged)
+    QRegularExpression m_regex;
 
 public:
     explicit Criteria(QObject* parent = nullptr);
     virtual ~Criteria() {}
 
-    QVariant pattern() const;
-    void setPattern(QVariant p);
+    QString pattern() const;
+    void setPattern(QString p);
+
+    void setModel(CategoryProxyModel* model);
+    CategoryProxyModel* model() const;
 
     virtual QString result(const QModelIndex&) const = 0;
 
 Q_SIGNALS:
-    void patternChanged(QVariant pattern);
+    void patternChanged(QString pattern);
+    void modelChanged(CategoryProxyModel* model);
 };
 
 class Role : public Criteria {
     Q_OBJECT
     Q_PROPERTY(QString role READ role WRITE setRole NOTIFY roleChanged FINAL)
-    QString role_;
+    QString m_role;
 
 public:
     explicit Role(QObject* parent = nullptr);
@@ -99,26 +106,8 @@ Q_SIGNALS:
     void roleChanged(QString role);
 };
 
-class Tag : public Criteria {
-    Q_OBJECT
-    Q_PROPERTY(QString field READ field WRITE setField NOTIFY fieldChanged FINAL)
-    QString field_;
-
-public:
-    explicit Tag(QObject* parent = nullptr);
-
-    QString field() const;
-    void setField(QString str);
-
-    virtual QString result(const QModelIndex&) const override;
-
-Q_SIGNALS:
-    void fieldChanged(QString field);
-};
-
 } // namespace Melosic
 QML_DECLARE_TYPE(Melosic::Category)
 QML_DECLARE_TYPE(Melosic::Criteria)
-QML_DECLARE_TYPE(Melosic::Tag)
 
 #endif // MELOSIC_CATEGORY_HPP

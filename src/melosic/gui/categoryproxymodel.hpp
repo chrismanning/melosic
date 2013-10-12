@@ -71,7 +71,7 @@ private:
 class CategoryProxyModelAttached : public QObject {
     Q_OBJECT
     Q_PROPERTY(Melosic::Block* block READ block NOTIFY blockChanged)
-    mutable QSharedPointer<Block> block_;
+    mutable QSharedPointer<Block> m_block;
     CategoryProxyModel* model;
     QList<QMetaObject::Connection> modelConns;
 

@@ -2,7 +2,7 @@ import QtQuick 2.1
 
 import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
-import QtQuick.Controls.Styles 1.0
+import QtQuick.Controls.Styles 1.1
 import QtQuick.Layouts 1.1
 
 import Melosic.Playlist 1.0
@@ -18,11 +18,11 @@ ListView {
     model: playlistManagerModel
     delegate: Item {
         id: viewerItem
-        width: clv.lv.width
-        height: clv.lv.height
+        width: root.width
+        height: root.height
         visible: ListView.isCurrentItem
         Connections {
-            target: clv.lv
+            target: root
             onCurrentIndexChanged: {
                 if(viewerItem.ListView.isCurrentItem) {
                     manager.currentPlaylist = clv
@@ -39,7 +39,6 @@ ListView {
 
         CategoryListView {
             id: clv
-            property var lv: viewerItem.ListView.view
             anchors.fill: parent
             model: playlistModel
             frameVisible: true
@@ -51,19 +50,25 @@ ListView {
             category: Category {
                 id: __category
 
-                CategoryRole { role: "artist" }
-                CategoryRole { role: "album" }
+                CategoryRole {
+                    id: pathCriteria
+                    role: "filepath"
+                    pattern: ".*(?=/.*)"
+                }
+                CategoryTag { field: "albumartist" }
+                CategoryTag { field: "album" }
+                CategoryTag { field: "date" }
 
                 delegate: Loader {
                     Component {
                         id: tagCategoryComponent
                         Column {
-                            spacing: clv.lv.padding
+                            spacing: root.padding
 
                             y: spacing
                             x: spacing
                             height: childrenRect.height + spacing*(children.length)
-                            width: clv.lv.width
+                            width: root.width
                             Label {
                                 text: model.artist + " - " + model.album
                                 elide: Text.ElideRight
@@ -78,7 +83,32 @@ ListView {
                             }
                         }
                     }
-                    sourceComponent: model.tags_readable ? tagCategoryComponent : undefined
+                    Component {
+                        id: fileCategoryComponent
+                        Column {
+                            spacing: root.padding
+
+                            y: spacing
+                            x: spacing
+                            height: childrenRect.height + spacing*(children.length)
+                            width: root.width
+                            Label {
+                                property var arr: model.filepath.match(pat)
+                                text: arr ? arr[0] : ""
+                                elide: Text.ElideRight
+                                color: textColor
+                                width: parent.width
+                                property var pat: new RegExp(pathCriteria.pattern)
+                            }
+                            Label {
+                                text: model.extension + " | " + itemCount + " tracks"
+                                elide: Text.ElideRight
+                                color: textColor
+                                width: parent.width
+                            }
+                        }
+                    }
+                    sourceComponent: model.tags_readable ? tagCategoryComponent : fileCategoryComponent
                 }
             }
 
@@ -114,7 +144,7 @@ ListView {
                     id: tagComponent
                     Row {
                         id: track
-                        spacing: clv.lv.padding
+                        spacing: root.padding
                         x: spacing
                         Row {
                             spacing: parent.spacing
@@ -149,7 +179,7 @@ ListView {
                         x: padding
                         elide: Text.ElideRight
                         color: textColor
-                        text: model.filepath
+                        text: model.file
                     }
                 }
 

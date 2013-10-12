@@ -41,6 +41,7 @@
 #include "playercontrols.hpp"
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
+#include "categorytag.hpp"
 
 namespace Melosic {
 
@@ -63,8 +64,8 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");
     qmlRegisterUncreatableType<Criteria>("Melosic.Playlist", 1, 0, "CategoryCriteria", "abstract");
     qmlRegisterType<Role>("Melosic.Playlist", 1, 0, "CategoryRole");
-    qmlRegisterType<Tag>("Melosic.Playlist", 1, 0, "CategoryTag");
     qmlRegisterType<Category>("Melosic.Playlist", 1, 0, "Category");
+    qmlRegisterType<CategoryTag>("Melosic.Playlist", 1, 0, "CategoryTag");
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
     engine->rootContext()->setContextProperty("playerControls", playerControls.data());

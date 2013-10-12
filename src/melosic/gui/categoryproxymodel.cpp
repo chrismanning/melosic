@@ -432,7 +432,7 @@ CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObjec
     Q_ASSERT(index.isValid());
     upgrade_lock l(model->pimpl->mu);
     if(model->pimpl->hasBlock(index, l))
-        block_ = model->pimpl->blockForIndex_(index, l);
+        m_block = model->pimpl->blockForIndex_(index, l);
 }
 
 CategoryProxyModelAttached::~CategoryProxyModelAttached() {
@@ -444,12 +444,12 @@ CategoryProxyModelAttached::~CategoryProxyModelAttached() {
 }
 
 Block* CategoryProxyModelAttached::block() const {
-    return block_.data();
+    return m_block.data();
 }
 
 void CategoryProxyModelAttached::setBlock(QSharedPointer<Block> b) {
-    block_ = b;
-    Q_EMIT blockChanged(block_.data());
+    m_block = b;
+    Q_EMIT blockChanged(m_block.data());
 }
 
 bool Block::adjacent(const Block& b) {

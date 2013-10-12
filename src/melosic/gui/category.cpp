@@ -24,12 +24,9 @@
 namespace Melosic {
 
 Category::Category(QObject* parent) : QObject(parent) {
-    for(Criteria* c : criteria_)
-        c->model = model();
-
     connect(this, &Category::modelChanged, [this] (CategoryProxyModel* m) {
         for(Criteria* c : criteria_)
-            c->model = m;
+            c->setModel(m);
     });
 }
 
@@ -55,53 +52,51 @@ void Category::setDelegate(QQmlComponent* d) {
     Q_EMIT delegateChanged(d);
 }
 
-Criteria::Criteria(QObject* parent) : QObject(parent) {}
-
-QVariant Criteria::pattern() const {
-    return pattern_;
+Criteria::Criteria(QObject* parent) : QObject(parent) {
+    connect(this, &Criteria::patternChanged, [this] (QString p) { m_regex.setPattern(p); });
 }
 
-void Criteria::setPattern(QVariant p) {
-    pattern_ = p;
+QString Criteria::pattern() const {
+    return m_pattern;
+}
+
+void Criteria::setPattern(QString p) {
+    m_pattern = p;
+    qDebug() << "Pattern set: " << p;
     Q_EMIT patternChanged(p);
+}
+
+void Criteria::setModel(CategoryProxyModel* model) {
+    m_category_model = model;
+    Q_EMIT modelChanged(m_category_model);
+}
+
+CategoryProxyModel* Criteria::model() const {
+    return m_category_model;
 }
 
 Role::Role(QObject* parent) : Criteria(parent) {}
 
 QString Role::role() const {
-    return role_;
+    return m_role;
 }
 
 void Role::setRole(QString str) {
-    role_ = str;
-    Q_EMIT roleChanged(role_);
+    m_role = str;
+    Q_EMIT roleChanged(m_role);
 }
 
 QString Role::result(const QModelIndex& index) const {
     Q_ASSERT(index.isValid());
-    if(!model) {
-        return role_;
-    }
+    if(!m_category_model)
+        return m_role;
 
-    auto roles = model->roleNames();
-    if(!roles.values().contains(role_.toUtf8()))
-        return "?";
-    return index.data(model->roleNames().key(role_.toUtf8())).toString();
-}
-
-Tag::Tag(QObject* parent) : Criteria(parent) {}
-
-QString Tag::field() const {
-    return field_;
-}
-
-void Tag::setField(QString str) {
-    field_ = str;
-    Q_EMIT fieldChanged(str);
-}
-
-QString Tag::result(const QModelIndex&) const {
-    return tr("");
+    auto roles = m_category_model->roleNames();
+    if(!roles.values().contains(m_role.toUtf8()))
+        return m_role;
+    auto res = index.data(m_category_model->roleNames().key(m_role.toUtf8())).toString();
+    auto match = m_regex.match(res);
+    return match.hasMatch() ? match.captured() : "";
 }
 
 } // namespace Melosic

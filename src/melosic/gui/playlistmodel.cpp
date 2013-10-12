@@ -135,7 +135,7 @@ QMimeData* PlaylistModel::mimeData(const QModelIndexList& indexes) const {
 
     for(const QModelIndex& index : indexes) {
         if(index.isValid()) {
-            auto text = data(index, (int)TrackRoles::FileName).toString();
+            auto text = data(index, (int)TrackRoles::FilePath).toString();
             stream << text;
         }
     }
@@ -164,16 +164,18 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
 bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
     LOG(logject) << "In insertTracks(int, QList<QUrl>)";
     qSort(filenames);
-    std::function<std::string(QUrl)> fun([] (QUrl url) {
+    auto fun = [] (QUrl url) {
         return url.toLocalFile().toStdString();
-    });
+    };
     TRACE_LOG(logject) << "Inserting " << filenames.count() << " files";
-    for(auto&& v : filenames | transformed(fun))
-        TRACE_LOG(logject) << v;
 
     auto range = filenames | transformed(fun);
     std::vector<boost::filesystem::path> tmp{range.begin(), range.end()};
     Q_ASSERT(static_cast<int>(tmp.size()) == filenames.size());
+#ifndef MELOSIC_DISABLE_LOGGING
+    for(auto&& v : tmp)
+        TRACE_LOG(logject) << v;
+#endif
     return insertTracks(row, tmp);
 }
 
@@ -240,6 +242,7 @@ void PlaylistModel::refreshTags(int start, int end) {
 bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
                                  int row, int column, const QModelIndex& parent)
 {
+    assert(false);
     if(action == Qt::IgnoreAction)
         return true;
 
@@ -253,33 +256,17 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     if(column > 0)
         return false;
 
-//    auto begin = playlist.begin();
-
-//    if(row != -1)
-//        begin += row;
-//    else if(parent.isValid())
-//        begin += parent.row();
-//    else
-//        begin += rowCount(QModelIndex());
-
     QByteArray encodedData = data->data("application/vnd.text.list");
     QDataStream stream(&encodedData, QIODevice::ReadOnly);
-    QStringList filenames;
-    int rows = 0;
+    QList<QUrl> filenames;
 
     while(!stream.atEnd()) {
         QString text;
         stream >> text;
         filenames << text;
-        ++rows;
     }
 
-//    for(const auto& filename : filenames) {
-//        begin = emplace(begin, kernel.getDecoderManager(), filename.toStdString());
-//    }
-    return false;
-
-    return true;
+    return insertTracks(row, filenames);
 }
 
 bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
@@ -318,5 +305,9 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
 
     return playlist.size() == s - count;
 }
+
+MetadataTag::MetadataTag(QObject* parent)
+    : QObject(parent)
+{}
 
 } // namespace Melosic

@@ -61,11 +61,19 @@ namespace Thread {
 class Manager;
 }
 
+class TrackMetadata;
+class TrackProperties;
+class MetadataTag;
+class CategoryTag;
+
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     Core::Playlist playlist;
     Thread::Manager& tman;
     static Logger::Logger logject;
+
+    friend class MetadataTag;
+    friend class CategoryTag;
 
 public:
     explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
@@ -85,7 +93,7 @@ public:
     Q_INVOKABLE bool insertTracks(int row, QList<QUrl>);
     bool insertTracks(int row, ForwardRange<const boost::filesystem::path>);
     bool insertTracks(int row, std::initializer_list<const boost::filesystem::path> filenames) {
-        return insertTracks(row, std::move(ForwardRange<const boost::filesystem::path>(filenames)));
+        return insertTracks(row, ForwardRange<const boost::filesystem::path>(filenames));
     }
 
     Q_INVOKABLE void refreshTags(int start, int end = -1);
@@ -94,6 +102,22 @@ public:
                               const QModelIndex&, int destinationChild) override;
     Q_INVOKABLE bool moveRows(int sourceRow, int count, int destinationChild);
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+};
+
+class MetadataTag : public QObject {
+    Q_OBJECT
+
+    Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged);
+    QString m_format_string;
+    Q_PROPERTY(Melosic::PlaylistModel* playlistModel MEMBER m_playlist_model NOTIFY playlistModelChanged);
+    PlaylistModel* m_playlist_model;
+
+public:
+    explicit MetadataTag(QObject* parent = nullptr);
+
+Q_SIGNALS:
+    void formatStringChanged(QString);
+    void playlistModelChanged(PlaylistModel*);
 };
 
 } // namespace Melosic
