@@ -70,7 +70,7 @@ CategoryProxyModel::CategoryProxyModel(QObject* parent)
     connect(this, &CategoryProxyModel::rowsAboutToBeRemoved, this, &CategoryProxyModel::onRowsAboutToBeRemoved);
     connect(this, &CategoryProxyModel::dataChanged, this, &CategoryProxyModel::onDataChanged);
     connect(this, &CategoryProxyModel::categoryChanged, [this] (Category* c) {
-        qDebug() << "Category changed";
+        TRACE_LOG(logject) << "Category changed";
         Q_ASSERT(c);
         Q_ASSERT(c->model());
         onDataChanged(index(0,0), index(sourceModel()->rowCount() - 1, 0), {});
@@ -363,6 +363,9 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
         }
         if(!curBlock)
             curBlock = blockForIndex_(cur, l);
+        Q_ASSERT(curBlock);
+        if(curBlock->firstIndex() == cur && prevBlock && prevBlock->contains(cur))
+            prevBlock->setCount(prevBlock->count()-1);
 
         prev = cur;
         prevCategory = curCategory;
