@@ -249,6 +249,7 @@ ScrollView {
                         id: itemMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
+                        cursorShape: mouseDragArea.cursorShape
 
                         onEntered: {
                             if(!tooltipLoader.sourceComponent)
@@ -339,6 +340,7 @@ ScrollView {
 
                         MouseArea {
                             anchors.fill: parent
+                            cursorShape: mouseDragArea.cursorShape
 
                             onPressed: {
                                 console.debug("category pressed")
@@ -403,8 +405,14 @@ ScrollView {
             z: -1
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
-            cursorShape: dragging ? Qt.DragMoveCursor : Qt.ArrowCursor
             property bool dragging: false
+            onDraggingChanged: {
+                if(dragging)
+                    cursorShape = Qt.DragMoveCursor
+                else
+                    cursorShape = Qt.ArrowCursor
+            }
+
             property int startDragY
             property int modifiers
 
