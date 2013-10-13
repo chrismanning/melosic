@@ -126,7 +126,7 @@ ApplicationWindow {
         onTriggered: {
             var pm = playlistManager.currentModel
             if(pm == null)
-                return;
+                return
             if(currentPlaylist.selected.count <= 0) {
                 pm.refreshTags(0,-1)
                 return
@@ -159,24 +159,10 @@ ApplicationWindow {
             }
             Label {
                 id: playlistDuration
-                Connections {
-                    target: playlistManager
-                    onCurrentPlaylistChanged: {
-                        var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
-                            return parseInt(previousValue) + parseInt(currentValue.duration);
-                        }, 0)
-                        playlistDuration.text = '[' + SecsToMins.secsToMins(dur) + ']'
-                    }
-                }
-                Connections {
-                    target: currentPlaylist
-                    onCountChanged: {
-                        var dur = currentPlaylist.reduce(function(previousValue, currentValue, index, array){
-                            return parseInt(previousValue) + parseInt(currentValue.duration);
-                        }, 0)
-                        playlistDuration.text = '[' + SecsToMins.secsToMins(dur) + ']'
-                    }
-                }
+                property var dur: currentPlaylist.reduce(function(previousValue, currentValue, index, array){
+                    return parseInt(previousValue) + parseInt(currentValue.duration);
+                }, currentPlaylist.count > 0 ? 0 : 0)
+                text: '[' + SecsToMins.secsToMins(dur) + ']'
             }
             Label {
                 text: playerControls.stateStr
