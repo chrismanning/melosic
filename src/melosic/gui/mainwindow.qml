@@ -189,6 +189,9 @@ ApplicationWindow {
         id: playlistManager
     }
 
+    minimumHeight: 400
+    minimumWidth: 400
+
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
@@ -205,6 +208,8 @@ ApplicationWindow {
         ColumnLayout {
             Layout.fillHeight: true
             Layout.fillWidth: true
+            Layout.minimumWidth: 100
+            Layout.minimumHeight: 100
             spacing: 0
             RowLayout {
                 spacing: 0
@@ -232,8 +237,6 @@ ApplicationWindow {
                 id: playlistView
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.minimumWidth: 100
-                Layout.minimumHeight: 100
                 manager: playlistManager
             }
         }
