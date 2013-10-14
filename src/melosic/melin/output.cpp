@@ -49,6 +49,7 @@ class Manager::impl {
 public:
     impl(Config::Manager& confman, ASIO::io_service& io_service) : io_service(io_service) {
         conf.putNode("output device", "default"s);
+        conf.putNode("buffer time", 1000);
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 

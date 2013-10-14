@@ -60,6 +60,7 @@ static constexpr std::array<uint8_t, 5> bpss{{8, 16, 24, 24, 32}};
 Config::Conf conf{"ALSA"};
 snd_pcm_uframes_t frames = 1024;
 bool resample = false;
+size_t buf_time_msecs{1000};
 
 struct alsa_category_ : boost::system::error_category {
     const char* name() const noexcept override {
@@ -126,13 +127,6 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             as.target_sample_rate = rate;
         }
 
-        auto frames = ::frames;
-        if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
-            return;
-        auto buf = frames * 8;
-        if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
-            return;
-
         snd_pcm_format_t fmt(SND_PCM_FORMAT_UNKNOWN);
 
         switch(as.bps) {
@@ -192,6 +186,14 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             return;
 
         m_current_specs = as;
+
+        snd_pcm_uframes_t frames = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buf_time_msecs;
+        frames/=80;
+        if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
+            return;
+        auto buf = frames * 8;
+        if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
+            return;
 
         auto pcount = snd_pcm_poll_descriptors_count(m_pdh);
         if((pcount < 0) && (ec = {pcount, alsa_category}))
@@ -329,8 +331,6 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             ec = {static_cast<int>(r), alsa_category};
             return 0;
         }
-        else if(r != frames)
-            WARN_LOG(logject) << "not all frames written";
 
         assert(m_pdh != nullptr);
         r = snd_pcm_frames_to_bytes(m_pdh, r);
@@ -432,6 +432,8 @@ void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) 
             ::frames = get<snd_pcm_uframes_t>(val);
         else if(key == "resample")
             ::resample = get<bool>(val);
+        else if(key == "buffer time")
+            ::buf_time_msecs = get<uint64_t>(val);
     }
     catch(boost::bad_get& e) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
@@ -447,6 +449,10 @@ void loadedSlot(Config::Conf& base, std::unique_lock<std::mutex>& l) {
         o = base.getChild("Output"s);
     }
     assert(o);
+    o->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
+        variableUpdateSlot(pair.first, pair.second);
+    });
+
     auto c = o->getChild("ALSA"s);
     if(!c) {
         o->putChild(::conf);

@@ -76,7 +76,9 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         play_impl();
         if(state_impl() == DeviceState::Playing) {
             l.unlock();
-            write_handler(boost::system::error_code(), buffer_size);
+            const AudioSpecs& as = playman.currentPlaylist()->currentTrack()->getAudioSpecs();
+            write_handler(boost::system::error_code(),
+                          (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count());
         }
     }
     void play_impl();
@@ -114,6 +116,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     void changeDevice();
     void sinkChangeSlot();
 
+    Core::Kernel& kernel;
     Melosic::Playlist::Manager& playman;
     Output::Manager& outman;
     Config::Manager& confman;
@@ -231,12 +234,13 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             playlist->jumpTo(0);
         }
         else try {
-            n = buffer_size;
+            const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
+
+            n = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count();
             ASIO::mutable_buffer tmp{::operator new(n), n};
             in_buf.emplace_back(tmp);
 
-            const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
-            Widener widen{buffer_size, as.bps, as.target_bps};
+            Widener widen{n, as.bps, as.target_bps};
             TRACE_LOG(logject) << "widening from " << (unsigned)as.bps << " to " << (unsigned)as.target_bps;
 
             auto composite = io::compose(widen, boost::ref(*playlist));
@@ -256,12 +260,10 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             playlist->next();
             play_impl();
         }
-        l.unlock();
         read_handler(ec, n);
     }
 
     void read_handler(boost::system::error_code ec, std::size_t n) {
-        unique_lock l(mu);
         TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
         if(ec) {
             if(ec.value() == boost::system::errc::operation_canceled || ec.value() == ASIO::error::eof) {
@@ -280,24 +282,25 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
         ASIO::mutable_buffer tmp{in_buf.front()};
         in_buf.pop_front();
-        l.unlock();
         assert(asioOutput);
-        auto self = shared_from_this();
-        ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
-        [this, tmp, self] (boost::system::error_code ec, std::size_t n) {
-            if(n < ASIO::buffer_size(tmp)) {
-                ASIO::mutable_buffer tmp2;
-                ASIO::buffer_copy(tmp2, tmp + n);
-                in_buf.push_front(tmp2);
-            }
-            ::operator delete(ASIO::buffer_cast<void*>(tmp));
+        kernel.getThreadManager().enqueue([self=shared_from_this(),this,tmp]() {
+            unique_lock l(mu);
+            ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
+                [tmp, self] (boost::system::error_code ec, std::size_t n) {
+                    if(n < ASIO::buffer_size(tmp)) {
+                        ASIO::mutable_buffer tmp2;
+                        ASIO::buffer_copy(tmp2, tmp + n);
+                        self->in_buf.push_front(tmp2);
+                    }
+                    ::operator delete(ASIO::buffer_cast<void*>(tmp));
 
-            write_handler(ec, n);
+                    self->write_handler(ec, n);
+                });
         });
     }
 
     Config::Conf conf{"Player"};
-    std::atomic<std::size_t> buffer_size{8192};
+    chrono::milliseconds buffer_time{1000};
 
     void loadedSlot(Config::Conf& base) {
         TRACE_LOG(logject) << "Player conf loaded";
@@ -315,6 +318,15 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             variableUpdateSlot(pair.first, pair.second);
         });
         c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+
+        c = base.getChild("Output");
+        if(!c)
+            return;
+        assert(c);
+        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
+            variableUpdateSlot(pair.first, pair.second);
+        });
+        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
     }
 
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
@@ -322,11 +334,9 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         using Config::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
-            if(key == "buffer size") {
-                buffer_size = get<size_t>(val);
+            if(key == "buffer time") {
+                buffer_time = chrono::milliseconds(get<size_t>(val));
             }
-            else
-                ERROR_LOG(logject) << "Config: Unknown key: " << key;
         }
         catch(boost::bad_get&) {
             ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
@@ -522,6 +532,7 @@ struct Paused : virtual State, Stop, Tell {
 };
 
 Player::impl::impl(Kernel& kernel) :
+    kernel(kernel),
     playman(kernel.getPlaylistManager()),
     outman(kernel.getOutputManager()),
     confman(kernel.getConfigManager()),
@@ -532,7 +543,6 @@ Player::impl::impl(Kernel& kernel) :
                    std::make_shared<Stopped>(stateChanged))),
     logject(logging::keywords::channel = "StateMachine")
 {
-    conf.putNode("buffer size", buffer_size);
     playman.getTrackChangedSignal().connect(&impl::trackChangeSlot, this);
     outman.getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
     confman.getLoadedSignal().connect(&impl::loadedSlot, this);
