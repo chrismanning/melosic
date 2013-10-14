@@ -20,25 +20,34 @@
 
 #include <QObject>
 #include <QString>
+#include <QScopedPointer>
+
+#include <chrono>
+namespace chrono = std::chrono;
 
 namespace Melosic {
 
 namespace Core {
+class Kernel;
 class Player;
 }
 
+class PlaylistModel;
+
 class PlayerControls : public QObject {
     Q_OBJECT
-    class PlayerControlsPrivate;
-    Q_DECLARE_PRIVATE(PlayerControls)
-    const QScopedPointer<PlayerControlsPrivate> d_ptr;
-    Q_ENUMS(DeviceState)
+    struct impl;
+    const QScopedPointer<impl> pimpl;
 
+    Q_ENUMS(DeviceState)
     Q_PROPERTY(DeviceState state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString stateStr READ stateStr NOTIFY stateStrChanged)
+    Q_PROPERTY(Melosic::PlaylistModel* currentPlaylistModel
+               READ currentPlaylistModel WRITE setCurrentPlaylistModel
+               NOTIFY currentPlaylistModelChanged)
 
 public:
-    explicit PlayerControls(Core::Player& player, QObject* parent = 0);
+    explicit PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent = 0);
 
     enum DeviceState {
         Error,
@@ -56,14 +65,18 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void previous();
     Q_INVOKABLE void next();
-    Q_INVOKABLE void seek();
+    Q_INVOKABLE void seek(chrono::milliseconds);
 
     DeviceState state() const;
     QString stateStr() const;
 
+    PlaylistModel* currentPlaylistModel() const;
+    void setCurrentPlaylistModel(PlaylistModel*);
+
 Q_SIGNALS:
     void stateChanged(DeviceState);
     void stateStrChanged(QString);
+    void currentPlaylistModelChanged(PlaylistModel*);
 };
 
 } // namespace Melosic

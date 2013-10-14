@@ -54,7 +54,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 {
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
-    playerControls.reset(new PlayerControls(player));
+    playerControls.reset(new PlayerControls(kernel, player));
 
     //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");

@@ -17,33 +17,48 @@
 
 #include <QMetaEnum>
 
+#include <cassert>
+#include <optional>
+
+#include <melosic/melin/kernel.hpp>
 #include <melosic/core/player.hpp>
+#include <melosic/core/playlist.hpp>
+#include <melosic/common/connection.hpp>
 #include <melosic/common/signal.hpp>
+#include <melosic/melin/playlist.hpp>
 
 #include "playercontrols.hpp"
+#include "playlistmodel.hpp"
 
 namespace Melosic {
 
-class PlayerControls::PlayerControlsPrivate {
-    Q_DECLARE_PUBLIC(PlayerControls)
+struct PlayerControls::impl {
+    Core::Kernel& kernel;
     Core::Player& player;
-    PlayerControls* const q_ptr;
-
     Signals::ScopedConnection stateChangedConn;
-public:
-    PlayerControlsPrivate(Core::Player& player, PlayerControls* parent) : player(player), q_ptr(parent) {
+
+    impl(Core::Kernel& kernel, Core::Player& player)
+        : kernel(kernel), player(player)
+    {
         state = (PlayerControls::DeviceState) player.state();
+        kernel.getPlaylistManager().getCurrentPlaylistChangedSignal().
+                connect([this] (std::optional<Core::Playlist> cp) {
+            currentPlaylist = cp;
+        });
+        currentPlaylist = kernel.getPlaylistManager().currentPlaylist();
     }
 
     PlayerControls::DeviceState state;
+    PlaylistModel* currentPlaylistModel{nullptr};
+    std::optional<Core::Playlist> currentPlaylist;
 };
 
-PlayerControls::PlayerControls(Core::Player& player, QObject *parent) :
-    QObject(parent), d_ptr(new PlayerControlsPrivate(player, this))
+PlayerControls::PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent) :
+    QObject(parent), pimpl(new impl(kernel, player))
 {
     qRegisterMetaType<DeviceState>("DeviceState");
-    d_func()->stateChangedConn = d_func()->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
-        d_func()->state = (PlayerControls::DeviceState) ds;
+    pimpl->stateChangedConn = pimpl->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
+        pimpl->state = (PlayerControls::DeviceState) ds;
         Q_EMIT stateChanged(state());
         Q_EMIT stateStrChanged(stateStr());
     });
@@ -52,28 +67,37 @@ PlayerControls::PlayerControls(Core::Player& player, QObject *parent) :
 PlayerControls::~PlayerControls() {}
 
 void PlayerControls::play() {
-    d_func()->player.play();
+    pimpl->player.play();
 }
 
 void PlayerControls::pause() {
-    d_func()->player.pause();
+    pimpl->player.pause();
 }
 
 void PlayerControls::stop() {
-    d_func()->player.stop();
+    pimpl->player.stop();
 }
 
 void PlayerControls::previous() {
+    if(!pimpl->currentPlaylist)
+        return;
+    pimpl->currentPlaylist->previous();
 }
 
 void PlayerControls::next() {
+    if(!pimpl->currentPlaylist)
+        return;
+    pimpl->currentPlaylist->next();
 }
 
-void PlayerControls::seek() {
+void PlayerControls::seek(chrono::milliseconds t) {
+    if(!pimpl->currentPlaylist)
+        return;
+    pimpl->currentPlaylist->seek(t);
 }
 
 PlayerControls::DeviceState PlayerControls::state() const {
-    return d_func()->state;
+    return pimpl->state;
 }
 
 QString PlayerControls::stateStr() const {
@@ -83,6 +107,17 @@ QString PlayerControls::stateStr() const {
             return QLatin1String(m.valueToKey(state()));
     }
     assert(false);
+}
+
+PlaylistModel* PlayerControls::currentPlaylistModel() const {
+    return pimpl->currentPlaylistModel;
+}
+
+void PlayerControls::setCurrentPlaylistModel(PlaylistModel* pm) {
+    if(pimpl->currentPlaylistModel == pm)
+        return;
+    pimpl->currentPlaylistModel = pm;
+    Q_EMIT currentPlaylistModelChanged(pm);
 }
 
 } // namespace Melosic
