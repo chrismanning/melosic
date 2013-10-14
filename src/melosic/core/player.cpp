@@ -78,7 +78,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             l.unlock();
             const AudioSpecs& as = playman.currentPlaylist()->currentTrack()->getAudioSpecs();
             write_handler(boost::system::error_code(),
-                          (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count());
+                          (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count() * as.channels);
         }
     }
     void play_impl();
@@ -236,7 +236,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         else try {
             const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
 
-            n = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count();
+            n = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count() * as.channels;
             ASIO::mutable_buffer tmp{::operator new(n), n};
             in_buf.emplace_back(tmp);
 
