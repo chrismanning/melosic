@@ -301,7 +301,8 @@ public:
     }
 
     void setName(std::string name) {
-        this->name = name;
+        TRACE_LOG(logject) << "setting playlist name to \"" << name << "\"";
+        this->name.swap(name);
     }
 
     mutex mu;

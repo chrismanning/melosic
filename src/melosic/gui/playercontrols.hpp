@@ -42,9 +42,6 @@ class PlayerControls : public QObject {
     Q_ENUMS(DeviceState)
     Q_PROPERTY(DeviceState state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString stateStr READ stateStr NOTIFY stateStrChanged)
-    Q_PROPERTY(Melosic::PlaylistModel* currentPlaylistModel
-               READ currentPlaylistModel WRITE setCurrentPlaylistModel
-               NOTIFY currentPlaylistModelChanged)
 
 public:
     explicit PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent = 0);
@@ -70,13 +67,9 @@ public:
     DeviceState state() const;
     QString stateStr() const;
 
-    PlaylistModel* currentPlaylistModel() const;
-    void setCurrentPlaylistModel(PlaylistModel*);
-
 Q_SIGNALS:
     void stateChanged(DeviceState);
     void stateStrChanged(QString);
-    void currentPlaylistModelChanged(PlaylistModel*);
 };
 
 } // namespace Melosic

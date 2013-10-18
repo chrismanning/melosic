@@ -55,9 +55,11 @@ ScrollView {
     function removeSelected() {
         if(removeCallback === null || selected.count <= 0)
             return
+        console.debug("removing selected")
 
         var groups = contiguousSelected().reverse()
         for(var i = 0; i < groups.length; i++) {
+            console.debug("i: ",i)
             var g = groups[i]
             if(g.length <= 0)
                 continue
@@ -84,12 +86,14 @@ ScrollView {
 
     function contiguousSelected() {
         var groups = new Array
+
         if(selected.count <= 0)
             return groups
 
         groups.push(new Array)
+
         for(var i = 0, j = 0; i < selected.count; i++) {
-            if(groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex && groups[j].length > 0) {
+            if(groups[j].length > 0 && groups[j][groups[j].length-1]+1 !== selected.get(i).itemsIndex) {
                 groups.push(new Array)
                 groups[j].naturalSort()
                 ++j
@@ -294,6 +298,10 @@ ScrollView {
                             }
 
                             mouse.accepted = false
+                        }
+
+                        onDoubleClicked: {
+                            console.debug("item double clicked")
                         }
                     }
                 }

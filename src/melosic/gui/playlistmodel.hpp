@@ -20,6 +20,8 @@
 
 #include <memory>
 #include <initializer_list>
+#include <chrono>
+namespace chrono = std::chrono;
 
 #include <QAbstractListModel>
 #include <QStringList>
@@ -71,6 +73,9 @@ class PlaylistModel : public QAbstractListModel {
     Core::Playlist playlist;
     Thread::Manager& tman;
     static Logger::Logger logject;
+    long m_duration{0};
+
+    Q_PROPERTY(long duration READ duration NOTIFY durationChanged)
 
     friend class MetadataTag;
     friend class CategoryTag;
@@ -102,6 +107,11 @@ public:
                               const QModelIndex&, int destinationChild) override;
     Q_INVOKABLE bool moveRows(int sourceRow, int count, int destinationChild);
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
+
+    long duration() const;
+
+Q_SIGNALS:
+    void durationChanged(long);
 };
 
 class MetadataTag : public QObject {

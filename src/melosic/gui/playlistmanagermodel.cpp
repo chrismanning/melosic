@@ -38,17 +38,27 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::M
     conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (std::optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
-        if(p)
-            playlists.emplace(*p, new PlaylistModel(*p, this->tman));
+        if(p) {
+           auto pm = new PlaylistModel(*p, this->tman);
+           pm->moveToThread(this->thread());
+           playlists.insert({*p, pm});
+        }
     }));
     conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (std::optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist removed: " << !!p;
         if(!p)
             return;
-        auto it = playlists.find(*p);
-        if(it != playlists.end())
-            playlists.erase(it);
+        auto it = playlists.left.find(*p);
+        if(it != playlists.left.end())
+            playlists.left.erase(it);
+    }));
+    conns.emplace_back(playman.getCurrentPlaylistChangedSignal().connect([this] (std::optional<Core::Playlist> p) {
+        if(!p) return;
+        lock_guard l(mu);
+        auto it = playlists.left.find(*p);
+        if(it != playlists.left.end())
+            setCurrentPlaylistModel(it->second);
     }));
 
     playman.insert(0, "Default");
@@ -80,8 +90,8 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
         case PlaylistModelRole: {
             auto v = playman.getPlaylist(index.row());
             assert(v);
-            auto it = playlists.find(*v);
-            assert(playlists.end() != it);
+            auto it = playlists.left.find(*v);
+            assert(playlists.left.end() != it);
 
             return QVariant::fromValue(it->second);
         }
@@ -134,6 +144,23 @@ bool PlaylistManagerModel::removeRows(int row, int count, const QModelIndex&) {
 
 QModelIndex PlaylistManagerModel::index(int row, int column, const QModelIndex& parent) const {
     return QAbstractListModel::index(row, column, parent);
+}
+
+PlaylistModel* PlaylistManagerModel::currentPlaylistModel() const {
+    return m_current;
+}
+
+void PlaylistManagerModel::setCurrentPlaylistModel(PlaylistModel* pm) {
+    if(m_current == pm)
+        return;
+
+    m_current = pm;
+
+    auto it = playlists.right.find(m_current);
+    if(it == playlists.right.end())
+        return;
+    playman.setCurrent(it->second);
+    Q_EMIT currentPlaylistModelChanged(pm);
 }
 
 } // namespace Melosic

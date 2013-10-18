@@ -16,22 +16,13 @@
 **************************************************************************/
 
 #include <functional>
-#include <deque>
 #include <algorithm>
 
 #include <QStringList>
 #include <QMimeData>
-#include <QPainter>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include <boost/range/algorithm/sort.hpp>
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
-#include <boost/format.hpp>
-using boost::format;
-#include <boost/scope_exit.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -55,6 +46,11 @@ PlaylistModel::PlaylistModel(Core::Playlist playlist, Thread::Manager& tman, QOb
 {
     this->playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
         Q_EMIT dataChanged(index(start), index(end-1));
+    });
+
+    connect(this, &PlaylistModel::dataChanged, [this] (const QModelIndex&, const QModelIndex&, const QVector<int>&) {
+        m_duration = chrono::duration_cast<chrono::seconds>(this->playlist.duration()).count();
+        Q_EMIT durationChanged(m_duration);
     });
 }
 
@@ -296,6 +292,7 @@ bool PlaylistModel::moveRows(int sourceRow, int count, int destinationChild) {
 bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     if(row < 0 && (count + row) > rowCount())
         return false;
+    TRACE_LOG(logject) << "removing tracks " << row << " - " << row+count;
 
     const auto s = playlist.size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
@@ -303,7 +300,14 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     endRemoveRows();
     assert(playlist.size() == s - count);
 
+    m_duration = chrono::duration_cast<chrono::seconds>(this->playlist.duration()).count();
+    Q_EMIT durationChanged(m_duration);
+
     return playlist.size() == s - count;
+}
+
+long PlaylistModel::duration() const {
+    return m_duration;
 }
 
 MetadataTag::MetadataTag(QObject* parent)

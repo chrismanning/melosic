@@ -111,9 +111,12 @@ public:
 private:
     class impl;
     std::shared_ptr<impl> pimpl;
-    template <typename>
-    friend struct std::hash;
+    friend std::size_t hash_value(const Playlist&);
 };
+
+inline std::size_t hash_value(const Playlist& b) {
+    return std::hash<std::shared_ptr<Melosic::Core::Playlist::impl>>()(b.pimpl);
+}
 
 } // namespace Core
 } // namespace Melosic
@@ -122,7 +125,7 @@ namespace std {
     template <>
     struct hash<Melosic::Core::Playlist> {
         std::size_t operator()(Melosic::Core::Playlist const& s) const {
-            return std::hash<std::shared_ptr<Melosic::Core::Playlist::impl>>()(s.pimpl);
+            return hash_value(s);
         }
     };
 }

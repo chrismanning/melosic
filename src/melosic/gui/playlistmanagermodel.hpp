@@ -23,6 +23,9 @@
 
 #include <QAbstractListModel>
 
+#include <boost/bimap.hpp>
+#include <boost/bimap/unordered_set_of.hpp>
+
 #include <melosic/melin/logging.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/common/connection.hpp>
@@ -42,10 +45,16 @@ class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
     Thread::Manager& tman;
-    std::unordered_map<Core::Playlist, PlaylistModel*> playlists;
+    boost::bimap<boost::bimaps::unordered_set_of<Core::Playlist>,
+                 boost::bimaps::unordered_set_of<PlaylistModel*>> playlists;
     std::list<Signals::ScopedConnection> conns;
     Logger::Logger logject;
     mutable std::mutex mu;
+    Q_PROPERTY(Melosic::PlaylistModel* currentPlaylistModel
+               READ currentPlaylistModel WRITE setCurrentPlaylistModel
+               NOTIFY currentPlaylistModelChanged)
+
+    PlaylistModel* m_current{nullptr};
 
 public:
     explicit PlaylistManagerModel(Playlist::Manager&, Thread::Manager&, QObject* parent = nullptr);
@@ -64,6 +73,15 @@ public:
     Q_INVOKABLE bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;
+
+    PlaylistModel* currentPlaylistModel() const;
+    void setCurrentPlaylistModel(PlaylistModel*);
+
+Q_SIGNALS:
+    void currentPlaylistModelChanged(PlaylistModel*);
+
+//private Q_SLOTS:
+//    void allocPlaylistModel();
 };
 
 } // namespace Melosic

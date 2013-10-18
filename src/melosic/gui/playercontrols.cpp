@@ -109,15 +109,4 @@ QString PlayerControls::stateStr() const {
     assert(false);
 }
 
-PlaylistModel* PlayerControls::currentPlaylistModel() const {
-    return pimpl->currentPlaylistModel;
-}
-
-void PlayerControls::setCurrentPlaylistModel(PlaylistModel* pm) {
-    if(pimpl->currentPlaylistModel == pm)
-        return;
-    pimpl->currentPlaylistModel = pm;
-    Q_EMIT currentPlaylistModelChanged(pm);
-}
-
 } // namespace Melosic

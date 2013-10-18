@@ -107,6 +107,9 @@ public:
     }
 
     void setCurrent(std::optional<Core::Playlist> p, unique_lock& l) {
+        TRACE_LOG(logject) << "setting current playlist " << !!p;
+        if(p == current)
+            return;
         current = p;
         currentPlaylistChanged(current, l);
     }

@@ -155,14 +155,12 @@ ApplicationWindow {
                 property bool selected: currentPlaylist.selected.count > 0
                 property int count: currentPlaylist.count
 
-                text: (selected ? currentPlaylist.selected.count : count) + " tracks" + (selected ? " selected" : "")
+                text: (selected ? currentPlaylist.selected.count : count)
+                      + " tracks" + (selected ? " selected" : "")
             }
             Label {
                 id: playlistDuration
-                property var dur: currentPlaylist.reduce(function(previousValue, currentValue, index, array){
-                    return parseInt(previousValue) + parseInt(currentValue.duration);
-                }, currentPlaylist.count > 0 ? 0 : 0)
-                text: '[' + SecsToMins.secsToMins(dur) + ']'
+                text: '[' + SecsToMins.secsToMins(playlistManagerModel.currentPlaylistModel.duration) + ']'
             }
             Label {
                 text: playerControls.stateStr
