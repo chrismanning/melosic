@@ -61,7 +61,7 @@ Rectangle {
             }
 
             property var __control: loader.lv
-            z: __control.z +1
+            z: selected ? 1 : -index
 
             Component {
                 id: si
