@@ -117,11 +117,10 @@ struct SignalCore<Ret (Args...)> {
     }
 
     void swap(SignalCore& b) noexcept(is_nothrow_swappable<FunsType>::value) {
-        std::lock(mu, b.mu);
+        unique_lock l{mu, std::defer_lock}, l2{b.mu, std::defer_lock};
+        std::lock(l, l2);
         using std::swap;
         swap(funs, b.funs);
-        b.mu.unlock();
-        mu.unlock();
     }
 
 protected:
