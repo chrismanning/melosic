@@ -12,7 +12,7 @@ ScrollView {
 
     property var model
 
-    property alias delegate: delegateModel.itemDelegate
+    property Component delegate
     property alias currentItem: listView.currentItem
     property alias currentIndex: listView.currentIndex
     property alias count: listView.count
@@ -155,10 +155,10 @@ ScrollView {
 
             model: root.categoryModel
 
-            property Component itemDelegate
             delegate: Item {
                 id: rowitem
                 x: 5
+                z: -index
                 width: listView.width - (x*2)
                 property bool drawCategory: category && block && block.firstRow === index
 
@@ -194,7 +194,6 @@ ScrollView {
                             anchors.fill: parent
                             StyleItem {
                                 anchors.fill: parent
-                                z: 1
                                 elementType: "itemrow"
                                 selected: rowitem.DelegateModel.inSelected
                                 hasFocus: rowitem.ListView.isCurrentItem
@@ -215,7 +214,7 @@ ScrollView {
                     Loader {
                         id: itemDelegateLoader
                         anchors.fill: parent
-                        sourceComponent: delegateModel.itemDelegate
+                        sourceComponent: root.delegate
                         property var model: itemModel
                         property bool itemSelected: rowitem.DelegateModel.inSelected
                         property int rowIndex: rowitem.rowIndex
@@ -311,7 +310,7 @@ ScrollView {
                     x: -parent.x
                     width: listView.width
 
-                    z: -1
+                    z: -index
                     visible: drawCategory
                     active: drawCategory
 
@@ -404,13 +403,13 @@ ScrollView {
             parent: viewport
             anchors.fill: parent
             color: palette.base
-            z: -1
+            z: -count
         }
 
         MouseArea {
             id: mouseDragArea
             anchors.fill: parent
-            z: -1
+            z: -count
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
             property bool dragging: false
