@@ -103,8 +103,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
         return r;
     }
 
-    const AudioSpecs& currentSpecs() const noexcept {
-        return get_service().currentSpecs(get_implementation());
+    const AudioSpecs& current_specs() const noexcept {
+        return get_service().current_specs(get_implementation());
     }
 
     Output::DeviceState state() const noexcept {

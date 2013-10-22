@@ -60,7 +60,7 @@ static constexpr std::array<uint8_t, 5> bpss{{8, 16, 24, 24, 32}};
 Config::Conf conf{"ALSA"};
 snd_pcm_uframes_t frames = 1024;
 bool resample = false;
-size_t buf_time_msecs{1000};
+chrono::milliseconds buf_time_msecs{1000ms};
 
 struct alsa_category_ : boost::system::error_category {
     const char* name() const noexcept override {
@@ -182,18 +182,31 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         if((ec = {snd_pcm_hw_params_set_format(m_pdh, m_params, fmt), alsa_category}))
             return;
 
+        unsigned buf_time_usecs = chrono::duration_cast<chrono::nanoseconds>(buf_time_msecs).count();
+        TRACE_LOG(logject) << "buf: " << buf_time_usecs;
+        if((ec = {snd_pcm_hw_params_set_buffer_time_near(m_pdh, m_params, &buf_time_usecs, &dir), alsa_category}))
+            return;
+
+        snd_pcm_hw_params_get_buffer_size(m_params, (snd_pcm_uframes_t*)&buf_time_usecs);
+        TRACE_LOG(logject) << "buf: " << buf_time_usecs;
+
+        snd_pcm_uframes_t min_buf;
+        snd_pcm_hw_params_get_buffer_size_min(m_params, &min_buf);
+        TRACE_LOG(logject) << "min buf: " << min_buf;
+
+        snd_pcm_uframes_t frames;
+        snd_pcm_hw_params_get_period_size_min(m_params, &frames, &dir);
+        TRACE_LOG(logject) << "min frames: " << frames;
+        frames = buf_time_usecs/(min_buf/frames);
+        TRACE_LOG(logject) << "frames = buf/(min_buf/min_frames): " << frames;
+        if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
+            return;
+        TRACE_LOG(logject) << "set frames per period: " << frames;
+
         if((ec = {snd_pcm_hw_params(m_pdh, m_params), alsa_category}))
             return;
 
         m_current_specs = as;
-
-        snd_pcm_uframes_t frames = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buf_time_msecs;
-        frames/=80;
-        if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
-            return;
-        auto buf = frames * 8;
-        if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
-            return;
 
         auto pcount = snd_pcm_poll_descriptors_count(m_pdh);
         if((pcount < 0) && (ec = {pcount, alsa_category}))
@@ -354,7 +367,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             m_asio_fd.async_write_some(ASIO::null_buffers(), f);
     }
 
-    const AudioSpecs& currentSpecs() const noexcept override {
+    const AudioSpecs& current_specs() const noexcept override {
         return m_current_specs;
     }
 
@@ -433,7 +446,7 @@ void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) 
         else if(key == "resample")
             ::resample = get<bool>(val);
         else if(key == "buffer time")
-            ::buf_time_msecs = get<uint64_t>(val);
+            ::buf_time_msecs = chrono::milliseconds(get<uint64_t>(val));
     }
     catch(boost::bad_get& e) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;

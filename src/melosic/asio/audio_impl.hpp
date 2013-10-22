@@ -64,7 +64,7 @@ struct MELOSIC_EXPORT AudioOutputServiceBase {
     virtual void non_blocking(bool, boost::system::error_code&) noexcept = 0;
 
     virtual Output::DeviceState state() const noexcept = 0;
-    virtual const AudioSpecs& currentSpecs() const noexcept = 0;
+    virtual const AudioSpecs& current_specs() const noexcept = 0;
 
 protected:
     io_service& get_io_service() noexcept {

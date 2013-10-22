@@ -117,11 +117,7 @@ public:
     chrono::milliseconds duration() {
         if(end > start)
             return end - start;
-
-        if(!m_tags_readable)
-            return 0ms;
-
-        return chrono::milliseconds(uint64_t(as.total_samples / (as.sample_rate/1000.0)));
+        return 0ms;
     }
 
     AudioSpecs& getAudioSpecs() {
@@ -144,6 +140,7 @@ public:
                 decoder->getAudioSpecs() = as;
             else
                 as = decoder->getAudioSpecs();
+            end = start + decoder->duration();
         }
         catch(DecoderException& e) {
             e << ErrorTag::FilePath(input.filename());

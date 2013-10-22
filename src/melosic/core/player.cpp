@@ -48,6 +48,7 @@ namespace io = boost::iostreams;
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/int_get.hpp>
+#include <melosic/common/pcmbuffer.hpp>
 
 #include "player.hpp"
 
@@ -147,7 +148,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     std::unique_ptr<ASIO::AudioOutputBase> asioOutput;
 
-    std::list<ASIO::mutable_buffer> in_buf;
+    std::list<PCMBuffer> in_buf;
 
     struct Widener : io::multichar_input_filter {
         struct category : io::multichar_input_filter::category, io::optimally_buffered_tag {};
@@ -237,7 +238,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
 
             n = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count() * as.channels;
-            ASIO::mutable_buffer tmp{::operator new(n), n};
+            PCMBuffer tmp{::operator new(n), n};
+            tmp.audio_specs = as;
             in_buf.emplace_back(tmp);
 
             Widener widen{n, as.bps, as.target_bps};
@@ -280,16 +282,16 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             return;
         }
 
-        ASIO::mutable_buffer tmp{in_buf.front()};
+        PCMBuffer tmp{in_buf.front()};
         in_buf.pop_front();
         assert(asioOutput);
         kernel.getThreadManager().enqueue([self=shared_from_this(),this,tmp]() {
             unique_lock l(mu);
             ASIO::async_write(*asioOutput, ASIO::buffer(tmp),
                 [tmp, self] (boost::system::error_code ec, std::size_t n) {
-                    if(n < ASIO::buffer_size(tmp)) {
-                        ASIO::mutable_buffer tmp2;
-                        ASIO::buffer_copy(tmp2, tmp + n);
+                    if(n < ASIO::buffer_size(ASIO::mutable_buffer(tmp))) {
+                        PCMBuffer tmp2;
+                        ASIO::buffer_copy(ASIO::mutable_buffer(tmp2), tmp + n);
                         self->in_buf.push_front(tmp2);
                     }
                     ::operator delete(ASIO::buffer_cast<void*>(tmp));
@@ -594,7 +596,7 @@ void Player::impl::trackChangeSlot(int, std::optional<Track> track) {
     try {
         if(*cp && asioOutput) {
             assert(track == *cp->currentTrack());
-            if(asioOutput->currentSpecs() != track->getAudioSpecs()) {
+            if(asioOutput->current_specs() != track->getAudioSpecs()) {
                 LOG(logject) << "Changing sink specs for new track";
                 TRACE_LOG(logject) << "new track specs: " << track->getAudioSpecs();
                 asioOutput->stop();
@@ -606,7 +608,7 @@ void Player::impl::trackChangeSlot(int, std::optional<Track> track) {
             }
             else {
                 auto& as1 = track->getAudioSpecs();
-                auto& as2 = asioOutput->currentSpecs();
+                auto& as2 = asioOutput->current_specs();
                 as1.target_bps = as2.target_bps;
                 as1.target_sample_rate = as2.target_sample_rate;
             }

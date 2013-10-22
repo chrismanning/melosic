@@ -43,8 +43,7 @@ static constexpr Plugin::Info flacInfo{"FLAC",
                                 << ErrorTag::DecodeErrStr(flacptr->get_state().as_cstring()));\
 }
 
-class FlacDecoderImpl : public FLAC::Decoder::Stream {
-public:
+struct FlacDecoderImpl : FLAC::Decoder::Stream {
     FlacDecoderImpl(IO::SeekableSource& input, std::deque<char>& buf, AudioSpecs& as)
         : input(input), buf(buf), as(as), lastSample(0)
     {
@@ -139,9 +138,9 @@ public:
     void metadata_callback(const ::FLAC__StreamMetadata *metadata) override {
         if(metadata->type == FLAC__METADATA_TYPE_STREAMINFO) {
             //the get*() functions don't seem to work at this point
-            FLAC__StreamMetadata_StreamInfo m = metadata->data.stream_info;
+            m_metadata_cache = metadata->data.stream_info;
 
-            as = AudioSpecs(m.channels, m.bits_per_sample, m.sample_rate, m.total_samples);
+            as = AudioSpecs(m_metadata_cache.channels, m_metadata_cache.bits_per_sample, m_metadata_cache.sample_rate);
 
             TRACE_LOG(logject) << as;
         }
@@ -178,15 +177,15 @@ public:
 
     chrono::milliseconds tell() {
         auto rate = get_sample_rate() / 1000.0;
-        chrono::milliseconds time(int(lastSample / rate));
+        chrono::milliseconds time(chrono::milliseconds::rep(lastSample / rate));
         return time;
     }
 
-private:
     IO::SeekableSource& input;
     std::deque<char>& buf;
     AudioSpecs& as;
     std::streampos start;
+    FLAC__StreamMetadata_StreamInfo m_metadata_cache;
     uint64_t lastSample;
 };
 
@@ -227,6 +226,11 @@ public:
 
     chrono::milliseconds tell() override {
         return impl.tell();
+    }
+
+    chrono::milliseconds duration() override {
+        auto samples = impl.m_metadata_cache.total_samples;
+        return chrono::milliseconds(chrono::milliseconds::rep(samples / (as.sample_rate/1000.0)));
     }
 
     void reset() override {

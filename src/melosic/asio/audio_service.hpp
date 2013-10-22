@@ -90,8 +90,8 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
         return impl->state();
     }
 
-    const AudioSpecs& currentSpecs(const implementation_type& impl) const noexcept {
-        return impl->currentSpecs();
+    const AudioSpecs& current_specs(const implementation_type& impl) const noexcept {
+        return impl->current_specs();
     }
 
     bool non_blocking(const implementation_type& impl) const noexcept {

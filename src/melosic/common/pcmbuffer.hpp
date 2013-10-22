@@ -18,21 +18,22 @@
 #ifndef MELOSIC_PCMBUFFER_HPP
 #define MELOSIC_PCMBUFFER_HPP
 
-#include <melosic/common/common.hpp>
-#include <melosic/common/properties.hpp>
+#include <boost/asio/buffer.hpp>
+
+#include <melosic/common/audiospecs.hpp>
 
 namespace Melosic {
 
-class PCMBuffer {
-public:
-    PCMBuffer();
+struct PCMBuffer : boost::asio::mutable_buffer {
+    using boost::asio::mutable_buffer::mutable_buffer;
 
-    void reserve(size_t samples);
-    void pushSample(int sample, uint8_t bits);
+    AudioSpecs audio_specs;
+};
 
-    readWriteProperty(uint8_t, bitDepth, BitDepth)
-    readWriteProperty(uint32_t, sampleRate, SampleRate)
-    readWriteProperty(AudioSpecs, audioSpecs, AudioSpecs)
+struct ConstPCMBuffer : boost::asio::const_buffer {
+    using boost::asio::const_buffer::const_buffer;
+
+    AudioSpecs audio_specs;
 };
 
 } //end namespace Melosic
