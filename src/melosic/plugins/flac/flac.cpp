@@ -22,6 +22,7 @@
 namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
+#include <cmath>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/decoder.hpp>
@@ -140,7 +141,9 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
             //the get*() functions don't seem to work at this point
             m_metadata_cache = metadata->data.stream_info;
 
-            as = AudioSpecs(m_metadata_cache.channels, m_metadata_cache.bits_per_sample, m_metadata_cache.sample_rate);
+            as = {static_cast<uint8_t>(m_metadata_cache.channels),
+                  static_cast<uint8_t>(m_metadata_cache.bits_per_sample),
+                  m_metadata_cache.sample_rate};
 
             TRACE_LOG(logject) << as;
         }
@@ -167,18 +170,14 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
     }
 
     void seek(chrono::milliseconds dur) {
-        auto rate = get_sample_rate() / 1000.0;
-        auto req = uint64_t(dur.count() * rate);
-        if(!seek_absolute(req)) {
+        if(!seek_absolute(as.time_to_samples(dur))) {
             WARN_LOG(logject) << "Seek to " << dur.count() << "ms failed";
             TRACE_LOG(logject) << "Position is " << tell().count() << "ms";
         }
     }
 
     chrono::milliseconds tell() {
-        auto rate = get_sample_rate() / 1000.0;
-        chrono::milliseconds time(chrono::milliseconds::rep(lastSample / rate));
-        return time;
+        return as.samples_to_time<chrono::milliseconds>(lastSample);
     }
 
     IO::SeekableSource& input;
@@ -228,9 +227,8 @@ public:
         return impl.tell();
     }
 
-    chrono::milliseconds duration() override {
-        auto samples = impl.m_metadata_cache.total_samples;
-        return chrono::milliseconds(chrono::milliseconds::rep(samples / (as.sample_rate/1000.0)));
+    chrono::milliseconds duration() const override {
+        return as.samples_to_time<chrono::milliseconds>(impl.m_metadata_cache.total_samples);
     }
 
     void reset() override {
@@ -244,7 +242,7 @@ public:
     }
 
     explicit operator bool() override {
-        return !impl.end();
+        return !(impl.end() && buf.empty());
     }
 
 private:

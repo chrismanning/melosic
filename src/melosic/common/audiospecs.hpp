@@ -40,6 +40,34 @@ struct AudioSpecs {
         return !((*this) == b);
     }
 
+    constexpr size_t samples_to_bytes(size_t samples) const noexcept {
+        return samples * (bps/8) * channels;
+    }
+
+    constexpr size_t bytes_to_samples(size_t bytes) const noexcept {
+        return bytes / (bps/8) / channels;
+    }
+
+    template <typename Duration>
+    constexpr size_t time_to_samples(Duration time) const noexcept {
+        return sample_rate * chrono::duration_cast<chrono::duration<double>>(time).count();
+    }
+
+    template <typename Duration>
+    constexpr Duration samples_to_time(size_t samples) const noexcept {
+        return chrono::duration_cast<Duration>(chrono::duration<double>(samples / static_cast<double>(sample_rate)));
+    }
+
+    template <typename Duration>
+    constexpr size_t time_to_bytes(Duration time) const noexcept {
+        return time_to_samples(time) * (bps/8);
+    }
+
+    template <typename Duration>
+    constexpr Duration bytes_to_time(size_t bytes) const noexcept {
+        return samples_to_time<Duration>(bytes / (bps/8));
+    }
+
     uint8_t channels = 0;
     uint8_t bps = 0;
     uint8_t target_bps = 0;

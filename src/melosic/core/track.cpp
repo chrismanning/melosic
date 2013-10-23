@@ -88,8 +88,13 @@ public:
         if(!isOpen())
             reOpen();
         try {
-            auto difference = (end > start) ? (end - tell()).count() : 0;
-            return decoder->read(s, (difference < n) ? n : difference);
+//            if(duration() == decoder->duration()) {
+//                auto difference = (end > start) ? +std::llrint((end - decoder->tell()).count() *
+//                                                               (as.sample_rate/1000.0) *
+//                                                               (as.bps/8)) : 0;
+//                n = difference > n ? n : +difference;
+//            }
+            return decoder->read(s, n);
         }
         catch(AudioDataInvalidException& e) {
             e << ErrorTag::FilePath(filePath());
@@ -140,7 +145,8 @@ public:
                 decoder->getAudioSpecs() = as;
             else
                 as = decoder->getAudioSpecs();
-            end = start + decoder->duration();
+            if(end <= start)
+                end = start + decoder->duration();
         }
         catch(DecoderException& e) {
             e << ErrorTag::FilePath(input.filename());

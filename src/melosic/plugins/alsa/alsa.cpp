@@ -182,22 +182,23 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         if((ec = {snd_pcm_hw_params_set_format(m_pdh, m_params, fmt), alsa_category}))
             return;
 
-        unsigned buf_time_usecs = chrono::duration_cast<chrono::nanoseconds>(buf_time_msecs).count();
-        TRACE_LOG(logject) << "buf: " << buf_time_usecs;
-        if((ec = {snd_pcm_hw_params_set_buffer_time_near(m_pdh, m_params, &buf_time_usecs, &dir), alsa_category}))
-            return;
-
-        snd_pcm_hw_params_get_buffer_size(m_params, (snd_pcm_uframes_t*)&buf_time_usecs);
-        TRACE_LOG(logject) << "buf: " << buf_time_usecs;
+        snd_pcm_uframes_t min_frames;
+        snd_pcm_hw_params_get_period_size_min(m_params, &min_frames, &dir);
+        TRACE_LOG(logject) << "min frames: " << min_frames;
 
         snd_pcm_uframes_t min_buf;
         snd_pcm_hw_params_get_buffer_size_min(m_params, &min_buf);
         TRACE_LOG(logject) << "min buf: " << min_buf;
 
-        snd_pcm_uframes_t frames;
-        snd_pcm_hw_params_get_period_size_min(m_params, &frames, &dir);
-        TRACE_LOG(logject) << "min frames: " << frames;
-        frames = buf_time_usecs/(min_buf/frames);
+        snd_pcm_uframes_t buf = as.time_to_bytes(buf_time_msecs);
+        TRACE_LOG(logject) << "buf: " << buf;
+        if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
+            return;
+
+        snd_pcm_hw_params_get_buffer_size(m_params, (snd_pcm_uframes_t*)&buf);
+        TRACE_LOG(logject) << "set buf: " << buf;
+
+        snd_pcm_uframes_t frames = buf/(min_buf/min_frames);
         TRACE_LOG(logject) << "frames = buf/(min_buf/min_frames): " << frames;
         if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
             return;
@@ -259,6 +260,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
         m_state = Output::DeviceState::Ready;
         assert(!ec);
+        TRACE_LOG(logject) << "internal state after prepare: " << snd_pcm_state_name(snd_pcm_state(m_pdh));
     }
 
     void play(boost::system::error_code& ec) noexcept override {
@@ -332,6 +334,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
         if(ec)
             return 0;
+
         const auto size = ASIO::buffer_size(buf);
         auto ptr = ASIO::buffer_cast<const char*>(buf);
 

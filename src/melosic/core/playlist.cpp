@@ -88,15 +88,17 @@ public:
             return -1;
 
         auto r = io::read(*m_current_track, s, n);
-        if(r < n) {
-            if(r < 0)
-                r = 0;
+        if(r < n && !*m_current_track) {
+            TRACE_LOG(logject) << "tell(): " << m_current_track->tell().count();
+            TRACE_LOG(logject) << "duration(): " << m_current_track->duration().count();
             const AudioSpecs& as = m_current_track->getAudioSpecs();
             m_current_track->close();
             next(l);
             if(m_current_track) {
                 if(m_current_track->getAudioSpecs() != as)
                     return r;
+                if(r < 0)
+                    r = 0;
                 m_current_track->reOpen();
                 m_current_track->reset();
                 r += io::read(*m_current_track, s + r, n - r);

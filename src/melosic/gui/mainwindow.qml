@@ -60,7 +60,10 @@ ApplicationWindow {
         id: quitAction
         text: "Quit"
         shortcut: "ctrl+q"
-        onTriggered: Qt.quit()
+        onTriggered: {
+            playerControls.stop()
+            Qt.quit()
+        }
     }
 
     Action {

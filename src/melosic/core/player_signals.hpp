@@ -33,7 +33,7 @@ namespace Signals {
 
 namespace Player {
 typedef SignalCore<void(Melosic::Output::DeviceState)> StateChanged;
-typedef SignalCore<void(chrono::milliseconds, chrono::milliseconds)> NotifyPlayPos;
+typedef SignalCore<void(chrono::milliseconds /*current*/, chrono::milliseconds /*total*/)> NotifyPlayPos;
 }
 
 }

@@ -78,8 +78,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         if(state_impl() == DeviceState::Playing) {
             l.unlock();
             const AudioSpecs& as = playman.currentPlaylist()->currentTrack()->getAudioSpecs();
-            write_handler(boost::system::error_code(),
-                          (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count() * as.channels);
+            write_handler(boost::system::error_code(), as.time_to_bytes(buffer_time));
         }
     }
     void play_impl();
@@ -209,10 +208,18 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     void write_handler(boost::system::error_code ec, std::size_t n) {
         unique_lock l(mu);
+        if(state_impl() != Output::DeviceState::Playing)
+            return;
+        auto playlist = playman.currentPlaylist();
+        l.unlock();
+        auto ct = playlist ? playlist->currentTrack() : std::nullopt;
+        if(ct)
+            notifyPlayPosition(ct->tell(), ct->duration());
+        l.lock();
         TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
         if(ec) {
             if(ec.value() == boost::system::errc::operation_canceled) {
-                TRACE_LOG(logject) << "write error: " << ec.message();
+                TRACE_LOG(logject) << ec.message();
                 return;
             }
             ERROR_LOG(logject) << "write error: " << ec.message();
@@ -221,7 +228,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         }
         ec.clear();
 
-        auto playlist = playman.currentPlaylist();
+        playlist = playman.currentPlaylist();
 
         if(!playlist) {
             ec = ASIO::error::make_error_code(ASIO::error::no_data);
@@ -237,10 +244,9 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         else try {
             const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
 
-            n = (as.target_bps/8) * (as.target_sample_rate/1000.0) * buffer_time.count() * as.channels;
+            n = as.time_to_bytes(buffer_time);
             PCMBuffer tmp{::operator new(n), n};
-            tmp.audio_specs = as;
-            in_buf.emplace_back(tmp);
+//            tmp.audio_specs = as;
 
             Widener widen{n, as.bps, as.target_bps};
             TRACE_LOG(logject) << "widening from " << (unsigned)as.bps << " to " << (unsigned)as.target_bps;
@@ -248,12 +254,14 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             auto composite = io::compose(widen, boost::ref(*playlist));
 
             auto n_ = io::read(composite, ASIO::buffer_cast<char*>(tmp), n);
-            if(n_ <= 0) {
+            if(n_ < 0) {
+                TRACE_LOG(logject) << "end of playlist";
                 ec = ASIO::error::make_error_code(ASIO::error::eof);
                 n_ = 0;
-                stop_impl();
-                playlist->jumpTo(0);
+                ::operator delete(ASIO::buffer_cast<void*>(tmp));
             }
+            else
+                in_buf.emplace_back(tmp);
             n = static_cast<std::size_t>(n_);
         }
         catch(...) {
@@ -267,22 +275,19 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     void read_handler(boost::system::error_code ec, std::size_t n) {
         TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
-        if(ec) {
+        if(ec || (in_buf.empty() && (ec = ASIO::error::make_error_code(ASIO::error::no_data)))) {
             if(ec.value() == boost::system::errc::operation_canceled || ec.value() == ASIO::error::eof) {
-                TRACE_LOG(logject) << "read error: " << ec.message();
+                TRACE_LOG(logject) << ec.message();
+                assert(in_buf.empty());
                 return;
             }
             ERROR_LOG(logject) << "read error: " << ec.message();
             stop_impl();
             return;
         }
-        if(in_buf.empty()) {
-            ERROR_LOG(logject) << "buffer is empty, abandon ship";
-            stop_impl();
-            return;
-        }
+        assert(n > 0);
 
-        PCMBuffer tmp{in_buf.front()};
+        PCMBuffer tmp{ASIO::buffer_cast<void*>(in_buf.front()), n};
         in_buf.pop_front();
         assert(asioOutput);
         kernel.getThreadManager().enqueue([self=shared_from_this(),this,tmp]() {
@@ -548,6 +553,9 @@ Player::impl::impl(Kernel& kernel) :
     playman.getTrackChangedSignal().connect(&impl::trackChangeSlot, this);
     outman.getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
     confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+    notifyPlayPosition.connect([this] (chrono::milliseconds pos, chrono::milliseconds dur) {
+        TRACE_LOG(logject) << "pos: " << pos.count() << "; dur: " << dur.count();
+    });
 }
 
 Player::impl::~impl() {
