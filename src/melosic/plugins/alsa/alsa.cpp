@@ -330,13 +330,16 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
     size_t write_some(const ASIO::const_buffer& buf, boost::system::error_code& ec) noexcept override {
         if(m_pdh == nullptr)
-            BOOST_THROW_EXCEPTION(DeviceWriteException());
+            ec = ASIO::error::make_error_code(ASIO::error::bad_descriptor);
 
         if(ec)
             return 0;
 
         const auto size = ASIO::buffer_size(buf);
         auto ptr = ASIO::buffer_cast<const char*>(buf);
+
+        if(size == 0 || ptr == nullptr)
+            return 0;
 
         auto frames = snd_pcm_bytes_to_frames(m_pdh, size);
         auto r = snd_pcm_writei(m_pdh, ptr, frames);
