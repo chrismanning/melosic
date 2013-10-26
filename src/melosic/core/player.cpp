@@ -78,7 +78,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         if(state_impl() == DeviceState::Playing) {
             l.unlock();
             const AudioSpecs& as = playman.currentPlaylist()->currentTrack()->getAudioSpecs();
-            write_handler(boost::system::error_code(), as.time_to_bytes(buffer_time));
+            write_handler(boost::system::error_code(), 0);
         }
     }
     void play_impl();
@@ -244,7 +244,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         else try {
             const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
 
-            n = as.time_to_bytes(buffer_time);
+            n = as.time_to_bytes(buffer_time)*4;
             PCMBuffer tmp{::operator new(n), n};
 //            tmp.audio_specs = as;
 
@@ -286,6 +286,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             return;
         }
         assert(n > 0);
+        assert(!in_buf.empty());
 
         PCMBuffer tmp{ASIO::buffer_cast<void*>(in_buf.front()), n};
         in_buf.pop_front();
