@@ -26,8 +26,6 @@ using namespace std::literals;
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/container/stable_vector.hpp>
-#include <boost/range/iterator_range.hpp>
 
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
@@ -50,24 +48,26 @@ public:
     typedef char char_type;
 
     typedef Track value_type;
-    typedef boost::container::stable_vector<value_type> list_type;
+    typedef std::optional<value_type> optional_type;
     typedef int size_type;
 
     Playlist(Decoder::Manager&, std::string);
     ~Playlist();
 
-    MELOSIC_LOCAL std::streamsize read(char* s, std::streamsize n);
+    MELOSIC_LOCAL std::streamsize read(char_type* s, std::streamsize n);
     void seek(chrono::milliseconds dur);
     chrono::milliseconds duration() const;
     void previous();
     void next();
     void jumpTo(size_type pos);
 
-    std::optional<value_type> currentTrack();
-    const std::optional<value_type> currentTrack() const;
+    optional_type currentTrack();
+    const optional_type currentTrack() const;
 
-    std::optional<value_type> getTrack(size_type);
-    const std::optional<value_type> getTrack(size_type) const;
+    size_type currentTrackPos() const;
+
+    optional_type getTrack(size_type);
+    const optional_type getTrack(size_type) const;
 
     std::vector<value_type> getTracks(size_type, size_type);
     const std::vector<value_type> getTracks(size_type, size_type) const;
@@ -81,14 +81,14 @@ public:
 
     size_type insert(size_type pos, ForwardRange<value_type> values);
     size_type emplace(size_type pos, ForwardRange<const boost::filesystem::path> values);
-    std::optional<value_type> insert(size_type pos, value_type value);
-    std::optional<value_type> emplace(size_type pos,
-                                      boost::filesystem::path filename,
-                                      chrono::milliseconds start = 0ms,
-                                      chrono::milliseconds end = 0ms);
+    value_type insert(size_type pos, value_type value);
+    optional_type emplace(size_type pos,
+                          boost::filesystem::path filename,
+                          chrono::milliseconds start = 0ms,
+                          chrono::milliseconds end = 0ms);
 
     void push_back(value_type value);
-    void emplace_back(boost::filesystem::path filename,
+    bool emplace_back(boost::filesystem::path filename,
                       chrono::milliseconds start = 0ms,
                       chrono::milliseconds end = 0ms);
 
