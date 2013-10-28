@@ -48,7 +48,7 @@ public:
     virtual void seek(chrono::milliseconds dur) = 0;
     virtual chrono::milliseconds tell() = 0;
     virtual chrono::milliseconds duration() const = 0;
-    virtual Melosic::AudioSpecs& getAudioSpecs() = 0;
+    virtual Melosic::AudioSpecs getAudioSpecs() = 0;
     virtual explicit operator bool() = 0;
     virtual void reset() = 0;
 };

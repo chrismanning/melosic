@@ -77,7 +77,6 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         play_impl();
         if(state_impl() == DeviceState::Playing) {
             l.unlock();
-            const AudioSpecs& as = playman.currentPlaylist()->currentTrack()->getAudioSpecs();
             write_handler(boost::system::error_code(), 0);
         }
     }
@@ -242,14 +241,16 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             playlist->jumpTo(0);
         }
         else try {
-            const AudioSpecs& as = playlist->currentTrack()->getAudioSpecs();
+            const auto as = playlist->currentTrack()->getAudioSpecs();
 
-            n = as.time_to_bytes(buffer_time)*4;
+            n = as.time_to_bytes(buffer_time);
             PCMBuffer tmp{::operator new(n), n};
-//            tmp.audio_specs = as;
+            tmp.audio_specs = as;
 
-            Widener widen{n, as.bps, as.target_bps};
-            TRACE_LOG(logject) << "widening from " << (unsigned)as.bps << " to " << (unsigned)as.target_bps;
+            Widener widen{n, as.bps, asioOutput->current_specs().bps};
+            if(as.bps != asioOutput->current_specs().bps)
+                TRACE_LOG(logject) << "widening from " << (unsigned)as.bps
+                                   << " to " << (unsigned)asioOutput->current_specs().bps;
 
             auto composite = io::compose(widen, boost::ref(*playlist));
 
@@ -404,7 +405,7 @@ struct Stopped : State {
             if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
 
-            auto& as = ct->getAudioSpecs();
+            const auto as = ct->getAudioSpecs();
             stateMachine->asioOutput->prepare(as);
             TRACE_LOG(stateMachine->logject) << "sink prepared with specs:\n" << as;
             stateMachine->asioOutput->play();
@@ -614,12 +615,6 @@ void Player::impl::trackChangeSlot(int, std::optional<Track> track) {
                 TRACE_LOG(logject) << "prepared track specs: " << track->getAudioSpecs();
                 this_thread::sleep_for(100ms);
                 asioOutput->play();
-            }
-            else {
-                auto& as1 = track->getAudioSpecs();
-                auto& as2 = asioOutput->current_specs();
-                as1.target_bps = as2.target_bps;
-                as1.target_sample_rate = as2.target_sample_rate;
             }
         }
     }

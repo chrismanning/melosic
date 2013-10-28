@@ -48,23 +48,24 @@ struct MELOSIC_EXPORT AudioOutputServiceBase {
     virtual void cancel(boost::system::error_code&) noexcept = 0;
     virtual void assign(Output::DeviceName dev_name, boost::system::error_code& ec) noexcept = 0;
 
-    virtual void prepare(AudioSpecs&, boost::system::error_code&) noexcept = 0;
+    virtual AudioSpecs prepare(const AudioSpecs, boost::system::error_code&) noexcept = 0;
     virtual void play(boost::system::error_code&) noexcept = 0;
     virtual void pause(boost::system::error_code&) noexcept = 0;
     virtual void unpause(boost::system::error_code&) noexcept = 0;
     virtual void stop(boost::system::error_code&) noexcept = 0;
     virtual size_t write_some(const const_buffer&, boost::system::error_code&) noexcept = 0;
 
-    virtual void asyncPrepare(AudioSpecs&, boost::system::error_code&) noexcept = 0;
+    typedef std::function<void(boost::system::error_code, AudioSpecs)> PrepareHandler;
+    virtual void async_prepare(const AudioSpecs, PrepareHandler) noexcept = 0;
 
-    typedef std::function<void(const boost::system::error_code&, std::size_t)> WriteHandler;
+    typedef std::function<void(boost::system::error_code, std::size_t)> WriteHandler;
     virtual void async_write_some(const const_buffer&, WriteHandler) = 0;
 
     virtual bool non_blocking() const noexcept = 0;
     virtual void non_blocking(bool, boost::system::error_code&) noexcept = 0;
 
     virtual Output::DeviceState state() const noexcept = 0;
-    virtual const AudioSpecs& current_specs() const noexcept = 0;
+    virtual AudioSpecs current_specs() const noexcept = 0;
 
 protected:
     io_service& get_io_service() noexcept {

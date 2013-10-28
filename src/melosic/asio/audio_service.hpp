@@ -54,7 +54,7 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
         impl->assign(std::move(dev_name), ec);
     }
 
-    void prepare(implementation_type& impl, AudioSpecs& as, boost::system::error_code& ec) noexcept {
+    void prepare(implementation_type& impl, const AudioSpecs as, boost::system::error_code& ec) noexcept {
         impl->prepare(as, ec);
     }
 
@@ -90,7 +90,7 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
         return impl->state();
     }
 
-    const AudioSpecs& current_specs(const implementation_type& impl) const noexcept {
+    AudioSpecs current_specs(const implementation_type& impl) const noexcept {
         return impl->current_specs();
     }
 
@@ -102,7 +102,7 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
     }
 
     template <typename PrepareHandler>
-    void async_prepare(implementation_type& impl, PrepareHandler handler);
+    void async_prepare(implementation_type& impl, const AudioSpecs, PrepareHandler handler);
 
     template <typename ConstBufferSequence, typename WriteHandler>
     void async_write_some(implementation_type& impl, const ConstBufferSequence& buf, WriteHandler&& handler) {

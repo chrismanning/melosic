@@ -125,10 +125,6 @@ public:
         return 0ms;
     }
 
-    AudioSpecs& getAudioSpecs() {
-        return as;
-    }
-
     std::optional<std::string> getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
@@ -262,13 +258,9 @@ chrono::milliseconds Track::duration() const {
     return pimpl->duration();
 }
 
-Melosic::AudioSpecs& Track::getAudioSpecs() {
+Melosic::AudioSpecs Track::getAudioSpecs() const {
     shared_lock l(pimpl->mu);
-    return pimpl->getAudioSpecs();
-}
-const Melosic::AudioSpecs& Track::getAudioSpecs() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->getAudioSpecs();
+    return pimpl->as;
 }
 
 std::optional<std::string> Track::getTag(const std::string& key) const {

@@ -100,36 +100,33 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             m_asio_fd.cancel(ec);
     }
 
-    void prepare(AudioSpecs& as, boost::system::error_code& ec) noexcept override {
+    AudioSpecs prepare(const AudioSpecs as, boost::system::error_code& ec) noexcept override {
         m_current_specs = as;
         m_state = Output::DeviceState::Error;
         if((m_pdh == nullptr) &&
                 (ec = {snd_pcm_open(&m_pdh, m_name.c_str(), SND_PCM_STREAM_PLAYBACK, m_non_blocking), alsa_category}))
-            return;
+            return m_current_specs;
 
         if((m_params == nullptr) && (ec = {snd_pcm_hw_params_malloc(&m_params), alsa_category}))
-            return;
+            return m_current_specs;
 
         snd_pcm_hw_params_any(m_pdh, m_params);
 
         snd_pcm_hw_params_set_access(m_pdh, m_params, SND_PCM_ACCESS_RW_INTERLEAVED);
 
-        if((ec = {snd_pcm_hw_params_set_channels(m_pdh, m_params, as.channels), alsa_category}))
-            return;
+        if((ec = {snd_pcm_hw_params_set_channels(m_pdh, m_params, m_current_specs.channels), alsa_category}))
+            return m_current_specs;
         int dir = 0;
         if((ec = {snd_pcm_hw_params_set_rate_resample(m_pdh, m_params, ::resample), alsa_category}))
-            return;
-        unsigned rate = as.sample_rate;
-        if((ec = {snd_pcm_hw_params_set_rate_near(m_pdh, m_params, &rate, &dir), alsa_category}))
-            return;
-        if(rate != as.sample_rate) {
-            WARN_LOG(logject) << "Sample rate: " << as.sample_rate << " not supported. Using " << rate;
-            as.target_sample_rate = rate;
-        }
+            return m_current_specs;
+        if((ec = {snd_pcm_hw_params_set_rate_near(m_pdh, m_params, &m_current_specs.sample_rate, &dir), alsa_category}))
+            return m_current_specs;
+        if(as.sample_rate != m_current_specs.sample_rate)
+            WARN_LOG(logject) << "Sample rate: " << as.sample_rate << " not supported. Using " << m_current_specs.sample_rate;
 
         snd_pcm_format_t fmt(SND_PCM_FORMAT_UNKNOWN);
 
-        switch(as.bps) {
+        switch(m_current_specs.bps) {
             case 8:
                 fmt = SND_PCM_FORMAT_S8;
                 break;
@@ -143,7 +140,6 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
                 fmt = SND_PCM_FORMAT_S32_LE;
                 break;
         }
-        as.target_bps = as.bps;
 
         if(snd_pcm_hw_params_test_format(m_pdh, m_params, fmt) < 0) {
             WARN_LOG(logject) << "unsupported format";
@@ -154,8 +150,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
                 WARN_LOG(logject) << "trying higher bps of " << static_cast<unsigned>(*bps);
                 if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *p)) {
                     fmt = *p;
-                    as.target_bps = *bps;
-                    WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(as.target_bps);
+                    m_current_specs.bps = *bps;
+                    WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(m_current_specs.bps);
                     break;
                 }
             }
@@ -167,20 +163,20 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
                     WARN_LOG(logject) << "trying lower bps of " << static_cast<unsigned>(*bps);
                     if(!snd_pcm_hw_params_test_format(m_pdh, m_params, *rp)) {
                         fmt = *rp;
-                        as.target_bps = *bps;
-                        WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(as.target_bps);
+                        m_current_specs.bps = *bps;
+                        WARN_LOG(logject) << "settled on bps of " << static_cast<unsigned>(m_current_specs.bps);
                         break;
                     }
                 }
                 if(rp == formats.rend()) {
                     ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
-                    return;
+                    return m_current_specs;
                 }
             }
         }
 
         if((ec = {snd_pcm_hw_params_set_format(m_pdh, m_params, fmt), alsa_category}))
-            return;
+            return m_current_specs;
 
         snd_pcm_uframes_t min_frames;
         snd_pcm_hw_params_get_period_size_min(m_params, &min_frames, &dir);
@@ -190,10 +186,10 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         snd_pcm_hw_params_get_buffer_size_min(m_params, &min_buf);
         TRACE_LOG(logject) << "min buf: " << min_buf;
 
-        snd_pcm_uframes_t buf = as.time_to_bytes(buf_time_msecs);
+        snd_pcm_uframes_t buf = m_current_specs.time_to_bytes(buf_time_msecs);
         TRACE_LOG(logject) << "buf: " << buf;
         if((ec = {snd_pcm_hw_params_set_buffer_size_near(m_pdh, m_params, &buf), alsa_category}))
-            return;
+            return m_current_specs;
 
         snd_pcm_hw_params_get_buffer_size(m_params, (snd_pcm_uframes_t*)&buf);
         TRACE_LOG(logject) << "set buf: " << buf;
@@ -201,17 +197,15 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         snd_pcm_uframes_t frames = buf/(min_buf/min_frames);
         TRACE_LOG(logject) << "frames = buf/(min_buf/min_frames): " << frames;
         if((ec = {snd_pcm_hw_params_set_period_size_near(m_pdh, m_params, &frames, &dir), alsa_category}))
-            return;
+            return m_current_specs;
         TRACE_LOG(logject) << "set frames per period: " << frames;
 
         if((ec = {snd_pcm_hw_params(m_pdh, m_params), alsa_category}))
-            return;
-
-        m_current_specs = as;
+            return m_current_specs;
 
         auto pcount = snd_pcm_poll_descriptors_count(m_pdh);
         if((pcount < 0) && (ec = {pcount, alsa_category}))
-            return;
+            return m_current_specs;
 
         m_pfds.clear();
         m_pfds.resize(pcount);
@@ -221,7 +215,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         TRACE_LOG(logject) << "no. poll descriptors filled: " << n;
         assert(!m_pfds.empty());
         if((n < 0) && (ec = {n, alsa_category}))
-            return;
+            return m_current_specs;
 
         m_mangled_revents = static_cast<bool>(m_pfds.data()->events & POLLIN);
 
@@ -229,7 +223,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             m_asio_fd.cancel();
             m_asio_fd.close();
         }
-        if(m_asio_fd.assign(m_pfds.data()->fd, ec)) return;
+        if(m_asio_fd.assign(m_pfds.data()->fd, ec)) return m_current_specs;
 
         {
             auto events = m_pfds.data()->events;
@@ -261,6 +255,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         m_state = Output::DeviceState::Ready;
         assert(!ec);
         TRACE_LOG(logject) << "internal state after prepare: " << snd_pcm_state_name(snd_pcm_state(m_pdh));
+
+        return m_current_specs;
     }
 
     void play(boost::system::error_code& ec) noexcept override {
@@ -357,7 +353,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         return r;
     }
 
-    void asyncPrepare(AudioSpecs&, boost::system::error_code&) noexcept override {
+    void async_prepare(const AudioSpecs, PrepareHandler) noexcept override {
     }
 
     void async_write_some(const ASIO::const_buffer& buf, WriteHandler handler) override {
@@ -373,7 +369,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             m_asio_fd.async_write_some(ASIO::null_buffers(), f);
     }
 
-    const AudioSpecs& current_specs() const noexcept override {
+    AudioSpecs current_specs() const noexcept override {
         return m_current_specs;
     }
 

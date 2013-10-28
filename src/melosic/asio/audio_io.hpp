@@ -46,10 +46,10 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
     }
 
-    void prepare(AudioSpecs& as, boost::system::error_code& ec) noexcept {
+    void prepare(const AudioSpecs as, boost::system::error_code& ec) noexcept {
         get_service().prepare(get_implementation(), as, ec);
     }
-    void prepare(AudioSpecs& as) {
+    void prepare(const AudioSpecs as) {
         boost::system::error_code ec;
         prepare(as, ec);
         if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
@@ -103,7 +103,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         return r;
     }
 
-    const AudioSpecs& current_specs() const noexcept {
+    AudioSpecs current_specs() const noexcept {
         return get_service().current_specs(get_implementation());
     }
 

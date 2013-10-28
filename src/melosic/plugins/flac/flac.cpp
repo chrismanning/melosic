@@ -237,7 +237,7 @@ public:
         buf.clear();
     }
 
-    AudioSpecs& getAudioSpecs() override {
+    AudioSpecs getAudioSpecs() override {
         return as;
     }
 

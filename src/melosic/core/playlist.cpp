@@ -91,7 +91,7 @@ public:
         if(r < n && !*m_current_track) {
             TRACE_LOG(logject) << "tell(): " << m_current_track->tell().count();
             TRACE_LOG(logject) << "duration(): " << m_current_track->duration().count();
-            const AudioSpecs& as = m_current_track->getAudioSpecs();
+            const auto as = m_current_track->getAudioSpecs();
             m_current_track->close();
             next(l);
             if(m_current_track) {

@@ -27,9 +27,7 @@ struct AudioSpecs {
     constexpr AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate) noexcept
         : channels(channels),
           bps(bps),
-          target_bps(bps),
-          sample_rate(sample_rate),
-          target_sample_rate(sample_rate) {}
+          sample_rate(sample_rate) {}
 
     constexpr bool operator==(const AudioSpecs& b) const noexcept {
         return channels == b.channels &&
@@ -70,17 +68,13 @@ struct AudioSpecs {
 
     uint8_t channels = 0;
     uint8_t bps = 0;
-    uint8_t target_bps = 0;
     uint32_t sample_rate = 0;
-    uint32_t target_sample_rate = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const AudioSpecs& as) {
     os << "channels: " << static_cast<unsigned>(as.channels);
     os << "; bps: " << static_cast<unsigned>(as.bps);
-    os << "; target_bps: " << static_cast<unsigned>(as.target_bps);
     os << "; sample_rate: " << as.sample_rate;
-    os << "; target_sample_rate: " << as.target_sample_rate;
     return os;
 }
 

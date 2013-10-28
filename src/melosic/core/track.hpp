@@ -58,8 +58,7 @@ public:
 
     chrono::milliseconds tell();
     chrono::milliseconds duration() const;
-    Melosic::AudioSpecs& getAudioSpecs();
-    const Melosic::AudioSpecs& getAudioSpecs() const;
+    Melosic::AudioSpecs getAudioSpecs() const;
     const boost::filesystem::path& filePath() const;
     std::optional<std::string> getTag(const std::string& key) const;
 
