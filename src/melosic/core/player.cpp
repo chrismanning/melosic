@@ -153,8 +153,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
         Widener(std::size_t buffer_size, uint16_t from, uint16_t to) noexcept :
             buffer_size(buffer_size),
-            from(from),
-            to(to)
+            from(from/8),
+            to(to/8)
         {
             assert(from);
             assert(to);
@@ -167,29 +167,27 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             if(to == from)
                 return io::read(src, s, n);
 
-            assert(!(n % (to/8)));
-            const auto tbytes = (to/8);
-            const auto fbytes = (from/8);
+            assert(!(n % to));
 
             std::streamsize i{0}, r;
             if(to > from)
-                for(i = 0; i < n; i += tbytes) {
-                    for(int j = 0; j < (tbytes - fbytes); j++)
+                for(i = 0; i < n; i += to) {
+                    for(int j = 0; j < (to - from); j++)
                         *s++ = 0;
-                    r = io::read(src, s, fbytes);
+                    r = io::read(src, s, from);
                     if(r <= 0)
                         return -1;
                     s += r;
                 }
             else if(to < from)
-                for(i = 0; i < n; i += tbytes) {
-                    char c[fbytes - tbytes];
-                    r = io::read(src, c, fbytes - tbytes);
-                    assert(r == fbytes - tbytes);
-                    r = io::read(src, s, tbytes);
+                for(i = 0; i < n; i += to) {
+                    char c[from - to];
+                    r = io::read(src, c, from - to);
+                    assert(r == from - to);
+                    r = io::read(src, s, to);
                     if(r <= 0)
                         return -1;
-                    s += tbytes;
+                    s += to;
                 }
             else assert(false);
 
