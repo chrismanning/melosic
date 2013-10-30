@@ -125,13 +125,13 @@ public:
         return 0ms;
     }
 
-    std::optional<std::string> getTag(const std::string& key) {
+    boost::optional<std::string> getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
         if(val == tags.end() && key.substr(0, 5) == "album" && key != "albumtitle" && key.size() > 5)
             val = tags.find(TagLib::String(key.substr(5).c_str()));
 
-        return val != tags.end() ? val->second.front().to8Bit(true) : std::optional<std::string>{};
+        return val != tags.end() ? val->second.front().to8Bit(true) : boost::optional<std::string>{};
     }
 
     void reloadDecoder() {
@@ -212,6 +212,10 @@ bool Track::operator==(const Track& b) const noexcept {
     return pimpl == b.pimpl;
 }
 
+bool Track::operator!=(const Track& b) const noexcept {
+    return pimpl != b.pimpl;
+}
+
 void Track::setTimePoints(chrono::milliseconds start, chrono::milliseconds end) {
     lock_guard l(pimpl->mu);
     pimpl->start = start;
@@ -263,7 +267,7 @@ Melosic::AudioSpecs Track::getAudioSpecs() const {
     return pimpl->as;
 }
 
-std::optional<std::string> Track::getTag(const std::string& key) const {
+boost::optional<std::string> Track::getTag(const std::string& key) const {
     shared_lock l(pimpl->mu);
     return pimpl->getTag(key);
 }

@@ -20,6 +20,8 @@ using mutex = std::mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 
+#include <boost/optional.hpp>
+
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/gui/playlistmodel.hpp>
@@ -35,7 +37,7 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::M
       tman(tman),
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {
-    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (std::optional<Core::Playlist> p) {
+    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (boost::optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p) {
@@ -44,7 +46,7 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::M
            playlists.insert({*p, pm});
         }
     }));
-    conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (std::optional<Core::Playlist> p) {
+    conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (boost::optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist removed: " << !!p;
         if(!p)
@@ -53,7 +55,7 @@ PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::M
         if(it != playlists.left.end())
             playlists.left.erase(it);
     }));
-    conns.emplace_back(playman.getCurrentPlaylistChangedSignal().connect([this] (std::optional<Core::Playlist> p) {
+    conns.emplace_back(playman.getCurrentPlaylistChangedSignal().connect([this] (boost::optional<Core::Playlist> p) {
         if(!p) return;
         lock_guard l(mu);
         auto it = playlists.left.find(*p);

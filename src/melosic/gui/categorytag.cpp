@@ -15,6 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+
+#include <boost/optional.hpp>
+
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 

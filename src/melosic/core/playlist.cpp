@@ -70,7 +70,7 @@ struct CurrentTrackChanged : Signals::Signal<Signals::Playlist::CurrentTrackChan
 
 static CurrentTrackChanged currentTrackChangedSignal;
 
-static void currentTrackChanged(int i, std::optional<Core::Track> t, unique_lock& l) {
+static void currentTrackChanged(int i, boost::optional<Core::Track> t, unique_lock& l) {
     l.unlock();
     BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
     currentTrackChangedSignal(i, t);
@@ -83,32 +83,7 @@ public:
         name(name)
     {}
 
-    //IO
-    std::streamsize read(Playlist::char_type* s, std::streamsize n, unique_lock& l) {
-        if(m_current_track == std::end(tracks))
-            return -1;
-
-        auto r = io::read(*m_current_track, s, n);
-        if(r < n && !*m_current_track) {
-            TRACE_LOG(logject) << "tell(): " << m_current_track->tell().count();
-            TRACE_LOG(logject) << "duration(): " << m_current_track->duration().count();
-            const auto as = m_current_track->getAudioSpecs();
-            m_current_track->close();
-            next(l);
-            if(m_current_track != std::end(tracks)) {
-                if(m_current_track->getAudioSpecs() != as)
-                    return r;
-                if(r < 0)
-                    r = 0;
-                m_current_track->reOpen();
-                m_current_track->reset();
-                r += io::read(*m_current_track, s + r, n - r);
-            }
-        }
-        return r;
-    }
-
-    void trackAdded(int i, std::optional<Core::Track> t, unique_lock& l) {
+    void trackAdded(int i, boost::optional<Core::Track> t, unique_lock& l) {
         if(i < 0 || !t)
             return;
         t->getTagsChangedSignal().connect([it=std::next(std::begin(tracks), i), this]
@@ -120,7 +95,7 @@ public:
         trackAddedSignal(i, t);
     }
 
-    void trackRemoved(int i, std::optional<Core::Track> t, unique_lock& l) {
+    void trackRemoved(int i, boost::optional<Core::Track> t, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         trackRemovedSignal(i, t);
@@ -130,11 +105,6 @@ public:
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         tagsChangedSignal(i, std::cref(tags));
-    }
-
-    void seek(chrono::milliseconds dur) {
-        if(m_current_track != std::end(tracks))
-            m_current_track->seek(dur);
     }
 
     //playlist controls
@@ -148,11 +118,10 @@ public:
             return;
         if(m_current_track == std::begin(tracks)) {
             currentTrackChanged(currentTrackPos(), currentTrack(), l);
-            seek(0ms);
+            m_current_track->reset();
         }
         else {
             --m_current_track;
-            m_current_track->reset();
         }
         currentTrackChanged(currentTrackPos(), currentTrack(), l);
     }
@@ -160,7 +129,6 @@ public:
     void next(unique_lock& l) {
         if(m_current_track == std::end(tracks))
             return;
-        m_current_track->reset();
         if(currentTrackPos() == size())
             m_current_track = std::end(tracks);
         else
@@ -169,9 +137,6 @@ public:
     }
 
     void jumpTo(Playlist::size_type pos, unique_lock& l) {
-        if(m_current_track != std::end(tracks))
-            m_current_track->reset();
-
         if(pos >= size() || pos < 0)
             m_current_track = std::end(tracks);
         else
@@ -181,7 +146,7 @@ public:
 
     Playlist::optional_type currentTrack() {
         if(m_current_track == std::end(tracks))
-            return std::nullopt;
+            return boost::none;
         return *m_current_track;
     }
 
@@ -214,7 +179,7 @@ public:
         return *r;
     }
 
-    std::optional<Core::Track> emplace(Playlist::size_type pos, boost::filesystem::path filename,
+    boost::optional<Core::Track> emplace(Playlist::size_type pos, boost::filesystem::path filename,
                                        chrono::milliseconds start, chrono::milliseconds end,
                                        unique_lock& l)
     {
@@ -335,17 +300,6 @@ Playlist::Playlist(Decoder::Manager& decman, std::string name) :
     pimpl(new impl(decman, std::move(name))) {}
 
 Playlist::~Playlist() {}
-
-//IO
-std::streamsize Playlist::read(char_type* s, std::streamsize n) {
-    unique_lock l(pimpl->mu);
-    return pimpl->read(s, n, l);
-}
-
-void Playlist::seek(chrono::milliseconds dur) {
-    lock_guard l(pimpl->mu);
-    pimpl->seek(dur);
-}
 
 //playlist controls
 chrono::milliseconds Playlist::duration() const {

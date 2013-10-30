@@ -24,6 +24,7 @@ namespace ph = std::placeholders;
 using namespace boost::adaptors;
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/scope_exit.hpp>
+#include <boost/optional.hpp>
 
 #include <taglib/aifffile.h>
 #include <taglib/mpcfile.h>
@@ -80,7 +81,7 @@ public:
         }
     }
 
-    std::optional<Core::Track> openTrack(boost::filesystem::path,
+    boost::optional<Core::Track> openTrack(boost::filesystem::path,
                                          chrono::milliseconds,
                                          chrono::milliseconds) noexcept;
 
@@ -96,7 +97,7 @@ void Manager::addAudioFormat(Factory fact, std::string extension) {
     pimpl->addAudioFormat(fact, extension);
 }
 
-std::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path filepath,
+boost::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path filepath,
                                      chrono::milliseconds start,
                                      chrono::milliseconds end) noexcept
 {
@@ -124,7 +125,7 @@ std::optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path file
 
     return t;
 }
-std::optional<Core::Track> Manager::openTrack(boost::filesystem::path filepath,
+boost::optional<Core::Track> Manager::openTrack(boost::filesystem::path filepath,
                                                 chrono::milliseconds start,
                                                 chrono::milliseconds end) const noexcept
 {

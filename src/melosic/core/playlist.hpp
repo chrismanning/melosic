@@ -22,7 +22,7 @@
 #include <chrono>
 namespace chrono = std::chrono;
 using namespace std::literals;
-#include <optional>
+#include <boost/optional/optional_fwd.hpp>
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
@@ -48,14 +48,12 @@ public:
     typedef char char_type;
 
     typedef Track value_type;
-    typedef std::optional<value_type> optional_type;
+    typedef boost::optional<value_type> optional_type;
     typedef int size_type;
 
     Playlist(Decoder::Manager&, std::string);
     ~Playlist();
 
-    MELOSIC_LOCAL std::streamsize read(char_type* s, std::streamsize n);
-    void seek(chrono::milliseconds dur);
     chrono::milliseconds duration() const;
     void previous();
     void next();

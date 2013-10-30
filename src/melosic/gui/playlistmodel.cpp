@@ -23,6 +23,7 @@
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
+#include <boost/optional.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>

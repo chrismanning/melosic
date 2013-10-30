@@ -19,7 +19,7 @@
 #define MELOSIC_TRACK_HPP
 
 #include <memory>
-#include <optional>
+#include <boost/optional/optional_fwd.hpp>
 
 #include <boost/filesystem/path.hpp>
 
@@ -46,6 +46,7 @@ public:
     virtual ~Track();
 
     bool operator==(const Track&) const noexcept;
+    bool operator!=(const Track&) const noexcept;
 
     void setTimePoints(chrono::milliseconds start, chrono::milliseconds end);
 
@@ -60,7 +61,7 @@ public:
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs getAudioSpecs() const;
     const boost::filesystem::path& filePath() const;
-    std::optional<std::string> getTag(const std::string& key) const;
+    boost::optional<std::string> getTag(const std::string& key) const;
 
     void reloadTags();
     bool taggable() const;

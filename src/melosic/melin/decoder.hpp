@@ -21,11 +21,11 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
-#include <optional>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/mpl/lambda.hpp>
 namespace { namespace mpl = boost::mpl; }
+#include <boost/optional/optional_fwd.hpp>
 
 #include <taglib/tfile.h>
 
@@ -70,7 +70,7 @@ public:
         addAudioFormat(fact, {std::move(extensions)...});
     }
 
-    std::optional<Core::Track> openTrack(boost::filesystem::path filepath,
+    boost::optional<Core::Track> openTrack(boost::filesystem::path filepath,
                             chrono::milliseconds start = 0ms,
                             chrono::milliseconds end = 0ms) const noexcept;
 
