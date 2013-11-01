@@ -19,8 +19,12 @@
 #define MELOSIC_PLAYER_HPP
 
 #include <memory>
+#include <tuple>
+using std::tuple;
 #include <chrono>
 namespace chrono = std::chrono;
+
+#include <boost/optional/optional_fwd.hpp>
 
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/core/player_signals.hpp>
@@ -37,6 +41,7 @@ namespace Core {
 
 class Kernel;
 class Playlist;
+class Track;
 
 class Player {
 public:
@@ -55,6 +60,13 @@ public:
     MELOSIC_EXPORT DeviceState state() const;
     MELOSIC_EXPORT void seek(chrono::milliseconds dur);
     MELOSIC_EXPORT chrono::milliseconds tell() const;
+
+    MELOSIC_EXPORT boost::optional<Playlist> currentPlaylist() const;
+    MELOSIC_EXPORT boost::optional<Track> currentTrack() const;
+    MELOSIC_EXPORT void next();
+    MELOSIC_EXPORT void previous();
+    MELOSIC_EXPORT void jumpTo(int);
+    MELOSIC_EXPORT tuple<boost::optional<Playlist>, boost::optional<Track>> current() const;
 
     MELOSIC_EXPORT Signals::Player::StateChanged& stateChangedSignal() const;
 

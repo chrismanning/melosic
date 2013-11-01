@@ -30,7 +30,6 @@ using boost::format;
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
 #include <boost/range/adaptor/sliced.hpp>
-#include <boost/container/stable_vector.hpp>
 
 #include <taglib/tpropertymap.h>
 
@@ -63,18 +62,6 @@ struct TagsChanged : Signals::Signal<Signals::Playlist::TagsChanged> {
 struct MultiTagsChanged : Signals::Signal<Signals::Playlist::MultiTagsChanged> {
     using Super::Signal;
 };
-
-struct CurrentTrackChanged : Signals::Signal<Signals::Playlist::CurrentTrackChanged> {
-    using Super::Signal;
-};
-
-static CurrentTrackChanged currentTrackChangedSignal;
-
-static void currentTrackChanged(int i, boost::optional<Core::Track> t, unique_lock& l) {
-    l.unlock();
-    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
-    currentTrackChangedSignal(i, t);
-}
 
 class Playlist::impl {
 public:
@@ -113,47 +100,6 @@ public:
                                [](chrono::milliseconds a, Track& b) { return a + b.duration(); });
     }
 
-    void previous(unique_lock& l) {
-        if(m_current_track == std::end(tracks))
-            return;
-        if(m_current_track == std::begin(tracks)) {
-            currentTrackChanged(currentTrackPos(), currentTrack(), l);
-            m_current_track->reset();
-        }
-        else {
-            --m_current_track;
-        }
-        currentTrackChanged(currentTrackPos(), currentTrack(), l);
-    }
-
-    void next(unique_lock& l) {
-        if(m_current_track == std::end(tracks))
-            return;
-        if(currentTrackPos() == size())
-            m_current_track = std::end(tracks);
-        else
-            ++m_current_track;
-        currentTrackChanged(currentTrackPos(), currentTrack(), l);
-    }
-
-    void jumpTo(Playlist::size_type pos, unique_lock& l) {
-        if(pos >= size() || pos < 0)
-            m_current_track = std::end(tracks);
-        else
-            m_current_track = std::next(std::begin(tracks), pos);
-        currentTrackChanged(currentTrackPos(), currentTrack(), l);
-    }
-
-    Playlist::optional_type currentTrack() {
-        if(m_current_track == std::end(tracks))
-            return boost::none;
-        return *m_current_track;
-    }
-
-    Playlist::size_type currentTrackPos() {
-        return std::distance(std::begin(tracks), m_current_track);
-    }
-
     //capacity
     bool empty() {
         return tracks.empty();
@@ -174,8 +120,6 @@ public:
 
         trackAdded(pos, *r, l);
 
-        if(size() == 1)
-            jumpTo(0, l);
         return *r;
     }
 
@@ -191,9 +135,6 @@ public:
         auto r = tracks.emplace(std::next(std::begin(tracks), pos), *v);
 
         trackAdded(pos, *r, l);
-
-        if(size() == 1)
-            jumpTo(0, l);
 
         return *r;
     }
@@ -228,9 +169,6 @@ public:
             }
         }
 
-        if(size() == 1)
-            jumpTo(0, l);
-
         return s;
     }
 
@@ -238,9 +176,6 @@ public:
         tracks.push_back(std::move(value));
 
         trackAdded(tracks.size()-1, tracks.back(), l);
-
-        if(size() == 1)
-            jumpTo(0, l);
     }
 
     bool emplace_back(boost::filesystem::path filename,
@@ -255,8 +190,6 @@ public:
 
         trackAdded(tracks.size()-1, tracks.back(), l);
 
-        if(size() == 1)
-            jumpTo(0, l);
         return true;
     }
 
@@ -284,9 +217,7 @@ public:
     }
 
     mutex mu;
-    using Container = boost::container::stable_vector<Playlist::value_type>;
-    Container tracks;
-    Container::iterator m_current_track{tracks.end()};
+    Playlist::Container tracks;
     TrackAdded trackAddedSignal;
     TrackRemoved trackRemovedSignal;
     TagsChanged tagsChangedSignal;
@@ -301,40 +232,20 @@ Playlist::Playlist(Decoder::Manager& decman, std::string name) :
 
 Playlist::~Playlist() {}
 
+Playlist::Container::iterator Playlist::begin() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->tracks.begin();
+}
+
+Playlist::Container::iterator Playlist::end() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->tracks.end();
+}
+
 //playlist controls
 chrono::milliseconds Playlist::duration() const {
     shared_lock l(pimpl->mu);
     return pimpl->duration();
-}
-
-void Playlist::previous() {
-    unique_lock l(pimpl->mu);
-    pimpl->previous(l);
-}
-
-void Playlist::next() {
-    unique_lock l(pimpl->mu);
-    pimpl->next(l);
-}
-
-void Playlist::jumpTo(Playlist::size_type pos) {
-    unique_lock l(pimpl->mu);
-    pimpl->jumpTo(pos, l);
-}
-
-Playlist::optional_type Playlist::currentTrack() {
-    shared_lock l(pimpl->mu);
-    return pimpl->currentTrack();
-}
-
-const Playlist::optional_type Playlist::currentTrack() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->currentTrack();
-}
-
-Playlist::size_type Playlist::currentTrackPos() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->currentTrackPos();
 }
 
 Playlist::optional_type Playlist::getTrack(size_type pos) {
@@ -390,11 +301,6 @@ Playlist::size_type Playlist::size() const {
 
 Playlist::size_type Playlist::max_size() const {
     return std::numeric_limits<size_type>::max();
-}
-
-Playlist::operator bool() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->empty() ? false : static_cast<bool>(pimpl->currentTrack());
 }
 
 Playlist::value_type Playlist::insert(size_type pos, Playlist::value_type value) {
@@ -480,10 +386,6 @@ Signals::Playlist::TagsChanged& Playlist::getTagsChangedSignal() const noexcept 
 
 Signals::Playlist::MultiTagsChanged& Playlist::getMutlipleTagsChangedSignal() const noexcept {
     return pimpl->multiTagsChangedSignal;
-}
-
-Signals::Playlist::CurrentTrackChanged& Playlist::getCurrentTrackChangedSignal() noexcept {
-    return currentTrackChangedSignal;
 }
 
 } // namespace Core

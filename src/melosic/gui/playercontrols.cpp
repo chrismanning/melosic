@@ -79,15 +79,11 @@ void PlayerControls::stop() {
 }
 
 void PlayerControls::previous() {
-    if(!pimpl->currentPlaylist)
-        return;
-    pimpl->currentPlaylist->previous();
+    pimpl->player.previous();
 }
 
 void PlayerControls::next() {
-    if(!pimpl->currentPlaylist)
-        return;
-    pimpl->currentPlaylist->next();
+    pimpl->player.next();
 }
 
 void PlayerControls::seek(chrono::milliseconds t) {

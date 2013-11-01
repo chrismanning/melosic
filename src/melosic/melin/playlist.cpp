@@ -226,9 +226,5 @@ Signals::Playlist::PlaylistRemoved& Manager::getPlaylistRemovedSignal() const {
     return pimpl->playlistRemovedSignal;
 }
 
-Signals::Playlist::CurrentTrackChanged& Manager::getTrackChangedSignal() const {
-    return Core::Playlist::getCurrentTrackChangedSignal();
-}
-
 } // namespace Playlist
 } // namespace Melosic

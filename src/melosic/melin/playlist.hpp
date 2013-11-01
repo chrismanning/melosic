@@ -65,8 +65,6 @@ public:
     MELOSIC_EXPORT Signals::Playlist::PlaylistAdded& getPlaylistAddedSignal() const;
     MELOSIC_EXPORT Signals::Playlist::PlaylistRemoved& getPlaylistRemovedSignal() const;
 
-    MELOSIC_EXPORT Signals::Playlist::CurrentTrackChanged& getTrackChangedSignal() const;
-
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
