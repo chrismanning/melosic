@@ -62,6 +62,7 @@ public:
     Q_INVOKABLE void stop();
     Q_INVOKABLE void previous();
     Q_INVOKABLE void next();
+    Q_INVOKABLE void jumpTo(int);
     Q_INVOKABLE void seek(chrono::milliseconds);
 
     DeviceState state() const;

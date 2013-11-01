@@ -86,6 +86,10 @@ void PlayerControls::next() {
     pimpl->player.next();
 }
 
+void PlayerControls::jumpTo(int p) {
+    pimpl->player.jumpTo(p);
+}
+
 void PlayerControls::seek(chrono::milliseconds t) {
     if(!pimpl->currentPlaylist)
         return;

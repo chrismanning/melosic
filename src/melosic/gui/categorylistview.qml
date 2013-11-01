@@ -300,7 +300,12 @@ ScrollView {
                         }
 
                         onDoubleClicked: {
+                            playerControls.stop()
                             console.debug("item double clicked")
+                            playlistManagerModel.currentPlaylistModel = root.model
+                            console.debug("item in current playlist; jumping & playing")
+                            playerControls.jumpTo(model.index)
+                            playerControls.play()
                         }
                     }
                 }

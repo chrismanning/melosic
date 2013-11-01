@@ -6,9 +6,6 @@ Item {
     id: root
     property CategoryListView currentPlaylist
     property QtObject currentModel
-    onCurrentModelChanged: {
-        playlistManagerModel.currentPlaylistModel = currentModel
-    }
     Connections {
         target: playlistManagerModel
         onCurrentPlaylistModelChanged: {
