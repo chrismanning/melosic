@@ -97,6 +97,14 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
 
             return QVariant::fromValue(it->second);
         }
+        case PlaylistIsCurrent: {
+            auto v = playman.getPlaylist(index.row());
+            assert(v);
+            auto it = playlists.left.find(*v);
+            assert(playlists.left.end() != it);
+
+            return QVariant::fromValue(it->second == m_current);
+        }
         default:
             return QVariant();
     }
@@ -110,6 +118,7 @@ QHash<int, QByteArray> PlaylistManagerModel::roleNames() const {
     QHash<int, QByteArray> roles = QAbstractListModel::roleNames();
     roles[PlaylistModelRole] = "playlistModel";
     roles[PlaylistTitleRole] = "title";
+    roles[PlaylistIsCurrent] = "isCurrent";
     return roles;
 }
 

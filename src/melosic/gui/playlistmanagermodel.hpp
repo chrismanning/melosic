@@ -61,7 +61,8 @@ public:
 
     enum {
         PlaylistModelRole = Qt::UserRole * 12,
-        PlaylistTitleRole
+        PlaylistTitleRole,
+        PlaylistIsCurrent
     };
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
