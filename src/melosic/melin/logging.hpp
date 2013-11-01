@@ -46,8 +46,8 @@ enum MELOSIC_EXPORT class Severity {
 
 typedef logging::sources::severity_channel_logger_mt<Severity> Logger;
 
-template< typename CharT, typename TraitsT >
-inline std::basic_ostream<CharT, TraitsT>& operator<< (
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<< (
     std::basic_ostream<CharT, TraitsT>& strm, Severity lvl)
 {
     switch(lvl) {
@@ -69,6 +69,7 @@ inline std::basic_ostream<CharT, TraitsT>& operator<< (
     }
     return strm;
 }
+extern template std::ostream& operator<<(std::ostream&, Severity);
 
 MELOSIC_EXPORT void init();
 
