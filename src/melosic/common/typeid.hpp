@@ -23,7 +23,8 @@
 #include <cxxabi.h>
 
 namespace std {
-inline std::ostream& operator<<(std::ostream& strm, const std::type_info& t) {
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, const std::type_info& t) {
     const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
     if(str) {
         strm << str;

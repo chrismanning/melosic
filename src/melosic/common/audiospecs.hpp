@@ -71,7 +71,9 @@ struct AudioSpecs {
     uint32_t sample_rate = 0;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const AudioSpecs& as) {
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, const AudioSpecs& as)
+{
     os << "channels: " << static_cast<unsigned>(as.channels);
     os << "; bps: " << static_cast<unsigned>(as.bps);
     os << "; sample_rate: " << as.sample_rate;

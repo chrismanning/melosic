@@ -39,8 +39,9 @@ using RandomRange = boost::any_range<T,
                                      boost::random_access_traversal_tag,
                                      typename std::add_lvalue_reference<T>::type,
                                      std::ptrdiff_t>;
-template <typename T>
-std::ostream& operator<<(std::ostream& out, ForwardRange<T> range) {
+
+template <typename CharT, typename TraitsT, typename T>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, ForwardRange<T> range) {
     for(const T& v : range) {
         out << v << std::endl;
     }

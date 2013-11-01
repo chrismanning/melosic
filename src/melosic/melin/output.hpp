@@ -97,12 +97,15 @@ struct DeviceName {
     bool operator<(const DeviceName& b) const {
         return name < b.name;
     }
-    friend std::ostream& operator<<(std::ostream&, const DeviceName&);
+    template <typename CharT, typename TraitsT>
+    friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&, const DeviceName&);
 
 private:
     const std::string name, desc;
 };
-inline std::ostream& operator<<(std::ostream& out, const DeviceName& b) {
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const DeviceName& b) {
     return out << b.name + (b.desc.size() ? (": " + b.desc) : "");
 }
 
