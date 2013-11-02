@@ -32,17 +32,11 @@ namespace chrono = std::chrono;
 #include <QQmlProperty>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/optional.hpp>
-using boost::optional;
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/common/connection.hpp>
-
-namespace TagLib {
-class PropertyMap;
-}
 
 namespace Melosic {
 
@@ -123,7 +117,6 @@ class TagBinding : public QObject, public QQmlPropertyValueSource {
 
     Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged)
     QString m_format_string;
-    optional<const TagLib::PropertyMap&> tags;
     Signals::Connection conn;
     QQmlProperty m_target_property;
 

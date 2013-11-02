@@ -28,6 +28,8 @@
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
+#include <boost/optional.hpp>
+using boost::optional;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -342,7 +344,6 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     m_target_property = property;
     m_target_property.write(QString::fromStdString(*track->getTag(m_format_string.toStdString())));
     conn = track->getTagsChangedSignal().connect([this] (const TagLib::PropertyMap& tags) {
-        this->tags = tags;
         auto it = tags.find(m_format_string.toStdString());
         if(it == tags.end())
             return;
