@@ -24,6 +24,9 @@
 #include <QApplication>
 #include <QVector>
 
+#include <boost/optional.hpp>
+using boost::optional;
+
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -66,6 +69,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Role>("Melosic.Playlist", 1, 0, "CategoryRole");
     qmlRegisterType<Category>("Melosic.Playlist", 1, 0, "Category");
     qmlRegisterType<CategoryTag>("Melosic.Playlist", 1, 0, "CategoryTag");
+    qmlRegisterType<TagBinding>("Melosic.Playlist", 1, 0, "TagBinding");
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
     engine->rootContext()->setContextProperty("playerControls", playerControls.data());

@@ -28,13 +28,21 @@ namespace chrono = std::chrono;
 #include <QQmlListProperty>
 #include <QUrl>
 #include <QHash>
+#include <QQmlPropertyValueSource>
+#include <QQmlProperty>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/optional.hpp>
+using boost::optional;
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/common/connection.hpp>
+
+namespace TagLib {
+class PropertyMap;
+}
 
 namespace Melosic {
 
@@ -63,11 +71,6 @@ namespace Thread {
 class Manager;
 }
 
-class TrackMetadata;
-class TrackProperties;
-class MetadataTag;
-class CategoryTag;
-
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     Core::Playlist playlist;
@@ -77,8 +80,8 @@ class PlaylistModel : public QAbstractListModel {
 
     Q_PROPERTY(long duration READ duration NOTIFY durationChanged)
 
-    friend class MetadataTag;
     friend class CategoryTag;
+    friend class TagBinding;
 
 public:
     explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
@@ -114,20 +117,24 @@ Q_SIGNALS:
     void durationChanged(long);
 };
 
-class MetadataTag : public QObject {
+class TagBinding : public QObject, public QQmlPropertyValueSource {
     Q_OBJECT
+    Q_INTERFACES(QQmlPropertyValueSource)
 
-    Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged);
+    Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged)
     QString m_format_string;
-    Q_PROPERTY(Melosic::PlaylistModel* playlistModel MEMBER m_playlist_model NOTIFY playlistModelChanged);
-    PlaylistModel* m_playlist_model;
+    optional<const TagLib::PropertyMap&> tags;
+    Signals::Connection conn;
+    QQmlProperty m_target_property;
 
 public:
-    explicit MetadataTag(QObject* parent = nullptr);
+    explicit TagBinding(QObject* parent = nullptr);
+    virtual ~TagBinding();
+
+    void setTarget(const QQmlProperty& property) override;
 
 Q_SIGNALS:
     void formatStringChanged(QString);
-    void playlistModelChanged(PlaylistModel*);
 };
 
 } // namespace Melosic

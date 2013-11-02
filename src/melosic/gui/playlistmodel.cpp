@@ -20,10 +20,14 @@
 
 #include <QStringList>
 #include <QMimeData>
+#include <QQmlComponent>
+#include <QQmlContext>
+#include <QQuickItem>
+#include <QQmlEngine>
+#include <QDebug>
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
-#include <boost/optional.hpp>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -311,8 +315,43 @@ long PlaylistModel::duration() const {
     return m_duration;
 }
 
-MetadataTag::MetadataTag(QObject* parent)
-    : QObject(parent)
+TagBinding::TagBinding(QObject* parent) :
+    QObject(parent)
 {}
+
+TagBinding::~TagBinding() {
+    conn.disconnect();
+}
+
+void TagBinding::setTarget(const QQmlProperty& property) {
+    auto context = QQmlEngine::contextForObject(property.object());
+    assert(context);
+    auto v = context->contextProperty("playlistModel");
+    assert(v.isValid());
+    PlaylistModel* pm = qvariant_cast<PlaylistModel*>(v);
+    assert(pm);
+    v = context->contextProperty("model");
+    assert(v.isValid());
+    v = qvariant_cast<QObject*>(v)->property("index");
+    assert(v.isValid());
+    bool b;
+    auto index = v.toInt(&b);
+    assert(b);
+    auto track = pm->playlist.getTrack(index);
+    assert(track);
+    m_target_property = property;
+    m_target_property.write(QString::fromStdString(*track->getTag(m_format_string.toStdString())));
+    conn = track->getTagsChangedSignal().connect([this] (const TagLib::PropertyMap& tags) {
+        this->tags = tags;
+        auto it = tags.find(m_format_string.toStdString());
+        if(it == tags.end())
+            return;
+        QStringList strings;
+        for(const auto& str : it->second)
+            strings.push_back(QString::fromStdString(str.to8Bit(true)));
+
+        m_target_property.write(strings.join("; "));
+    });
+}
 
 } // namespace Melosic

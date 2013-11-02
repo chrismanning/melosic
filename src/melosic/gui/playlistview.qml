@@ -153,8 +153,10 @@ ListView {
                                 id: trackno
                                 elide: Text.ElideRight
                                 color: textColor
-                                text: model.tracknumber
                                 width: 15
+                                TagBinding on text {
+                                    formatString: "tracknumber"
+                                }
                             }
                             Label {
                                 x: spacing
