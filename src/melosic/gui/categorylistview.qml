@@ -129,13 +129,6 @@ ScrollView {
         boundsBehavior: Flickable.StopAtBounds
         Component.onDestruction: console.debug("Playlist view being destroyed")
 
-        Binding {
-            target: root.categoryModel.category
-            property: "model"
-            when: category !== null
-            value: root.categoryModel
-        }
-
         Loader {
             id: proxyLoader
 

@@ -34,15 +34,6 @@ QQmlListProperty<Criteria> Category::categoryCriteria() {
     return {this, criteria_};
 }
 
-CategoryProxyModel* Category::model() const {
-    return model_;
-}
-
-void Category::setModel(CategoryProxyModel* m) {
-    model_ = m;
-    Q_EMIT modelChanged(model_);
-}
-
 QQmlComponent* Category::delegate() const {
     return delegate_;
 }
