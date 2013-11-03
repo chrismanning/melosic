@@ -22,8 +22,6 @@
 #include <chrono>
 namespace chrono = std::chrono;
 using namespace std::literals;
-#include <boost/optional/optional_fwd.hpp>
-using boost::optional;
 
 #include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
@@ -32,6 +30,7 @@ using boost::optional;
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/melin/playlist_signals.hpp>
+#include <melosic/common/optional_fwd.hpp>
 
 namespace Melosic {
 
@@ -50,7 +49,7 @@ public:
     typedef char char_type;
 
     typedef Track value_type;
-    typedef boost::optional<value_type> optional_type;
+    typedef optional<value_type> optional_type;
     typedef int size_type;
 
     using Container = boost::container::stable_vector<Playlist::value_type>;

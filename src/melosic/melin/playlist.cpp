@@ -26,7 +26,7 @@ using unique_lock = std::unique_lock<mutex>;
 using shared_lock = boost::shared_lock<mutex>;
 #include <boost/scope_exit.hpp>
 #include <boost/container/stable_vector.hpp>
-#include <boost/optional.hpp>
+#include <melosic/common/optional.hpp>
 
 #include <melosic/core/playlist.hpp>
 #include <melosic/common/signal.hpp>
@@ -56,7 +56,7 @@ public:
     impl(Decoder::Manager& decman) : decman(decman)
     {}
 
-    boost::optional<Core::Playlist> insert(size_type pos, const std::string& name, unique_lock& l) {
+    optional<Core::Playlist> insert(size_type pos, const std::string& name, unique_lock& l) {
         assert(pos >= 0);
         TRACE_LOG(logject) << "inserting playlist \"" << name << "\" at position " << pos;
         auto it = playlists.emplace(std::next(std::begin(playlists), pos), decman, name);
@@ -104,11 +104,11 @@ public:
         return playlists.empty();
     }
 
-    boost::optional<Core::Playlist> currentPlaylist() {
+    optional<Core::Playlist> currentPlaylist() {
         return current;
     }
 
-    void setCurrent(boost::optional<Core::Playlist> p, unique_lock& l) {
+    void setCurrent(optional<Core::Playlist> p, unique_lock& l) {
         TRACE_LOG(logject) << "setting current playlist " << !!p;
         if(p == current)
             return;
@@ -122,19 +122,19 @@ public:
         currentPlaylistChanged(current, l);
     }
 
-    void currentPlaylistChanged(boost::optional<Core::Playlist> p, unique_lock& l) {
+    void currentPlaylistChanged(optional<Core::Playlist> p, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         currentPlaylistChangedSignal(p);
     }
 
-    void playlistAdded(boost::optional<Core::Playlist> p, unique_lock& l) {
+    void playlistAdded(optional<Core::Playlist> p, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         playlistAddedSignal(p);
     }
 
-    void playlistRemoved(boost::optional<Core::Playlist> p, unique_lock& l) {
+    void playlistRemoved(optional<Core::Playlist> p, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         playlistRemovedSignal(p);
@@ -149,7 +149,7 @@ private:
     CurrentPlaylistChanged currentPlaylistChangedSignal;
     PlaylistAdded playlistAddedSignal;
     PlaylistRemoved playlistRemovedSignal;
-    boost::optional<Core::Playlist> current;
+    optional<Core::Playlist> current;
     boost::container::stable_vector<Core::Playlist> playlists;
 
     friend class Manager;
@@ -159,7 +159,7 @@ Manager::Manager(Decoder::Manager& decman) : pimpl(new impl(decman)) {}
 
 Manager::~Manager() {}
 
-boost::optional<Core::Playlist> Manager::insert(size_type pos, std::string name) {
+optional<Core::Playlist> Manager::insert(size_type pos, std::string name) {
     unique_lock l(pimpl->mu);
     return pimpl->insert(pos, name, l);
 }
@@ -174,7 +174,7 @@ void Manager::erase(size_type start, size_type end) {
     pimpl->erase(start, end, l);
 }
 
-boost::optional<Core::Playlist> Manager::getPlaylist(size_type pos) {
+optional<Core::Playlist> Manager::getPlaylist(size_type pos) {
     assert(pos >= 0);
     shared_lock l(pimpl->mu);
     if(pos >= size()) {
@@ -185,7 +185,7 @@ boost::optional<Core::Playlist> Manager::getPlaylist(size_type pos) {
     return pimpl->playlists[pos];
 }
 
-const boost::optional<Core::Playlist> Manager::getPlaylist(size_type pos) const {
+const optional<Core::Playlist> Manager::getPlaylist(size_type pos) const {
     return const_cast<Manager*>(this)->getPlaylist(pos);
 }
 
@@ -199,12 +199,12 @@ bool Manager::empty() const {
     return pimpl->empty();
 }
 
-boost::optional<Core::Playlist> Manager::currentPlaylist() const {
+optional<Core::Playlist> Manager::currentPlaylist() const {
     shared_lock l(pimpl->mu);
     return pimpl->currentPlaylist();
 }
 
-void Manager::setCurrent(boost::optional<Core::Playlist> p) const {
+void Manager::setCurrent(optional<Core::Playlist> p) const {
     unique_lock l(pimpl->mu);
     pimpl->setCurrent(p, l);
 }

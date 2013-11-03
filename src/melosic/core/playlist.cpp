@@ -70,7 +70,7 @@ public:
         name(name)
     {}
 
-    void trackAdded(int i, boost::optional<Core::Track> t, unique_lock& l) {
+    void trackAdded(int i, optional<Core::Track> t, unique_lock& l) {
         if(i < 0 || !t)
             return;
         t->getTagsChangedSignal().connect([it=std::next(std::begin(tracks), i), this]
@@ -82,7 +82,7 @@ public:
         trackAddedSignal(i, t);
     }
 
-    void trackRemoved(int i, boost::optional<Core::Track> t, unique_lock& l) {
+    void trackRemoved(int i, optional<Core::Track> t, unique_lock& l) {
         l.unlock();
         BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
         trackRemovedSignal(i, t);
@@ -123,7 +123,7 @@ public:
         return *r;
     }
 
-    boost::optional<Core::Track> emplace(Playlist::size_type pos, boost::filesystem::path filename,
+    optional<Core::Track> emplace(Playlist::size_type pos, boost::filesystem::path filename,
                                        chrono::milliseconds start, chrono::milliseconds end,
                                        unique_lock& l)
     {

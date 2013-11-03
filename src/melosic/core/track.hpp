@@ -19,7 +19,6 @@
 #define MELOSIC_TRACK_HPP
 
 #include <memory>
-#include <boost/optional/optional_fwd.hpp>
 
 #include <boost/filesystem/path.hpp>
 
@@ -28,6 +27,7 @@
 #include <melosic/melin/input.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/core/track_signals.hpp>
+#include <melosic/common/optional_fwd.hpp>
 
 namespace Melosic {
 namespace Core {
@@ -61,7 +61,7 @@ public:
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs getAudioSpecs() const;
     const boost::filesystem::path& filePath() const;
-    boost::optional<std::string> getTag(const std::string& key) const;
+    optional<std::string> getTag(const std::string& key) const;
 
     void reloadTags();
     bool taggable() const;

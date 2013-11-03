@@ -18,7 +18,7 @@
 #ifndef MELOSIC_PLAYLIST_SIGNALS_HPP
 #define MELOSIC_PLAYLIST_SIGNALS_HPP
 
-#include <boost/optional/optional_fwd.hpp>
+#include <melosic/common/optional_fwd.hpp>
 
 #include <melosic/common/signal_fwd.hpp>
 
@@ -36,13 +36,13 @@ class Track;
 namespace Signals {
 namespace Playlist {
 
-typedef SignalCore<void(boost::optional<Core::Playlist>)> PlaylistAdded;
-typedef SignalCore<void(boost::optional<Core::Playlist>)> PlaylistRemoved;
-typedef SignalCore<void(boost::optional<Core::Playlist>)> CurrentPlaylistChanged;
+typedef SignalCore<void(optional<Core::Playlist>)> PlaylistAdded;
+typedef SignalCore<void(optional<Core::Playlist>)> PlaylistRemoved;
+typedef SignalCore<void(optional<Core::Playlist>)> CurrentPlaylistChanged;
 
-typedef SignalCore<void(int, boost::optional<Core::Track>)> TrackAdded;
-typedef SignalCore<void(int, boost::optional<Core::Track>)> TrackRemoved;
-typedef SignalCore<void(int, boost::optional<Core::Track>)> CurrentTrackChanged;
+typedef SignalCore<void(int, optional<Core::Track>)> TrackAdded;
+typedef SignalCore<void(int, optional<Core::Track>)> TrackRemoved;
+typedef SignalCore<void(int, optional<Core::Track>)> CurrentTrackChanged;
 
 typedef SignalCore<void(int, const TagLib::PropertyMap&)> TagsChanged;
 typedef SignalCore<void(int, int)> MultiTagsChanged;

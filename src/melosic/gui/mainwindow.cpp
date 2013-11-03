@@ -24,9 +24,6 @@
 #include <QApplication>
 #include <QVector>
 
-#include <boost/optional.hpp>
-using boost::optional;
-
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -37,6 +34,7 @@ using boost::optional;
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/common/optional.hpp>
 
 #include "mainwindow.hpp"
 #include "playlistmodel.hpp"

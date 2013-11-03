@@ -23,6 +23,7 @@ using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
+#include <melosic/common/optional.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -125,13 +126,13 @@ public:
         return 0ms;
     }
 
-    boost::optional<std::string> getTag(const std::string& key) {
+    optional<std::string> getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
         if(val == tags.end() && key.substr(0, 5) == "album" && key != "albumtitle" && key.size() > 5)
             val = tags.find(TagLib::String(key.substr(5).c_str()));
 
-        return val != tags.end() ? val->second.front().to8Bit(true) : boost::optional<std::string>{};
+        return val != tags.end() ? optional<std::string>{val->second.front().to8Bit(true)} : nullopt;
     }
 
     void reloadDecoder() {
@@ -267,7 +268,7 @@ Melosic::AudioSpecs Track::getAudioSpecs() const {
     return pimpl->as;
 }
 
-boost::optional<std::string> Track::getTag(const std::string& key) const {
+optional<std::string> Track::getTag(const std::string& key) const {
     shared_lock l(pimpl->mu);
     return pimpl->getTag(key);
 }

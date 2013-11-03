@@ -18,7 +18,7 @@
 #include <QMetaEnum>
 
 #include <cassert>
-#include <boost/optional.hpp>
+#include <melosic/common/optional.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/core/player.hpp>
@@ -42,7 +42,7 @@ struct PlayerControls::impl {
     {
         state = (PlayerControls::DeviceState) player.state();
         kernel.getPlaylistManager().getCurrentPlaylistChangedSignal().
-                connect([this] (boost::optional<Core::Playlist> cp) {
+                connect([this] (optional<Core::Playlist> cp) {
             currentPlaylist = cp;
         });
         currentPlaylist = kernel.getPlaylistManager().currentPlaylist();
@@ -50,7 +50,7 @@ struct PlayerControls::impl {
 
     PlayerControls::DeviceState state;
     PlaylistModel* currentPlaylistModel{nullptr};
-    boost::optional<Core::Playlist> currentPlaylist;
+    optional<Core::Playlist> currentPlaylist;
 };
 
 PlayerControls::PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent) :

@@ -31,7 +31,6 @@ namespace io = boost::iostreams;
 #include <boost/scope_exit.hpp>
 #include <boost/asio.hpp>
 #include <boost/variant.hpp>
-#include <boost/optional.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/core/playlist.hpp>
@@ -50,6 +49,7 @@ namespace io = boost::iostreams;
 #include <melosic/melin/config.hpp>
 #include <melosic/common/int_get.hpp>
 #include <melosic/common/pcmbuffer.hpp>
+#include <melosic/common/optional.hpp>
 
 #include "player.hpp"
 
@@ -130,8 +130,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     }
     void jumpTo_impl(int);
 
-    void currentPlaylistChangedSlot(boost::optional<Playlist>);
-    void trackChangeSlot(int, boost::optional<Track>);
+    void currentPlaylistChangedSlot(optional<Playlist>);
+    void trackChangeSlot(int, optional<Track>);
     void changeDevice();
     void sinkChangeSlot();
 
@@ -364,9 +364,9 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         });
     }
 
-    boost::optional<Playlist> m_current_playlist;
+    optional<Playlist> m_current_playlist;
     Signals::ScopedConnection currentPlaylistConnection;
-    boost::optional<Track> m_current_track;
+    optional<Track> m_current_track;
     Playlist::Container::iterator m_current_iterator;
     chrono::milliseconds m_gapless_preload{1000};
 
@@ -659,7 +659,7 @@ Output::DeviceState Player::impl::state_impl() {
 
 void Player::impl::next_impl() {
     if(!m_current_playlist) {
-        m_current_track = boost::none;
+        m_current_track = nullopt;
         m_current_iterator = {};
         return;
     }
@@ -670,7 +670,7 @@ void Player::impl::next_impl() {
     if(m_current_iterator != m_current_playlist->end())
         ++m_current_iterator;
     if(m_current_iterator == m_current_playlist->end()) {
-        m_current_track = boost::none;
+        m_current_track = nullopt;
         m_current_iterator = m_current_playlist->end();
     }
     else
@@ -679,7 +679,7 @@ void Player::impl::next_impl() {
 
 void Player::impl::previous_impl() {
     if(!m_current_playlist) {
-        m_current_track = boost::none;
+        m_current_track = nullopt;
         m_current_iterator = {};
         return;
     }
@@ -696,7 +696,7 @@ void Player::impl::previous_impl() {
 
 void Player::impl::jumpTo_impl(int p) {
     if(!m_current_playlist) {
-        m_current_track = boost::none;
+        m_current_track = nullopt;
         m_current_iterator = {};
         return;
     }
@@ -707,17 +707,17 @@ void Player::impl::jumpTo_impl(int p) {
     if(p < m_current_playlist->size())
         m_current_track = *(m_current_iterator = std::next(m_current_playlist->begin(), p));
     else {
-        m_current_track = boost::none;
+        m_current_track = nullopt;
         m_current_iterator = m_current_playlist->end();
     }
 }
 
-void Player::impl::currentPlaylistChangedSlot(boost::optional<Playlist> p) {
+void Player::impl::currentPlaylistChangedSlot(optional<Playlist> p) {
     m_current_playlist = p;
     jumpTo(0);
 }
 
-void Player::impl::trackChangeSlot(int, boost::optional<Track> t) {
+void Player::impl::trackChangeSlot(int, optional<Track> t) {
 //    if(!m_current_track)
 //        m_current_track = t;
     assert(false);
@@ -778,12 +778,12 @@ chrono::milliseconds Player::tell() const {
     return pimpl->tell();
 }
 
-boost::optional<Playlist> Player::currentPlaylist() const {
+optional<Playlist> Player::currentPlaylist() const {
     lock_guard l(pimpl->mu);
     return pimpl->m_current_playlist;
 }
 
-boost::optional<Track> Player::currentTrack() const {
+optional<Track> Player::currentTrack() const {
     lock_guard l(pimpl->mu);
     return pimpl->m_current_track;
 }
@@ -800,7 +800,7 @@ void Player::jumpTo(int p) {
     pimpl->jumpTo(p);
 }
 
-tuple<boost::optional<Playlist>, boost::optional<Track> > Player::current() const {
+tuple<optional<Playlist>, optional<Track> > Player::current() const {
     lock_guard l(pimpl->mu);
     return std::make_tuple(pimpl->m_current_playlist, pimpl->m_current_track);
 }

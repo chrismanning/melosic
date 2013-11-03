@@ -24,7 +24,7 @@
 #include <map>
 
 #include <boost/range/iterator_range.hpp>
-#include <boost/optional.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 
@@ -85,7 +85,7 @@ struct Parameter {
     Parameter(Parameter&&) = delete;
     Parameter(const Parameter&) = delete;
 
-    Parameter& addMember(const std::string& key, boost::optional<std::string> value = boost::optional<std::string>()) {
+    Parameter& addMember(const std::string& key, Melosic::optional<std::string> value = {}) {
         members.emplace(key, value ? *value : "");
         return *this;
     }

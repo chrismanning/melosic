@@ -15,38 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#ifndef MELOSIC_OPTIONAL_HPP
+#define MELOSIC_OPTIONAL_HPP
 
-#include <melosic/common/optional.hpp>
-#include <melosic/core/playlist.hpp>
-#include <melosic/core/track.hpp>
-
-#include "playlistmodel.hpp"
-#include "categoryproxymodel.hpp"
-#include "categorytag.hpp"
+#include "optional_fwd.hpp"
+#include <boost/optional.hpp>
+#include <boost/none.hpp>
 
 namespace Melosic {
-
-CategoryTag::CategoryTag(QObject *parent) :
-    Criteria(parent)
-{
-    connect(this, &Criteria::modelChanged, [this] (CategoryProxyModel* m) {
-        if(!m)
-            return;
-        m_playlist_model = qobject_cast<PlaylistModel*>(m->sourceModel());
-    });
+const auto nullopt = boost::none;
 }
 
-QString CategoryTag::result(const QModelIndex& index) const {
-    Q_ASSERT(index.isValid());
-    if(!m_playlist_model)
-        return m_field;
-    auto t = m_playlist_model->playlist.getTrack(index.row());
-    if(!t)
-        return m_field;
-    auto tag = t->getTag(m_field.toStdString());
-    if(!tag)
-        return m_field;
-    return QString::fromStdString(*tag);
-}
-
-}
+#endif // MELOSIC_OPTIONAL_HPP

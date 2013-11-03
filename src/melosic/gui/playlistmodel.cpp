@@ -28,8 +28,6 @@
 
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
-#include <boost/optional.hpp>
-using boost::optional;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -37,6 +35,7 @@ using boost::optional;
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/signal_core.hpp>
 #include <melosic/common/thread.hpp>
+#include <melosic/common/optional.hpp>
 
 #include <taglib/tpropertymap.h>
 
