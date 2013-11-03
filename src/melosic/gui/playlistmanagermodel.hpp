@@ -80,9 +80,6 @@ public:
 
 Q_SIGNALS:
     void currentPlaylistModelChanged(PlaylistModel*);
-
-//private Q_SLOTS:
-//    void allocPlaylistModel();
 };
 
 } // namespace Melosic

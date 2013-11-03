@@ -47,13 +47,6 @@ struct TrackRoles {
         FileExtension,
         TagsReadable,
         Current,
-        Title,
-        Artist,
-        Album,
-        AlbumArtist,
-        TrackNumber,
-        Genre,
-        Date,
         Duration
     };
 };

@@ -69,14 +69,32 @@ ListView {
                             x: spacing
                             height: childrenRect.height + spacing*(children.length)
                             width: root.width
+
+                            property string artist
+                            TagBinding on artist {
+                                formatString: "artist"
+                            }
+                            property string album
+                            TagBinding on album {
+                                formatString: "album"
+                            }
                             Label {
-                                text: model.artist + " - " + model.album
+                                text: artist + " - " + album
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
                             }
+
+                            property string genre
+                            TagBinding on genre {
+                                formatString: "genre"
+                            }
+                            property string year
+                            TagBinding on year {
+                                formatString: "date"
+                            }
                             Label {
-                                text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
+                                text: genre + " | " + year + " | " + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
@@ -131,10 +149,14 @@ ListView {
                         color: "red"
                     }
 
+                    property string title
+                    TagBinding on title {
+                        formatString: "title"
+                    }
                     Label {
                         id: txt
                         color: pal.highlightedText
-                        text: model.tags_readable ? model.title : model.filepath
+                        text: model.tags_readable ? title : model.filepath
                     }
                 }
             }
@@ -162,7 +184,9 @@ ListView {
                                 x: spacing
                                 elide: Text.ElideRight
                                 color: textColor
-                                text: model.title
+                                TagBinding on text {
+                                    formatString: "title"
+                                }
                                 width: parent.width - trackno.width - spacing
                             }
                         }

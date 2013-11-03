@@ -86,22 +86,6 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
                 return QString::fromStdString(track->filePath().extension().string());
             case TrackRoles::TagsReadable:
                 return QVariant::fromValue(track->tagsReadable());
-            case TrackRoles::Title:
-                return QString::fromStdString(*track->getTag("title"));
-            case TrackRoles::Artist:
-                return QString::fromStdString(*track->getTag("artist"));
-            case TrackRoles::Album:
-                return QString::fromStdString(*track->getTag("album"));
-            case TrackRoles::AlbumArtist: {
-                auto aa = track->getTag("albumartist");
-                return QString::fromStdString(!aa ? *track->getTag("artist") : *aa);
-            }
-            case TrackRoles::TrackNumber:
-                return QString::fromStdString(*track->getTag("tracknumber"));
-            case TrackRoles::Genre:
-                return QString::fromStdString(*track->getTag("genre"));
-            case TrackRoles::Date:
-                return QString::fromStdString(*track->getTag("date"));
             case TrackRoles::Duration: {
                 return QVariant::fromValue(chrono::duration_cast<chrono::seconds>(track->duration()).count());
             }
@@ -153,12 +137,6 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
     roles[TrackRoles::FileExtension] = "extension";
     roles[TrackRoles::TagsReadable] = "tags_readable";
     roles[TrackRoles::Current] = "is_current";
-    roles[TrackRoles::Title] = "title";
-    roles[TrackRoles::Artist] = "artist";
-    roles[TrackRoles::Album] = "album";
-    roles[TrackRoles::TrackNumber] = "tracknumber";
-    roles[TrackRoles::Genre] = "genre";
-    roles[TrackRoles::Date] = "year";
     roles[TrackRoles::Duration] = "duration";
     return roles.unite(QAbstractListModel::roleNames());
 }
@@ -341,7 +319,8 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     auto track = pm->playlist.getTrack(index);
     assert(track);
     m_target_property = property;
-    m_target_property.write(QString::fromStdString(*track->getTag(m_format_string.toStdString())));
+    auto t = track->getTag(m_format_string.toStdString());
+    m_target_property.write(QString::fromStdString(t ? *t : "?"));
     conn = track->getTagsChangedSignal().connect([this] (const TagLib::PropertyMap& tags) {
         auto it = tags.find(m_format_string.toStdString());
         if(it == tags.end())

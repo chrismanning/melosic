@@ -144,7 +144,7 @@ private:
     Decoder::Manager& decman;
 
     mutex mu;
-    Logger::Logger logject{logging::keywords::channel = "PlaylistManagerModel"};
+    Logger::Logger logject{logging::keywords::channel = "Playlist::Manager"};
 
     CurrentPlaylistChanged currentPlaylistChangedSignal;
     PlaylistAdded playlistAddedSignal;
