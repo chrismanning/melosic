@@ -1,5 +1,5 @@
 FIND_PACKAGE(Qt5Qml REQUIRED)
-FIND_PACKAGE(Qt5Quick REQUIRED)
+FIND_PACKAGE(Qt5Quick REQUIRED COMPONENTS Private)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5Test REQUIRED)
 
@@ -15,9 +15,12 @@ SET(qt-gui_SOURCES ${qt-gui_SOURCES} categoryproxymodel.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} category.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} categorytag.cpp)
 SET(qt-gui_SOURCES ${qt-gui_SOURCES} modeltest.cpp modeltest.h)
+SET(qt-gui_SOURCES ${qt-gui_SOURCES} quicklogbackend.cpp)
 SET(qt-gui_HEADERS mainwindow.hpp playlistmodel.hpp)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} . ${Boost_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${Qt5Quick_PRIVATE_INCLUDE_DIRS})
+MESSAGE(${Qt5Quick_PRIVATE_INCLUDE_DIRS})
 
 QT5_ADD_RESOURCES(RCS_FILES resources.qrc)
 

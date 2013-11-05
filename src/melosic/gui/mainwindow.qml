@@ -2,6 +2,7 @@ import QtQuick 2.1
 import QtQuick.Dialogs 1.0
 import QtQuick.Controls 1.0
 import QtQuick.Layouts 1.0
+import QtQuick.Window 2.1
 
 import Melosic.Playlist 1.0
 
@@ -22,8 +23,9 @@ ApplicationWindow {
             MenuItem { action: quitAction }
         }
         Menu {
-            title: "Edit"
+            title: "View"
             MenuItem { action: optionsAction }
+            MenuItem { action: logWindowAction }
         }
         Menu {
             title: "Playback"
@@ -71,6 +73,14 @@ ApplicationWindow {
         text: "Options"
         onTriggered: {
             configDialog.visible = !configDialog.visible
+        }
+    }
+    Action {
+        id: logWindowAction
+        text: "View Log"
+        onTriggered: {
+            if(enable_logging)
+                logWindow.visible = !logWindow.visible
         }
     }
 
@@ -178,6 +188,27 @@ ApplicationWindow {
 
     SystemPalette {
         id: pal
+    }
+
+    property var logWindow: logWindowLoader.item
+    Loader {
+        id: logWindowLoader
+        active: enable_logging
+        sourceComponent: Window {
+            modality: Qt.NonModal
+            width: 500
+            height: 500
+            visible: false
+            TextArea {
+                id: logText
+                anchors.fill: parent
+                readOnly: true
+                textFormat: TextEdit.PlainText
+            }
+            Component.onCompleted: {
+                logsink.textEdit = logText
+            }
+        }
     }
 
     Component.onCompleted: {

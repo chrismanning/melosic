@@ -24,6 +24,8 @@
 #include <QApplication>
 #include <QVector>
 
+#include <boost/log/sinks/sync_frontend.hpp>
+
 #include <melosic/common/common.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -43,6 +45,10 @@
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
 #include "categorytag.hpp"
+#include "quicklogbackend.hpp"
+
+Melosic::Config::Conf conf{"QML"};
+bool enable_logging{false};
 
 namespace Melosic {
 
@@ -53,6 +59,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager())),
     modelTest(playlistManagerModel)
 {
+    ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
     playerControls.reset(new PlayerControls(kernel, player));
@@ -61,6 +68,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterType<QAbstractItemModel>();
     qmlRegisterType<PlaylistModel>();
+    qmlRegisterType<QuickLogBackend>();
     qRegisterMetaType<QVector<int>>();
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");
     qmlRegisterUncreatableType<Criteria>("Melosic.Playlist", 1, 0, "CategoryCriteria", "abstract");
@@ -68,6 +76,13 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Category>("Melosic.Playlist", 1, 0, "Category");
     qmlRegisterType<CategoryTag>("Melosic.Playlist", 1, 0, "CategoryTag");
     qmlRegisterType<TagBinding>("Melosic.Playlist", 1, 0, "TagBinding");
+
+    if(::enable_logging) {
+        auto sink = boost::make_shared<logging::sinks::synchronous_sink<QuickLogBackend>>();
+        logging::core::get()->add_sink(sink);
+        engine->rootContext()->setContextProperty("logsink", sink->locked_backend().get());
+    }
+    engine->rootContext()->setContextProperty("enable_logging", ::enable_logging);
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
     engine->rootContext()->setContextProperty("playerControls", playerControls.data());
