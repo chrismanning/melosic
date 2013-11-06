@@ -42,6 +42,9 @@ ApplicationWindow {
             MenuSeparator {}
             MenuItem { action: removeTracksAction }
             MenuItem { action: refreshTracksAction }
+            MenuSeparator {}
+            MenuItem { action: addPlaylistAction }
+            MenuItem { action: removePlaylistAction }
         }
     }
 
@@ -171,6 +174,19 @@ ApplicationWindow {
         }
     }
 
+    Action {
+        id: addPlaylistAction
+        text: "Add New Playlist"
+        iconName: "list-add"
+        onTriggered: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
+    }
+    Action {
+        id: removePlaylistAction
+        text: "Remove Current Playlist"
+        iconName: "list-remove"
+        onTriggered: playlistManagerModel.removeRows(playlistManager.currentIndex,1)
+    }
+
     property alias currentPlaylist: playlistManager.currentPlaylist
 
     statusBar: StatusBar {
@@ -273,11 +289,9 @@ ApplicationWindow {
                     orientation: Qt.Horizontal
                 }
 
-                Button {
-                    id: addbtn
+                ToolButton {
                     z: 1
-                    text: "Add"
-                    onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
+                    action: addPlaylistAction
                 }
             }
 
@@ -286,6 +300,16 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 manager: playlistManager
+            }
+
+            RowLayout {
+                id: buttonRow
+                Layout.alignment: Qt.AlignHCenter
+                ToolButton { action: playAction }
+                ToolButton { action: pauseAction }
+                ToolButton { action: stopAction }
+                ToolButton { action: previousAction }
+                ToolButton { action: nextAction }
             }
         }
     }

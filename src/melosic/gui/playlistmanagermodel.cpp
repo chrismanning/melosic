@@ -134,6 +134,7 @@ bool PlaylistManagerModel::setData(const QModelIndex& index, const QVariant& val
     auto v = playman.getPlaylist(index.row());
     assert(v);
     v->setName(value.toString().toStdString());
+    Q_EMIT dataChanged(index, index, {PlaylistTitleRole});
     return true;
 }
 
@@ -149,7 +150,9 @@ bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {
 }
 
 bool PlaylistManagerModel::removeRows(int row, int count, const QModelIndex&) {
-    playman.erase(row, count);
+    beginRemoveRows(QModelIndex(), row, row + count - 1);
+    playman.erase(row, row + count);
+    endRemoveRows();
     return true;
 }
 
