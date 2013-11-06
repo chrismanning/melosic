@@ -1,4 +1,4 @@
-import QtQuick 2.1
+import QtQuick 2.2
 import QtQuick.Dialogs 1.0
 import QtQuick.Controls 1.0
 import QtQuick.Layouts 1.0
@@ -48,7 +48,7 @@ ApplicationWindow {
     Action {
         id: openAction
         text: "Open"
-        shortcut: "ctrl+o"
+        shortcut: StandardKey.Open
         iconName: "document-open"
         onTriggered: {
             fileDialog.visible = !fileDialog.visible
@@ -57,13 +57,13 @@ ApplicationWindow {
     Action {
         id: saveAction
         text: "Save Playlist"
-        shortcut: "ctrl+s"
+        shortcut: StandardKey.Save
         iconName: "document-save"
     }
     Action {
         id: quitAction
         text: "Quit"
-        shortcut: "ctrl+q"
+        shortcut: StandardKey.Quit
         iconName: "application-exit"
         onTriggered: {
             playerControls.stop()
@@ -74,6 +74,7 @@ ApplicationWindow {
     Action {
         id: optionsAction
         text: "Options"
+        shortcut: StandardKey.Preferences
         iconName: "configure"
         onTriggered: {
             configDialog.visible = !configDialog.visible
@@ -122,20 +123,21 @@ ApplicationWindow {
     Action {
         id: selectAllAction
         text: "Select All"
-        shortcut: "ctrl+a"
+        shortcut: StandardKey.SelectAll
         iconName: "edit-select-all"
         onTriggered: currentPlaylist.selectAll()
     }
     Action {
         id: clearSelectionAction
         text: "Clear Selection"
+        shortcut: StandardKey.Deselect
         iconName: "edit-clear"
         onTriggered: currentPlaylist.clearSelection()
     }
     Action {
         id: removeTracksAction
         text: "Remove Selected"
-        shortcut: "del"
+        shortcut: StandardKey.Delete
         iconName: "edit-delete"
         onTriggered: {
             if(currentPlaylist !== null)
@@ -148,6 +150,7 @@ ApplicationWindow {
     Action {
         id: refreshTracksAction
         text: "Refresh Tags of selected/all"
+        shortcut: StandardKey.Refresh
         iconName: "view-refresh"
         onTriggered: {
             var pm = playlistManager.currentModel
