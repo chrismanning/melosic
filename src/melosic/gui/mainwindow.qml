@@ -49,6 +49,7 @@ ApplicationWindow {
         id: openAction
         text: "Open"
         shortcut: "ctrl+o"
+        iconName: "document-open"
         onTriggered: {
             fileDialog.visible = !fileDialog.visible
         }
@@ -57,11 +58,13 @@ ApplicationWindow {
         id: saveAction
         text: "Save Playlist"
         shortcut: "ctrl+s"
+        iconName: "document-save"
     }
     Action {
         id: quitAction
         text: "Quit"
         shortcut: "ctrl+q"
+        iconName: "application-exit"
         onTriggered: {
             playerControls.stop()
             Qt.quit()
@@ -71,6 +74,7 @@ ApplicationWindow {
     Action {
         id: optionsAction
         text: "Options"
+        iconName: "configure"
         onTriggered: {
             configDialog.visible = !configDialog.visible
         }
@@ -87,26 +91,31 @@ ApplicationWindow {
     Action {
         id: playAction
         text: "Play"
+        iconName: "media-playback-start"
         onTriggered: playerControls.play()
     }
     Action {
         id: pauseAction
         text: "Pause"
+        iconName: "media-playback-pause"
         onTriggered: playerControls.pause()
     }
     Action {
         id: previousAction
         text: "Previous"
+        iconName: "media-skip-backward"
         onTriggered: playerControls.previous()
     }
     Action {
         id: nextAction
         text: "Next"
+        iconName: "media-skip-forward"
         onTriggered: playerControls.next()
     }
     Action {
         id: stopAction
         text: "Stop"
+        iconName: "media-playback-stop"
         onTriggered: playerControls.stop()
     }
 
@@ -114,17 +123,20 @@ ApplicationWindow {
         id: selectAllAction
         text: "Select All"
         shortcut: "ctrl+a"
+        iconName: "edit-select-all"
         onTriggered: currentPlaylist.selectAll()
     }
     Action {
         id: clearSelectionAction
         text: "Clear Selection"
+        iconName: "edit-clear"
         onTriggered: currentPlaylist.clearSelection()
     }
     Action {
         id: removeTracksAction
         text: "Remove Selected"
         shortcut: "del"
+        iconName: "edit-delete"
         onTriggered: {
             if(currentPlaylist !== null)
                 currentPlaylist.removeSelected()
@@ -136,6 +148,7 @@ ApplicationWindow {
     Action {
         id: refreshTracksAction
         text: "Refresh Tags of selected/all"
+        iconName: "view-refresh"
         onTriggered: {
             var pm = playlistManager.currentModel
             if(pm == null)
