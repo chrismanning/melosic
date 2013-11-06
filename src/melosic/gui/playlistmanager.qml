@@ -1,4 +1,4 @@
-import QtQuick 2.1
+import QtQuick 2.2
 
 import Melosic.Playlist 1.0
 
