@@ -61,7 +61,6 @@ public:
 
     enum {
         PlaylistModelRole = Qt::UserRole * 12,
-        PlaylistTitleRole,
         PlaylistIsCurrent
     };
 
@@ -70,7 +69,6 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;
-    bool setData(const QModelIndex& index, const QVariant& value, int role) override;
     Q_INVOKABLE bool insertRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
     QModelIndex index(int row, int column = 0, const QModelIndex& parent = QModelIndex()) const override;

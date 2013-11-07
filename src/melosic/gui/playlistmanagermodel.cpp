@@ -82,7 +82,6 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
 
     assert(!playman.empty());
     switch(role) {
-        case PlaylistTitleRole:
         case Qt::DisplayRole:
         case Qt::EditRole: {
             auto v = playman.getPlaylist(index.row());
@@ -117,7 +116,6 @@ QVariant PlaylistManagerModel::headerData(int, Qt::Orientation, int) const {
 QHash<int, QByteArray> PlaylistManagerModel::roleNames() const {
     QHash<int, QByteArray> roles = QAbstractListModel::roleNames();
     roles[PlaylistModelRole] = "playlistModel";
-    roles[PlaylistTitleRole] = "title";
     roles[PlaylistIsCurrent] = "isCurrent";
     return roles;
 }
@@ -125,17 +123,6 @@ QHash<int, QByteArray> PlaylistManagerModel::roleNames() const {
 int PlaylistManagerModel::rowCount(const QModelIndex& /*parent*/) const {
     lock_guard l(mu);
     return playlists.size();
-}
-
-bool PlaylistManagerModel::setData(const QModelIndex& index, const QVariant& value, int role) {
-    if(!index.isValid() || index.row() >= playman.size() || !(role & Qt::EditRole) || !value.isValid())
-        return false;
-
-    auto v = playman.getPlaylist(index.row());
-    assert(v);
-    v->setName(value.toString().toStdString());
-    Q_EMIT dataChanged(index, index, {PlaylistTitleRole});
-    return true;
 }
 
 bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {

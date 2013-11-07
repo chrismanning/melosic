@@ -66,6 +66,7 @@ class PlaylistModel : public QAbstractListModel {
     long m_duration{0};
 
     Q_PROPERTY(long duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
 
     friend class CategoryTag;
     friend class TagBinding;
@@ -73,6 +74,9 @@ class PlaylistModel : public QAbstractListModel {
 public:
     explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
                            QObject* parent = nullptr);
+
+    QString name() const;
+    void setName(QString name);
 
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -102,6 +106,7 @@ public:
 
 Q_SIGNALS:
     void durationChanged(long);
+    void nameChanged(QString);
 };
 
 class TagBinding : public QObject, public QQmlPropertyValueSource {

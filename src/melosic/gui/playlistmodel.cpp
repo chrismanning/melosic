@@ -60,6 +60,15 @@ PlaylistModel::PlaylistModel(Core::Playlist playlist, Thread::Manager& tman, QOb
     });
 }
 
+QString PlaylistModel::name() const {
+    return QString::fromStdString(playlist.getName());
+}
+
+void PlaylistModel::setName(QString name) {
+    playlist.setName(name.toStdString());
+    Q_EMIT nameChanged(name);
+}
+
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
     return playlist.size();
 }
