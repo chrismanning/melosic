@@ -68,6 +68,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterType<QAbstractItemModel>();
     qmlRegisterType<PlaylistModel>();
+    qmlRegisterUncreatableType<PlayerControls>("Melosic.Playlist", 1, 0, "PlayerControls", "singleton");
     qmlRegisterType<QuickLogBackend>();
     qRegisterMetaType<QVector<int>>();
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");

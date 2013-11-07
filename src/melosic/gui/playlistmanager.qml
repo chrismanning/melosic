@@ -12,6 +12,12 @@ Item {
             currentModel = playlistManagerModel.currentPlaylistModel
         }
     }
+    onCurrentModelChanged: {
+        if(currentModel === playlistManagerModel.currentPlaylistModel)
+            return
+        if(playerControls.state !== PlayerControls.Playing && playerControls.state !== PlayerControls.Paused)
+            playlistManagerModel.currentPlaylistModel = currentModel
+    }
 
     property int currentIndex
 }
