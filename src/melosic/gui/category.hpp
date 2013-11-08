@@ -36,6 +36,7 @@ class Category : public QObject {
     Q_PROPERTY(QQmlListProperty<Melosic::Criteria> categoryCriteria READ categoryCriteria FINAL)
     QList<Criteria*> criteria_;
 
+    Q_PROPERTY(CategoryProxyModel* model READ model WRITE setModel NOTIFY modelChanged)
     CategoryProxyModel* m_category_model;
     friend class CategoryProxyModel;
 
@@ -51,6 +52,9 @@ public:
 
     QQmlComponent* delegate() const;
     void setDelegate(QQmlComponent* d);
+
+    CategoryProxyModel* model() const;
+    void setModel(CategoryProxyModel*);
 
 Q_SIGNALS:
     void modelChanged(CategoryProxyModel* model);

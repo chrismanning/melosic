@@ -72,7 +72,7 @@ CategoryProxyModel::CategoryProxyModel(QObject* parent)
     connect(this, &CategoryProxyModel::categoryChanged, [this] (Category* c) {
         TRACE_LOG(logject) << "Category changed";
         Q_ASSERT(c);
-        Q_ASSERT(c->m_category_model);
+        Q_ASSERT(c->model());
         onDataChanged(index(0,0), index(sourceModel()->rowCount() - 1, 0), {});
     });
 }
@@ -92,10 +92,10 @@ Category* CategoryProxyModel::category() const {
 void CategoryProxyModel::setCategory(Category* c) {
     unique_lock l(pimpl->mu);
     pimpl->m_category = c;
-    if(!c->m_category_model)
-        c->m_category_model = this;
+    if(!c->model())
+        c->setModel(this);
     else
-        Q_ASSERT(c->m_category_model == this);
+        Q_ASSERT(c->model() == this);
     l.unlock();
     Q_EMIT categoryChanged(c);
 }
