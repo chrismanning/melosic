@@ -34,6 +34,8 @@ ApplicationWindow {
             MenuItem { action: previousAction }
             MenuItem { action: nextAction }
             MenuItem { action: stopAction }
+            MenuSeparator {}
+            MenuItem { action: jumpPlayAction }
         }
         Menu {
             title: "Playlist"
@@ -121,6 +123,18 @@ ApplicationWindow {
         text: "Stop"
         iconName: "media-playback-stop"
         onTriggered: playerControls.stop()
+    }
+    Action {
+        id: jumpPlayAction
+        text: "Jump to current and play"
+        iconName: "go-jump"
+        onTriggered: {
+            playerControls.stop()
+            playlistManagerModel.currentPlaylistModel = playlistManager.currentModel
+            console.debug("item in current playlist; jumping & playing")
+            playerControls.jumpTo(playlistManager.currentPlaylist.currentIndex)
+            playerControls.play()
+        }
     }
 
     Action {
@@ -300,6 +314,11 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 manager: playlistManager
+
+                contextMenu: Menu {
+                    MenuItem { action: jumpPlayAction }
+                    MenuItem { action: removeTracksAction }
+                }
             }
 
             RowLayout {

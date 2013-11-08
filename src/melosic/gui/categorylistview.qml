@@ -22,6 +22,7 @@ ScrollView {
     property var moveItems
     property Component tooltip
     property Component categoryTooltip
+    property Component contextMenu: null
 
     property DelegateModelGroup selected: selectedGroup
 
@@ -122,6 +123,8 @@ ScrollView {
         return value
     }
 
+    property var doubleClickAction: null
+
     ListView {
         id: listView
         anchors.fill: parent
@@ -141,6 +144,12 @@ ScrollView {
 
             sourceComponent: typeof root.model == 'CategoryProxyModel' ?  undefined : categoryModelComponent
         }
+
+        Loader {
+            id: menuLoader
+            sourceComponent: contextMenu
+        }
+        property alias __contextMenu: menuLoader.item
 
         model: DelegateModel {
             id: delegateModel
@@ -244,6 +253,7 @@ ScrollView {
                     MouseArea {
                         id: itemMouseArea
                         anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         hoverEnabled: true
                         cursorShape: mouseDragArea.cursorShape
 
@@ -282,23 +292,22 @@ ScrollView {
                                     delegateModel.select(listView.currentIndex, cur+1)
                                 }
                             }
-                            else if(mouse.button == Qt.LeftButton) {
+                            else {
                                 if(!rowitem.DelegateModel.inSelected) {
                                     clearSelection()
                                 }
                                 rowitem.DelegateModel.inSelected = true
+                                if(mouse.button == Qt.RightButton && listView.__contextMenu != null)
+                                    listView.__contextMenu.popup()
                             }
 
                             mouse.accepted = false
                         }
 
                         onDoubleClicked: {
-                            playerControls.stop()
                             console.debug("item double clicked")
-                            playlistManagerModel.currentPlaylistModel = root.model
-                            console.debug("item in current playlist; jumping & playing")
-                            playerControls.jumpTo(model.index)
-                            playerControls.play()
+                            if(root.doubleClickAction !== null)
+                                root.doubleClickAction(model)
                         }
                     }
                 }
@@ -490,7 +499,7 @@ ScrollView {
                 }
 
                 if(mouse.button == Qt.RightButton) {
-                    console.debug("right-click")
+                    console.debug("mouseDragArea right-click")
                 }
             }
         }

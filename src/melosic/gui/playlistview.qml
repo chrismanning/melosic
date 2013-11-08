@@ -15,6 +15,8 @@ ListView {
 
     property PlaylistManager manager
 
+    property Component contextMenu
+
     model: playlistManagerModel
     delegate: Item {
         id: viewerItem
@@ -46,6 +48,16 @@ ListView {
             padding: 3
             removeCallback: function(from,count) { return playlistModel.removeRows(from, count) }
             moveCallback: function(from,count,to) { return playlistModel.moveRows(from, count, to) }
+
+            contextMenu: root.contextMenu
+
+            doubleClickAction: function(data) {
+                playerControls.stop()
+                playlistManagerModel.currentPlaylistModel = playlistModel
+                console.debug("item in current playlist; jumping & playing")
+                playerControls.jumpTo(data.index)
+                playerControls.play()
+            }
 
             category: Category {
                 id: __category
@@ -149,13 +161,13 @@ ListView {
                         color: "red"
                     }
 
-                    property string title
-                    TagBinding on title {
-                        formatString: "title"
-                    }
                     Label {
                         id: txt
                         color: pal.highlightedText
+                        property string title
+                        TagBinding on title {
+                            formatString: "title"
+                        }
                         text: model.tags_readable ? title : model.filepath
                     }
                 }
