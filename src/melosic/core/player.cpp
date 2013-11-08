@@ -704,7 +704,7 @@ void Player::impl::jumpTo_impl(int p) {
         m_current_track->reset();
         m_current_track->close();
     }
-    if(p < m_current_playlist->size())
+    if(p < m_current_playlist->size() && p >= 0)
         m_current_track = *(m_current_iterator = std::next(m_current_playlist->begin(), p));
     else {
         m_current_track = nullopt;
