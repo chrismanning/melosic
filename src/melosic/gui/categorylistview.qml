@@ -297,8 +297,6 @@ ScrollView {
                                     clearSelection()
                                 }
                                 rowitem.DelegateModel.inSelected = true
-                                if(mouse.button == Qt.RightButton && listView.__contextMenu != null)
-                                    listView.__contextMenu.popup()
                             }
 
                             mouse.accepted = false
@@ -494,12 +492,13 @@ ScrollView {
             }
 
             onClicked: {
-                if(dragging || listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
-                    return
+                if(mouse.button == Qt.RightButton && listView.__contextMenu != null) {
+                    console.debug("mouseDragArea right-click")
+                    listView.__contextMenu.popup()
                 }
 
-                if(mouse.button == Qt.RightButton) {
-                    console.debug("mouseDragArea right-click")
+                if(dragging || listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
+                    return
                 }
             }
         }
