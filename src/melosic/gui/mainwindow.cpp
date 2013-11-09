@@ -47,6 +47,10 @@
 #include "categorytag.hpp"
 #include "quicklogbackend.hpp"
 
+#ifdef Qt5Test_FOUND
+#include "modeltest.h"
+#endif
+
 Melosic::Config::Conf conf{"QML"};
 bool enable_logging{false};
 
@@ -56,9 +60,11 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
-    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager())),
-    modelTest(playlistManagerModel)
+    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager()))
 {
+#ifdef Qt5Test_FOUND
+    modelTest = new ModelTest(playlistManagerModel);
+#endif
     ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
@@ -117,7 +123,7 @@ MainWindow::~MainWindow() {
     TRACE_LOG(logject) << "Destroying main window";
 }
 
-void MainWindow::onStateChangeSlot(DeviceState /*state*/) {
+void MainWindow::onStateChangeSlot(Output::DeviceState /*state*/) {
 //    switch(state) {
 //        case DeviceState::Playing:
 //            ui->playButton->setText("Pause");
