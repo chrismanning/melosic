@@ -47,12 +47,8 @@
 #include "categorytag.hpp"
 #include "quicklogbackend.hpp"
 
-#ifdef Qt5Test_FOUND
-#include "modeltest.h"
-#endif
-
-Melosic::Config::Conf conf{"QML"};
-bool enable_logging{false};
+static Melosic::Config::Conf conf{"QML"};
+static bool enable_logging{false};
 
 namespace Melosic {
 
@@ -62,9 +58,6 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     component(new QQmlComponent(engine.data())),
     playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager()))
 {
-#ifdef Qt5Test_FOUND
-    modelTest = new ModelTest(playlistManagerModel);
-#endif
     ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 

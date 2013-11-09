@@ -63,9 +63,6 @@ private:
     QScopedPointer<QQmlComponent> component;
     QScopedPointer<QQuickWindow> window;
     PlaylistManagerModel* playlistManagerModel;
-#ifdef Qt5Test_FOUND
-    ModelTest* modelTest;
-#endif
 };
 
 } // namespace Melosic
