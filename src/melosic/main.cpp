@@ -44,11 +44,12 @@ int main(int argc, char* argv[]) {
 
     boost::locale::generator gen;
     std::locale::global(gen("en_GB.UTF-8"));
+
+    Logger::init();
+
     Logger::Logger logject(logging::keywords::channel = "Main");
 
     try {
-        Logger::init();
-
         QApplication app(argc, argv);
 
         Core::Kernel kernel;
