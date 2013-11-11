@@ -73,6 +73,8 @@ public:
     explicit operator bool() const;
     Track clone() const;
 
+    optional<std::string> format_string(const std::string&) const;
+
     Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
 
 private:

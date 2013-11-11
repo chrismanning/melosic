@@ -21,7 +21,6 @@
 #include <boost/log/core.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
-#include <boost/log/expressions.hpp>
 namespace logging = boost::log;
 namespace expr = logging::expressions;
 namespace sinks = logging::sinks;

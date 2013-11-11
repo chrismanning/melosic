@@ -82,31 +82,23 @@ ListView {
                             height: childrenRect.height + spacing*(children.length)
                             width: root.width
 
-                            property string artist
-                            TagBinding on artist {
-                                formatString: "artist"
-                            }
-                            property string album
-                            TagBinding on album {
-                                formatString: "album"
+                            property string cat_line
+                            TagBinding on cat_line {
+                                formatString: "%{albumartist} - %{album}"
                             }
                             Label {
-                                text: artist + " - " + album
+                                text: cat_line
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
                             }
 
-                            property string genre
-                            TagBinding on genre {
-                                formatString: "genre"
-                            }
-                            property string year
-                            TagBinding on year {
-                                formatString: "date"
+                            property string cat_line2
+                            TagBinding on cat_line2 {
+                                formatString: "%{genre} | %{date} | "
                             }
                             Label {
-                                text: genre + " | " + year + " | " + itemCount + " tracks"
+                                text: cat_line2 + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
@@ -166,7 +158,7 @@ ListView {
                         color: pal.highlightedText
                         property string title
                         TagBinding on title {
-                            formatString: "title"
+                            formatString: "%{title}"
                         }
                         text: model.tags_readable ? title : model.filepath
                     }
@@ -189,7 +181,7 @@ ListView {
                                 color: textColor
                                 width: 15
                                 TagBinding on text {
-                                    formatString: "tracknumber"
+                                    formatString: "%{tracknumber}"
                                 }
                             }
                             Label {
@@ -197,7 +189,7 @@ ListView {
                                 elide: Text.ElideRight
                                 color: textColor
                                 TagBinding on text {
-                                    formatString: "title"
+                                    formatString: "%{title}"
                                 }
                                 width: parent.width - trackno.width - spacing
                             }

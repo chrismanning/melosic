@@ -328,17 +328,11 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     auto track = pm->playlist.getTrack(index);
     assert(track);
     m_target_property = property;
-    auto t = track->getTag(m_format_string.toStdString());
+    auto t = track->format_string(m_format_string.toStdString());
     m_target_property.write(QString::fromStdString(t ? *t : "?"));
-    conn = track->getTagsChangedSignal().connect([this] (const TagLib::PropertyMap& tags) {
-        auto it = tags.find(m_format_string.toStdString());
-        if(it == tags.end())
-            return;
-        QStringList strings;
-        for(const auto& str : it->second)
-            strings.push_back(QString::fromStdString(str.to8Bit(true)));
-
-        m_target_property.write(strings.join("; "));
+    conn = track->getTagsChangedSignal().connect([this, track] (const TagLib::PropertyMap&) {
+        auto t = track->format_string(m_format_string.toStdString());
+        m_target_property.write(QString::fromStdString(t ? *t : "?"));
     });
 }
 
