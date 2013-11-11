@@ -253,7 +253,7 @@ public:
                 continue;
             TRACE_LOG(logject) << "In search path: " << dir;
 
-            for(const fs::path& file : fs::recursive_directory_iterator(dir)) {
+            for(const fs::path& file : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {})) {
                 try {
                     if(std::regex_match(file.string(), filter)) {
                         WARN_LOG(logject) << file << " matches blacklist";
