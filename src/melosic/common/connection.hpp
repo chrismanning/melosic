@@ -85,9 +85,18 @@ public:
         return false;
     }
 
+    void swap(Connection& b) noexcept {
+        using std::swap;
+        swap(pimpl, b.pimpl);
+    }
+
 private:
     friend struct ConnHash;
 };
+
+inline void swap(Connection& a, Connection& b) noexcept {
+    a.swap(b);
+}
 
 struct ConnHash {
     ConnHash() noexcept = default;
@@ -98,13 +107,20 @@ struct ConnHash {
 
 struct ScopedConnection : Connection {
     ScopedConnection() noexcept = default;
-    ScopedConnection(ScopedConnection&& conn) noexcept = default;
-    ScopedConnection& operator=(ScopedConnection&& conn) noexcept = default;
+    ScopedConnection(ScopedConnection&& conn) noexcept(noexcept(disconnect())) : Connection((disconnect(), conn)) {}
+
+    ScopedConnection& operator=(ScopedConnection&& conn)
+    noexcept(std::is_nothrow_move_constructible<ScopedConnection>::value)
+    {
+        using std::swap;
+        swap(conn, *this);
+        return *this;
+    }
 
     ScopedConnection(const Connection& conn) noexcept : Connection(conn) {}
 
     ScopedConnection(Connection&& conn) noexcept : Connection(conn) {}
-    ScopedConnection& operator=(Connection&& conn) noexcept {
+    ScopedConnection& operator=(Connection conn) noexcept {
         return *this = ScopedConnection(conn);
     }
 

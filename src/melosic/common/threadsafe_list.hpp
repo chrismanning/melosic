@@ -305,8 +305,9 @@ bool operator!=(const threadsafe_list<T>& a, const threadsafe_list<T>& b) {
     return !(a == b);
 }
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const threadsafe_list<T>& l) {
+template <typename CharT, typename TraitsT, typename T>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& os, const threadsafe_list<T>& l)
+{
     os << '[';
     l.for_each([&] (const T& val) {
         os << val << ",";

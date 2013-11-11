@@ -15,23 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_TYPEID_HPP
-#define MELOSIC_TYPEID_HPP
+#ifndef MELOSIC_OPTIONAL_HPP
+#define MELOSIC_OPTIONAL_HPP
 
-#include <ostream>
-#include <typeinfo>
-#include <cxxabi.h>
+#include "optional_fwd.hpp"
+#include <boost/optional.hpp>
+#include <boost/none.hpp>
 
-namespace std {
-template <typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, const std::type_info& t) {
-    const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
-    if(str) {
-        strm << str;
-        ::free(str);
-    }
-    return strm;
+namespace Melosic {
+const auto nullopt = boost::none;
 }
-} //std
 
-#endif // MELOSIC_TYPEID_HPP
+#endif // MELOSIC_OPTIONAL_HPP

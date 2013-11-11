@@ -21,7 +21,6 @@
 #include <QIdentityProxyModel>
 #include <QSharedPointer>
 #include <qqml.h>
-#include <optional>
 
 namespace Melosic {
 

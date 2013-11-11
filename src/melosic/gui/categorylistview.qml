@@ -1,6 +1,6 @@
 import QtQml.Models 2.1
-import QtQuick 2.1
-import QtQuick.Controls 1.0
+import QtQuick 2.2
+import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
 
 import Melosic.Playlist 1.0
@@ -22,6 +22,7 @@ ScrollView {
     property var moveItems
     property Component tooltip
     property Component categoryTooltip
+    property Component contextMenu: null
 
     property DelegateModelGroup selected: selectedGroup
 
@@ -122,19 +123,14 @@ ScrollView {
         return value
     }
 
+    property var doubleClickAction: null
+
     ListView {
         id: listView
         anchors.fill: parent
         interactive: false
         boundsBehavior: Flickable.StopAtBounds
         Component.onDestruction: console.debug("Playlist view being destroyed")
-
-        Binding {
-            target: root.categoryModel.category
-            property: "model"
-            when: category !== null
-            value: root.categoryModel
-        }
 
         Loader {
             id: proxyLoader
@@ -148,6 +144,12 @@ ScrollView {
 
             sourceComponent: typeof root.model == 'CategoryProxyModel' ?  undefined : categoryModelComponent
         }
+
+        Loader {
+            id: menuLoader
+            sourceComponent: contextMenu
+        }
+        property alias __contextMenu: menuLoader.item
 
         model: DelegateModel {
             id: delegateModel
@@ -251,6 +253,7 @@ ScrollView {
                     MouseArea {
                         id: itemMouseArea
                         anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
                         hoverEnabled: true
                         cursorShape: mouseDragArea.cursorShape
 
@@ -289,7 +292,7 @@ ScrollView {
                                     delegateModel.select(listView.currentIndex, cur+1)
                                 }
                             }
-                            else if(mouse.button == Qt.LeftButton) {
+                            else {
                                 if(!rowitem.DelegateModel.inSelected) {
                                     clearSelection()
                                 }
@@ -301,6 +304,8 @@ ScrollView {
 
                         onDoubleClicked: {
                             console.debug("item double clicked")
+                            if(root.doubleClickAction !== null)
+                                root.doubleClickAction(model)
                         }
                     }
                 }
@@ -487,12 +492,13 @@ ScrollView {
             }
 
             onClicked: {
-                if(dragging || listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
-                    return
+                if(mouse.button == Qt.RightButton && listView.__contextMenu != null) {
+                    console.debug("mouseDragArea right-click")
+                    listView.__contextMenu.popup()
                 }
 
-                if(mouse.button == Qt.RightButton) {
-                    console.debug("right-click")
+                if(dragging || listView.indexAt(mouse.x, mouse.y + listView.contentY) === -1) {
+                    return
                 }
             }
         }

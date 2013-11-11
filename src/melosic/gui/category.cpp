@@ -28,19 +28,12 @@ Category::Category(QObject* parent) : QObject(parent) {
         for(Criteria* c : criteria_)
             c->setModel(m);
     });
+    if(parent && qobject_cast<CategoryProxyModel*>(parent))
+        this->setProperty("model", QVariant::fromValue(parent));
 }
 
 QQmlListProperty<Criteria> Category::categoryCriteria() {
     return {this, criteria_};
-}
-
-CategoryProxyModel* Category::model() const {
-    return model_;
-}
-
-void Category::setModel(CategoryProxyModel* m) {
-    model_ = m;
-    Q_EMIT modelChanged(model_);
 }
 
 QQmlComponent* Category::delegate() const {
@@ -50,6 +43,15 @@ QQmlComponent* Category::delegate() const {
 void Category::setDelegate(QQmlComponent* d) {
     delegate_ = d;
     Q_EMIT delegateChanged(d);
+}
+
+CategoryProxyModel* Category::model() const {
+    return m_category_model;
+}
+
+void Category::setModel(CategoryProxyModel* m) {
+    m_category_model = m;
+    Q_EMIT modelChanged(m);
 }
 
 Criteria::Criteria(QObject* parent) : QObject(parent) {

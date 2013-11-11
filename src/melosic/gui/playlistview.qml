@@ -1,4 +1,4 @@
-import QtQuick 2.1
+import QtQuick 2.2
 
 import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
@@ -14,6 +14,8 @@ ListView {
     property int padding: 3
 
     property PlaylistManager manager
+
+    property Component contextMenu
 
     model: playlistManagerModel
     delegate: Item {
@@ -47,6 +49,16 @@ ListView {
             removeCallback: function(from,count) { return playlistModel.removeRows(from, count) }
             moveCallback: function(from,count,to) { return playlistModel.moveRows(from, count, to) }
 
+            contextMenu: root.contextMenu
+
+            doubleClickAction: function(data) {
+                playerControls.stop()
+                playlistManagerModel.currentPlaylistModel = playlistModel
+                console.debug("item in current playlist; jumping & playing")
+                playerControls.jumpTo(data.index)
+                playerControls.play()
+            }
+
             category: Category {
                 id: __category
 
@@ -69,14 +81,24 @@ ListView {
                             x: spacing
                             height: childrenRect.height + spacing*(children.length)
                             width: root.width
+
+                            property string cat_line
+                            TagBinding on cat_line {
+                                formatString: "%{albumartist} - %{album}"
+                            }
                             Label {
-                                text: model.artist + " - " + model.album
+                                text: cat_line
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
                             }
+
+                            property string cat_line2
+                            TagBinding on cat_line2 {
+                                formatString: "%{genre} | %{date} | "
+                            }
                             Label {
-                                text: model.genre + " | " + model.year + " | " + itemCount + " tracks"
+                                text: cat_line2 + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
@@ -134,7 +156,11 @@ ListView {
                     Label {
                         id: txt
                         color: pal.highlightedText
-                        text: model.tags_readable ? model.title : model.filepath
+                        property string title
+                        TagBinding on title {
+                            formatString: "%{title}"
+                        }
+                        text: model.tags_readable ? title : model.filepath
                     }
                 }
             }
@@ -153,14 +179,18 @@ ListView {
                                 id: trackno
                                 elide: Text.ElideRight
                                 color: textColor
-                                text: model.tracknumber
                                 width: 15
+                                TagBinding on text {
+                                    formatString: "%{tracknumber}"
+                                }
                             }
                             Label {
                                 x: spacing
                                 elide: Text.ElideRight
                                 color: textColor
-                                text: model.title
+                                TagBinding on text {
+                                    formatString: "%{title}"
+                                }
                                 width: parent.width - trackno.width - spacing
                             }
                         }

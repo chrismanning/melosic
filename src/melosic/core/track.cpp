@@ -23,6 +23,8 @@ using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
+#include <boost/spirit/include/qi.hpp>
+#include <boost/spirit/include/phoenix.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -36,6 +38,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/common/signal.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 namespace Core {
@@ -125,13 +128,18 @@ public:
         return 0ms;
     }
 
-    std::optional<std::string> getTag(const std::string& key) {
+    optional<std::string> getTag(const std::string& key) {
         TagLib::String key_(key.c_str());
         auto val = tags.find(key_);
         if(val == tags.end() && key.substr(0, 5) == "album" && key != "albumtitle" && key.size() > 5)
             val = tags.find(TagLib::String(key.substr(5).c_str()));
 
-        return val != tags.end() ? val->second.front().to8Bit(true) : std::optional<std::string>{};
+        return val != tags.end() ? optional<std::string>{val->second.front().to8Bit(true)} : nullopt;
+    }
+
+    std::string getTagOr(const std::string& key) {
+        auto t = getTag(key);
+        return t ? *t : "?"s;
     }
 
     void reloadDecoder() {
@@ -182,6 +190,8 @@ public:
         return std::make_shared<impl>(decoder_factory, filepath, start, end);
     }
 
+    optional<std::string> parse_format(std::string, boost::system::error_code&);
+
 private:
     friend class Track;
     boost::filesystem::path filepath;
@@ -210,6 +220,10 @@ Track::~Track() {}
 
 bool Track::operator==(const Track& b) const noexcept {
     return pimpl == b.pimpl;
+}
+
+bool Track::operator!=(const Track& b) const noexcept {
+    return pimpl != b.pimpl;
 }
 
 void Track::setTimePoints(chrono::milliseconds start, chrono::milliseconds end) {
@@ -263,7 +277,7 @@ Melosic::AudioSpecs Track::getAudioSpecs() const {
     return pimpl->as;
 }
 
-std::optional<std::string> Track::getTag(const std::string& key) const {
+optional<std::string> Track::getTag(const std::string& key) const {
     shared_lock l(pimpl->mu);
     return pimpl->getTag(key);
 }
@@ -313,11 +327,52 @@ Track Track::clone() const {
     return Track(pimpl->clone());
 }
 
+optional<std::string> Track::format_string(const std::string& fmt_str) const {
+    lock_guard l(pimpl->mu);
+    boost::system::error_code ec;
+    return pimpl->parse_format(fmt_str, ec);
+}
+
 Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept {
     return pimpl->tagsChanged;
 }
 
 Track::Track(decltype(pimpl) p) : pimpl(p) {}
+
+optional<std::string> Track::impl::parse_format(std::string str, boost::system::error_code&) {
+    if(str.empty())
+        return nullopt;
+    namespace qi = boost::spirit::qi;
+    namespace phx = boost::phoenix;
+    qi::rule<std::string::iterator, std::string()> long_field = '{' > +(qi::char_ - qi::char_("\n{}")) > '}';
+    qi::symbols<char, std::string> short_field;
+    short_field.add("a", "artist")
+                   ("A", "albumartist")
+                   ("t", "title")
+                   ("T", "album")
+                   ("n", "tracknumber")
+                   ("N", "totaltracks")
+                   ("d", "date")
+                   ("g", "genre")
+                   ("c", "comment")
+                   ("f", "file")
+                   ("p", "filepath")
+                   ("e", "extension");
+
+    qi::rule<std::string::iterator, std::string()> tag = qi::lit('%') > (long_field | short_field) [
+            qi::_val = phx::bind(&Track::impl::getTagOr, this, qi::_1)
+    ];
+
+    std::vector<std::string> strs;
+    auto r = qi::parse(str.begin(), str.end(), *(tag | +(qi::char_-'%')), strs);
+    assert(r);
+    std::stringstream strm;
+    for(const auto& v : strs)
+        strm << v;
+    if(!strm.str().empty())
+        return strm.str();
+    return nullopt;
+}
 
 } // namespace Core
 } // namespace Melosic

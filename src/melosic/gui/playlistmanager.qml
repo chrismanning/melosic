@@ -1,4 +1,4 @@
-import QtQuick 2.1
+import QtQuick 2.2
 
 import Melosic.Playlist 1.0
 
@@ -6,14 +6,17 @@ Item {
     id: root
     property CategoryListView currentPlaylist
     property QtObject currentModel
-    onCurrentModelChanged: {
-        playlistManagerModel.currentPlaylistModel = currentModel
-    }
     Connections {
         target: playlistManagerModel
         onCurrentPlaylistModelChanged: {
             currentModel = playlistManagerModel.currentPlaylistModel
         }
+    }
+    onCurrentModelChanged: {
+        if(currentModel === playlistManagerModel.currentPlaylistModel)
+            return
+        if(playerControls.state !== PlayerControls.Playing && playerControls.state !== PlayerControls.Paused)
+            playlistManagerModel.currentPlaylistModel = currentModel
     }
 
     property int currentIndex

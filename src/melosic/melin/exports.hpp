@@ -114,9 +114,12 @@ struct Version {
     constexpr bool operator!=(const Version& b) const { return vers != b.vers; }
 private:
     uint32_t vers;
-    friend std::ostream& operator<<(std::ostream& out, const Version& v);
+    template <typename CharT, typename TraitsT>
+    friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&, const Version&);
 };
-inline std::ostream& operator<<(std::ostream& out, const Version& v) {
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const Version& v) {
     return out << ((v.vers >> 16)&0xFF) << "." << ((v.vers >> 8)&0xFF) << "." << (v.vers&0xFF);
 }
 
@@ -139,7 +142,9 @@ struct Info {
     Version APIVersion;
     time_t built;
 };
-inline std::ostream& operator<<(std::ostream& out, const Info& info) {
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const Info& info) {
     char str[40];
     std::strftime(str, sizeof str, "%x %X %Z", std::localtime(&info.built));
     return out << info.name

@@ -28,6 +28,8 @@ namespace chrono = std::chrono;
 #include <QQmlListProperty>
 #include <QUrl>
 #include <QHash>
+#include <QQmlPropertyValueSource>
+#include <QQmlProperty>
 
 #include <boost/filesystem/path.hpp>
 
@@ -45,13 +47,6 @@ struct TrackRoles {
         FileExtension,
         TagsReadable,
         Current,
-        Title,
-        Artist,
-        Album,
-        AlbumArtist,
-        TrackNumber,
-        Genre,
-        Date,
         Duration
     };
 };
@@ -63,11 +58,6 @@ namespace Thread {
 class Manager;
 }
 
-class TrackMetadata;
-class TrackProperties;
-class MetadataTag;
-class CategoryTag;
-
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     Core::Playlist playlist;
@@ -76,13 +66,17 @@ class PlaylistModel : public QAbstractListModel {
     long m_duration{0};
 
     Q_PROPERTY(long duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
 
-    friend class MetadataTag;
     friend class CategoryTag;
+    friend class TagBinding;
 
 public:
     explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
                            QObject* parent = nullptr);
+
+    QString name() const;
+    void setName(QString name);
 
     Q_INVOKABLE int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
@@ -112,22 +106,26 @@ public:
 
 Q_SIGNALS:
     void durationChanged(long);
+    void nameChanged(QString);
 };
 
-class MetadataTag : public QObject {
+class TagBinding : public QObject, public QQmlPropertyValueSource {
     Q_OBJECT
+    Q_INTERFACES(QQmlPropertyValueSource)
 
-    Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged);
+    Q_PROPERTY(QString formatString MEMBER m_format_string NOTIFY formatStringChanged)
     QString m_format_string;
-    Q_PROPERTY(Melosic::PlaylistModel* playlistModel MEMBER m_playlist_model NOTIFY playlistModelChanged);
-    PlaylistModel* m_playlist_model;
+    Signals::Connection conn;
+    QQmlProperty m_target_property;
 
 public:
-    explicit MetadataTag(QObject* parent = nullptr);
+    explicit TagBinding(QObject* parent = nullptr);
+    virtual ~TagBinding();
+
+    void setTarget(const QQmlProperty& property) override;
 
 Q_SIGNALS:
     void formatStringChanged(QString);
-    void playlistModelChanged(PlaylistModel*);
 };
 
 } // namespace Melosic

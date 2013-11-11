@@ -1,7 +1,8 @@
-import QtQuick 2.1
-import QtQuick.Dialogs 1.0
-import QtQuick.Controls 1.0
-import QtQuick.Layouts 1.0
+import QtQuick 2.2
+import QtQuick.Dialogs 1.1
+import QtQuick.Controls 1.1
+import QtQuick.Layouts 1.1
+import QtQuick.Window 2.1
 
 import Melosic.Playlist 1.0
 
@@ -22,8 +23,9 @@ ApplicationWindow {
             MenuItem { action: quitAction }
         }
         Menu {
-            title: "Edit"
+            title: "View"
             MenuItem { action: optionsAction }
+            MenuItem { action: logWindowAction }
         }
         Menu {
             title: "Playback"
@@ -32,6 +34,8 @@ ApplicationWindow {
             MenuItem { action: previousAction }
             MenuItem { action: nextAction }
             MenuItem { action: stopAction }
+            MenuSeparator {}
+            MenuItem { action: jumpPlayAction }
         }
         Menu {
             title: "Playlist"
@@ -40,13 +44,17 @@ ApplicationWindow {
             MenuSeparator {}
             MenuItem { action: removeTracksAction }
             MenuItem { action: refreshTracksAction }
+            MenuSeparator {}
+            MenuItem { action: addPlaylistAction }
+            MenuItem { action: removePlaylistAction }
         }
     }
 
     Action {
         id: openAction
         text: "Open"
-        shortcut: "ctrl+o"
+        shortcut: StandardKey.Open
+        iconName: "document-open"
         onTriggered: {
             fileDialog.visible = !fileDialog.visible
         }
@@ -54,12 +62,14 @@ ApplicationWindow {
     Action {
         id: saveAction
         text: "Save Playlist"
-        shortcut: "ctrl+s"
+        shortcut: StandardKey.Save
+        iconName: "document-save"
     }
     Action {
         id: quitAction
         text: "Quit"
-        shortcut: "ctrl+q"
+        shortcut: StandardKey.Quit
+        iconName: "application-exit"
         onTriggered: {
             playerControls.stop()
             Qt.quit()
@@ -69,52 +79,83 @@ ApplicationWindow {
     Action {
         id: optionsAction
         text: "Options"
+        shortcut: StandardKey.Preferences
+        iconName: "configure"
         onTriggered: {
             configDialog.visible = !configDialog.visible
+        }
+    }
+    Action {
+        id: logWindowAction
+        text: "View Log"
+        onTriggered: {
+            if(enable_logging)
+                logWindow.visible = !logWindow.visible
         }
     }
 
     Action {
         id: playAction
         text: "Play"
+        iconName: "media-playback-start"
         onTriggered: playerControls.play()
     }
     Action {
         id: pauseAction
         text: "Pause"
+        iconName: "media-playback-pause"
         onTriggered: playerControls.pause()
     }
     Action {
         id: previousAction
         text: "Previous"
+        iconName: "media-skip-backward"
         onTriggered: playerControls.previous()
     }
     Action {
         id: nextAction
         text: "Next"
+        iconName: "media-skip-forward"
         onTriggered: playerControls.next()
     }
     Action {
         id: stopAction
         text: "Stop"
+        iconName: "media-playback-stop"
         onTriggered: playerControls.stop()
+    }
+    Action {
+        id: jumpPlayAction
+        text: "Jump to current and play"
+        iconName: "go-jump"
+        onTriggered: {
+            playerControls.stop()
+            playlistManagerModel.currentPlaylistModel = playlistManager.currentModel
+            console.debug("item in current playlist; jumping & playing")
+            playerControls.jumpTo(playlistManager.currentPlaylist.currentIndex)
+            playerControls.play()
+        }
     }
 
     Action {
         id: selectAllAction
         text: "Select All"
-        shortcut: "ctrl+a"
+        shortcut: StandardKey.SelectAll
+        iconName: "edit-select-all"
         onTriggered: currentPlaylist.selectAll()
     }
     Action {
         id: clearSelectionAction
         text: "Clear Selection"
+        shortcut: StandardKey.Deselect
+        iconName: "edit-clear"
         onTriggered: currentPlaylist.clearSelection()
     }
     Action {
         id: removeTracksAction
         text: "Remove Selected"
-        shortcut: "del"
+        shortcut: StandardKey.Delete
+        iconName: "edit-delete"
         onTriggered: {
             if(currentPlaylist !== null)
                 currentPlaylist.removeSelected()
@@ -126,6 +167,8 @@ ApplicationWindow {
     Action {
         id: refreshTracksAction
         text: "Refresh Tags of selected/all"
+        shortcut: StandardKey.Refresh
+        iconName: "view-refresh"
         onTriggered: {
             var pm = playlistManager.currentModel
             if(pm == null)
@@ -143,6 +186,19 @@ ApplicationWindow {
                 pm.refreshTags(g[0], g[g.length-1])
             }
         }
+    }
+
+    Action {
+        id: addPlaylistAction
+        text: "Add New Playlist"
+        iconName: "list-add"
+        onTriggered: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
+    }
+    Action {
+        id: removePlaylistAction
+        text: "Remove Current Playlist"
+        iconName: "list-remove"
+        onTriggered: playlistManagerModel.removeRows(playlistManager.currentIndex,1)
     }
 
     property alias currentPlaylist: playlistManager.currentPlaylist
@@ -178,6 +234,27 @@ ApplicationWindow {
 
     SystemPalette {
         id: pal
+    }
+
+    property var logWindow: logWindowLoader.item
+    Loader {
+        id: logWindowLoader
+        active: enable_logging
+        sourceComponent: Window {
+            modality: Qt.NonModal
+            width: 500
+            height: 500
+            visible: false
+            TextArea {
+                id: logText
+                anchors.fill: parent
+                readOnly: true
+                textFormat: TextEdit.PlainText
+            }
+            Component.onCompleted: {
+                logsink.textEdit = logText
+            }
+        }
     }
 
     Component.onCompleted: {
@@ -226,11 +303,9 @@ ApplicationWindow {
                     orientation: Qt.Horizontal
                 }
 
-                Button {
-                    id: addbtn
+                ToolButton {
                     z: 1
-                    text: "Add"
-                    onClicked: playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
+                    action: addPlaylistAction
                 }
             }
 
@@ -239,6 +314,21 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 manager: playlistManager
+
+                contextMenu: Menu {
+                    MenuItem { action: jumpPlayAction }
+                    MenuItem { action: removeTracksAction }
+                }
+            }
+
+            RowLayout {
+                id: buttonRow
+                Layout.alignment: Qt.AlignHCenter
+                ToolButton { action: playAction }
+                ToolButton { action: pauseAction }
+                ToolButton { action: stopAction }
+                ToolButton { action: previousAction }
+                ToolButton { action: nextAction }
             }
         }
     }

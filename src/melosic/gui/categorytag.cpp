@@ -15,6 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <melosic/common/optional.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 
@@ -27,6 +28,9 @@ namespace Melosic {
 CategoryTag::CategoryTag(QObject *parent) :
     Criteria(parent)
 {
+    if(m_category_model)
+        m_playlist_model = qobject_cast<PlaylistModel*>(m_category_model->sourceModel());
+    else
     connect(this, &Criteria::modelChanged, [this] (CategoryProxyModel* m) {
         if(!m)
             return;
@@ -38,10 +42,10 @@ QString CategoryTag::result(const QModelIndex& index) const {
     Q_ASSERT(index.isValid());
     if(!m_playlist_model)
         return m_field;
-    auto t = m_playlist_model->playlist.getTrack(index.row());
-    if(!t)
+    auto track = m_playlist_model->playlist.getTrack(index.row());
+    if(!track)
         return m_field;
-    auto tag = t->getTag(m_field.toStdString());
+    auto tag = track->getTag(m_field.toStdString());
     if(!tag)
         return m_field;
     return QString::fromStdString(*tag);

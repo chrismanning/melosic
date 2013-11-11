@@ -25,18 +25,19 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/connection.hpp>
 
-#include "modeltest.h"
-
 class QQmlEngine;
 class QQmlContext;
 class QQmlComponent;
 class QQuickWindow;
 
+#ifdef Qt5Test_FOUND
+class ModelTest;
+#endif
+
 namespace Melosic {
 
 namespace Core {
 class Kernel;
-class Playlist;
 class Player;
 }
 class PlayerControls;
@@ -45,15 +46,13 @@ namespace Output {
 enum class DeviceState;
 }
 
-using Output::DeviceState;
-
 class PlaylistManagerModel;
 
 class MELOSIC_EXPORT MainWindow {
 public:
     explicit MainWindow(Core::Kernel& kernel, Core::Player& player);
     ~MainWindow();
-    void onStateChangeSlot(DeviceState state);
+    void onStateChangeSlot(Output::DeviceState state);
 
 private:
     Logger::Logger logject;
@@ -64,7 +63,6 @@ private:
     QScopedPointer<QQmlComponent> component;
     QScopedPointer<QQuickWindow> window;
     PlaylistManagerModel* playlistManagerModel;
-    ModelTest modelTest;
 };
 
 } // namespace Melosic

@@ -18,7 +18,7 @@
 #include <QMetaEnum>
 
 #include <cassert>
-#include <optional>
+#include <melosic/common/optional.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/core/player.hpp>
@@ -42,7 +42,7 @@ struct PlayerControls::impl {
     {
         state = (PlayerControls::DeviceState) player.state();
         kernel.getPlaylistManager().getCurrentPlaylistChangedSignal().
-                connect([this] (std::optional<Core::Playlist> cp) {
+                connect([this] (optional<Core::Playlist> cp) {
             currentPlaylist = cp;
         });
         currentPlaylist = kernel.getPlaylistManager().currentPlaylist();
@@ -50,7 +50,7 @@ struct PlayerControls::impl {
 
     PlayerControls::DeviceState state;
     PlaylistModel* currentPlaylistModel{nullptr};
-    std::optional<Core::Playlist> currentPlaylist;
+    optional<Core::Playlist> currentPlaylist;
 };
 
 PlayerControls::PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent) :
@@ -79,21 +79,21 @@ void PlayerControls::stop() {
 }
 
 void PlayerControls::previous() {
-    if(!pimpl->currentPlaylist)
-        return;
-    pimpl->currentPlaylist->previous();
+    pimpl->player.previous();
 }
 
 void PlayerControls::next() {
-    if(!pimpl->currentPlaylist)
-        return;
-    pimpl->currentPlaylist->next();
+    pimpl->player.next();
+}
+
+void PlayerControls::jumpTo(int p) {
+    pimpl->player.jumpTo(p);
 }
 
 void PlayerControls::seek(chrono::milliseconds t) {
     if(!pimpl->currentPlaylist)
         return;
-    pimpl->currentPlaylist->seek(t);
+    pimpl->player.seek(t);
 }
 
 PlayerControls::DeviceState PlayerControls::state() const {

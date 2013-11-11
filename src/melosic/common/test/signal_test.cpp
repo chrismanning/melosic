@@ -38,6 +38,10 @@ TEST_F(SignalTest, SignalConnectTest) {
     EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
     c.disconnect();
     EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
+    Melosic::Signals::ScopedConnection sc = sig1.connect([] (int32_t) {});
+    EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
+    sc = Melosic::Signals::ScopedConnection{};
+    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
 }
 
 TEST_F(SignalTest, SignalCallTest) {

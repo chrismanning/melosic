@@ -1,5 +1,5 @@
 project(melosic CXX C)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.11)
 
 option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" ON)
 
