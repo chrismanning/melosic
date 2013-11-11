@@ -14,7 +14,6 @@ add_definitions(-DBOOST_ALL_DYN_LINK)
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
- set(CMAKE_STANDARD_LIBRARIES "-lc++abi")
 endif()
 
 add_subdirectory(extern)
