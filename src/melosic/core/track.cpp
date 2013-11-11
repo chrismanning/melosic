@@ -25,6 +25,7 @@ using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -162,6 +163,13 @@ public:
         return static_cast<bool>(decoder_factory);
     }
 
+    void reloadTags(unique_lock& l) {
+        reloadTags();
+        l.unlock();
+        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        tagsChanged(std::cref(tags));
+    }
+
     void reloadTags() {
         tags.clear();
         taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
@@ -170,7 +178,6 @@ public:
         tags = taglibfile->properties();
         taglibfile.reset();
         m_tags_readable = true;
-        tagsChanged(std::cref(tags));
         TRACE_LOG(logject) << tags.toString().to8Bit(true);
     }
 
@@ -294,7 +301,7 @@ const boost::filesystem::path& Track::filePath() const {
 
 void Track::reloadTags() {
     unique_lock l(pimpl->mu);
-    pimpl->reloadTags();
+    pimpl->reloadTags(l);
 }
 
 bool Track::taggable() const {
