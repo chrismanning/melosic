@@ -28,7 +28,6 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/iostreams/read.hpp>
 #include <boost/iostreams/compose.hpp>
 namespace io = boost::iostreams;
-#include <boost/scope_exit.hpp>
 #include <boost/asio.hpp>
 #include <boost/variant.hpp>
 
@@ -229,9 +228,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
             return;
 
         if(m_current_track) {
-            l.unlock();
             notifyPlayPosition(m_current_track->tell(), m_current_track->duration());
-            l.lock();
             if(m_current_playlist && m_current_track->duration() - m_current_track->tell() < m_gapless_preload) {
                 auto nt = std::next(m_current_iterator);
                 if(nt != m_current_playlist->end() && !nt->isOpen()) {

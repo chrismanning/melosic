@@ -23,8 +23,6 @@ namespace ph = std::placeholders;
 #include <boost/range/adaptor/map.hpp>
 using namespace boost::adaptors;
 #include <boost/algorithm/string/case_conv.hpp>
-#include <boost/scope_exit.hpp>
-#include <melosic/common/optional.hpp>
 
 #include <taglib/aifffile.h>
 #include <taglib/mpcfile.h>
@@ -48,6 +46,7 @@ using namespace boost::adaptors;
 #include <taglib/speexfile.h>
 #include <taglib/opusfile.h>
 
+#include <melosic/common/optional.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/file.hpp>
 #include <melosic/common/string.hpp>

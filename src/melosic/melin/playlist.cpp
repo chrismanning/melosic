@@ -24,10 +24,9 @@ using mutex = boost::shared_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using shared_lock = boost::shared_lock<mutex>;
-#include <boost/scope_exit.hpp>
 #include <boost/container/stable_vector.hpp>
-#include <melosic/common/optional.hpp>
 
+#include <melosic/common/optional.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/string.hpp>
@@ -123,20 +122,17 @@ public:
     }
 
     void currentPlaylistChanged(optional<Core::Playlist> p, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         currentPlaylistChangedSignal(p);
     }
 
     void playlistAdded(optional<Core::Playlist> p, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         playlistAddedSignal(p);
     }
 
     void playlistRemoved(optional<Core::Playlist> p, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         playlistRemovedSignal(p);
     }
 

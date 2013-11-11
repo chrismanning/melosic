@@ -21,7 +21,6 @@
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
 
-#include <boost/scope_exit.hpp>
 #include <boost/thread/shared_mutex.hpp>
 using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
@@ -29,6 +28,7 @@ using unique_lock = boost::unique_lock<mutex>;
 using upgrade_lock = boost::upgrade_lock<mutex>;
 
 #include <melosic/melin/logging.hpp>
+#include <melosic/common/scope_unlock_exit_lock.hpp>
 
 namespace Melosic {
 
@@ -393,8 +393,7 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
         }
     }
 
-    l.unlock();
-    BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+    scope_unlock_exit_lock<upgrade_lock> s{l};
     Q_EMIT parent.blocksNeedUpdating(start, end_);
 }
 

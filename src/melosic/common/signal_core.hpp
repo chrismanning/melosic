@@ -33,19 +33,13 @@
 #include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
 #include <melosic/common/connection.hpp>
+#include <melosic/common/scope_unlock_exit_lock.hpp>
 
 namespace Melosic {
 namespace Signals {
 
 namespace {
 namespace mpl = boost::mpl;
-
-using Mutex = std::mutex;
-using lock_guard = std::lock_guard<Mutex>;
-using unique_lock = std::unique_lock<Mutex>;
-
-template <typename Lock>
-using LockNoExcept = std::is_nothrow_constructible<Lock, typename Lock::mutex_type>;
 }
 
 template <typename Ret, typename ...Args>
@@ -60,6 +54,10 @@ struct SignalCore<Ret (Args...)> {
                                  typename std::decay<Args>::type...>,
                   std::true_type>::type::value,
                   "Signal args must be copyable");
+
+    using Mutex = std::mutex;
+    using lock_guard = std::lock_guard<Mutex>;
+    using unique_lock = std::unique_lock<Mutex>;
 
     using Slot = std::function<Ret(Args...)>;
     using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
@@ -105,13 +103,19 @@ struct SignalCore<Ret (Args...)> {
         return connect([=] (Args&&... as) mutable { return (bo()->*func)(std::forward<Args>(as)...); });
     }
 
-    bool disconnect(const Connection& conn) noexcept(LockNoExcept<lock_guard>::value) {
+    bool disconnect(const Connection& conn) {
         lock_guard l(mu);
+        return disconnect(conn, nullptr);
+    }
+
+private:
+    bool disconnect(const Connection& conn, void* locked) {
         auto s = funs.size();
         auto n = funs.erase(conn);
         return funs.size() == s-n;
     }
 
+public:
     size_t slotCount() const noexcept {
         return funs.size();
     }
@@ -137,46 +141,42 @@ protected:
         unique_lock l(mu);
         for(auto i(funs.begin()); i != funs.end();) {
             try {
-                l.unlock();
                 if(!tman.contains(std::this_thread::get_id())) {
                     try {
                         futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
                     }
                     catch(TaskQueueError& e) {
+                        scope_unlock_exit_lock<unique_lock> s{l};
                         i->second(std::forward<Args>(args)...);
                     }
                 }
-                else
+                else {
+                    scope_unlock_exit_lock<unique_lock> s{l};
                     i->second(std::forward<Args>(args)...);
-                l.lock();
+                }
                 ++i;
             }
             catch(std::bad_weak_ptr&) {
                 auto tmp(i->first);
                 ++i;
-                tmp.disconnect();
-                l.lock();
+                disconnect(tmp, nullptr);
                 if(i != funs.begin())
                     i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
             }
             catch(...) {
                 eptr = std::current_exception();
-                l.lock();
                 ++i;
             }
         }
         for(auto&& f : futures) {
             try {
-                l.unlock();
                 f.first.get();
-                l.lock();
             }
             catch(std::bad_weak_ptr&) {
-                f.second.disconnect();
+                disconnect(f.second, nullptr);
             }
             catch(...) {
                 eptr = std::current_exception();
-                l.lock();
             }
         }
 

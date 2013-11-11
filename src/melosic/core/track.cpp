@@ -25,7 +25,6 @@ using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix.hpp>
-#include <boost/scope_exit.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
@@ -165,8 +164,7 @@ public:
 
     void reloadTags(unique_lock& l) {
         reloadTags();
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         tagsChanged(std::cref(tags));
     }
 

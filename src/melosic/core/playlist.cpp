@@ -26,7 +26,6 @@ using unique_lock = std::unique_lock<mutex>;
 using shared_lock = boost::shared_lock<mutex>;
 #include <boost/format.hpp>
 using boost::format;
-#include <boost/scope_exit.hpp>
 #include <boost/iostreams/read.hpp>
 namespace io = boost::iostreams;
 #include <boost/range/adaptor/sliced.hpp>
@@ -77,20 +76,17 @@ public:
                                           (const TagLib::PropertyMap& tags) mutable {
             tagsChangedSignal(+std::distance(std::begin(tracks), it), std::cref(tags));
         });
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         trackAddedSignal(i, t);
     }
 
     void trackRemoved(int i, optional<Core::Track> t, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         trackRemovedSignal(i, t);
     }
 
     void tagsChanged(int i, const TagLib::PropertyMap& tags, unique_lock& l) {
-        l.unlock();
-        BOOST_SCOPE_EXIT_ALL(&l) { l.lock(); };
+        scope_unlock_exit_lock<unique_lock> s{l};
         tagsChangedSignal(i, std::cref(tags));
     }
 
