@@ -34,7 +34,7 @@ class Kernel;
 
 namespace Plugin {
 
-class Manager {
+class Manager final {
 public:
     ~Manager();
 

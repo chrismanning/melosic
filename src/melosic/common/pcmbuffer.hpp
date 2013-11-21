@@ -38,4 +38,17 @@ struct ConstPCMBuffer : boost::asio::const_buffer {
 
 } //end namespace Melosic
 
+namespace boost {
+namespace asio {
+
+size_t buffer_size(const Melosic::PCMBuffer& b) {
+    return buffer_size(mutable_buffer(b));
+}
+size_t buffer_size(const Melosic::ConstPCMBuffer& b) {
+    return buffer_size(const_buffer(b));
+}
+
+}
+}
+
 #endif // MELOSIC_PCMBUFFER_HPP

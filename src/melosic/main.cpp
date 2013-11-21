@@ -27,9 +27,6 @@
 namespace fs = boost::filesystem;
 
 #include <melosic/melin/kernel.hpp>
-#include <melosic/common/file.hpp>
-#include <melosic/common/error.hpp>
-#include <melosic/melin/exports.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/logging.hpp>

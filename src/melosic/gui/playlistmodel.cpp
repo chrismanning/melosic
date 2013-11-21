@@ -220,8 +220,8 @@ void PlaylistModel::refreshTags(int start, int end) {
     end = end < start ? playlist.size() : end+1;
     for(auto& t : playlist.getTracks(start, end)) {
         try {
-            t.reOpen();
-            t.close();
+//            t.reOpen();
+//            t.close();
         }
         catch(...) {}
     }
@@ -330,10 +330,10 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     m_target_property = property;
     auto t = track->format_string(m_format_string.toStdString());
     m_target_property.write(QString::fromStdString(t ? *t : "?"));
-    conn = track->getTagsChangedSignal().connect([this, track] (const TagLib::PropertyMap&) {
-        auto t = track->format_string(m_format_string.toStdString());
-        m_target_property.write(QString::fromStdString(t ? *t : "?"));
-    });
+//    conn = track->getTagsChangedSignal().connect([this, track] (const TagLib::PropertyMap&) {
+//        auto t = track->format_string(m_format_string.toStdString());
+//        m_target_property.write(QString::fromStdString(t ? *t : "?"));
+//    });
 }
 
 } // namespace Melosic

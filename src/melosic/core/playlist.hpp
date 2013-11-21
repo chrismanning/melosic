@@ -23,9 +23,9 @@
 namespace chrono = std::chrono;
 using namespace std::literals;
 
-#include <boost/iostreams/concepts.hpp>
 #include <boost/filesystem/path.hpp>
-#include <boost/container/stable_vector.hpp>
+#include <boost/iterator/iterator_facade.hpp>
+#include <boost/range/detail/any_iterator.hpp>
 
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
@@ -44,15 +44,9 @@ class Track;
 
 class MELOSIC_EXPORT Playlist {
 public:
-    struct category : boost::iostreams::input, boost::iostreams::device_tag
-    {};
-    typedef char char_type;
-
     typedef Track value_type;
     typedef optional<value_type> optional_type;
     typedef int size_type;
-
-    using Container = boost::container::stable_vector<Playlist::value_type>;
 
     Playlist(Decoder::Manager&, std::string);
     ~Playlist();
@@ -74,15 +68,10 @@ public:
     size_type insert(size_type pos, ForwardRange<value_type> values);
     size_type emplace(size_type pos, ForwardRange<const boost::filesystem::path> values);
     value_type insert(size_type pos, value_type value);
-    optional_type emplace(size_type pos,
-                          boost::filesystem::path filename,
-                          chrono::milliseconds start = 0ms,
-                          chrono::milliseconds end = 0ms);
+    size_type emplace(size_type pos, boost::filesystem::path filename);
 
     void push_back(value_type value);
-    bool emplace_back(boost::filesystem::path filename,
-                      chrono::milliseconds start = 0ms,
-                      chrono::milliseconds end = 0ms);
+    bool emplace_back(boost::filesystem::path filename);
 
     void erase(size_type pos);
     void erase(size_type start, size_type end);
@@ -101,10 +90,17 @@ public:
 private:
     class impl;
     std::shared_ptr<impl> pimpl;
+    struct Iterator;
+    friend struct Iterator;
     friend std::size_t hash_value(const Playlist&);
 
-    Container::iterator begin() const;
-    Container::iterator end() const;
+    typedef boost::range_detail::any_iterator<optional_type,
+                                              boost::random_access_traversal_tag,
+                                              optional_type,
+                                              ptrdiff_t> iterator;
+
+    iterator begin() const;
+    iterator end() const;
     friend class Player;
 };
 

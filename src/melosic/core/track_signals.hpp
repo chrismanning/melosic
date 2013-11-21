@@ -18,20 +18,9 @@
 #ifndef MELOSIC_TRACK_SIGNALS_HPP
 #define MELOSIC_TRACK_SIGNALS_HPP
 
-#include <melosic/common/signal_fwd.hpp>
-
-namespace TagLib {
-class PropertyMap;
-}
+#include <chrono>
 
 namespace Melosic {
-namespace Signals {
-namespace Track {
-
-using TagsChanged = SignalCore<void(const TagLib::PropertyMap&)>;
-
-}// Track
-}// Signals
 }// Melosic
 
 #endif // MELOSIC_TRACK_SIGNALS_HPP

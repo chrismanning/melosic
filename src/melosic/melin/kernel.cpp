@@ -29,6 +29,7 @@ namespace asio = boost::asio;
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/directories.hpp>
 #include <melosic/core/track.hpp>
+#include <melosic/melin/library.hpp>
 
 namespace Melosic {
 namespace Core {
@@ -43,8 +44,9 @@ struct Kernel::impl {
         tman(&io_service),
         null_worker_(std::move(null_worker)),
         inman(),
-        decman(),
+        decman(tman),
         encman(),
+        libman(confman),
         playlistman(decman)
     {}
 
@@ -58,6 +60,7 @@ struct Kernel::impl {
     Input::Manager inman;
     Decoder::Manager decman;
     Encoder::Manager encman;
+    Library::Manager libman;
     Melosic::Playlist::Manager playlistman;
 };
 

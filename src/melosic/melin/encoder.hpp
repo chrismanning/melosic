@@ -23,7 +23,7 @@
 namespace Melosic {
 namespace Encoder {
 
-class Manager {
+class Manager final {
 public:
     Manager();
     ~Manager();

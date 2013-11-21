@@ -15,26 +15,36 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
-#define MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
+#ifndef MELOSIC_LIBRARY_HPP
+#define MELOSIC_LIBRARY_HPP
 
-#include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/configvar.hpp>
+#include <memory>
+
+#include <boost/filesystem/path.hpp>
 
 namespace Melosic {
 
 namespace Config {
-class Conf;
+class Manager;
 }
 
-namespace Signals {
+namespace Library {
 
-namespace Config {
-typedef SignalCore<void(const Melosic::Config::KeyType&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef SignalCore<void(boost::synchronized_value<Melosic::Config::Conf>&)> Loaded;
-}
+class Manager final {
+public:
+    Manager(Config::Manager&);
 
-}
-}
+    ~Manager();
 
-#endif // MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
+    void addDirectory(boost::filesystem::path);
+    void rescan();
+
+private:
+    struct impl;
+    std::unique_ptr<impl> pimpl;
+};
+
+} // namespace Library
+} // namespace Melosic
+
+#endif // MELOSIC_LIBRARY_HPP

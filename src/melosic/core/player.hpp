@@ -43,9 +43,9 @@ class Kernel;
 class Playlist;
 class Track;
 
-class Player {
+class Player final {
 public:
-    Player(Core::Kernel&);
+    explicit Player(Core::Kernel&);
 
     ~Player();
 

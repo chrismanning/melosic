@@ -19,69 +19,77 @@
 #define MELOSIC_TRACK_HPP
 
 #include <memory>
+#include <map>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/locale/collator.hpp>
+#include <boost/thread/synchronized_value.hpp>
 
 #include <melosic/common/common.hpp>
-#include <melosic/common/stream.hpp>
-#include <melosic/melin/input.hpp>
-#include <melosic/melin/decoder.hpp>
-#include <melosic/core/track_signals.hpp>
+#include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/optional_fwd.hpp>
 
 namespace Melosic {
+
+struct AudioSpecs;
+
+namespace Core {
+using CaseInsensitiveComparator = boost::locale::comparator<char, boost::locale::collator_base::primary>;
+using TagMap = std::multimap<std::string, std::string, CaseInsensitiveComparator>;
+}
+
+namespace Signals {
+namespace Track {
+
+using TagsChanged = SignalCore<void(const boost::synchronized_value<Core::TagMap>&)>;
+using DurationChanged = SignalCore<void(std::chrono::milliseconds)>;
+using AudioSpecsChanged = SignalCore<void(AudioSpecs)>;
+
+}// Track
+}// Signals
+
+namespace Decoder {
+class Manager;
+}
+
 namespace Core {
 
-class MELOSIC_EXPORT Track {
-    explicit Track(Decoder::Factory,
-                   boost::filesystem::path filename,
-                   chrono::milliseconds start = 0ms,
-                   chrono::milliseconds end = 0ms);
+class MELOSIC_EXPORT Track final {
     friend class Decoder::Manager;
+    friend struct AudioFile;
+    void setAudioSpecs(AudioSpecs);
+    void setTimePoints(chrono::milliseconds end, chrono::milliseconds start = 0ms);
+    explicit Track(boost::filesystem::path filename,
+                   chrono::milliseconds end = 0ms,
+                   chrono::milliseconds start = 0ms);
 
 public:
-    typedef char char_type;
-    typedef io::source_tag category;
-
-    virtual ~Track();
+    ~Track();
 
     bool operator==(const Track&) const noexcept;
     bool operator!=(const Track&) const noexcept;
 
-    void setTimePoints(chrono::milliseconds start, chrono::milliseconds end);
-
-    std::streamsize read(char * s, std::streamsize n);
-    void reset();
-    void seek(chrono::milliseconds dur);
-    void close();
-    bool isOpen() const;
-    void reOpen();
-
-    chrono::milliseconds tell();
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs getAudioSpecs() const;
     const boost::filesystem::path& filePath() const;
     optional<std::string> getTag(const std::string& key) const;
-
-    void reloadTags();
-    bool taggable() const;
-    bool tagsReadable() const;
-    void reloadDecoder();
-    bool decodable() const;
-
-    bool valid() const;
-    explicit operator bool() const;
-    Track clone() const;
-
     optional<std::string> format_string(const std::string&) const;
+
+    boost::synchronized_value<TagMap>& getTags();
+    const boost::synchronized_value<TagMap>& getTags() const;
+    void setTags(TagMap);
+
+    bool tagsReadable() const;
 
     Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
 
 private:
     class impl;
     std::shared_ptr<impl> pimpl;
-    explicit Track(decltype(pimpl));
+    friend size_t hash_value(const Track &b);
 };
+
+size_t hash_value(const Track& b);
 
 } // namespace Core
 } // namespace Melosic

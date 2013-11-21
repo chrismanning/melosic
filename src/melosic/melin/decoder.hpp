@@ -21,37 +21,39 @@
 #include <memory>
 #include <functional>
 #include <type_traits>
+#include <future>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/mpl/lambda.hpp>
 namespace { namespace mpl = boost::mpl; }
+
 #include <melosic/common/optional_fwd.hpp>
-
-#include <taglib/tfile.h>
-
-#include <melosic/melin/input.hpp>
 #include <melosic/common/traits.hpp>
+#include <melosic/common/audiospecs.hpp>
 
 namespace Melosic {
-namespace IO {
-class File;
+namespace Thread {
+class Manager;
 }
 
 namespace Core {
 class Track;
+struct AudioFile;
 }
 
-namespace Decoder {
-typedef Input::Playable Playable;
-typedef std::function<std::unique_ptr<Playable>(IO::BiDirectionalClosableSeekable&)> Factory;
+struct PCMBuffer;
 
-class Manager {
+namespace Decoder {
+class PCMSource;
+typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)> Factory;
+
+class Manager final {
 public:
-    Manager();
+    explicit Manager(Thread::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
-    Manager(const Manager&&) = delete;
+    Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
     MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string extension);
@@ -70,13 +72,28 @@ public:
         addAudioFormat(fact, {std::move(extensions)...});
     }
 
-    optional<Core::Track> openTrack(boost::filesystem::path filepath,
-                            chrono::milliseconds start = 0ms,
-                            chrono::milliseconds end = 0ms) const noexcept;
+    optional<Core::AudioFile> getFile(boost::filesystem::path) const;
+    std::future<bool> initialiseAudioFile(Core::AudioFile&) const;
+    std::vector<Melosic::Core::Track> openPath(boost::filesystem::path) const;
+
+    std::unique_ptr<PCMSource> openTrack(const Core::Track&) const;
 
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
+};
+
+class PCMSource {
+public:
+    typedef char char_type;
+    virtual ~PCMSource() {}
+    virtual void seek(chrono::milliseconds dur) = 0;
+    virtual chrono::milliseconds tell() = 0;
+    virtual chrono::milliseconds duration() const = 0;
+    virtual AudioSpecs getAudioSpecs() = 0;
+    virtual size_t decode(PCMBuffer& buf, boost::system::error_code& ec) = 0;
+    virtual bool valid() = 0;
+    virtual void reset() = 0;
 };
 
 } // namespace Decoder

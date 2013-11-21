@@ -25,15 +25,15 @@ using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix.hpp>
+#include <boost/locale/collator.hpp>
+#include <boost/thread/synchronized_value.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
 #include <taglib/fileref.h>
 
 #include "track.hpp"
-#include <melosic/common/stream.hpp>
 #include <melosic/common/common.hpp>
-#include <melosic/common/file.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
@@ -49,78 +49,14 @@ struct TagsChanged : Signals::Signal<Signals::Track::TagsChanged> {
     using Super::Signal;
 };
 
-class Track::impl : public std::enable_shared_from_this<impl> {
+class Track::impl {
 public:
-    impl(Decoder::Factory factory, boost::filesystem::path filename,
+    impl(boost::filesystem::path filename,
          chrono::milliseconds start, chrono::milliseconds end)
-        : filepath(std::move(filename)), decoder_factory(std::move(factory)), start(start), end(end)
-    {
-//        open(filename, start, end);
-    }
+        : filepath(std::move(filename)), start(start), end(end)
+    {}
 
     ~impl() {}
-
-    void open(boost::filesystem::path filename, chrono::milliseconds start, chrono::milliseconds end) {
-        using std::swap;
-
-        close();
-        swap(filepath, filename);
-        swap(this->start, start);
-        swap(this->end, end);
-        input.open(filepath);
-        reloadDecoder();
-        reloadTags();
-        seek(0ms);
-    }
-
-    bool isOpen() {
-        return input.isOpen() && static_cast<bool>(decoder);
-    }
-
-    void reOpen() {
-        open(filepath, start, end);
-    }
-
-    void close() {
-        taglibfile.reset();
-        decoder.reset();
-        input.close();
-    }
-
-    std::streamsize read(char * s, std::streamsize n) {
-        if(!isOpen())
-            reOpen();
-        try {
-//            if(duration() == decoder->duration()) {
-//                auto difference = (end > start) ? +std::llrint((end - decoder->tell()).count() *
-//                                                               (as.sample_rate/1000.0) *
-//                                                               (as.bps/8)) : 0;
-//                n = difference > n ? n : +difference;
-//            }
-            return decoder->read(s, n);
-        }
-        catch(AudioDataInvalidException& e) {
-            e << ErrorTag::FilePath(filePath());
-            throw;
-        }
-    }
-
-    void seek(chrono::milliseconds dur) {
-        if(!isOpen())
-            reOpen();
-        decoder->seek(dur + start);
-    }
-
-    chrono::milliseconds tell() {
-        if(!isOpen())
-            reOpen();
-        return decoder->tell() - start;
-    }
-
-    void reset() {
-        if(isOpen())
-            decoder->reset();
-    }
 
     chrono::milliseconds duration() {
         if(end > start)
@@ -129,12 +65,12 @@ public:
     }
 
     optional<std::string> getTag(const std::string& key) {
-        TagLib::String key_(key.c_str());
-        auto val = tags.find(key_);
-        if(val == tags.end() && key.substr(0, 5) == "album" && key != "albumtitle" && key.size() > 5)
-            val = tags.find(TagLib::String(key.substr(5).c_str()));
+        auto tags = m_tags.synchronize();
+        auto it = tags->find(key);
+        if(it == tags->end() && key.substr(0, 5) == "album" && key != "albumtitle" && key.size() > 5)
+            it = tags->find(key.substr(5));
 
-        return val != tags.end() ? optional<std::string>{val->second.front().to8Bit(true)} : nullopt;
+        return (it != tags->end()) ? optional<std::string>{it->second} : nullopt;
     }
 
     std::string getTagOr(const std::string& key) {
@@ -142,57 +78,29 @@ public:
         return t ? *t : "?"s;
     }
 
-    void reloadDecoder() {
-        try {
-            decoder = decoder_factory(input);
-            if(as == decoder->getAudioSpecs())
-                decoder->getAudioSpecs() = as;
-            else
-                as = decoder->getAudioSpecs();
-            if(end <= start)
-                end = start + decoder->duration();
-        }
-        catch(DecoderException& e) {
-            e << ErrorTag::FilePath(input.filename());
-            throw;
-        }
-    }
+//    void reloadTags(unique_lock& l) {
+//        reloadTags();
+//        scope_unlock_exit_lock<unique_lock> s{l};
+//        tagsChanged(std::cref(tags));
+//    }
 
-    bool decodable() {
-        return static_cast<bool>(decoder_factory);
-    }
+//    void reloadTags() {
+//        tags.clear();
+//        taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
+//        if(!taglibfile)
+//            return;
+//        tags = taglibfile->properties();
+//        taglibfile.reset();
+//        m_tags_readable = true;
+//        TRACE_LOG(logject) << tags;
+//    }
 
-    void reloadTags(unique_lock& l) {
-        reloadTags();
-        scope_unlock_exit_lock<unique_lock> s{l};
-        tagsChanged(std::cref(tags));
-    }
-
-    void reloadTags() {
-        tags.clear();
-        taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
-        if(!taglibfile)
-            return;
-        tags = taglibfile->properties();
-        taglibfile.reset();
-        m_tags_readable = true;
-        TRACE_LOG(logject) << tags.toString().to8Bit(true);
-    }
-
-    bool taggable() {
-        return static_cast<bool>(taglibfile);
-    }
-
-    bool valid() {
-        return decoder_factory && decoder && *decoder;
-    }
+//    bool taggable() {
+//        return static_cast<bool>(taglibfile);
+//    }
 
     const boost::filesystem::path& filePath() {
         return filepath;
-    }
-
-    std::shared_ptr<impl> clone() {
-        return std::make_shared<impl>(decoder_factory, filepath, start, end);
     }
 
     optional<std::string> parse_format(std::string, boost::system::error_code&);
@@ -200,25 +108,17 @@ public:
 private:
     friend class Track;
     boost::filesystem::path filepath;
-    Decoder::Factory decoder_factory;
-    IO::File input;
     chrono::milliseconds start, end;
-    std::unique_ptr<Decoder::Playable> decoder;
-    std::unique_ptr<TagLib::File> taglibfile;
-    TagLib::PropertyMap tags;
+    boost::synchronized_value<TagMap> m_tags;
     AudioSpecs as;
-    bool m_tags_readable{false};
     TagsChanged tagsChanged;
     mutex mu;
 };
 
-Track::Track(Decoder::Factory factory,
-             boost::filesystem::path filename,
-             chrono::milliseconds start,
-             chrono::milliseconds end)
-    : pimpl(std::make_shared<impl>(std::move(factory),
-                                   std::move(filename),
-                                   start, end))
+Track::Track(boost::filesystem::path filename,
+             chrono::milliseconds end,
+             chrono::milliseconds start)
+    : pimpl(std::make_shared<impl>(std::move(filename), start, end))
 {}
 
 Track::~Track() {}
@@ -231,45 +131,15 @@ bool Track::operator!=(const Track& b) const noexcept {
     return pimpl != b.pimpl;
 }
 
-void Track::setTimePoints(chrono::milliseconds start, chrono::milliseconds end) {
+void Track::setAudioSpecs(AudioSpecs as) {
+    unique_lock l(pimpl->mu);
+    pimpl->as = as;
+}
+
+void Track::setTimePoints(chrono::milliseconds end, chrono::milliseconds start) {
     lock_guard l(pimpl->mu);
     pimpl->start = start;
     pimpl->end = end;
-}
-
-std::streamsize Track::read(char * s, std::streamsize n) {
-    lock_guard l(pimpl->mu);
-    return pimpl->read(s, n);
-}
-
-void Track::close() {
-    lock_guard l(pimpl->mu);
-    pimpl->close();
-}
-
-bool Track::isOpen() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->isOpen();
-}
-
-void Track::reOpen() {
-    lock_guard l(pimpl->mu);
-    pimpl->reOpen();
-}
-
-void Track::seek(chrono::milliseconds dur) {
-    lock_guard l(pimpl->mu);
-    pimpl->seek(dur);
-}
-
-chrono::milliseconds Track::tell() {
-    shared_lock l(pimpl->mu);
-    return pimpl->tell();
-}
-
-void Track::reset() {
-    lock_guard l(pimpl->mu);
-    pimpl->reset();
 }
 
 chrono::milliseconds Track::duration() const {
@@ -287,49 +157,42 @@ optional<std::string> Track::getTag(const std::string& key) const {
     return pimpl->getTag(key);
 }
 
-Track::operator bool() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->valid();
-}
-
 const boost::filesystem::path& Track::filePath() const {
     shared_lock l(pimpl->mu);
     return pimpl->filePath();
 }
 
-void Track::reloadTags() {
+boost::synchronized_value<TagMap>& Track::getTags() {
     unique_lock l(pimpl->mu);
-    pimpl->reloadTags(l);
+    return pimpl->m_tags;
 }
 
-bool Track::taggable() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->taggable();
+const boost::synchronized_value<TagMap>& Track::getTags() const {
+    unique_lock l(pimpl->mu);
+    return pimpl->m_tags;
 }
+
+void Track::setTags(TagMap tags) {
+    {
+        lock_guard l(pimpl->mu);
+        pimpl->m_tags = std::move(tags);
+    }
+    pimpl->tagsChanged(std::cref(pimpl->m_tags));
+}
+
+//void Track::reloadTags() {
+//    unique_lock l(pimpl->mu);
+//    pimpl->reloadTags(l);
+//}
+
+//bool Track::taggable() const {
+//    shared_lock l(pimpl->mu);
+//    return pimpl->taggable();
+//}
 
 bool Track::tagsReadable() const {
     shared_lock l(pimpl->mu);
-    return pimpl->m_tags_readable;
-}
-
-void Track::reloadDecoder() {
-    lock_guard l(pimpl->mu);
-    pimpl->reloadDecoder();
-}
-
-bool Track::decodable() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->decodable();
-}
-
-bool Track::valid() const {
-    shared_lock l(pimpl->mu);
-    return pimpl->valid();
-}
-
-Track Track::clone() const {
-    lock_guard l(pimpl->mu);
-    return Track(pimpl->clone());
+    return !pimpl->m_tags->empty();
 }
 
 optional<std::string> Track::format_string(const std::string& fmt_str) const {
@@ -341,8 +204,6 @@ optional<std::string> Track::format_string(const std::string& fmt_str) const {
 Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept {
     return pimpl->tagsChanged;
 }
-
-Track::Track(decltype(pimpl) p) : pimpl(p) {}
 
 optional<std::string> Track::impl::parse_format(std::string str, boost::system::error_code&) {
     if(str.empty())
@@ -377,6 +238,11 @@ optional<std::string> Track::impl::parse_format(std::string str, boost::system::
     if(!strm.str().empty())
         return strm.str();
     return nullopt;
+}
+
+size_t hash_value(const Track& b) {
+    std::hash<std::shared_ptr<Track::impl>> hasher;
+    return hasher(b.pimpl);
 }
 
 } // namespace Core

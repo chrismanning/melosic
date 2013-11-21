@@ -22,7 +22,6 @@
 #include <functional>
 #include <list>
 
-#include <melosic/common/stream.hpp>
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/melin/config.hpp>
@@ -48,7 +47,7 @@ struct AudioOutputBase;
 namespace Output {
 typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(boost::asio::io_service&, DeviceName)> ASIOFactory;
 
-class Manager {
+class Manager final {
 public:
     explicit Manager(Config::Manager&, boost::asio::io_service&);
     ~Manager();

@@ -57,7 +57,7 @@ class Manager;
 
 namespace Core {
 
-class Kernel {
+class Kernel final {
 public:
     Kernel();
 

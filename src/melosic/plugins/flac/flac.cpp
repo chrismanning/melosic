@@ -17,21 +17,26 @@
 
 #include <FLAC++/decoder.h>
 
-#include <boost/iostreams/read.hpp>
-#include <boost/iostreams/positioning.hpp>
-namespace io = boost::iostreams;
 #include <deque>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+
+#include <boost/iostreams/read.hpp>
+#include <boost/iostreams/positioning.hpp>
+#include <boost/iostreams/seek.hpp>
+namespace io = boost::iostreams;
+#include <boost/asio/error.hpp>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/decoder.hpp>
-#include <melosic/common/stream.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/audiospecs.hpp>
+#include <melosic/common/pcmbuffer.hpp>
 using namespace Melosic;
 using Logger::Severity;
+namespace ASIO = boost::asio;
 
 static Logger::Logger logject{logging::keywords::channel = "FLAC"};
 
@@ -45,12 +50,14 @@ static constexpr Plugin::Info flacInfo{"FLAC",
 }
 
 struct FlacDecoderImpl : FLAC::Decoder::Stream {
-    FlacDecoderImpl(IO::SeekableSource& input, std::deque<char>& buf, AudioSpecs& as)
-        : input(input), buf(buf), as(as), lastSample(0)
+    FlacDecoderImpl(std::unique_ptr<std::istream> input, std::deque<char>& buf, AudioSpecs& as)
+        : m_input(std::move(input)), buf(buf), as(as), lastSample(0)
     {
+        assert(m_input);
+        m_input->exceptions(std::ifstream::badbit | std::ifstream::failbit);
         FLAC_THROW_IF(DecoderInitException, init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, this);
         FLAC_THROW_IF(MetadataException, process_until_end_of_metadata(), this);
-        start = input.tellg();
+        start = io::seek(*m_input, 0, std::ios_base::cur);
         FLAC_THROW_IF(AudioDataInvalidException, process_single() && seek_absolute(0), this);
         reset();
         buf.clear();
@@ -67,12 +74,13 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
 
     ::FLAC__StreamDecoderReadStatus read_callback(FLAC__byte buffer[], size_t *bytes) override {
         try {
-            *bytes = io::read(input, (char*)buffer, *bytes);
+            auto n = io::read(*m_input, (char*)buffer, *bytes);
 
-            if(*(std::streamsize*)bytes == -1) {
+            if(n < 0) {
                 *bytes = 0;
                 return FLAC__STREAM_DECODER_READ_STATUS_END_OF_STREAM;
             }
+            *bytes = static_cast<size_t>(+n);
             return FLAC__STREAM_DECODER_READ_STATUS_CONTINUE;
         }
         catch(ReadException& e) {
@@ -150,7 +158,7 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
     }
 
     ::FLAC__StreamDecoderSeekStatus seek_callback(FLAC__uint64 absolute_byte_offset) override {
-        auto off = io::position_to_offset(input.seekg(absolute_byte_offset, std::ios_base::beg));
+        auto off = io::position_to_offset(io::seek(*m_input, absolute_byte_offset, std::ios_base::beg));
         if(off == (int64_t)absolute_byte_offset)
             return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
         else
@@ -158,15 +166,19 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
     }
 
     ::FLAC__StreamDecoderTellStatus tell_callback(FLAC__uint64 *absolute_byte_offset) override {
-        *absolute_byte_offset = io::position_to_offset(input.tellg());
+        *absolute_byte_offset = io::position_to_offset(io::seek(*m_input, 0, std::ios_base::cur));
         return FLAC__STREAM_DECODER_TELL_STATUS_OK;
     }
 
     ::FLAC__StreamDecoderLengthStatus length_callback(FLAC__uint64* stream_length) override {
-        auto cur = io::position_to_offset(input.tellg());
-        *stream_length = io::position_to_offset(input.seekg(0, std::ios_base::end));
-        input.seekg(cur, std::ios_base::beg);
+        auto cur = io::position_to_offset(io::seek(*m_input, 0, std::ios_base::cur));
+        *stream_length = io::position_to_offset(io::seek(*m_input, 0, std::ios_base::end));
+        io::seek(*m_input, cur, std::ios_base::beg);
         return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
+    }
+
+    bool eof_callback() override {
+        return m_input->eof();
     }
 
     void seek(chrono::milliseconds dur) {
@@ -180,7 +192,7 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
         return as.samples_to_time<chrono::milliseconds>(lastSample);
     }
 
-    IO::SeekableSource& input;
+    std::unique_ptr<std::istream> m_input;
     std::deque<char>& buf;
     AudioSpecs& as;
     std::streampos start;
@@ -188,35 +200,38 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
     uint64_t lastSample;
 };
 
-class FlacDecoder : public Decoder::Playable {
+class FlacDecoder : public Decoder::PCMSource {
 public:
-    FlacDecoder(IO::SeekableSource& input) :
+    FlacDecoder(std::unique_ptr<std::istream> input) :
         as(),
         buf(),
-        impl(input, buf, as)
+        impl(std::move(input), buf, as)
     {}
 
     virtual ~FlacDecoder() {}
 
-    std::streamsize read(char * s, std::streamsize n) override {
-        while(static_cast<std::streamsize>(buf.size()) < n && !impl.end()) {
+    size_t decode(PCMBuffer& pcm_buf, boost::system::error_code& ec) override {
+        pcm_buf.audio_specs = as;
+        while(buf.size() < ASIO::buffer_size(pcm_buf) && !impl.end()) {
             auto r = impl.process_single();
             if(!r || FLAC__STREAM_DECODER_END_OF_STREAM == static_cast<FLAC__StreamDecoderState>(impl.get_state())) {
-                if(buf.empty())
-                    return -1;
+                if(buf.empty()) {
+                    ec = ASIO::error::make_error_code(ASIO::error::eof);
+                    return 0;
+                }
                 else
                     break;
             }
 
-            FLAC_THROW_IF(AudioDataInvalidException, r && !buf.empty(), (&impl));
+            FLAC_THROW_IF(AudioDataInvalidException, r, (&impl));
         }
 
-        auto min = std::min(n, static_cast<std::streamsize>(buf.size()));
-        auto m = std::move(buf.begin(), std::next(buf.begin(), min), s);
-        auto d = std::distance(s, m);
+        auto min = std::min(ASIO::buffer_size(pcm_buf), buf.size());
+        auto m = std::move(buf.begin(), std::next(buf.begin(), min), ASIO::buffer_cast<char*>(pcm_buf));
+        auto d = std::distance(ASIO::buffer_cast<char*>(pcm_buf), m);
         buf.erase(buf.begin(), std::next(buf.begin(), d));
 
-        return d == 0 && !(*this) ? -1 : d;
+        return d == 0 && !valid() ? (-1) : d;
     }
 
     void seek(chrono::milliseconds dur) override {
@@ -241,7 +256,7 @@ public:
         return as;
     }
 
-    explicit operator bool() override {
+    bool valid() override {
         return !(impl.end() && buf.empty());
     }
 
@@ -257,7 +272,7 @@ extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsI
 }
 
 extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
-    decman->addAudioFormat([](IO::SeekableSource& input) { return std::make_unique<FlacDecoder>(input); },
+    decman->addAudioFormat([](auto input) { return std::make_unique<FlacDecoder>(std::move(input)); },
     ".flac"s);
 }
 

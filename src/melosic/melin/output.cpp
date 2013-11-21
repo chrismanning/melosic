@@ -53,13 +53,14 @@ public:
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
-    void loadedSlot(Config::Conf& base) {
+    void loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
         TRACE_LOG(logject) << "Output conf loaded";
 
-        auto c = base.getChild("Output"s);
+        auto base = ubase.synchronize();
+        auto c = base->getChild("Output"s);
         if(!c) {
-            base.putChild(conf);
-            c = base.getChild("Output"s);
+            base->putChild(conf);
+            c = base->getChild("Output"s);
         }
         assert(c);
         c->merge(conf);

@@ -21,7 +21,6 @@
 #include <memory>
 
 #include <melosic/common/common.hpp>
-#include <melosic/common/stream.hpp>
 
 namespace Melosic {
 struct AudioSpecs;
@@ -39,18 +38,6 @@ public:
 private:
     class impl;
     std::unique_ptr<impl> pimpl;
-};
-
-class Playable : public IO::Source {
-public:
-    typedef char char_type;
-    virtual ~Playable() {}
-    virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
-    virtual chrono::milliseconds duration() const = 0;
-    virtual Melosic::AudioSpecs getAudioSpecs() = 0;
-    virtual explicit operator bool() = 0;
-    virtual void reset() = 0;
 };
 
 } // namespace Input

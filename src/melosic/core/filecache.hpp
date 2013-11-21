@@ -15,26 +15,33 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
-#define MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
+#ifndef MELOSIC_FILECACHE_HPP
+#define MELOSIC_FILECACHE_HPP
 
-#include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/configvar.hpp>
+#include <memory>
+
+#include <boost/filesystem/path.hpp>
+
+#include <melosic/common/optional_fwd.hpp>
 
 namespace Melosic {
+namespace Core {
 
-namespace Config {
-class Conf;
-}
+struct AudioFile;
 
-namespace Signals {
+class FileCache {
+public:
+    FileCache();
+    ~FileCache();
 
-namespace Config {
-typedef SignalCore<void(const Melosic::Config::KeyType&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef SignalCore<void(boost::synchronized_value<Melosic::Config::Conf>&)> Loaded;
-}
+    optional<Core::AudioFile> getFile(const boost::filesystem::path&, boost::system::error_code&) const;
 
-}
-}
+private:
+    struct impl;
+    std::unique_ptr<impl> pimpl;
+};
 
-#endif // MELOSIC_CONFIG_VARIABLE_UPDATED_HPP
+} // namespace Core
+} // namespace Melosic
+
+#endif // MELOSIC_FILECACHE_HPP

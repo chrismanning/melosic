@@ -28,6 +28,7 @@
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/metafunctions.hpp>
 #include <boost/mpl/contains.hpp>
+#include <boost/thread/synchronized_value.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/common.hpp>
@@ -58,7 +59,7 @@ public:
     void loadConfig();
     void saveConfig();
 
-    std::tuple<Conf&, std::unique_lock<std::mutex>&&> getConfigRoot();
+    boost::synchronized_value<Conf>& getConfigRoot();
 
     Signals::Config::Loaded& getLoadedSignal() const;
 

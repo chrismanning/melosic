@@ -19,39 +19,27 @@
 #include <string>
 #include <functional>
 namespace ph = std::placeholders;
+#include <mutex>
+using mutex = std::mutex;
+using unique_lock = std::unique_lock<mutex>;
 
 #include <boost/range/adaptor/map.hpp>
 using namespace boost::adaptors;
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
+#include <boost/filesystem/fstream.hpp>
 
-#include <taglib/aifffile.h>
-#include <taglib/mpcfile.h>
-#include <taglib/tfile.h>
-#include <taglib/apefile.h>
-#include <taglib/mpegfile.h>
-#include <taglib/trueaudiofile.h>
-#include <taglib/asffile.h>
-#include <taglib/oggfile.h>
-#include <taglib/vorbisfile.h>
-#include <taglib/flacfile.h>
-#include <taglib/oggflacfile.h>
-#include <taglib/wavfile.h>
-#include <taglib/itfile.h>
-#include <taglib/rifffile.h>
-#include <taglib/wavpackfile.h>
-#include <taglib/modfile.h>
-#include <taglib/s3mfile.h>
-#include <taglib/xmfile.h>
-#include <taglib/mp4file.h>
-#include <taglib/speexfile.h>
-#include <taglib/opusfile.h>
+#include <taglib/fileref.h>
+#include <taglib/tpropertymap.h>
 
 #include <melosic/common/optional.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/common/file.hpp>
 #include <melosic/common/string.hpp>
-#include <melosic/core/taglibfile.hpp>
 #include <melosic/core/track.hpp>
+#include <melosic/core/filecache.hpp>
+#include <melosic/core/audiofile.hpp>
+#include <melosic/common/thread.hpp>
 
 #include "decoder.hpp"
 
@@ -64,71 +52,85 @@ Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
 
 class Manager::impl {
 public:
-    impl() = default;
-
-    void addAudioFormat(Factory fact, std::string extension) {
-        boost::to_lower(extension);
-        LOG(logject) << "Adding support for extension " << extension;
-        auto bef = inputFactories.size();
-        auto pos = inputFactories.find(extension);
-        if(pos == inputFactories.end()) {
-            inputFactories.emplace(std::move(extension), fact);
-            assert(++bef == inputFactories.size());
-        }
-        else {
-            WARN_LOG(logject) << extension << ": already registered to a decoder factory";
-        }
-    }
-
-    optional<Core::Track> openTrack(boost::filesystem::path,
-                                         chrono::milliseconds,
-                                         chrono::milliseconds) noexcept;
-
-private:
+    impl(Thread::Manager& tman) : tman(tman) {}
+    Thread::Manager& tman;
+    mutex mu;
     std::unordered_map<std::string, Factory> inputFactories;
+    Core::FileCache m_file_cache;
 };
 
-Manager::Manager() : pimpl(new impl) {}
+Manager::Manager(Thread::Manager& tman) : pimpl(new impl(tman)) {}
 
 Manager::~Manager() {}
 
 void Manager::addAudioFormat(Factory fact, std::string extension) {
-    pimpl->addAudioFormat(fact, extension);
-}
-
-optional<Core::Track> Manager::impl::openTrack(boost::filesystem::path filepath,
-                                     chrono::milliseconds start,
-                                     chrono::milliseconds end) noexcept
-{
-    auto ext = filepath.extension().string();
-    if(ext.empty())
-        return {};
-    boost::to_lower(ext);
-    TRACE_LOG(logject) << "Trying to open file with extension " << ext;
-    auto fact = inputFactories.find(ext);
-
-    Factory decoderFactory;
-    TRACE_LOG(logject) << "Factory decoderFactory;";
-    if(fact != inputFactories.end()) {
-        TRACE_LOG(logject) << "fact != inputFactories.end()";
-        decoderFactory = fact->second;
+    unique_lock l(pimpl->mu);
+    boost::to_lower(extension);
+    LOG(logject) << "Adding support for extension " << extension;
+    auto bef = pimpl->inputFactories.size();
+    auto pos = pimpl->inputFactories.find(extension);
+    if(pos == pimpl->inputFactories.end()) {
+        pimpl->inputFactories.emplace(std::move(extension), fact);
+        assert(++bef == pimpl->inputFactories.size());
     }
     else {
-        ERROR_LOG(logject) << "Cannot decode file with extension " << ext;
-        decoderFactory = [=](Factory::argument_type) -> Factory::result_type {
-            BOOST_THROW_EXCEPTION(UnsupportedTypeException() << ErrorTag::FileExtension(ext));
-        };
+        WARN_LOG(logject) << extension << ": already registered to a decoder factory";
     }
-
-    Core::Track t{std::move(decoderFactory), std::move(filepath), start, end};
-
-    return t;
 }
-optional<Core::Track> Manager::openTrack(boost::filesystem::path filepath,
-                                                chrono::milliseconds start,
-                                                chrono::milliseconds end) const noexcept
-{
-    return pimpl->openTrack(std::move(filepath), start, end);
+
+optional<Core::AudioFile> Manager::getFile(boost::filesystem::path p) const {
+    boost::system::error_code ec;
+    return pimpl->m_file_cache.getFile(p, ec);
+}
+
+std::future<bool> Manager::initialiseAudioFile(Core::AudioFile& af) const {
+    return pimpl->tman.enqueue([af, this] () mutable {
+        FileRef taglib_file{af.filePath().c_str()};
+        if(taglib_file.isNull())
+            return false;
+        if(/*is playlist or cue*/taglib_file.tag()->properties().contains("CUEFILE"))
+            return false;
+        Core::Track t{af.filePath()};
+        Core::TagMap tags;
+        for(const auto& tag : taglib_file.tag()->properties()) {
+            for(const auto& v : tag.second)
+                tags.emplace(tag.first.to8Bit(), v.to8Bit());
+        }
+        t.setTags(tags);
+        auto pcm_src = openTrack(t);
+        if(pcm_src) {
+            t.setTimePoints(pcm_src->duration());
+            t.setAudioSpecs(pcm_src->getAudioSpecs());
+        }
+        else {
+            auto ap = taglib_file.audioProperties();
+            t.setAudioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
+            t.setTimePoints(chrono::seconds{ap->length()});
+        }
+        af.tracks()->push_back(t);
+        return true;
+    });
+}
+
+std::vector<Core::Track> Manager::openPath(boost::filesystem::path p) const {
+    auto af = getFile(std::move(p));
+    assert(af);
+    auto fut = initialiseAudioFile(*af);
+    fut.wait();
+    return af->tracks().get();
+}
+
+std::unique_ptr<PCMSource> Manager::openTrack(const Core::Track& track) const {
+    unique_lock l(pimpl->mu);
+    auto ext = track.filePath().extension().string();
+    if(ext.empty())
+        return nullptr;
+    boost::to_lower(ext);
+    TRACE_LOG(logject) << "Trying to open file with extension " << ext;
+    auto fact = pimpl->inputFactories.find(ext);
+    if(fact != pimpl->inputFactories.end())
+        return fact->second(std::make_unique<fs::ifstream>(track.filePath()));
+    return nullptr;
 }
 
 } // namespace Decoder

@@ -22,7 +22,7 @@
 
 namespace Melosic {
 
-struct AudioSpecs {
+struct AudioSpecs final {
     constexpr AudioSpecs() noexcept = default;
     constexpr AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate) noexcept
         : channels(channels),

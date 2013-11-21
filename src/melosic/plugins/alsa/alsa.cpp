@@ -456,8 +456,7 @@ void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) 
     }
 }
 
-void loadedSlot(Config::Conf& base, std::unique_lock<std::mutex>& l) {
-    assert(l);
+void loadedSlot(Config::Conf& base) {
     auto o = base.getChild("Output"s);
     if(!o) {
         base.putChild(Config::Conf("Output"s));
@@ -486,10 +485,8 @@ void loadedSlot(Config::Conf& base, std::unique_lock<std::mutex>& l) {
 extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", ::frames);
     ::conf.putNode("resample", ::resample);
-    std::reference_wrapper<Config::Conf> base{::conf};
-    std::unique_lock<std::mutex> l;
-    std::tie(base, l) = confman->getConfigRoot();
-    loadedSlot(base, l);
+    auto base = confman->getConfigRoot().synchronize();
+    loadedSlot(*base);
 }
 
 extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {

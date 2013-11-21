@@ -36,7 +36,7 @@ class Manager;
 
 namespace Playlist {
 
-class Manager {
+class Manager final {
 public:
     typedef int size_type;
 

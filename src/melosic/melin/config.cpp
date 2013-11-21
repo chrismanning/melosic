@@ -62,7 +62,7 @@ struct Manager::impl {
     using lock_guard = std::lock_guard<Mutex>;
     using unique_lock = std::unique_lock<Mutex>;
 
-    impl(fs::path p) : conf("root") {
+    impl(fs::path p) : conf(Conf("root")) {
         if(p.empty())
             BOOST_THROW_EXCEPTION(Exception());
 
@@ -223,7 +223,8 @@ struct Manager::impl {
         lock_guard l(mu);
         assert(!confPath.empty());
 
-        json::Document rootjson(JsonFromConf(conf));
+        auto c = conf.synchronize();
+        json::Document rootjson(JsonFromConf(*c));
         json::StringBuffer strbuf;
         json::PrettyWriter<json::StringBuffer> writer(strbuf);
         rootjson.Accept(writer);
@@ -235,15 +236,14 @@ struct Manager::impl {
         ofs << stringified << std::endl;
     }
 
-    std::tuple<Conf&, unique_lock&&> getConfigRoot() {
-        unique_lock l(mu);
-        return std::forward_as_tuple(conf, std::move(l));
+    boost::synchronized_value<Conf>& getConfigRoot() {
+        return conf;
     }
 
     Mutex mu;
     json::Value::AllocatorType poolAlloc;
     fs::path confPath;
-    Conf conf;
+    boost::synchronized_value<Conf> conf;
     Loaded loaded;
 };
 
@@ -259,7 +259,7 @@ void Manager::saveConfig() {
     pimpl->saveConfig();
 }
 
-std::tuple<Conf&, std::unique_lock<std::mutex>&&> Manager::getConfigRoot() {
+boost::synchronized_value<Conf>& Manager::getConfigRoot() {
     return pimpl->getConfigRoot();
 }
 
