@@ -1,15 +1,24 @@
 [submodule "extern/cpp-netlib"]
 	path = extern/cpp-netlib
 	url = https://github.com/cpp-netlib/cpp-netlib.git
-[submodule "extern/opqit"]
-	path = extern/opqit
-	url = git@github.com:chrismanning/opqit.git
+    ignore = dirty
 [submodule "extern/gtest"]
 	path = extern/gtest
 	url = https://github.com/cpp-netlib/gtest.git
+    ignore = dirty
 [submodule "extern/gmock"]
 	path = extern/gmock
 	url = https://github.com/cpp-netlib/gmock.git
+    ignore = dirty
 [submodule "extern/rapidjson"]
 	path = extern/rapidjson
 	url = git@github.com:chrismanning/rapidjson.git
+    ignore = dirty
+[submodule "extern/ejdb"]
+	path = extern/ejdb
+	url = https://github.com/Softmotions/ejdb.git
+    ignore = dirty
+[submodule "extern/ejpp"]
+	path = extern/ejpp
+	url = git@github.com:chrismanning/ejpp.git
+    ignore = dirty
