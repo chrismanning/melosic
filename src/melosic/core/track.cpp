@@ -32,6 +32,8 @@ using lock_guard = std::lock_guard<mutex>;
 #include <taglib/tfile.h>
 #include <taglib/fileref.h>
 
+#include <bson/bson.h>
+
 #include "track.hpp"
 #include <melosic/common/common.hpp>
 #include <melosic/melin/logging.hpp>
@@ -50,11 +52,9 @@ struct TagsChanged : Signals::Signal<Signals::Track::TagsChanged> {
 };
 
 class Track::impl {
-public:
-    impl(boost::filesystem::path filename,
-         chrono::milliseconds start, chrono::milliseconds end)
-        : filepath(std::move(filename)), start(start), end(end)
-    {}
+  public:
+    impl(boost::filesystem::path filename, chrono::milliseconds start, chrono::milliseconds end)
+        : filepath(std::move(filename)), start(start), end(end) {}
 
     ~impl() {}
 
@@ -78,35 +78,34 @@ public:
         return t ? *t : "?"s;
     }
 
-//    void reloadTags(unique_lock& l) {
-//        reloadTags();
-//        scope_unlock_exit_lock<unique_lock> s{l};
-//        tagsChanged(std::cref(tags));
-//    }
+    //    void reloadTags(unique_lock& l) {
+    //        reloadTags();
+    //        scope_unlock_exit_lock<unique_lock> s{l};
+    //        tagsChanged(std::cref(tags));
+    //    }
 
-//    void reloadTags() {
-//        tags.clear();
-//        taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
-//        if(!taglibfile)
-//            return;
-//        tags = taglibfile->properties();
-//        taglibfile.reset();
-//        m_tags_readable = true;
-//        TRACE_LOG(logject) << tags;
-//    }
+    //    void reloadTags() {
+    //        tags.clear();
+    //        taglibfile.reset(TagLib::FileRef::create(filepath.string().c_str()));
+    //        if(!taglibfile)
+    //            return;
+    //        tags = taglibfile->properties();
+    //        taglibfile.reset();
+    //        m_tags_readable = true;
+    //        TRACE_LOG(logject) << tags;
+    //    }
 
-//    bool taggable() {
-//        return static_cast<bool>(taglibfile);
-//    }
+    //    bool taggable() {
+    //        return static_cast<bool>(taglibfile);
+    //    }
 
-    const boost::filesystem::path& filePath() {
-        return filepath;
-    }
+    const boost::filesystem::path& filePath() { return filepath; }
 
     optional<std::string> parse_format(std::string, boost::system::error_code&);
 
-private:
+  private:
     friend class Track;
+    friend bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder& ob, const Track& t);
     boost::filesystem::path filepath;
     chrono::milliseconds start, end;
     boost::synchronized_value<TagMap> m_tags;
@@ -115,30 +114,27 @@ private:
     mutex mu;
 };
 
-Track::Track(boost::filesystem::path filename,
-             chrono::milliseconds end,
-             chrono::milliseconds start)
-    : pimpl(std::make_shared<impl>(std::move(filename), start, end))
-{}
+Track::Track(boost::filesystem::path filename, chrono::milliseconds end, chrono::milliseconds start)
+    : pimpl(std::make_shared<impl>(std::move(filename), start, end)) {}
 
 Track::~Track() {}
 
-bool Track::operator==(const Track& b) const noexcept {
-    return pimpl == b.pimpl;
-}
+bool Track::operator==(const Track& b) const noexcept { return pimpl == b.pimpl; }
 
-bool Track::operator!=(const Track& b) const noexcept {
-    return pimpl != b.pimpl;
-}
+bool Track::operator!=(const Track& b) const noexcept { return pimpl != b.pimpl; }
 
 void Track::setAudioSpecs(AudioSpecs as) {
     unique_lock l(pimpl->mu);
     pimpl->as = as;
 }
 
-void Track::setTimePoints(chrono::milliseconds end, chrono::milliseconds start) {
+void Track::setStart(chrono::milliseconds start) {
     lock_guard l(pimpl->mu);
     pimpl->start = start;
+}
+
+void Track::setEnd(chrono::milliseconds end) {
+    lock_guard l(pimpl->mu);
     pimpl->end = end;
 }
 
@@ -180,12 +176,12 @@ void Track::setTags(TagMap tags) {
     pimpl->tagsChanged(std::cref(pimpl->m_tags));
 }
 
-//void Track::reloadTags() {
+// void Track::reloadTags() {
 //    unique_lock l(pimpl->mu);
 //    pimpl->reloadTags(l);
 //}
 
-//bool Track::taggable() const {
+// bool Track::taggable() const {
 //    shared_lock l(pimpl->mu);
 //    return pimpl->taggable();
 //}
@@ -201,8 +197,26 @@ optional<std::string> Track::format_string(const std::string& fmt_str) const {
     return pimpl->parse_format(fmt_str, ec);
 }
 
-Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept {
-    return pimpl->tagsChanged;
+Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept { return pimpl->tagsChanged; }
+
+bson::BSONObj Track::bson() const {
+    using std::get;
+
+    bson::BSONObjBuilder ob;
+    ob << "type" << "track";
+    ob << "path" << filePath().generic_string();
+    AudioSpecs as = pimpl->as;
+    ob << "channels" << as.channels;
+    ob << "sample rate" << as.sample_rate;
+    auto arr = pimpl->m_tags([] (auto&& metadata) {
+        bson::BSONArrayBuilder arb;
+        for(auto&& pair : metadata)
+            arb << BSON("key" << get<0>(pair) << "value" << get<1>(pair));
+        return arb.arr();
+    });
+    ob << "metadata" << arr;
+
+    return ob.obj();
 }
 
 optional<std::string> Track::impl::parse_format(std::string str, boost::system::error_code&) {
@@ -212,25 +226,14 @@ optional<std::string> Track::impl::parse_format(std::string str, boost::system::
     namespace phx = boost::phoenix;
     qi::rule<std::string::iterator, std::string()> long_field = '{' > +(qi::char_ - qi::char_("\n{}")) > '}';
     qi::symbols<char, std::string> short_field;
-    short_field.add("a", "artist")
-                   ("A", "albumartist")
-                   ("t", "title")
-                   ("T", "album")
-                   ("n", "tracknumber")
-                   ("N", "totaltracks")
-                   ("d", "date")
-                   ("g", "genre")
-                   ("c", "comment")
-                   ("f", "file")
-                   ("p", "filepath")
-                   ("e", "extension");
+    short_field.add("a", "artist")("A", "albumartist")("t", "title")("T", "album")("n", "tracknumber")(
+        "N", "totaltracks")("d", "date")("g", "genre")("c", "comment")("f", "file")("p", "filepath")("e", "extension");
 
-    qi::rule<std::string::iterator, std::string()> tag = qi::lit('%') > (long_field | short_field) [
-            qi::_val = phx::bind(&Track::impl::getTagOr, this, qi::_1)
-    ];
+    qi::rule<std::string::iterator, std::string()> tag =
+        qi::lit('%') > (long_field | short_field)[qi::_val = phx::bind(&Track::impl::getTagOr, this, qi::_1)];
 
     std::vector<std::string> strs;
-    auto r = qi::parse(str.begin(), str.end(), *(tag | +(qi::char_-'%')), strs);
+    auto r = qi::parse(str.begin(), str.end(), *(tag | +(qi::char_ - '%')), strs);
     assert(r);
     std::stringstream strm;
     for(const auto& v : strs)

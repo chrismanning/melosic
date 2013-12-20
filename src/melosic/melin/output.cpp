@@ -73,10 +73,11 @@ public:
     }
 
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+        using std::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
             if(key == "output device") {
-                const auto& sn = boost::get<std::string>(val);
+                const auto& sn = get<std::string>(val);
                 if(sinkName == sn)
                     LOG(logject) << "Chosen output same as current. Not reinitialising.";
                 else

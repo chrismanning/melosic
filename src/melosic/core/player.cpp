@@ -410,7 +410,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     }
 
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
-        using boost::get;
+        using std::get;
         using Config::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {

@@ -440,7 +440,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
 }
 
 void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
-    using boost::get;
+    using std::get;
     using Melosic::Config::get;
     try {
         if(key == "frames")

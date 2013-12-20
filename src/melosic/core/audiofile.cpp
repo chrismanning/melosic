@@ -15,10 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <numeric>
-
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
+
+#include <bson/bson.h>
 
 #include <melosic/core/track.hpp>
 
@@ -28,15 +28,15 @@ namespace Melosic {
 namespace Core {
 
 struct AudioFile::impl {
-    explicit impl(const fs::path& p) : m_path(fs::system_complete(p)) {}
+    explicit impl(const fs::path& p) : m_path(fs::canonical(p)) {}
 
-    const fs::path m_path;
+    fs::path m_path;
     boost::synchronized_value<std::vector<Track>> m_tracks;
 };
 
-AudioFile::AudioFile(const boost::filesystem::path& p) : pimpl(std::make_shared<impl>(p)) {}
+AudioFile::AudioFile(const fs::path& p) : pimpl(std::make_shared<impl>(p)) {}
 
-const boost::filesystem::path& AudioFile::filePath() const {
+const fs::path& AudioFile::filePath() const {
     return pimpl->m_path;
 }
 
@@ -44,18 +44,8 @@ size_t AudioFile::trackCount() const {
     return pimpl->m_tracks->size();
 }
 
-chrono::milliseconds AudioFile::duration() const {
-    auto tracks = pimpl->m_tracks.synchronize();
-    return std::accumulate(tracks->begin(), tracks->end(), 0ms,
-                           [](chrono::milliseconds a, const auto& b) { return a + b.duration(); });
-}
-
 size_t AudioFile::fileSize() const {
     return fs::file_size(pimpl->m_path);
-}
-
-bool AudioFile::initialised() const {
-    return false;
 }
 
 AudioFile::Type AudioFile::type() const {
@@ -70,8 +60,23 @@ const boost::synchronized_value<std::vector<Track>>& AudioFile::tracks() const {
     return pimpl->m_tracks;
 }
 
-void AudioFile::initialise() {
+bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder& ob, const AudioFile& af) {
+    ob << "path" << af.pimpl->m_path.string();
+    return ob;
+}
 
+bson::BSONObj& operator>>(bson::BSONObj& o, AudioFile& af) {
+    if(!o.hasField("path"))
+        return o;
+    fs::path p = o.getStringField("path");
+    if(af.pimpl)
+        af.pimpl->m_path.swap(p);
+    else
+        af.pimpl = std::make_shared<AudioFile::impl>(p);
+
+    if(!o.hasField("tracks"))
+        return o;
+    return o;
 }
 
 } // namespace Core

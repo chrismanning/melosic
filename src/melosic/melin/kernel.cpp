@@ -46,7 +46,7 @@ struct Kernel::impl {
         inman(),
         decman(tman),
         encman(),
-        libman(confman),
+        libman(confman, decman, plugman),
         playlistman(decman)
     {}
 

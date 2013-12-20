@@ -25,8 +25,16 @@ namespace chrono = std::chrono;
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/synchronized_value.hpp>
 
+namespace bson {
+class BSONObjBuilder;
+class BSONObj;
+}
+
 namespace Melosic {
 namespace Decoder {
+class Manager;
+}
+namespace Library {
 class Manager;
 }
 namespace Core {
@@ -34,11 +42,11 @@ namespace Core {
 class Track;
 
 struct AudioFile {
+    AudioFile() = default;
+
     const boost::filesystem::path& filePath() const;
     size_t trackCount() const;
-    chrono::milliseconds duration() const;
     size_t fileSize() const;
-    bool initialised() const;
 
     enum class Type {
         Unsupported,
@@ -56,12 +64,16 @@ struct AudioFile {
 private:
     explicit AudioFile(const boost::filesystem::path&);
     friend class FileCache;
-
-    void initialise();
+    friend class Library::Manager;
+    friend bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder&, const AudioFile&);
+    friend bson::BSONObj& operator>>(bson::BSONObj&, AudioFile&);
 
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
+
+bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder&, const AudioFile&);
+bson::BSONObj& operator>>(bson::BSONObj&, AudioFile&);
 
 } // namespace Core
 } // namespace Melosic

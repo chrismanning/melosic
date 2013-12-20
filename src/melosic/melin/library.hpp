@@ -19,25 +19,55 @@
 #define MELOSIC_LIBRARY_HPP
 
 #include <memory>
+#include <unordered_set>
 
 #include <boost/filesystem/path.hpp>
+#include <boost/functional/hash_fwd.hpp>
+#include <boost/thread/synchronized_value.hpp>
+
+#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/signal_fwd.hpp>
 
 namespace Melosic {
 
 namespace Config {
 class Manager;
 }
+namespace Decoder {
+class Manager;
+}
+namespace Plugin {
+class Manager;
+}
+
+namespace Core {
+struct AudioFile;
+class Track;
+}
+
+namespace Signals {
+namespace Library {
+using ScanStarted = SignalCore<void()>;
+using ScanEnded = SignalCore<void()>;
+}
+}
 
 namespace Library {
 
+struct PathEquivalence;
+
 class Manager final {
+    using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
 public:
-    Manager(Config::Manager&);
+    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&);
 
     ~Manager();
 
-    void addDirectory(boost::filesystem::path);
-    void rescan();
+    const boost::synchronized_value<SetType>& getDirectories() const;
+    void scan();
+
+    Signals::Library::ScanStarted& getScanStartedSignal() noexcept;
+    Signals::Library::ScanEnded& getScanEndedSignal() noexcept;
 
 private:
     struct impl;

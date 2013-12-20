@@ -19,17 +19,23 @@
 #define MELOSIC_PLUGIN_HPP
 
 #include <memory>
-#include <condition_variable>
 
 #include <boost/filesystem.hpp>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/common/range.hpp>
+#include <melosic/common/signal_fwd.hpp>
 
 namespace Melosic {
 
 namespace Core {
 class Kernel;
+}
+
+namespace Signals {
+namespace Plugin {
+using PluginsLoaded = SignalCore<void(ForwardRange<const Melosic::Plugin::Info>)>;
+}
 }
 
 namespace Plugin {
@@ -44,7 +50,8 @@ public:
 
     void loadPlugins(Core::Kernel& kernel);
 
-    MELOSIC_EXPORT ForwardRange<const Info> getPlugins() const;
+    ForwardRange<const Info> getPlugins() const;
+    Signals::Plugin::PluginsLoaded& getPluginsLoadedSignal() const;
 
 private:
     explicit Manager(Config::Manager& confman);

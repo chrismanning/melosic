@@ -21,10 +21,8 @@ using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <unordered_map>
 
-#include <boost/thread/synchronized_value.hpp>
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-#include <boost/range/iterator_range.hpp>
 #include <boost/functional/hash.hpp>
 
 #include <melosic/core/audiofile.hpp>
@@ -54,7 +52,7 @@ FileCache::~FileCache() {}
 optional<Core::AudioFile> FileCache::getFile(const fs::path& p_, boost::system::error_code& ec) const {
     unique_lock l(pimpl->mu);
 
-    fs::path p{fs::system_complete(p_, ec)};
+    fs::path p{fs::canonical(p_, ec)};
     if(!fs::exists(p) || fs::is_other(p) || fs::is_directory(p)) {
         pimpl->fileDB.erase(p);
         return nullopt;

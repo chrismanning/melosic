@@ -99,13 +99,13 @@ std::future<bool> Manager::initialiseAudioFile(Core::AudioFile& af) const {
         t.setTags(tags);
         auto pcm_src = openTrack(t);
         if(pcm_src) {
-            t.setTimePoints(pcm_src->duration());
+            t.setEnd(pcm_src->duration());
             t.setAudioSpecs(pcm_src->getAudioSpecs());
         }
         else {
             auto ap = taglib_file.audioProperties();
             t.setAudioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
-            t.setTimePoints(chrono::seconds{ap->length()});
+            t.setEnd(chrono::seconds{ap->length()});
         }
         af.tracks()->push_back(t);
         return true;
@@ -116,7 +116,8 @@ std::vector<Core::Track> Manager::openPath(boost::filesystem::path p) const {
     auto af = getFile(std::move(p));
     assert(af);
     auto fut = initialiseAudioFile(*af);
-    fut.wait();
+    if(!fut.get())
+        return {};
     return af->tracks().get();
 }
 

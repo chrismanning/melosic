@@ -29,6 +29,10 @@
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/optional_fwd.hpp>
 
+namespace bson {
+class BSONObj;
+}
+
 namespace Melosic {
 
 struct AudioSpecs;
@@ -56,9 +60,9 @@ namespace Core {
 
 class MELOSIC_EXPORT Track final {
     friend class Decoder::Manager;
-    friend struct AudioFile;
     void setAudioSpecs(AudioSpecs);
-    void setTimePoints(chrono::milliseconds end, chrono::milliseconds start = 0ms);
+    void setStart(chrono::milliseconds start);
+    void setEnd(chrono::milliseconds end);
     explicit Track(boost::filesystem::path filename,
                    chrono::milliseconds end = 0ms,
                    chrono::milliseconds start = 0ms);
@@ -69,6 +73,8 @@ public:
     bool operator==(const Track&) const noexcept;
     bool operator!=(const Track&) const noexcept;
 
+    chrono::milliseconds getStart() const;
+    chrono::milliseconds getEnd() const;
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs getAudioSpecs() const;
     const boost::filesystem::path& filePath() const;
@@ -82,6 +88,7 @@ public:
     bool tagsReadable() const;
 
     Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
+    bson::BSONObj bson() const;
 
 private:
     class impl;

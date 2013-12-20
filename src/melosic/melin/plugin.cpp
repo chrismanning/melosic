@@ -62,18 +62,21 @@ namespace fs = boost::filesystem;
 #include <boost/variant.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/configvar.hpp>
-#include <melosic/common/signal_core.hpp>
+#include <melosic/common/signal.hpp>
 
 #include "plugin.hpp"
 
 namespace Melosic {
 namespace Plugin {
+
+struct PluginsLoaded : Signals::Signal<Signals::Plugin::PluginsLoaded> {};
 
 class Plugin {
 public:
@@ -96,7 +99,6 @@ public:
                                   ErrorTag::Plugin::Info(info));
         }
         destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
-        LOG(logject) << "Plugin loaded: " << info;
     }
 
     Plugin(const Plugin&) = delete;
@@ -159,11 +161,9 @@ private:
     destroyPlugin_T destroyPlugin_;
     std::list<std::function<void()>> regFuns;
     DLHandle handle;
-    static Logger::Logger logject;
     Core::Kernel& kernel;
     Info info;
 };
-Logger::Logger Plugin::logject(logging::keywords::channel = "Plugin");
 
 class Manager::impl {
 public:
@@ -192,21 +192,22 @@ public:
     }
 
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+        using std::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
             if(key == "search paths") {
                 searchPaths.clear();
-                for(auto& path : boost::get<std::vector<Config::VarType>>(val))
-                    searchPaths.emplace_back(boost::get<std::string>(path));
+                for(auto& path : get<std::vector<Config::VarType>>(val))
+                    searchPaths.emplace_back(get<std::string>(path));
                 if(searchPaths.empty()) {
-                    for(auto& path : boost::get<std::vector<Config::VarType>>(conf.getNode("search paths")->second))
-                        searchPaths.emplace_back(boost::get<std::string>(path));
+                    for(auto& path : get<std::vector<Config::VarType>>(conf.getNode("search paths")->second))
+                        searchPaths.emplace_back(get<std::string>(path));
                 }
             }
             else if(key == "blacklist") {
                 blackList.clear();
-                for(auto& path : boost::get<std::vector<Config::VarType>>(val))
-                    blackList.push_back(boost::get<std::string>(path));
+                for(auto& path : get<std::vector<Config::VarType>>(val))
+                    blackList.push_back(get<std::string>(path));
             }
             else
                 ERROR_LOG(logject) << "Config: Unknown key: " << key;
@@ -243,10 +244,15 @@ public:
                                   ErrorTag::FilePath(filename) <<
                                   ErrorTag::Plugin::Msg("plugin already loaded"));
 
-        loadedPlugins.emplace(filename, Plugin(filepath, kernel));
+        auto info = loadedPlugins.emplace(filename, Plugin(filepath, kernel)).first->second.getInfo();
+        LOG(logject) << "Plugin loaded: " << info;
     }
 
     void loadPlugins(Core::Kernel& kernel) {
+        BOOST_SCOPE_EXIT_ALL(&) {
+            pluginsLoaded(getPlugins());
+        };
+
         TRACE_LOG(logject) << "Loading plugins...";
         std::regex filter{boost::algorithm::join(blackList, "|")};
         for(const fs::path& dir : searchPaths) {
@@ -293,6 +299,7 @@ private:
     std::list<std::string> blackList;
     friend class Manager;
     friend struct RegisterFuncsInserter;
+    PluginsLoaded pluginsLoaded;
 };
 
 Manager::Manager(Config::Manager& confman) : pimpl(new impl(confman)) {}
@@ -305,6 +312,10 @@ void Manager::loadPlugins(Core::Kernel& kernel) {
 
 ForwardRange<const Info> Manager::getPlugins() const {
     return pimpl->getPlugins();
+}
+
+Signals::Plugin::PluginsLoaded& Manager::getPluginsLoadedSignal() const {
+    return pimpl->pluginsLoaded;
 }
 
 } // namespace Plugin
