@@ -10,5 +10,7 @@
         <file>naturalsort.js</file>
         <file>secstomins.js</file>
         <file>tooltip.qml</file>
+        <file>filterview.qml</file>
+        <file>selectorview.qml</file>
     </qresource>
 </RCC>

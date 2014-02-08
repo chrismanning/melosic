@@ -52,11 +52,11 @@ ListView {
             contextMenu: root.contextMenu
 
             doubleClickAction: function(data) {
-                playerControls.stop()
+                PlayerControls.stop()
                 playlistManagerModel.currentPlaylistModel = playlistModel
                 console.debug("item in current playlist; jumping & playing")
-                playerControls.jumpTo(data.index)
-                playerControls.play()
+                PlayerControls.jumpTo(data.index)
+                PlayerControls.play()
             }
 
             category: Category {

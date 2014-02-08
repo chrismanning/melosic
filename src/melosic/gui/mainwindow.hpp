@@ -25,6 +25,8 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/connection.hpp>
 
+#include "librarymanager.hpp"
+
 class QQmlEngine;
 class QQmlContext;
 class QQmlComponent;
@@ -45,6 +47,9 @@ class PlayerControls;
 namespace Output {
 enum class DeviceState;
 }
+namespace Library {
+class Manager;
+}
 
 class PlaylistManagerModel;
 
@@ -53,11 +58,14 @@ public:
     explicit MainWindow(Core::Kernel& kernel, Core::Player& player);
     ~MainWindow();
     void onStateChangeSlot(Output::DeviceState state);
+    void scanEndedSlot();
 
 private:
+    Library::Manager& libman;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     QScopedPointer<PlayerControls> playerControls;
+    QScopedPointer<LibraryManager> qmllibman;
 
     QScopedPointer<QQmlEngine> engine;
     QScopedPointer<QQmlComponent> component;

@@ -1,10 +1,12 @@
 import QtQuick 2.2
 import QtQuick.Dialogs 1.1
 import QtQuick.Controls 1.1
+import QtQuick.Controls.Private 1.0
 import QtQuick.Layouts 1.1
 import QtQuick.Window 2.1
 
 import Melosic.Playlist 1.0
+import Melosic.Browser 1.0
 
 import "secstomins.js" as SecsToMins
 
@@ -71,7 +73,7 @@ ApplicationWindow {
         shortcut: StandardKey.Quit
         iconName: "application-exit"
         onTriggered: {
-            playerControls.stop()
+            PlayerControls.stop()
             Qt.quit()
         }
     }
@@ -98,42 +100,42 @@ ApplicationWindow {
         id: playAction
         text: "Play"
         iconName: "media-playback-start"
-        onTriggered: playerControls.play()
+        onTriggered: PlayerControls.play()
     }
     Action {
         id: pauseAction
         text: "Pause"
         iconName: "media-playback-pause"
-        onTriggered: playerControls.pause()
+        onTriggered: PlayerControls.pause()
     }
     Action {
         id: previousAction
         text: "Previous"
         iconName: "media-skip-backward"
-        onTriggered: playerControls.previous()
+        onTriggered: PlayerControls.previous()
     }
     Action {
         id: nextAction
         text: "Next"
         iconName: "media-skip-forward"
-        onTriggered: playerControls.next()
+        onTriggered: PlayerControls.next()
     }
     Action {
         id: stopAction
         text: "Stop"
         iconName: "media-playback-stop"
-        onTriggered: playerControls.stop()
+        onTriggered: PlayerControls.stop()
     }
     Action {
         id: jumpPlayAction
         text: "Jump to current and play"
         iconName: "go-jump"
         onTriggered: {
-            playerControls.stop()
+            PlayerControls.stop()
             playlistManagerModel.currentPlaylistModel = playlistManager.currentModel
             console.debug("item in current playlist; jumping & playing")
-            playerControls.jumpTo(playlistManager.currentPlaylist.currentIndex)
-            playerControls.play()
+            PlayerControls.jumpTo(playlistManager.currentPlaylist.currentIndex)
+            PlayerControls.play()
         }
     }
 
@@ -222,7 +224,7 @@ ApplicationWindow {
                 text: '[' + SecsToMins.secsToMins(playlistManagerModel.currentPlaylistModel.duration) + ']'
             }
             Label {
-                text: playerControls.stateStr
+                text: PlayerControls.stateStr
             }
         }
     }
@@ -273,6 +275,152 @@ ApplicationWindow {
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
+
+        FilterView {
+            Layout.minimumWidth: 100
+            Layout.alignment: Qt.AlignLeft
+
+            FilterPane {
+                id: genre
+                objectName: "genrepane"
+
+                Component.onCompleted: {
+                    query = {}
+                    paths = {
+                        genre: "metadata[?(@.key == 'genre')].value"
+                    }
+                }
+
+                header: "Genre"
+            }
+            FilterPane {
+                id: artist
+                dependsOn: genre
+                dependsPath: "$.genre"
+                objectName: "artistpane"
+
+                function init_query() {
+                    var tmp = {
+                        metadata: {
+                            $elemMatch: {
+                                key: "genre",
+                                value: {
+                                    $in: dependSelection
+                                }
+                            }
+                        }
+                    }
+                    if(dependSelection.length === 0)
+                        delete tmp.metadata.$elemMatch.value
+                    query = tmp
+                }
+
+                Component.onCompleted: {
+                    init_query()
+                    paths = {
+                        artist: "metadata[?(@.key == 'artist')].value"
+                    }
+                }
+                onDependSelectionChanged: init_query()
+            }
+            FilterPane {
+                id: album
+                dependsOn: artist
+                dependsPath: "$.artist"
+                objectName: "albumpane"
+
+                function init_query() {
+                    var tmp = {
+                        $and: [
+                            { metadata: { $elemMatch: { key: "artist", value: { $in: dependSelection } } } }
+                        ]
+                    }
+
+                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0) {
+                        if(dependsOn.query.$and !== undefined)
+                            tmp.$and = tmp.$and.concat(dependsOn.query.$and)
+                        else
+                            tmp.$and.push(dependsOn.query)
+                    }
+
+                    if(dependSelection.length === 0)
+                        tmp.$and.splice(0, 1)
+
+                    if(tmp.$and.length === 0)
+                        delete tmp.$and
+                    else if(tmp.$and.length === 1)
+                        tmp = tmp.$and[0]
+                    query = tmp
+                }
+
+                Component.onCompleted: {
+                    init_query()
+                    paths = {
+                        album: "metadata[?(@.key == 'album')].value",
+                        date: "metadata[?(@.key == 'date')].value"
+                    }
+                }
+                onDependSelectionChanged: init_query()
+            }
+            Connections {
+                target: album.dependsOn
+                onDependSelectionChanged: album.init_query()
+            }
+            FilterPane {
+                id: track
+                dependsOn: album
+                dependsPath: "$.album"
+                objectName: "trackpane"
+
+                function init_query() {
+                    var tmp = {
+                        $and: [
+                            { metadata: { $elemMatch: { key: "album", value: { $in: dependSelection } } } }
+                        ]
+                    }
+
+                    if(dependsOn && dependsOn.dependsOn !== undefined && dependsOn.dependsOn.dependSelection.length > 0) {
+                        if(dependsOn.dependsOn.query.$and !== undefined)
+                            tmp.$and = tmp.$and.concat(dependsOn.dependsOn.query.$and)
+                        else
+                            tmp.$and.push(dependsOn.dependsOn.query)
+                    }
+
+                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0) {
+                        if(dependsOn.query.$and !== undefined)
+                            tmp.$and = tmp.$and.concat(dependsOn.query.$and)
+                        else
+                            tmp.$and.push(dependsOn.query)
+                    }
+
+                    if(dependSelection.length === 0)
+                        tmp.$and.splice(0, 1)
+
+                    if(tmp.$and.length === 0)
+                        delete tmp.$and
+                    else if(tmp.$and.length === 1)
+                        tmp = tmp.$and[0]
+                    query = tmp
+                }
+
+                Component.onCompleted: {
+                    init_query()
+                    paths = {
+                        title: "metadata[?(@.key == 'title')].value",
+                        tracknumber: "metadata[?(@.key == 'tracknumber')].value"
+                    }
+                }
+                onDependSelectionChanged: init_query()
+            }
+            Connections {
+                target: track.dependsOn
+                onDependSelectionChanged: track.init_query()
+            }
+            Connections {
+                target: track.dependsOn.dependsOn
+                onDependSelectionChanged: track.init_query()
+            }
+        }
 
         PlaylistChooser {
             id: playlistChooser

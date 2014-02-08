@@ -25,13 +25,11 @@
 #include <boost/locale/collator.hpp>
 #include <boost/thread/synchronized_value.hpp>
 
+#include <jbson/document_fwd.hpp>
+
 #include <melosic/common/common.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/optional_fwd.hpp>
-
-namespace bson {
-class BSONObj;
-}
 
 namespace Melosic {
 
@@ -88,7 +86,7 @@ public:
     bool tagsReadable() const;
 
     Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
-    bson::BSONObj bson() const;
+    jbson::document bson() const;
 
 private:
     class impl;

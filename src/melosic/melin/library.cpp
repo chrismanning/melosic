@@ -23,8 +23,11 @@ namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
 #include <boost/functional/hash.hpp>
 
-#include <ejpp/ejdb.hpp>
-#include <bson/bson.h>
+#include <jbson/builder.hpp>
+#include <jbson/json_writer.hpp>
+#include <jbson/json_reader.hpp>
+#include <jbson/path.hpp>
+using namespace jbson::literal;
 
 #include <melosic/melin/config.hpp>
 #include <melosic/common/directories.hpp>
@@ -58,34 +61,6 @@ struct Manager::impl {
     void loadedSlot(boost::synchronized_value<Config::Conf>& ubase);
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val);
 
-    optional<Core::AudioFile> getFile(const fs::path& p_, std::error_code& ec) {
-        auto file_coll = db.create_collection("files", ec);
-        if(ec)
-            return nullopt;
-
-        fs::path p{fs::canonical(p_ /*, ec*/)};
-        if(!fs::exists(p) || fs::is_other(p) || fs::is_directory(p)) {
-            ec = std::make_error_code(std::errc::no_such_file_or_directory);
-            return nullopt;
-        }
-        ejdb::query q = db.create_query(BSON("path" << p.generic_string()), ec);
-        if(ec)
-            return nullopt;
-        auto results = file_coll.execute_query(q);
-        if(results.empty())
-            return nullopt;
-
-        assert(results.size() == 1);
-        auto file_obj = results.front();
-
-        Core::AudioFile af;
-        file_obj >> af;
-        if(!af.pimpl)
-            return nullopt;
-
-        return af;
-    }
-
     void scan();
     void scan(const fs::path& dir);
 
@@ -111,13 +86,13 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman) : decman
     db.open((DataDir / "medialibrary").c_str(),
             ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create | ejdb::db_mode::trans_sync, ec);
 
-    TRACE_LOG(logject) << "db metadata:" << db.metadata();
+    //    TRACE_LOG(logject) << "db metadata:" << db.metadata();
 
     confman.getLoadedSignal().connect(&impl::loadedSlot, this);
 }
 
 void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
-//    unique_lock l(mu);
+    //    unique_lock l(mu);
     TRACE_LOG(logject) << "Library conf loaded";
 
     auto base = ubase.synchronize();
@@ -131,7 +106,7 @@ void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
     c->addDefaultFunc([=]() { return conf; });
     c->iterateNodes([&](const std::tuple<Config::KeyType, Config::VarType>& pair) {
         using std::get;
-//        scope_unlock_exit_lock<decltype(l)> rl{l};
+        //        scope_unlock_exit_lock<decltype(l)> rl{l};
         TRACE_LOG(logject) << "Config: variable loaded: " << get<0>(pair);
         variableUpdateSlot(get<0>(pair), get<1>(pair));
     });
@@ -140,11 +115,12 @@ void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
 
 void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
     using std::get;
-//    unique_lock l(mu);
+    //    unique_lock l(mu);
     TRACE_LOG(logject) << "Config: variable updated: " << key;
     try {
         if(key == "directories") {
             auto tmp_dirs = get<std::vector<Config::VarType>>(val);
+            scanStarted();
             auto dirs = m_dirs.synchronize();
             for(auto&& dir : tmp_dirs) {
                 auto p = get<std::string>(dir);
@@ -154,6 +130,7 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
                 if(get<1>(ret))
                     scan(p);
             }
+            scanEnded();
         }
     }
     catch(boost::bad_get&) {
@@ -164,11 +141,13 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
 void Manager::impl::scan() {
     if(!pluginsLoaded)
         return;
+    scanStarted();
     m_dirs([this](auto&& dirs) {
         for(auto&& dir : dirs) {
             scan(dir);
         }
     });
+    scanEnded();
 }
 
 void Manager::impl::scan(const fs::path& dir) {
@@ -180,8 +159,10 @@ void Manager::impl::scan(const fs::path& dir) {
     auto coll = db.create_collection("tracks", ec);
 
     // remove all tracks in current prefix
-    auto qobj = BSON("$dropall" << true);
-    DEBUG_LOG(logject) << "query: " << qobj;
+    auto qobj = jbson::document(jbson::builder("$dropall", jbson::element_type::boolean_element, true));
+    auto qstr = std::string{};
+    write_json(qobj, std::back_inserter(qstr));
+    DEBUG_LOG(logject) << "query: " << qstr;
     auto qry = db.create_query(qobj, ec);
     if(ec) {
         ERROR_LOG(logject) << "query creation error: " << ec.message();
@@ -194,7 +175,6 @@ void Manager::impl::scan(const fs::path& dir) {
         ERROR_LOG(logject) << "collection sync error: " << ec.message();
         return;
     }
-//    return;
 
     auto range = boost::make_iterator_range(fs::recursive_directory_iterator{dir}, {});
 
@@ -203,13 +183,14 @@ void Manager::impl::scan(const fs::path& dir) {
         if(!fs::is_regular_file(p))
             continue;
         TRACE_LOG(logject) << p;
-        auto tracks = std::move(decman.openPath(p));
+        auto tracks = decman.openPath(p);
         if(tracks.empty())
             continue;
-        coll.save_document(tracks.front().bson(), ec);
-        if(ec) {
-            ERROR_LOG(logject) << "document save error: " << ec.message();
-            return;
+        for(const auto& t : tracks) {
+            coll.save_document(t.bson(), ec);
+            if(ec) {
+                ERROR_LOG(logject) << "document save error: " << ec.message();
+            }
         }
     }
     r = coll.sync(ec);
@@ -223,14 +204,6 @@ void Manager::impl::scan(const fs::path& dir) {
         return;
     }
     TRACE_LOG(logject) << dir << " scanned";
-//    auto qryall = db.create_query(BSON("path" << BSON("$begin" << dir.generic_string())), ec);
-    auto all = coll.get_all();
-    for(auto&& rec : all) {
-        TRACE_LOG(logject) << rec;
-    }
-
-//    coll.set_index("path", 1 << 1);
-//    coll.set_index("path", 1 << 7);
 }
 
 void Manager::impl::incremental_scan() {
@@ -261,10 +234,70 @@ Manager::~Manager() {}
 const boost::synchronized_value<Manager::SetType>& Manager::getDirectories() const { return pimpl->m_dirs; }
 
 void Manager::scan() {
-    pimpl->scanStarted();
-//    unique_lock l(pimpl->mu);
-//    l.unlock();
-    pimpl->scanEnded();
+    //    pimpl->scanStarted();
+    //    unique_lock l(pimpl->mu);
+    //    l.unlock();
+    //    pimpl->scanEnded();
+}
+
+ejdb::ejdb& Manager::getDataBase() const { return pimpl->db; }
+
+std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
+    std::error_code ec;
+    ejdb::query q;
+    try {
+        q = pimpl->db.create_query(qdoc, ec);
+    }
+    catch(...) {
+        return {};
+    }
+
+    auto coll = pimpl->db.create_collection("tracks", ec);
+    if(ec)
+        return {};
+
+    return coll.execute_query(q);
+}
+
+std::vector<jbson::element> Manager::query(const jbson::document& q, boost::string_ref json_path) const {
+    std::vector<jbson::element> vec;
+    auto docs = query(q);
+    if(json_path.empty() || (json_path.size() == 1 && json_path.front() == '$')) {
+        for(auto&& doc : docs)
+            for(auto&& e : doc)
+                vec.emplace_back(e);
+        return std::move(vec);
+    }
+    for(auto&& doc : docs)
+        for(auto&& e : jbson::path_select(doc, json_path))
+            vec.emplace_back(e);
+    return std::move(vec);
+}
+
+std::vector<jbson::document_set>
+Manager::query(const jbson::document& q,
+               ForwardRange<const std::tuple<std::string, std::string>> paths) const {
+    using std::get;
+    std::vector<jbson::document_set> res;
+    for(auto&& doc : query(q)) {
+        jbson::document_set set;
+        for(auto&& named_path : paths) {
+            for(auto&& e : jbson::path_select(doc, get<1>(named_path))) {
+                e.name(get<0>(named_path));
+                assert(e.name() == get<0>(named_path));
+                set.emplace(e);
+            }
+        }
+        res.emplace_back(std::move(set));
+    }
+    return std::move(res);
+}
+
+std::vector<jbson::document_set>
+Manager::query(const jbson::document& q,
+               std::initializer_list<std::tuple<std::string, std::string>> paths) const {
+    const auto p = ForwardRange<const std::tuple<std::string, std::string>>(paths);
+    return query(q, p);
 }
 
 Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return pimpl->scanStarted; }

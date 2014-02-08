@@ -15,7 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <array>
 #include <thread>
 #include <mutex>
 namespace this_thread = std::this_thread;

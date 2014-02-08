@@ -25,10 +25,7 @@ namespace chrono = std::chrono;
 #include <boost/filesystem/path.hpp>
 #include <boost/thread/synchronized_value.hpp>
 
-namespace bson {
-class BSONObjBuilder;
-class BSONObj;
-}
+#include <jbson/document_fwd.hpp>
 
 namespace Melosic {
 namespace Decoder {
@@ -65,15 +62,10 @@ private:
     explicit AudioFile(const boost::filesystem::path&);
     friend class FileCache;
     friend class Library::Manager;
-    friend bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder&, const AudioFile&);
-    friend bson::BSONObj& operator>>(bson::BSONObj&, AudioFile&);
 
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
-
-bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder&, const AudioFile&);
-bson::BSONObj& operator>>(bson::BSONObj&, AudioFile&);
 
 } // namespace Core
 } // namespace Melosic

@@ -23,7 +23,7 @@
 
 #include <QAbstractListModel>
 
-#include <boost/bimap.hpp>
+#include <boost/bimap/bimap.hpp>
 #include <boost/bimap/unordered_set_of.hpp>
 
 #include <melosic/melin/logging.hpp>
@@ -45,8 +45,8 @@ class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
     Thread::Manager& tman;
-    boost::bimap<boost::bimaps::unordered_set_of<Core::Playlist>,
-                 boost::bimaps::unordered_set_of<PlaylistModel*>> playlists;
+    boost::bimaps::bimap<boost::bimaps::unordered_set_of<Core::Playlist>,
+                         boost::bimaps::unordered_set_of<PlaylistModel*>> playlists;
     std::list<Signals::ScopedConnection> conns;
     Logger::Logger logject;
     mutable std::mutex mu;

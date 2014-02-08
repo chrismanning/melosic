@@ -24,6 +24,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/functional/hash.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <melosic/core/audiofile.hpp>
 #include <melosic/common/optional.hpp>

@@ -35,16 +35,16 @@ template <typename T>
 using TypeIndex = typename boost::mpl::index_of<VarType::types, T>::type;
 
 template <typename U>
-const U& get_impl(const VarType& operand) {
+U get_impl(const VarType& operand) {
     switch(operand.which()) {
         case TypeIndex<int32_t>::value:
-            return static_cast<const U&>(boost::get<int32_t>(operand));
+            return static_cast<U>(boost::get<int32_t>(operand));
         case TypeIndex<uint32_t>::value:
-            return static_cast<const U&>(boost::get<uint32_t>(operand));
+            return static_cast<U>(boost::get<uint32_t>(operand));
         case TypeIndex<int64_t>::value:
-            return static_cast<const U&>(boost::get<int64_t>(operand));
+            return static_cast<U>(boost::get<int64_t>(operand));
         case TypeIndex<uint64_t>::value:
-            return static_cast<const U&>(boost::get<uint64_t>(operand));
+            return static_cast<U>(boost::get<uint64_t>(operand));
         default:
             BOOST_THROW_EXCEPTION(boost::bad_get());
     }
@@ -58,7 +58,7 @@ U get(VarType& operand) {
 }
 
 template<typename U, class = typename std::enable_if<std::is_integral<U>::value && !std::is_same<U, bool>::value>::type>
-const U& get(const VarType& operand) {
+U get(const VarType& operand) {
     return get_impl<U>(operand);
 }
 

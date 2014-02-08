@@ -20,5 +20,5 @@
     ignore = dirty
 [submodule "extern/ejpp"]
 	path = extern/ejpp
-	url = git@github.com:chrismanning/ejpp.git
+	url = https://github.com/chrismanning/ejpp.git
     ignore = dirty

@@ -92,6 +92,8 @@ Category* CategoryProxyModel::category() const {
 void CategoryProxyModel::setCategory(Category* c) {
     unique_lock l(pimpl->mu);
     pimpl->m_category = c;
+    if(c == nullptr)
+        return;
     if(!c->model())
         c->setModel(this);
     else

@@ -17,8 +17,7 @@
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-
-#include <bson/bson.h>
+#include <boost/range/iterator_range.hpp>
 
 #include <melosic/core/track.hpp>
 
@@ -58,25 +57,6 @@ boost::synchronized_value<std::vector<Track>>& AudioFile::tracks() {
 
 const boost::synchronized_value<std::vector<Track>>& AudioFile::tracks() const {
     return pimpl->m_tracks;
-}
-
-bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder& ob, const AudioFile& af) {
-    ob << "path" << af.pimpl->m_path.string();
-    return ob;
-}
-
-bson::BSONObj& operator>>(bson::BSONObj& o, AudioFile& af) {
-    if(!o.hasField("path"))
-        return o;
-    fs::path p = o.getStringField("path");
-    if(af.pimpl)
-        af.pimpl->m_path.swap(p);
-    else
-        af.pimpl = std::make_shared<AudioFile::impl>(p);
-
-    if(!o.hasField("tracks"))
-        return o;
-    return o;
 }
 
 } // namespace Core

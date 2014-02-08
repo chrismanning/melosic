@@ -23,6 +23,7 @@
 #include <QQuickWindow>
 #include <QApplication>
 #include <QVector>
+#include <QItemSelectionModel>
 
 #include <boost/log/sinks/sync_frontend.hpp>
 
@@ -36,6 +37,11 @@
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/optional.hpp>
+#include <melosic/melin/library.hpp>
+
+#include <jbson/json_writer.hpp>
+#include <jbson/builder.hpp>
+#include <jbson/json_reader.hpp>
 
 #include "mainwindow.hpp"
 #include "playlistmodel.hpp"
@@ -45,13 +51,18 @@
 #include "category.hpp"
 #include "categorytag.hpp"
 #include "quicklogbackend.hpp"
+#include "filterpane.hpp"
+#include "jsondocmodel.hpp"
 
 static Melosic::Config::Conf conf{"QML"};
-static bool enable_logging{false};
+static bool enable_logging{true};
 
 namespace Melosic {
 
+using namespace jbson::literal;
+
 MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
+    libman(kernel.getLibraryManager()),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
@@ -62,11 +73,13 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 
     playerControls.reset(new PlayerControls(kernel, player));
 
+    qmllibman.reset(new LibraryManager(libman));
+
     //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterType<QAbstractItemModel>();
+    qmlRegisterType<QItemSelectionModel>();
     qmlRegisterType<PlaylistModel>();
-    qmlRegisterUncreatableType<PlayerControls>("Melosic.Playlist", 1, 0, "PlayerControls", "singleton");
     qmlRegisterType<QuickLogBackend>();
     qRegisterMetaType<QVector<int>>();
     qmlRegisterType<CategoryProxyModel>("Melosic.Playlist", 1, 0, "CategoryProxyModel");
@@ -75,6 +88,8 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     qmlRegisterType<Category>("Melosic.Playlist", 1, 0, "Category");
     qmlRegisterType<CategoryTag>("Melosic.Playlist", 1, 0, "CategoryTag");
     qmlRegisterType<TagBinding>("Melosic.Playlist", 1, 0, "TagBinding");
+    qmlRegisterType<FilterPane>("Melosic.Browser", 1, 0, "FilterPane");
+    qmlRegisterUncreatableType<SelectionModel>("Melosic.Browser", 1, 0, "SelectionModel", "C++ only");
 
     if(::enable_logging) {
         auto sink = boost::make_shared<logging::sinks::synchronous_sink<QuickLogBackend>>();
@@ -84,7 +99,8 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     engine->rootContext()->setContextProperty("enable_logging", ::enable_logging);
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
-    engine->rootContext()->setContextProperty("playerControls", playerControls.data());
+    engine->rootContext()->setContextProperty("PlayerControls", playerControls.data());
+    engine->rootContext()->setContextProperty("LibraryManager", qmllibman.data());
     engine->addImportPath("qrc:/");
     engine->addImportPath("qrc:/qml");
 
@@ -112,7 +128,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 }
 
 MainWindow::~MainWindow() {
-    TRACE_LOG(logject) << "Destroying main window";
+//    TRACE_LOG(logject) << "Destroying main window";
 }
 
 void MainWindow::onStateChangeSlot(Output::DeviceState /*state*/) {
@@ -131,6 +147,10 @@ void MainWindow::onStateChangeSlot(Output::DeviceState /*state*/) {
 //        default:
 //            break;
 //    }
+}
+
+void MainWindow::scanEndedSlot() {
+
 }
 
 } // namespace Melosic

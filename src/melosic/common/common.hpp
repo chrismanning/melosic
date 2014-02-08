@@ -30,27 +30,27 @@ using namespace std::literals;
 #ifdef _WIN32
 #   define MELOSIC_LOCAL
 #   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT __declspec(dllexport)
+#       define MELOSIC_EXPORT [[gnu::dllexport]]
 #   else
-#       define MELOSIC_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT [[gnu::dllimport]]
 #   endif
 #   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT __declspec(dllexport)
+#       define MELOSIC_EXPORT [[gnu::dllexport]]
 #   else
-#       define MELOSIC_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT [[gnu::dllimport]]
 #   endif
 #   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT __declspec(dllexport)
+#       define MELOSIC_EXPORT [[gnu::dllexport]]
 #   else
-#       define MELOSIC_EXPORT __declspec(dllimport)
+#       define MELOSIC_EXPORT [[gnu::dllimport]]
 #   endif
 #elif __GNUC__ >= 4
 #   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT __attribute__((visibility ("default")))
+#       define MELOSIC_EXPORT [[gnu::visibility("default")]]
 #   else
 #       define MELOSIC_EXPORT
 #   endif
-#   define MELOSIC_LOCAL __attribute__((visibility ("hidden")))
+#   define MELOSIC_LOCAL [[gnu::visibility("hidden")]]
 #else
 #   define MELOSIC_EXPORT
 #   define MELOSIC_LOCAL

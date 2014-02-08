@@ -20,13 +20,18 @@
 
 #include <memory>
 #include <unordered_set>
+#include <unordered_map>
 
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash_fwd.hpp>
 #include <boost/thread/synchronized_value.hpp>
 
+#include <ejpp/ejdb.hpp>
+
 #include <melosic/common/optional_fwd.hpp>
 #include <melosic/common/signal_fwd.hpp>
+#include <melosic/common/common.hpp>
+#include <melosic/common/range.hpp>
 
 namespace Melosic {
 
@@ -63,11 +68,25 @@ public:
 
     ~Manager();
 
-    const boost::synchronized_value<SetType>& getDirectories() const;
+    MELOSIC_EXPORT const boost::synchronized_value<SetType>& getDirectories() const;
     void scan();
 
-    Signals::Library::ScanStarted& getScanStartedSignal() noexcept;
-    Signals::Library::ScanEnded& getScanEndedSignal() noexcept;
+    MELOSIC_EXPORT ejdb::ejdb& getDataBase() const;
+
+    MELOSIC_EXPORT
+    std::vector<jbson::document> query(const jbson::document&) const;
+    MELOSIC_EXPORT
+    std::vector<jbson::element>
+    query(const jbson::document&, boost::string_ref) const;
+
+    MELOSIC_EXPORT std::vector<jbson::document_set>
+    query(const jbson::document&, ForwardRange<const std::tuple<std::string, std::string>>) const;
+
+    MELOSIC_EXPORT std::vector<jbson::document_set>
+    query(const jbson::document&, std::initializer_list<std::tuple<std::string, std::string>>) const;
+
+    MELOSIC_EXPORT Signals::Library::ScanStarted& getScanStartedSignal() noexcept;
+    MELOSIC_EXPORT Signals::Library::ScanEnded& getScanEndedSignal() noexcept;
 
 private:
     struct impl;

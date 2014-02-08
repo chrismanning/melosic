@@ -84,15 +84,17 @@ optional<Core::AudioFile> Manager::getFile(boost::filesystem::path p) const {
 }
 
 std::future<bool> Manager::initialiseAudioFile(Core::AudioFile& af) const {
-    return pimpl->tman.enqueue([af, this] () mutable {
+    return pimpl->tman.enqueue([&af, this] () mutable {
         FileRef taglib_file{af.filePath().c_str()};
         if(taglib_file.isNull())
             return false;
-        if(/*is playlist or cue*/taglib_file.tag()->properties().contains("CUEFILE"))
+        assert(taglib_file.tag() != nullptr);
+        auto taglib_tags = taglib_file.tag()->properties();
+        if(/*is playlist or cue*/taglib_tags.contains("CUEFILE"))
             return false;
         Core::Track t{af.filePath()};
         Core::TagMap tags;
-        for(const auto& tag : taglib_file.tag()->properties()) {
+        for(const auto& tag : taglib_tags) {
             for(const auto& v : tag.second)
                 tags.emplace(tag.first.to8Bit(), v.to8Bit());
         }
@@ -115,9 +117,11 @@ std::future<bool> Manager::initialiseAudioFile(Core::AudioFile& af) const {
 std::vector<Core::Track> Manager::openPath(boost::filesystem::path p) const {
     auto af = getFile(std::move(p));
     assert(af);
-    auto fut = initialiseAudioFile(*af);
-    if(!fut.get())
-        return {};
+    if(af->trackCount() == 0) {
+        auto fut = initialiseAudioFile(*af);
+        if(!fut.get())
+            return {};
+    }
     return af->tracks().get();
 }
 

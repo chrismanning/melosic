@@ -35,7 +35,7 @@ namespace Melosic {
 
 namespace Logger {
 
-enum MELOSIC_EXPORT class Severity {
+enum class Severity {
     info,
     warning,
     error,

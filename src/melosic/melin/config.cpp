@@ -134,14 +134,15 @@ struct Manager::impl {
         assert(ifs.good());
 
         ifs.seekg(0, std::ios::end);
-        char confstring[static_cast<std::streamoff>(ifs.tellg())+1];
+        auto confstring = std::vector<char>{};
+        confstring.resize(static_cast<std::streamoff>(ifs.tellg())+1);
         ifs.seekg(0, std::ios::beg);
-        ifs.read(confstring, sizeof(confstring)-1);
+        ifs.read(confstring.data(), confstring.size()-1);
         ifs.close();
-        confstring[sizeof(confstring)-1] = 0;
+        confstring.back() = 0;
 
         json::Document rootjson;
-        rootjson.ParseInsitu<0>(confstring);
+        rootjson.ParseInsitu<0>(confstring.data());
 
         if(!rootjson.HasParseError()) {
             Conf tmp_conf = std::move(ConfFromJson(rootjson, "root"s));

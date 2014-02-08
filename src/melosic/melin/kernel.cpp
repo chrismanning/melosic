@@ -107,6 +107,10 @@ Melosic::Playlist::Manager& Kernel::getPlaylistManager() {
     return pimpl->playlistman;
 }
 
+Library::Manager& Kernel::getLibraryManager() {
+    return pimpl->libman;
+}
+
 boost::asio::io_service& Kernel::getIOService() {
     return pimpl->io_service;
 }

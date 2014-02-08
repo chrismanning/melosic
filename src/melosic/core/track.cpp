@@ -27,12 +27,14 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/locale/collator.hpp>
 #include <boost/thread/synchronized_value.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <taglib/tpropertymap.h>
 #include <taglib/tfile.h>
 #include <taglib/fileref.h>
 
-#include <bson/bson.h>
+#include <jbson/document.hpp>
+#include <jbson/builder.hpp>
 
 #include "track.hpp"
 #include <melosic/common/common.hpp>
@@ -105,7 +107,6 @@ class Track::impl {
 
   private:
     friend class Track;
-    friend bson::BSONObjBuilder& operator<<(bson::BSONObjBuilder& ob, const Track& t);
     boost::filesystem::path filepath;
     chrono::milliseconds start, end;
     boost::synchronized_value<TagMap> m_tags;
@@ -199,24 +200,27 @@ optional<std::string> Track::format_string(const std::string& fmt_str) const {
 
 Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept { return pimpl->tagsChanged; }
 
-bson::BSONObj Track::bson() const {
+jbson::document Track::bson() const {
     using std::get;
+    using jbson::element_type;
 
-    bson::BSONObjBuilder ob;
-    ob << "type" << "track";
-    ob << "path" << filePath().generic_string();
-    AudioSpecs as = pimpl->as;
-    ob << "channels" << as.channels;
-    ob << "sample rate" << as.sample_rate;
-    auto arr = pimpl->m_tags([] (auto&& metadata) {
-        bson::BSONArrayBuilder arb;
+    jbson::builder ob;
+    ob("type", element_type::string_element, "track")
+    ("path", element_type::string_element, filePath().generic_string())(
+        "channels", element_type::int32_element, pimpl->as.channels)("sample rate", element_type::int32_element,
+                                                                     pimpl->as.sample_rate);
+    auto arr = pimpl->m_tags([](auto&& metadata) {
+        jbson::builder arb;
+        size_t i = 0;
         for(auto&& pair : metadata)
-            arb << BSON("key" << get<0>(pair) << "value" << get<1>(pair));
-        return arb.arr();
+            arb(std::to_string(i++), jbson::element_type::document_element,
+                jbson::builder("key", element_type::string_element, boost::to_lower_copy(get<0>(pair)))
+                              ("value", element_type::string_element, get<1>(pair)));
+        return std::move(arb);
     });
-    ob << "metadata" << arr;
+    ob("metadata", element_type::array_element, arr);
 
-    return ob.obj();
+    return ob;
 }
 
 optional<std::string> Track::impl::parse_format(std::string str, boost::system::error_code&) {
