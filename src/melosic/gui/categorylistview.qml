@@ -200,15 +200,11 @@ ScrollView {
                                 selected: rowitem.DelegateModel.inSelected
                                 hasFocus: rowitem.ListView.isCurrentItem
                             }
-                            Rectangle {
+                            StyleItem {
                                 anchors.fill: parent
-                                anchors.leftMargin: -1
-                                anchors.rightMargin: -1
                                 z: 2
+                                elementType: "focusrect"
                                 visible: rowitem.ListView.isCurrentItem
-                                border.width: 1
-                                border.color: palette.mid
-                                color: "transparent"
                             }
                         }
                     }
