@@ -15,7 +15,7 @@ Item {
     onCurrentModelChanged: {
         if(currentModel === playlistManagerModel.currentPlaylistModel)
             return
-        if(playerControls.state !== PlayerControls.Playing && playerControls.state !== PlayerControls.Paused)
+        if(PlayerControls.state !== PlayerControls.Playing && PlayerControls.state !== PlayerControls.Paused)
             playlistManagerModel.currentPlaylistModel = currentModel
     }
 
