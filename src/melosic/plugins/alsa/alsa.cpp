@@ -22,7 +22,7 @@
 #include <memory>
 
 #include <boost/variant.hpp>
-#include <boost/asio/posix/stream_descriptor.hpp>
+#include <asio/posix/stream_descriptor.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/melin/logging.hpp>
@@ -62,7 +62,7 @@ snd_pcm_uframes_t frames = 1024;
 bool resample = false;
 chrono::milliseconds buf_time_msecs{1000ms};
 
-struct alsa_category_ : boost::system::error_category {
+struct alsa_category_ : std::error_category {
     const char* name() const noexcept override {
         return "alsa";
     }
@@ -78,7 +78,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         m_asio_fd(service)
     {}
 
-    void assign(Output::DeviceName dev_name, boost::system::error_code& ec) noexcept override {
+    void assign(Output::DeviceName dev_name, std::error_code& ec) noexcept override {
         if(m_pdh != nullptr) {
             ec = {ASIO::error::already_open, ASIO::error::get_misc_category()};
             return;
@@ -88,19 +88,19 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     }
 
     void destroy() override {
-        boost::system::error_code ec;
+        std::error_code ec;
         if(m_pdh != nullptr)
             stop(ec);
         if(m_params != nullptr)
             snd_pcm_hw_params_free(m_params);
     }
 
-    void cancel(boost::system::error_code& ec) noexcept override {
+    void cancel(std::error_code& ec) noexcept override {
         if(m_asio_fd.is_open())
             m_asio_fd.cancel(ec);
     }
 
-    AudioSpecs prepare(const AudioSpecs as, boost::system::error_code& ec) noexcept override {
+    AudioSpecs prepare(const AudioSpecs as, std::error_code& ec) noexcept override {
         m_current_specs = as;
         m_state = Output::DeviceState::Error;
         if((m_pdh == nullptr) &&
@@ -169,7 +169,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
                     }
                 }
                 if(rp == formats.rend()) {
-                    ec = boost::system::errc::make_error_code(boost::system::errc::invalid_argument);
+                    ec = std::make_error_code(std::errc::invalid_argument);
                     return m_current_specs;
                 }
             }
@@ -259,7 +259,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         return m_current_specs;
     }
 
-    void play(boost::system::error_code& ec) noexcept override {
+    void play(std::error_code& ec) noexcept override {
         switch(m_state) {
             case Output::DeviceState::Stopped:
             case Output::DeviceState::Error:
@@ -281,7 +281,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         assert(!ec);
     }
 
-    void pause(boost::system::error_code& ec) noexcept override {
+    void pause(std::error_code& ec) noexcept override {
         if(m_state == Output::DeviceState::Playing) {
             if(snd_pcm_hw_params_can_pause(m_params)) {
                 if((ec = {snd_pcm_pause(m_pdh, true), alsa_category})) return;
@@ -299,7 +299,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         assert(!ec);
     }
 
-    void unpause(boost::system::error_code& ec) noexcept override {
+    void unpause(std::error_code& ec) noexcept override {
         if(snd_pcm_hw_params_can_pause(m_params)) {
             if((ec = {snd_pcm_pause(m_pdh, false), alsa_category})) return;
         }
@@ -311,7 +311,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         assert(!ec);
     }
 
-    void stop(boost::system::error_code& ec) noexcept override {
+    void stop(std::error_code& ec) noexcept override {
         if(m_state != Output::DeviceState::Stopped && m_state != Output::DeviceState::Error && m_pdh) {
             cancel(ec);
             if((ec = {snd_pcm_drop(m_pdh), alsa_category})) return;
@@ -324,7 +324,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
         assert(!ec);
     }
 
-    size_t write_some(const ASIO::const_buffer& buf, boost::system::error_code& ec) noexcept override {
+    size_t write_some(const ASIO::const_buffer& buf, std::error_code& ec) noexcept override {
         if(m_pdh == nullptr)
             ec = ASIO::error::make_error_code(ASIO::error::bad_descriptor);
 
@@ -357,7 +357,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     }
 
     void async_write_some(const ASIO::const_buffer& buf, WriteHandler handler) override {
-        auto f = get_strand().wrap([=] (boost::system::error_code ec, std::size_t n) {
+        auto f = get_strand().wrap([=] (std::error_code ec, std::size_t n) {
             if(!ec)
                 n = write_some(buf, ec);
             handler(ec, n);
@@ -380,7 +380,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
     bool non_blocking() const noexcept override {
         return m_non_blocking;
     }
-    void non_blocking(bool mode, boost::system::error_code& ec) noexcept override {
+    void non_blocking(bool mode, std::error_code& ec) noexcept override {
         if(m_pdh != nullptr) {
             ec = {ASIO::error::already_open, ASIO::error::misc_category};
             return;

@@ -18,27 +18,26 @@
 #ifndef MELOSIC_PCMBUFFER_HPP
 #define MELOSIC_PCMBUFFER_HPP
 
-#include <boost/asio/buffer.hpp>
+#include <asio/buffer.hpp>
 
 #include <melosic/common/audiospecs.hpp>
 
 namespace Melosic {
 
-struct PCMBuffer : boost::asio::mutable_buffer {
-    using boost::asio::mutable_buffer::mutable_buffer;
+struct PCMBuffer : asio::mutable_buffer {
+    using asio::mutable_buffer::mutable_buffer;
 
     AudioSpecs audio_specs;
 };
 
-struct ConstPCMBuffer : boost::asio::const_buffer {
-    using boost::asio::const_buffer::const_buffer;
+struct ConstPCMBuffer : asio::const_buffer {
+    using asio::const_buffer::const_buffer;
 
     AudioSpecs audio_specs;
 };
 
 } //end namespace Melosic
 
-namespace boost {
 namespace asio {
 
 size_t buffer_size(const Melosic::PCMBuffer& b) {
@@ -48,7 +47,6 @@ size_t buffer_size(const Melosic::ConstPCMBuffer& b) {
     return buffer_size(const_buffer(b));
 }
 
-}
 }
 
 #endif // MELOSIC_PCMBUFFER_HPP

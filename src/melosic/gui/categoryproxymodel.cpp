@@ -15,20 +15,23 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <QSharedPointer>
-#include <QDebug>
-
-#include "categoryproxymodel.hpp"
-#include "category.hpp"
-
+#include <mutex>
+#include <shared_mutex>
 #include <boost/thread/shared_mutex.hpp>
+#include <boost/thread/locks.hpp>
 using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
 using unique_lock = boost::unique_lock<mutex>;
 using upgrade_lock = boost::upgrade_lock<mutex>;
 
+#include <QSharedPointer>
+#include <QDebug>
+
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/scope_unlock_exit_lock.hpp>
+
+#include "categoryproxymodel.hpp"
+#include "category.hpp"
 
 namespace Melosic {
 

@@ -21,10 +21,11 @@
 #include <mutex>
 using std::mutex; using std::lock_guard;
 
-#include <boost/thread/shared_mutex.hpp>
-using boost::shared_mutex;
+#include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_lock_guard;
+using shared_mutex = std::shared_mutex;
+template <typename Mutex>
+using shared_lock = boost::shared_lock_guard<Mutex>;
 #include <boost/range/algorithm/sort.hpp>
 using namespace boost::range;
 #include <boost/range/adaptors.hpp>
@@ -124,7 +125,7 @@ public:
     }
 
     User& getUser() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return user;
     }
 

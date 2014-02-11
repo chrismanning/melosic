@@ -26,7 +26,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
 #include <boost/variant.hpp>
-#include <boost/asio/io_service.hpp>
+#include <asio/io_service.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/signal.hpp>
@@ -140,7 +140,7 @@ private:
     friend class Manager;
 };
 
-Manager::Manager(Config::Manager& confman, boost::asio::io_service& io_service)
+Manager::Manager(Config::Manager& confman, asio::io_service& io_service)
     : pimpl(new impl(confman, io_service)) {}
 
 Manager::~Manager() {}

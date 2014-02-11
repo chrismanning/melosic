@@ -15,8 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/asio/io_service.hpp>
-namespace asio = boost::asio;
+#include <asio/io_service.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
@@ -111,7 +110,7 @@ Library::Manager& Kernel::getLibraryManager() {
     return pimpl->libman;
 }
 
-boost::asio::io_service& Kernel::getIOService() {
+asio::io_service& Kernel::getIOService() {
     return pimpl->io_service;
 }
 

@@ -18,7 +18,7 @@
 #ifndef MELOSIC_AUDIO_IO_HPP
 #define MELOSIC_AUDIO_IO_HPP
 
-#include <boost/asio/buffer.hpp>
+#include <asio/buffer.hpp>
 
 #include <melosic/asio/audio_service.hpp>
 
@@ -28,78 +28,78 @@ namespace ASIO {
 struct MELOSIC_EXPORT AudioOutputBase {
     virtual ~AudioOutputBase() {}
 
-    void cancel(boost::system::error_code& ec) noexcept {
+    void cancel(std::error_code& ec) noexcept {
         get_service().cancel(get_implementation(), ec);
     }
     void cancel() {
-        boost::system::error_code ec;
+        std::error_code ec;
         cancel(ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void assign(Output::DeviceName dev_name, boost::system::error_code& ec) noexcept {
+    void assign(Output::DeviceName dev_name, std::error_code& ec) noexcept {
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
     void assign(Output::DeviceName dev_name) {
-        boost::system::error_code ec;
+        std::error_code ec;
         assign(std::move(dev_name), ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void prepare(const AudioSpecs as, boost::system::error_code& ec) noexcept {
+    void prepare(const AudioSpecs as, std::error_code& ec) noexcept {
         get_service().prepare(get_implementation(), as, ec);
     }
     void prepare(const AudioSpecs as) {
-        boost::system::error_code ec;
+        std::error_code ec;
         prepare(as, ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void play(boost::system::error_code& ec) noexcept {
+    void play(std::error_code& ec) noexcept {
         get_service().play(get_implementation(), ec);
     }
     void play() {
-        boost::system::error_code ec;
+        std::error_code ec;
         play(ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void pause(boost::system::error_code& ec) noexcept {
+    void pause(std::error_code& ec) noexcept {
         get_service().pause(get_implementation(), ec);
     }
     void pause() {
-        boost::system::error_code ec;
+        std::error_code ec;
         pause(ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void unpause(boost::system::error_code& ec) noexcept {
+    void unpause(std::error_code& ec) noexcept {
         get_service().unpause(get_implementation(), ec);
     }
     void unpause() {
-        boost::system::error_code ec;
+        std::error_code ec;
         unpause(ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void stop(boost::system::error_code& ec) noexcept {
+    void stop(std::error_code& ec) noexcept {
         get_service().stop(get_implementation(), ec);
     }
     void stop() {
-        boost::system::error_code ec;
+        std::error_code ec;
         stop(ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     template <typename ConstBufferSequence>
-    size_t write_some(const ConstBufferSequence& buffers, boost::system::error_code& ec) {
+    size_t write_some(const ConstBufferSequence& buffers, std::error_code& ec) {
         return get_service().write_some(get_implementation(), buffers, ec);
     }
     template <typename ConstBufferSequence>
     size_t write_some(const ConstBufferSequence& buffers) {
-        boost::system::error_code ec;
+        std::error_code ec;
         auto r = write_some(buffers, ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
         return r;
     }
 
@@ -115,13 +115,13 @@ struct MELOSIC_EXPORT AudioOutputBase {
         return get_service().non_blocking(get_implementation());
     }
 
-    void non_blocking(bool mode, boost::system::error_code& ec) noexcept {
+    void non_blocking(bool mode, std::error_code& ec) noexcept {
         get_service().non_blocking(get_implementation(), mode, ec);
     }
     void non_blocking(bool mode) {
-        boost::system::error_code ec;
+        std::error_code ec;
         non_blocking(mode, ec);
-        if(ec) BOOST_THROW_EXCEPTION(boost::system::system_error(ec));
+        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     template <typename ConstBufferSequence, typename WriteHandler>
@@ -166,7 +166,7 @@ struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
     BasicAudioOutput(io_service& service, Output::DeviceName dev_name)
       : BasicAudioOutput(service)
     {
-        boost::system::error_code ec;
+        std::error_code ec;
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
 

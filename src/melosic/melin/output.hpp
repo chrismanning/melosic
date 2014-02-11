@@ -27,10 +27,8 @@
 #include <melosic/melin/config.hpp>
 #include <melosic/melin/output_signals.hpp>
 
-namespace boost {
 namespace asio {
 class io_service;
-}
 }
 
 namespace Melosic {
@@ -45,11 +43,11 @@ struct AudioOutputBase;
 }
 
 namespace Output {
-typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(boost::asio::io_service&, DeviceName)> ASIOFactory;
+typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(asio::io_service&, DeviceName)> ASIOFactory;
 
 class Manager final {
 public:
-    explicit Manager(Config::Manager&, boost::asio::io_service&);
+    explicit Manager(Config::Manager&, asio::io_service&);
     ~Manager();
 
     Manager(Manager&&) = delete;

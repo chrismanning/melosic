@@ -79,7 +79,7 @@ void Manager::addAudioFormat(Factory fact, std::string extension) {
 }
 
 optional<Core::AudioFile> Manager::getFile(boost::filesystem::path p) const {
-    boost::system::error_code ec;
+    std::error_code ec;
     return pimpl->m_file_cache.getFile(p, ec);
 }
 

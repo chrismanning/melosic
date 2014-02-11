@@ -19,11 +19,11 @@
 #include <thread>
 #include <mutex>
 
-#include <boost/thread/shared_mutex.hpp>
-using mutex = boost::shared_mutex;
+#include <shared_mutex>
+using mutex = std::shared_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
-using shared_lock = boost::shared_lock<mutex>;
+using shared_lock = std::shared_lock<mutex>;
 #include <boost/format.hpp>
 using boost::format;
 #include <boost/iostreams/read.hpp>

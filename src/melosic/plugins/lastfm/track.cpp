@@ -27,9 +27,11 @@ using namespace std::literals;
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 using namespace boost::property_tree::xml_parser;
-#include <boost/thread/shared_mutex.hpp>
+#include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
-using boost::shared_mutex; using boost::shared_lock_guard;
+using shared_mutex = std::shared_mutex;
+template <typename Mutex>
+using shared_lock = boost::shared_lock_guard<Mutex>;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
@@ -218,27 +220,27 @@ public:
     }
 
     ForwardRange<Tag> topTags() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return topTags_;
     }
 
     const std::string& getName() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return name;
     }
 
     const Artist& getArtist() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return artist;
     }
 
     const network::uri& getUrl() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return url;
     }
 
     const std::string& getWiki() {
-        shared_lock_guard<Mutex> l(mu);
+        shared_lock<Mutex> l(mu);
         return wiki;
     }
 

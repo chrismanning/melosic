@@ -22,10 +22,8 @@
 
 #include <melosic/common/common.hpp>
 
-namespace boost {
 namespace asio {
 class io_service;
-}
 }
 
 namespace Melosic {
@@ -81,7 +79,7 @@ public:
     MELOSIC_EXPORT Melosic::Playlist::Manager& getPlaylistManager();
     MELOSIC_EXPORT Library::Manager& getLibraryManager();
 
-    MELOSIC_EXPORT boost::asio::io_service& getIOService();
+    MELOSIC_EXPORT asio::io_service& getIOService();
 
 private:
     struct impl;

@@ -34,7 +34,7 @@ public:
     FileCache();
     ~FileCache();
 
-    optional<Core::AudioFile> getFile(const boost::filesystem::path&, boost::system::error_code&) const;
+    optional<Core::AudioFile> getFile(const boost::filesystem::path&, std::error_code&) const;
 
 private:
     struct impl;

@@ -56,6 +56,10 @@ SET(TAGLIB_MIN_VERSION "1.8")
 include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
 SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z)
 
+if(UNIX)
+ SET(LINK_LIBS ${LINK_LIBS} dl)
+endif()
+
 SET(PN ${PROJECT_NAME})
 #test stuff
 
@@ -99,6 +103,7 @@ message(STATUS "${PROJECT_NAME} Gtest libs: ${GTEST_LIBRARIES}")
 enable_testing()
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main> $<TARGET_OBJECTS:${PN}objects>)
+  add_dependencies(${test_name} gtest_${PROJECT_NAME})
   target_link_libraries(${test_name} ${LINK_LIBS} ${GTEST_LIBRARIES} ejpp)
   set_target_properties(${test_name} PROPERTIES COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING=1")
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
@@ -107,3 +112,5 @@ endfunction()
 add_subdirectory(src/melosic)
 
 add_subdirectory(test)
+
+add_dependencies(${PN}_test_main gtest_${PROJECT_NAME})

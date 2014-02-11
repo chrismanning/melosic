@@ -17,10 +17,6 @@ add_subdirectory(gui)
 add_library(${PN}objects OBJECT ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
 add_library(${PN}lib SHARED $<TARGET_OBJECTS:${PN}objects>)
 
-if(UNIX)
- SET(LINK_LIBS ${LINK_LIBS} -ldl)
-endif()
-
 include_directories(${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
 
 add_subdirectory(plugins)

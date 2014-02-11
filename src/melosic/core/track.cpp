@@ -18,20 +18,15 @@
 #include <thread>
 #include <mutex>
 
-#include <boost/thread/shared_mutex.hpp>
-using mutex = boost::shared_mutex;
-using shared_lock = boost::shared_lock<mutex>;
+#include <shared_mutex>
+using mutex = std::shared_mutex;
+using shared_lock = std::shared_lock<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/phoenix.hpp>
-#include <boost/locale/collator.hpp>
 #include <boost/thread/synchronized_value.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
-
-#include <taglib/tpropertymap.h>
-#include <taglib/tfile.h>
-#include <taglib/fileref.h>
 
 #include <jbson/document.hpp>
 #include <jbson/builder.hpp>
@@ -103,7 +98,7 @@ class Track::impl {
 
     const boost::filesystem::path& filePath() { return filepath; }
 
-    optional<std::string> parse_format(std::string, boost::system::error_code&);
+    optional<std::string> parse_format(std::string, std::error_code&);
 
   private:
     friend class Track;
@@ -194,7 +189,7 @@ bool Track::tagsReadable() const {
 
 optional<std::string> Track::format_string(const std::string& fmt_str) const {
     lock_guard l(pimpl->mu);
-    boost::system::error_code ec;
+    std::error_code ec;
     return pimpl->parse_format(fmt_str, ec);
 }
 
@@ -223,7 +218,7 @@ jbson::document Track::bson() const {
     return ob;
 }
 
-optional<std::string> Track::impl::parse_format(std::string str, boost::system::error_code&) {
+optional<std::string> Track::impl::parse_format(std::string str, std::error_code&) {
     if(str.empty())
         return nullopt;
     namespace qi = boost::spirit::qi;

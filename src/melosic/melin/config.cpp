@@ -26,7 +26,7 @@
 namespace fs = boost::filesystem;
 #include <boost/mpl/index_of.hpp>
 namespace { namespace mpl = boost::mpl; }
-#include <boost/thread/shared_mutex.hpp>
+#include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/format.hpp>
 namespace { using boost::format; }

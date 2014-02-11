@@ -31,7 +31,7 @@ using namespace std::literals;
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
 #include <boost/mpl/bool.hpp>
-#include <boost/asio/io_service.hpp>
+#include <asio/io_service.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/traits.hpp>
@@ -128,7 +128,7 @@ namespace mpl = boost::mpl;
 class Manager {
 public:
     Manager(size_t numThreads, TaskQueue::size_type numTasks,
-            boost::asio::io_service* io_service) :
+            asio::io_service* io_service) :
         tasks(numTasks),
         asio_service(io_service)
     {
@@ -143,7 +143,7 @@ public:
                 }
                 else {
                     if(asio_service && !asio_service->stopped()) {
-                        boost::system::error_code ec;
+                        std::error_code ec;
                         auto n = asio_service->poll_one(ec);
                         if(n == 0) {
                         }
@@ -157,17 +157,17 @@ public:
             threads.emplace_back(f);
         if(asio_service)
             threads.emplace_back([this] () {
-                boost::system::error_code ec;
+                std::error_code ec;
                 asio_service->run(ec);
             });
     }
 
     explicit Manager(size_t numThreads = std::thread::hardware_concurrency() + 1,
-                     boost::asio::io_service* io_service = nullptr) :
+                     asio::io_service* io_service = nullptr) :
         Manager(numThreads, numThreads * 2, io_service)
     {}
 
-    explicit Manager(boost::asio::io_service* io_service) :
+    explicit Manager(asio::io_service* io_service) :
         Manager(std::thread::hardware_concurrency() + 1, io_service)
     {}
 
@@ -217,7 +217,7 @@ private:
     std::vector<std::thread> threads;
     TaskQueue tasks;
     std::atomic_bool done{false};
-    boost::asio::io_service* const asio_service;
+    asio::io_service* const asio_service;
 };
 
 } // namespace Thread

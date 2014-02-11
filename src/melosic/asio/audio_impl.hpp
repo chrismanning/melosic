@@ -19,10 +19,10 @@
 #define MELOSIC_AUDIO_IMPL_HPP
 
 #include <memory>
+#include <system_error>
 
-#include <boost/system/error_code.hpp>
-#include <boost/asio/buffer.hpp>
-#include <boost/asio/strand.hpp>
+#include <asio/buffer.hpp>
+#include <asio/strand.hpp>
 
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/output.hpp>
@@ -30,7 +30,7 @@
 namespace Melosic {
 namespace ASIO {
 
-using namespace boost::asio;
+using namespace ::asio;
 
 struct MELOSIC_EXPORT AudioOutputServiceBase {
     explicit AudioOutputServiceBase(io_service& service) :
@@ -45,24 +45,24 @@ struct MELOSIC_EXPORT AudioOutputServiceBase {
     }
 
     virtual void destroy() = 0;
-    virtual void cancel(boost::system::error_code&) noexcept = 0;
-    virtual void assign(Output::DeviceName dev_name, boost::system::error_code& ec) noexcept = 0;
+    virtual void cancel(std::error_code&) noexcept = 0;
+    virtual void assign(Output::DeviceName dev_name, std::error_code& ec) noexcept = 0;
 
-    virtual AudioSpecs prepare(const AudioSpecs, boost::system::error_code&) noexcept = 0;
-    virtual void play(boost::system::error_code&) noexcept = 0;
-    virtual void pause(boost::system::error_code&) noexcept = 0;
-    virtual void unpause(boost::system::error_code&) noexcept = 0;
-    virtual void stop(boost::system::error_code&) noexcept = 0;
-    virtual size_t write_some(const const_buffer&, boost::system::error_code&) noexcept = 0;
+    virtual AudioSpecs prepare(const AudioSpecs, std::error_code&) noexcept = 0;
+    virtual void play(std::error_code&) noexcept = 0;
+    virtual void pause(std::error_code&) noexcept = 0;
+    virtual void unpause(std::error_code&) noexcept = 0;
+    virtual void stop(std::error_code&) noexcept = 0;
+    virtual size_t write_some(const const_buffer&, std::error_code&) noexcept = 0;
 
-    typedef std::function<void(boost::system::error_code, AudioSpecs)> PrepareHandler;
+    typedef std::function<void(std::error_code, AudioSpecs)> PrepareHandler;
     virtual void async_prepare(const AudioSpecs, PrepareHandler) noexcept = 0;
 
-    typedef std::function<void(boost::system::error_code, std::size_t)> WriteHandler;
+    typedef std::function<void(std::error_code, std::size_t)> WriteHandler;
     virtual void async_write_some(const const_buffer&, WriteHandler) = 0;
 
     virtual bool non_blocking() const noexcept = 0;
-    virtual void non_blocking(bool, boost::system::error_code&) noexcept = 0;
+    virtual void non_blocking(bool, std::error_code&) noexcept = 0;
 
     virtual Output::DeviceState state() const noexcept = 0;
     virtual AudioSpecs current_specs() const noexcept = 0;

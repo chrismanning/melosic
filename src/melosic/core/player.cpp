@@ -28,7 +28,7 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/iostreams/compose.hpp>
 #include <boost/iostreams/concepts.hpp>
 namespace io = boost::iostreams;
-#include <boost/asio.hpp>
+#include <asio.hpp>
 #include <boost/variant.hpp>
 
 #include <melosic/common/error.hpp>
@@ -78,7 +78,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         play_impl();
         if(state_impl() == DeviceState::Playing) {
             l.unlock();
-            write_handler(boost::system::error_code(), 0);
+            write_handler(std::error_code(), 0);
         }
     }
     void play_impl();
@@ -223,7 +223,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         const uint16_t from, to;
     };
 
-    void write_handler(boost::system::error_code ec, std::size_t n) {
+    void write_handler(std::error_code ec, std::size_t n) {
         unique_lock l(mu);
         if(state_impl() != Output::DeviceState::Playing)
             return;
@@ -242,7 +242,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         }
         TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
         if(ec) {
-            if(ec.value() == boost::system::errc::operation_canceled) {
+            if(ec == std::errc::operation_canceled) {
                 TRACE_LOG(logject) << ec.message();
                 return;
             }
@@ -320,14 +320,14 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         read_handler(ec, n);
     }
 
-    void read_handler(boost::system::error_code ec, std::size_t n) {
+    void read_handler(std::error_code ec, std::size_t n) {
         TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
         if(ec || (in_buf.empty() && (ec = ASIO::error::make_error_code(ASIO::error::no_data)))) {
             if(ec.value() == ASIO::error::eof && m_current_source) {
                 ec.clear();
                 write_handler(ec, 0);
             }
-            if(ec.value() == boost::system::errc::operation_canceled) {
+            if(ec == std::errc::operation_canceled) {
                 TRACE_LOG(logject) << ec.message();
                 assert(in_buf.empty());
                 return;
@@ -353,7 +353,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         kernel.getThreadManager().enqueue([self=shared_from_this(),tmp]() mutable {
             unique_lock l(self->mu);
             ASIO::async_write(*self->asioOutput, ASIO::buffer(tmp),
-                [tmp, self] (boost::system::error_code ec, std::size_t n) {
+                [tmp, self] (std::error_code ec, std::size_t n) {
                     assert(ASIO::buffer_cast<void*>(tmp) != nullptr);
                     if(n < ASIO::buffer_size(ASIO::mutable_buffer(tmp))) {
                         const auto s = ASIO::buffer_size(ASIO::mutable_buffer(tmp)) - n;

@@ -22,3 +22,6 @@
 	path = extern/ejpp
 	url = https://github.com/chrismanning/ejpp.git
     ignore = dirty
+[submodule "extern/asio"]
+	path = extern/asio
+	url = https://github.com/chriskohlhoff/asio.git

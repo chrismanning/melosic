@@ -18,7 +18,7 @@
 #ifndef MELOSIC_AUDIO_SERVICE_HPP
 #define MELOSIC_AUDIO_SERVICE_HPP
 
-#include <boost/asio/io_service.hpp>
+#include <asio/io_service.hpp>
 
 #include <melosic/asio/audio_impl.hpp>
 
@@ -46,43 +46,43 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
         impl.reset();
     }
 
-    void cancel(implementation_type& impl, boost::system::error_code& ec) noexcept {
+    void cancel(implementation_type& impl, std::error_code& ec) noexcept {
         impl->cancel(ec);
     }
 
-    void assign(implementation_type& impl, Output::DeviceName dev_name, boost::system::error_code& ec) noexcept {
+    void assign(implementation_type& impl, Output::DeviceName dev_name, std::error_code& ec) noexcept {
         impl->assign(std::move(dev_name), ec);
     }
 
-    void prepare(implementation_type& impl, const AudioSpecs as, boost::system::error_code& ec) noexcept {
+    void prepare(implementation_type& impl, const AudioSpecs as, std::error_code& ec) noexcept {
         impl->prepare(as, ec);
     }
 
-    void play(implementation_type& impl, boost::system::error_code& ec) noexcept {
+    void play(implementation_type& impl, std::error_code& ec) noexcept {
         impl->play(ec);
     }
 
-    void pause(implementation_type& impl, boost::system::error_code& ec) noexcept {
+    void pause(implementation_type& impl, std::error_code& ec) noexcept {
         impl->pause(ec);
     }
 
-    void unpause(implementation_type& impl, boost::system::error_code& ec) noexcept {
+    void unpause(implementation_type& impl, std::error_code& ec) noexcept {
         impl->unpause(ec);
     }
 
-    void stop(implementation_type& impl, boost::system::error_code& ec) noexcept {
+    void stop(implementation_type& impl, std::error_code& ec) noexcept {
         impl->stop(ec);
     }
 
     template <typename ConstBufferSequence>
-    size_t write_some(implementation_type& impl, const ConstBufferSequence& buf, boost::system::error_code& ec) noexcept {
+    size_t write_some(implementation_type& impl, const ConstBufferSequence& buf, std::error_code& ec) noexcept {
         if(buf.begin() == buf.end()) {
             ec = ASIO::error::make_error_code(ASIO::error::no_buffer_space);
             return 0;
         }
         return impl->write_some(*buf.begin(), ec);
     }
-    size_t write_some(implementation_type& impl, const const_buffer& buf, boost::system::error_code& ec) noexcept {
+    size_t write_some(implementation_type& impl, const const_buffer& buf, std::error_code& ec) noexcept {
         return impl->write_some(buf, ec);
     }
 
@@ -97,7 +97,7 @@ struct MELOSIC_EXPORT AudioOutputService : io_service::service {
     bool non_blocking(const implementation_type& impl) const noexcept {
         return impl->non_blocking();
     }
-    void non_blocking(const implementation_type& impl, bool mode, boost::system::error_code& ec) noexcept {
+    void non_blocking(const implementation_type& impl, bool mode, std::error_code& ec) noexcept {
         impl->non_blocking(mode, ec);
     }
 

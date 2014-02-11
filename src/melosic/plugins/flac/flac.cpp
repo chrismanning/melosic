@@ -26,7 +26,7 @@
 #include <boost/iostreams/positioning.hpp>
 #include <boost/iostreams/seek.hpp>
 namespace io = boost::iostreams;
-#include <boost/asio/error.hpp>
+#include <asio/error.hpp>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/decoder.hpp>
@@ -36,7 +36,7 @@ namespace io = boost::iostreams;
 #include <melosic/common/pcmbuffer.hpp>
 using namespace Melosic;
 using Logger::Severity;
-namespace ASIO = boost::asio;
+namespace ASIO = asio;
 
 static Logger::Logger logject{logging::keywords::channel = "FLAC"};
 
@@ -210,7 +210,7 @@ public:
 
     virtual ~FlacDecoder() {}
 
-    size_t decode(PCMBuffer& pcm_buf, boost::system::error_code& ec) override {
+    size_t decode(PCMBuffer& pcm_buf, std::error_code& ec) override {
         pcm_buf.audio_specs = as;
         while(buf.size() < ASIO::buffer_size(pcm_buf) && !impl.end()) {
             auto r = impl.process_single();
