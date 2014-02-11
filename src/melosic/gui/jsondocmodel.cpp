@@ -51,9 +51,9 @@ QVariant JsonDocModel::data(const QModelIndex& index, int role) const {
     switch(role) {
         case Qt::DisplayRole:
         case DocumentRole: {
-            QString str;
+            std::string str;
             jbson::write_json(m_docs[index.row()], std::back_inserter(str));
-            return str;
+            return QString::fromStdString(str);
         }
         default:
             break;

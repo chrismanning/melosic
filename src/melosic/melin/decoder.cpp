@@ -96,7 +96,7 @@ std::future<bool> Manager::initialiseAudioFile(Core::AudioFile& af) const {
         Core::TagMap tags;
         for(const auto& tag : taglib_tags) {
             for(const auto& v : tag.second)
-                tags.emplace(tag.first.to8Bit(), v.to8Bit());
+                tags.emplace(tag.first.to8Bit(true), v.to8Bit(true));
         }
         t.setTags(tags);
         auto pcm_src = openTrack(t);
