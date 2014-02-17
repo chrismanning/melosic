@@ -71,8 +71,6 @@ public:
 
     SelectionModel* selectionModel() const;
 
-    void refresh();
-
 Q_SIGNALS:
     void queryChanged(QVariant);
     void headerChanged(QString);
@@ -81,6 +79,7 @@ Q_SIGNALS:
     void dependSelectionChanged(QVariantList);
 
 public Q_SLOTS:
+    void refresh();
 
 private:
     static QVariant* at_dep_sel(QQmlListProperty<QVariant>* list, int index);

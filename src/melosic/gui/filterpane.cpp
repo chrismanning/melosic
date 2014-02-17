@@ -37,14 +37,12 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent) {
     m_model = new JsonDocModel(this);
     m_selection_model = new SelectionModel(m_model, this);
     connect(this, &FilterPane::queryChanged, [this] (auto&&) {
-        std::clog << "queryChanged" << std::endl;
         if(m_paths.empty())
             return;
         refresh();
     });
     connect(this, &FilterPane::pathsChanged, [this] (auto&&) { refresh(); });
     connect(this, &FilterPane::dependsOnChanged, [this] (auto&&) {
-        std::clog << "dependsOnChanged" << std::endl;
         if(m_depends == nullptr)
             return;
         auto sel_model = m_depends->m_selection_model;
@@ -53,17 +51,13 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent) {
         assert(sel_model->model() != nullptr);
 
         connect(sel_model, &QItemSelectionModel::selectionChanged, [this] (auto&& selected, auto&& deselected) {
-            std::clog << "selection changed" << std::endl;
             for(auto&& range : selected) {
                 for(auto&& i : range.indexes()) {
-                    auto doc = i.data(JsonDocModel::DocumentRole);
+                    auto doc = i.data(JsonDocModel::DocumentStringRole);
                     jbson::json_reader reader;
                     auto str = doc.toString();
-                    std::clog << "doc str: " << qPrintable(str) << std::endl;
                     reader.parse(str.isEmpty() || str.isNull() ? "{}": str.toUtf8());
-                    std::clog << "depends path: " << qPrintable(m_depends_path) << std::endl;
                     auto res = jbson::path_select(jbson::document(std::move(reader)), m_depends_path.toUtf8());
-                    std::clog << "res size: " << res.size() << std::endl;
                     for(auto&& val : res) {
                         if(val.type() != jbson::element_type::string_element)
                             continue;
@@ -73,14 +67,11 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent) {
             }
             for(auto&& range : deselected) {
                 for(auto&& i : range.indexes()) {
-                    auto doc = i.data(JsonDocModel::DocumentRole);
+                    auto doc = i.data(JsonDocModel::DocumentStringRole);
                     jbson::json_reader reader;
                     auto str = doc.toString();
-                    std::clog << "doc str: " << qPrintable(str) << std::endl;
                     reader.parse(str.isEmpty() || str.isNull() ? "{}": str.toUtf8());
-                    std::clog << "depends path: " << qPrintable(m_depends_path) << std::endl;
                     auto res = jbson::path_select(jbson::document(std::move(reader)), m_depends_path.toUtf8());
-                    std::clog << "res size: " << res.size() << std::endl;
                     for(auto&& val : res) {
                         if(val.type() != jbson::element_type::string_element)
                             continue;
@@ -89,7 +80,6 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent) {
                     }
                 }
             }
-            std::clog << "m_depend_selection size: " << m_depend_selection.size() << std::endl;
             Q_EMIT dependSelectionChanged(m_depend_selection);
         });
         sel_model->clear();
@@ -175,7 +165,6 @@ void FilterPane::refresh() {
         json_string = m_query.toString();
     else
         json_string = QString(QJsonDocument::fromVariant(m_query).toJson());
-    std::clog << qPrintable(objectName()) << " query: " << qPrintable(json_string) << std::endl;
 
     jbson::document qry;
     try {
@@ -185,6 +174,7 @@ void FilterPane::refresh() {
     }
     catch(...) {
         std::clog << boost::current_exception_diagnostic_information();
+        std::clog << "Using empty query" << std::endl;
         qry = "{}"_json_doc;
     }
 
@@ -203,9 +193,9 @@ void FilterPane::refresh() {
         std::transform(ds.begin(), std::unique(ds.begin(), ds.end()),
                        std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
     }
-    std::clog << "no. results: " << docs.size() << std::endl;
 
     //TODO: replicate selection in new results
+    assert(m_selection_model != nullptr);
     m_selection_model->clear();
     m_model->setDocs(std::move(docs));
 }

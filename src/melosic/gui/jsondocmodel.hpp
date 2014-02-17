@@ -30,10 +30,10 @@ namespace Melosic {
 class JsonDocModel : public QAbstractListModel {
     std::vector<jbson::document> m_docs;
 
-  public:
-    explicit JsonDocModel(QObject* parent = nullptr);
+public:
+    explicit JsonDocModel(QObject *parent = nullptr);
 
-    enum Roles { DocumentRole = Qt::UserRole * 7 };
+    enum Roles { DocumentStringRole = Qt::UserRole * 7, DocumentRole };
 
     void setDocs(std::vector<jbson::document>&&);
     void setDocs(const std::vector<jbson::document>&);
@@ -41,7 +41,8 @@ class JsonDocModel : public QAbstractListModel {
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 };
 

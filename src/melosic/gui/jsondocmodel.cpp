@@ -26,14 +26,15 @@ namespace Melosic {
 JsonDocModel::JsonDocModel(QObject* parent) : QAbstractListModel(parent) {}
 
 void JsonDocModel::setDocs(std::vector<jbson::document>&& docs) {
-    beginResetModel();
-    m_docs.swap(docs);
-    endResetModel();
+    Q_EMIT beginResetModel();
+    m_docs = std::move(docs);
+    Q_EMIT endResetModel();
 }
 
 void JsonDocModel::setDocs(const std::vector<jbson::document>& docs) {
+    Q_EMIT beginResetModel();
     m_docs = docs;
-    setDocs(std::move(m_docs));
+    Q_EMIT endResetModel();
 }
 
 Qt::ItemFlags JsonDocModel::flags(const QModelIndex& index) const { return QAbstractItemModel::flags(index); }
@@ -44,16 +45,26 @@ int JsonDocModel::rowCount(const QModelIndex&) const {
     return static_cast<int>(m_docs.size());
 }
 
+static QVariantMap doc_to_map(const jbson::document&) {
+
+}
+
 QVariant JsonDocModel::data(const QModelIndex& index, int role) const {
-    if(!index.isValid())
+    if(!index.isValid()) {
         return {};
+    }
+    assert(index.row() < rowCount());
 
     switch(role) {
         case Qt::DisplayRole:
-        case DocumentRole: {
+        case DocumentStringRole: {
             std::string str;
             jbson::write_json(m_docs[index.row()], std::back_inserter(str));
             return QString::fromStdString(str);
+        }
+        case DocumentRole: {
+            QVariantMap map{};
+            return map;
         }
         default:
             break;
@@ -68,6 +79,7 @@ QVariant JsonDocModel::headerData(int section, Qt::Orientation orientation, int 
 
 QHash<int, QByteArray> JsonDocModel::roleNames() const {
     auto roles = QAbstractListModel::roleNames();
+    roles.insert(DocumentStringRole, "documentstring");
     roles.insert(DocumentRole, "document");
     return roles;
 }

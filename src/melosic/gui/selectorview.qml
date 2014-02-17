@@ -1,7 +1,6 @@
 import QtQuick 2.2
 import QtQuick.Controls 1.1
 import QtQuick.Controls.Private 1.0
-import QtQuick.Controls.Styles 1.1
 import QtQuick.Window 2.1
 
 import Melosic.Browser 1.0
@@ -14,6 +13,11 @@ ScrollView {
 
     property var selectionModel
 
+    property alias delegate: listView.delegate
+    property Component itemDelegate
+    property Component styleDelegate
+    property Component focusDelegate
+
     ListView {
         id: listView
         focus: true
@@ -23,7 +27,7 @@ ScrollView {
 
         SystemPalette {
             id: palette
-            colorGroup: enabled ? SystemPalette.Active : SystemPalette.Disabled
+            colorGroup: root.enabled ? SystemPalette.Active : SystemPalette.Disabled
         }
 
         Rectangle {
@@ -63,7 +67,6 @@ ScrollView {
                 if(newIndex <= -1 && selectionModel)
                     selectionModel.clear()
                 else if(!Settings.hasTouchScreen) {
-                    listView.currentIndex = newIndex
                     mouseSelect(newIndex, mouse.modifiers)
                     mouseArea.clickedRow = newIndex
                 }
@@ -73,6 +76,7 @@ ScrollView {
             function mouseSelect(index, modifiers) {
                 if(!selectionModel)
                     return
+                selectionModel.currentRow = index
                 if (modifiers & Qt.ShiftModifier)
                     selectionModel.select(previousRow, index, SelectionModel.ClearAndSelect)
                 else if (modifiers & Qt.ControlModifier)
@@ -93,40 +97,61 @@ ScrollView {
 
         delegate: Item {
             id: item
-            height: styleitem.height
+            height: styleloader.height
             width: root.width
 
-            Label {
-                id: lbl
-                x: 1
-                z: -1
-                width: root.width-2
-                text: document
-                color: styleitem.selected ? palette.highlightedText : palette.text
-            }
-            StyleItem {
-                id: styleitem
-                z: -3
-                width: root.width
-                elementType: "itemrow"
-                active: root.activeFocus
-                Connections {
-                    target: selectionModel
-                    onSelectionChanged: {
-                        styleitem.selected = selectionModel.isSelected(index)
-                    }
+            readonly property var itemModelData: typeof modelData == "undefined" ? null : modelData
+            readonly property var itemModel: model
+            readonly property int rowIndex: model.index
+            readonly property color itemTextColor: isSelected ? palette.highlightedText : palette.text
+
+            property bool isCurrent: ListView.isCurrentItem
+            property bool isSelected
+            Connections {
+                target: selectionModel
+                onSelectionChanged: {
+                    item.isSelected = selectionModel.isSelected(index)
                 }
             }
-            StyleItem {
-                id: focusrect
+
+            Loader {
+                id: itemloader
+                z: -1
+                width: item.width
+                property alias isSelected: item.isSelected
+                property alias isCurrent: item.isCurrent
+                property string documentstring: itemModel.documentstring
+
+                // these properties are exposed to the item delegate
+                readonly property var model: listView.model
+                readonly property var modelData: itemModelData
+                readonly property var itemModel: item.itemModel
+
+                property QtObject styleData: QtObject {
+                    readonly property int row: item.rowIndex
+                    readonly property bool selected: item.isSelected
+                    readonly property color textColor: item.itemTextColor
+                    readonly property var itemModel: itemloader.itemModel
+                }
+                sourceComponent: itemDelegate
+            }
+
+            Loader {
+                id: styleloader
+                z: -3
+                width: item.width
+                property alias isSelected: item.isSelected
+                property alias isCurrent: item.isCurrent
+                sourceComponent: styleDelegate
+            }
+
+            Loader {
+                id: focusloader
                 z: -2
-                anchors.margins: -1
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                elementType: "focusrect"
-                visible: item.ListView.isCurrentItem
+                anchors.fill: parent
+                property alias isSelected: item.isSelected
+                property alias isCurrent: item.isCurrent
+                sourceComponent: focusDelegate
             }
         }
     }
