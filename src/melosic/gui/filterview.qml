@@ -27,11 +27,13 @@ SplitView {
                 continue
             if(!__panes[i].hasOwnProperty("model"))
                 continue
-            var pane = paneLoader.createObject(root,
-                {
-                    model: __panes[i].model,
-                    selectionModel: __panes[i].selectionModel
-                })
+            var props = {
+                model: __panes[i].model,
+                selectionModel: __panes[i].selectionModel
+            }
+            if(__panes[i].delegate !== null)
+                props.itemDelegate = __panes[i].delegate
+            var pane = paneLoader.createObject(root, props)
             root.addItem(pane)
         }
     }

@@ -290,6 +290,12 @@ ApplicationWindow {
                         genre: "metadata[?(@.key == 'genre')].value"
                     }
                 }
+                delegate: Label {
+                    id: lbl
+                    x: 1
+                    text: document.genre
+                    color: styleData.textColor
+                }
 
                 header: "Genre"
             }
@@ -298,6 +304,13 @@ ApplicationWindow {
                 dependsOn: genre
                 dependsPath: "$.genre"
                 objectName: "artistpane"
+
+                delegate: Label {
+                    id: lbl
+                    x: 1
+                    text: document.artist
+                    color: styleData.textColor
+                }
 
                 function init_query() {
                     var tmp = {
@@ -328,6 +341,20 @@ ApplicationWindow {
                 dependsOn: artist
                 dependsPath: "$.artist"
                 objectName: "albumpane"
+
+                delegate: Row {
+                    x: 1
+                    spacing: 5
+                    Label {
+                        width: 30
+                        text: document.date
+                        color: styleData.textColor
+                    }
+                    Label {
+                        text: document.album
+                        color: styleData.textColor
+                    }
+                }
 
                 function init_query() {
                     var tmp = {
@@ -371,6 +398,19 @@ ApplicationWindow {
                 dependsOn: album
                 dependsPath: "$.album"
                 objectName: "trackpane"
+
+                delegate: Row {
+                    x: 1
+                    spacing: 5
+                    Label {
+                        text: document.tracknumber
+                        color: styleData.textColor
+                    }
+                    Label {
+                        text: document.title
+                        color: styleData.textColor
+                    }
+                }
 
                 function init_query() {
                     var tmp = {

@@ -121,6 +121,7 @@ ScrollView {
                 property alias isSelected: item.isSelected
                 property alias isCurrent: item.isCurrent
                 property string documentstring: itemModel.documentstring
+                property var document: itemModel.document
 
                 // these properties are exposed to the item delegate
                 readonly property var model: listView.model

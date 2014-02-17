@@ -21,6 +21,7 @@
 #include <QObject>
 #include <qqml.h>
 #include <QItemSelectionModel>
+#include <QQmlComponent>
 
 #include "jsondocmodel.hpp"
 #include "librarymanager.hpp"
@@ -42,6 +43,8 @@ class FilterPane : public QObject {
     Q_PROPERTY(QAbstractItemModel* model MEMBER m_model CONSTANT FINAL)
     Q_PROPERTY(Melosic::SelectionModel* selectionModel READ selectionModel CONSTANT FINAL)
 
+    Q_PROPERTY(QQmlComponent* delegate MEMBER m_delegate NOTIFY delegateChanged)
+
     QString m_header;
     QVariant m_query;
     QVariantMap m_paths;
@@ -51,6 +54,7 @@ class FilterPane : public QObject {
     JsonDocModel* m_model;
     SelectionModel* m_selection_model;
     LibraryManager* libman;
+    QQmlComponent* m_delegate{nullptr};
 
 public:
     explicit FilterPane(QObject* parent = nullptr);
@@ -77,6 +81,7 @@ Q_SIGNALS:
     void pathsChanged(QVariantMap);
     void dependsOnChanged(Melosic::FilterPane*);
     void dependSelectionChanged(QVariantList);
+    void delegateChanged(QQmlComponent*);
 
 public Q_SLOTS:
     void refresh();
