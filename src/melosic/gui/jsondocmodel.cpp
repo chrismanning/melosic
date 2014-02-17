@@ -45,14 +45,56 @@ int JsonDocModel::rowCount(const QModelIndex&) const {
     return static_cast<int>(m_docs.size());
 }
 
-static QVariantMap doc_to_map(const jbson::document&) {
+static QString toQString(boost::string_ref str) {
+    return QString::fromUtf8(str.data(), str.size());
+}
 
+struct QVariantVisitor {
+    QVariantMap& m_map;
+    explicit QVariantVisitor(QVariantMap& map) : m_map(map) {}
+
+    template <typename T>
+    void operator()(boost::string_ref name, T v, jbson::element_type e, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
+        m_map.insert(toQString(name), QVariant::fromValue(v));
+    }
+
+    void operator()(boost::string_ref name, std::string str, jbson::element_type) {
+        m_map.insert(toQString(name), QString::fromStdString(str));
+    }
+
+    void operator()(boost::string_ref name, boost::string_ref str, jbson::element_type) {
+        m_map.insert(toQString(name), toQString(str));
+    }
+
+    template <typename T>
+    void operator()(boost::string_ref name, jbson::basic_document<T>&& doc, jbson::element_type) {
+        QVariantMap map{};
+        QVariantVisitor v{map};
+        for(auto&& e : doc)
+            e.visit(v);
+        m_map.insert(toQString(name), map);
+    }
+
+    template <typename T>
+    void operator()(boost::string_ref, T&&, jbson::element_type, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
+        assert(false);
+    }
+    void operator()(boost::string_ref, jbson::element_type) {
+        assert(false);
+    }
+};
+
+static QVariantMap doc_to_map(const jbson::document& doc) {
+    QVariantMap map{};
+    QVariantVisitor v{map};
+    for(auto&& e : doc)
+        e.visit(v);
+    return std::move(map);
 }
 
 QVariant JsonDocModel::data(const QModelIndex& index, int role) const {
-    if(!index.isValid()) {
+    if(!index.isValid())
         return {};
-    }
     assert(index.row() < rowCount());
 
     switch(role) {
@@ -62,10 +104,8 @@ QVariant JsonDocModel::data(const QModelIndex& index, int role) const {
             jbson::write_json(m_docs[index.row()], std::back_inserter(str));
             return QString::fromStdString(str);
         }
-        case DocumentRole: {
-            QVariantMap map{};
-            return map;
-        }
+        case DocumentRole:
+            return doc_to_map(m_docs[index.row()]);
         default:
             break;
     }
