@@ -19,9 +19,10 @@
 
 #include <boost/log/sinks.hpp>
 #include <boost/utility/empty_deleter.hpp>
-#include <boost/log/support/date_time.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/expressions.hpp>
+#include <boost/log/support/date_time.hpp>
+#include <boost/date_time/local_time/local_time.hpp>
 
 #include "logging.hpp"
 
@@ -44,14 +45,21 @@ void init() {
     sink->locked_backend()->add_stream(stream);
 
     logging::core::get()->add_sink(sink);
-    sink->set_formatter
-            (
-            expr::format("%1% [%2%] <%3%> %4%")
-                        % expr::format_date_time<boost::posix_time::ptime>("TimeStamp", "%d/%m/%y %H:%M:%S")
-                        % expr::attr<std::string>("Channel")
-                        % expr::attr<Severity>("Severity")
-                        % expr::smessage
-                );
+
+    auto date_facet = new boost::posix_time::time_facet;
+
+    date_facet->format("%d/%m/%y %H:%M:%S");
+    auto loc = std::locale(std::locale(), date_facet);
+    sink->set_formatter([loc](logging::record_view const& rec, logging::formatting_ostream& strm) {
+        strm.imbue(loc);
+        strm << logging::extract<boost::posix_time::ptime>("TimeStamp", rec) << " ";
+
+        strm << "[" << logging::extract<std::string>("Channel", rec) << "] ";
+        strm << "<" << logging::extract<Severity>("Severity", rec) << "> ";
+
+        // Finally, put the record message to the stream
+        strm << rec[expr::smessage];
+    });
     logging::add_common_attributes();
 }
 }
