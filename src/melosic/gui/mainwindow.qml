@@ -291,9 +291,8 @@ ApplicationWindow {
                     }
                 }
                 delegate: Label {
-                    id: lbl
                     x: 1
-                    text: document.genre
+                    text: document.genre === undefined ? "Unknown Genre" : document.genre
                     color: styleData.textColor
                 }
 
@@ -306,9 +305,8 @@ ApplicationWindow {
                 objectName: "artistpane"
 
                 delegate: Label {
-                    id: lbl
                     x: 1
-                    text: document.artist
+                    text: document.artist === undefined ? "Unknown Artist" : document.artist
                     color: styleData.textColor
                 }
 
@@ -347,11 +345,11 @@ ApplicationWindow {
                     spacing: 5
                     Label {
                         width: 30
-                        text: document.date
+                        text: document.date === undefined ? "0000" : document.date
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.album
+                        text: document.album === undefined ? "Unknown Artist" : document.album
                         color: styleData.textColor
                     }
                 }
@@ -403,11 +401,11 @@ ApplicationWindow {
                     x: 1
                     spacing: 5
                     Label {
-                        text: document.tracknumber
+                        text: document.tracknumber === undefined ? "00" : document.tracknumber
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.title
+                        text: document.title === undefined ? "Unknown Title" : document.title
                         color: styleData.textColor
                     }
                 }
