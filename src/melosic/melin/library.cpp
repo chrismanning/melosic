@@ -21,10 +21,11 @@
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/functional/hash/hash.hpp>
 
-#include <jbson/builder.hpp>
+#ifndef NDEBUG
 #include <jbson/json_writer.hpp>
+#endif
 #include <jbson/json_reader.hpp>
 #include <jbson/path.hpp>
 using namespace jbson::literal;
@@ -159,12 +160,8 @@ void Manager::impl::scan(const fs::path& dir) {
     auto coll = db.create_collection("tracks", ec);
 
     // remove all tracks in current prefix
-    auto qobj = jbson::document(jbson::builder("$dropall", jbson::element_type::boolean_element, true));
-    auto qstr = std::string{};
-    write_json(qobj, std::back_inserter(qstr));
-    DEBUG_LOG(logject) << "query: " << qstr;
-    auto qry = db.create_query(qobj, ec);
-    if(ec) {
+    auto qry = db.create_query(R"({"$dropall":true})"_json_doc, ec);
+    if(!qry || ec) {
         ERROR_LOG(logject) << "query creation error: " << ec.message();
         return;
     }
@@ -187,10 +184,12 @@ void Manager::impl::scan(const fs::path& dir) {
         if(tracks.empty())
             continue;
         for(const auto& t : tracks) {
-            coll.save_document(t.bson(), ec);
+            auto oid = coll.save_document(t.bson(), ec);
             if(ec) {
                 ERROR_LOG(logject) << "document save error: " << ec.message();
+                continue;
             }
+            assert(oid);
         }
     }
     r = coll.sync(ec);
@@ -204,6 +203,25 @@ void Manager::impl::scan(const fs::path& dir) {
         return;
     }
     TRACE_LOG(logject) << dir << " scanned";
+
+#ifndef NDEBUG
+    qry = db.create_query("{}"_json_doc, ec);
+    if(!qry || ec) {
+        ERROR_LOG(logject) << "query creation error: " << ec.message();
+        return;
+    }
+
+    for(auto&& doc : coll.execute_query(qry)) {
+        auto r = coll.sync(ec);
+        if(!r || ec) {
+            ERROR_LOG(logject) << "collection sync error: " << ec.message();
+            return;
+        }
+        auto doc_str = std::string{};
+        write_json(doc, std::back_inserter(doc_str));
+        DEBUG_LOG(logject) << "track: " << doc_str;
+    }
+#endif
 }
 
 void Manager::impl::incremental_scan() {
@@ -247,6 +265,8 @@ std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
     ejdb::query q;
     try {
         q = pimpl->db.create_query(qdoc, ec);
+        if(ec)
+            return {};
     }
     catch(...) {
         return {};
@@ -277,14 +297,13 @@ std::vector<jbson::element> Manager::query(const jbson::document& q, boost::stri
 std::vector<jbson::document_set>
 Manager::query(const jbson::document& q,
                ForwardRange<const std::tuple<std::string, std::string>> paths) const {
-    using std::get;
     std::vector<jbson::document_set> res;
     for(auto&& doc : query(q)) {
         jbson::document_set set;
         for(auto&& named_path : paths) {
-            for(auto&& e : jbson::path_select(doc, get<1>(named_path))) {
-                e.name(get<0>(named_path));
-                assert(e.name() == get<0>(named_path));
+            for(auto&& e : jbson::path_select(doc, std::get<1>(named_path))) {
+                e.name(std::get<0>(named_path));
+                assert(e.name() == std::get<0>(named_path));
                 set.emplace(e);
             }
         }
