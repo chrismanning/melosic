@@ -30,7 +30,7 @@ int SelectionModel::currentRow() const {
 }
 
 void SelectionModel::setCurrentRow(int row) {
-    setCurrentIndex(row, SelectCurrent);
+    setCurrentIndex(row, Current);
 }
 
 bool SelectionModel::isSelected(int row) const {

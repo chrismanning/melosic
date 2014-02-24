@@ -44,13 +44,6 @@ ScrollView {
             z: -1
             propagateComposedEvents: true
             preventStealing: !Settings.hasTouchScreen
-            property bool autoincrement: false
-            property bool autodecrement: false
-            property int mouseModifiers: 0
-            property int previousRow: 0
-            property int clickedRow: -1
-            property int dragRow: -1
-            property int firstKeyRow: -1
 
 //            onClicked: {
 //                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
@@ -64,25 +57,26 @@ ScrollView {
             onPressed: {
                 var newIndex = listView.indexAt(0, mouseY + listView.contentY)
                 listView.forceActiveFocus()
-                if(newIndex <= -1 && selectionModel)
-                    selectionModel.clear()
-                else if(!Settings.hasTouchScreen) {
+
+                if(!selectionModel)
+                    return
+
+                if(newIndex <= -1)
+                    selectionModel.clearSelection()
+                else
                     mouseSelect(newIndex, mouse.modifiers)
-                    mouseArea.clickedRow = newIndex
-                }
-                mouseModifiers = mouse.modifiers
             }
 
             function mouseSelect(index, modifiers) {
                 if(!selectionModel)
                     return
-                selectionModel.currentRow = index
-                if (modifiers & Qt.ShiftModifier)
-                    selectionModel.select(previousRow, index, SelectionModel.ClearAndSelect)
-                else if (modifiers & Qt.ControlModifier)
+                if(modifiers & Qt.ShiftModifier)
+                    selectionModel.select(selectionModel.currentRow, index, SelectionModel.ClearAndSelect)
+                else if(modifiers & Qt.ControlModifier)
                     selectionModel.select(index, SelectionModel.Toggle)
                 else
                     selectionModel.select(index, SelectionModel.ClearAndSelect)
+                selectionModel.currentRow = index
             }
 
 //            onDoubleClicked: {
@@ -109,9 +103,7 @@ ScrollView {
             property bool isSelected
             Connections {
                 target: selectionModel
-                onSelectionChanged: {
-                    item.isSelected = selectionModel.isSelected(index)
-                }
+                onSelectionChanged: item.isSelected = selectionModel.isSelected(index)
             }
 
             Loader {
