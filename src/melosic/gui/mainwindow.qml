@@ -323,14 +323,15 @@ ApplicationWindow {
                         }
                     }
 
-                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
-                    if(new_dependSelection.length === 0)
+                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
+
+                    if(has_unknowns)
+                        tmp.metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
+                    if(tmp.metadata.$elemMatch.value.$in.length === 0)
                         delete tmp.metadata
-                    else
-                        tmp.metadata.$elemMatch.value.$in = new_dependSelection
-                    if(new_dependSelection.length !== dependSelection.length) {
-                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
-                        var u_qry = //{ $or:[
+
+                    if(has_unknowns) {
+                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
 //                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
                                 {'metadata.0': { $exists: false } }
                             //]}
@@ -339,7 +340,6 @@ ApplicationWindow {
                         else
                             tmp = { $or: [tmp, u_qry] }
                     }
-                    console.debug(objectName,"query:",Log.serialize(tmp))
 
                     query = tmp
                 }
@@ -385,21 +385,20 @@ ApplicationWindow {
                     if(dependsOn !== undefined && dependsOn.dependSelection.length > 0 && dependsOn.query.length !== 0)
                         tmp.$and.push(dependsOn.query)
 
-                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
+                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
 
-                    if(new_dependSelection.length === 0)
+                    if(has_unknowns)
+                        tmp.$and[0].metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
+                    if(tmp.$and[0].metadata.$elemMatch.value.$in.length === 0)
                         tmp.$and.splice(0, 1)
-                    else
-                        tmp.$and[0].metadata.$elemMatch.value.$in = new_dependSelection
 
                     if(tmp.$and.length === 0)
                         delete tmp.$and
                     else if(tmp.$and.length === 1)
                         tmp = tmp.$and[0]
 
-                    if(new_dependSelection.length !== dependSelection.length) {
-                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
-                        var u_qry = //{ $or:[
+                    if(has_unknowns) {
+                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
 //                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
                                 {'metadata.0': { $exists: false } }
                             //]}
@@ -408,7 +407,6 @@ ApplicationWindow {
                         else
                             tmp = { $or: [tmp, u_qry] }
                     }
-                    console.debug(objectName,"query:",Log.serialize(tmp))
 
                     query = tmp
                 }
@@ -469,9 +467,11 @@ ApplicationWindow {
                             tmp.$and.push(dependsOn.query)
                     }
 
-                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
+                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
 
-                    if(new_dependSelection.length === 0)
+                    if(has_unknowns)
+                        tmp.$and[0].metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
+                    if(tmp.$and[0].metadata.$elemMatch.value.$in.length === 0)
                         tmp.$and.splice(0, 1)
 
                     if(tmp.$and.length === 0)
@@ -479,9 +479,8 @@ ApplicationWindow {
                     else if(tmp.$and.length === 1)
                         tmp = tmp.$and[0]
 
-                    if(new_dependSelection.length !== dependSelection.length) {
-                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
-                        var u_qry = //{ $or:[
+                    if(has_unknowns) {
+                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
 //                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
                                 {'metadata.0': { $exists: false } }
                             //]}

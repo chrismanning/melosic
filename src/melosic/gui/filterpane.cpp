@@ -81,14 +81,17 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent) {
                     reader.parse(str.isEmpty() || str.isNull() ? "{}": str.toUtf8());
                     auto res = jbson::path_select(jbson::document(std::move(reader)), m_depends_path.toUtf8());
                     if(res.empty()) {
-                        m_depend_selection.erase(boost::range::find(m_depend_selection, ""));
+                        auto it = boost::range::find(m_depend_selection, "");
+                        if(it != m_depend_selection.end())
+                            m_depend_selection.erase(it);
                         continue;
                     }
                     for(auto&& val : res) {
                         if(val.type() != jbson::element_type::string_element)
                             continue;
                         auto it = boost::range::find(m_depend_selection, QString::fromStdString(val.value<std::string>()));
-                        m_depend_selection.erase(it);
+                        if(it != m_depend_selection.end())
+                            m_depend_selection.erase(it);
                     }
                 }
             }
@@ -258,14 +261,12 @@ void FilterPane::refresh() {
             sp.emplace_back(it.key().toStdString(), it->toString().toStdString());
         }
         auto ds = lm.query(qry, sp);
-        std::clog << qPrintable(this->objectName()) << ": query results: " << ds.size() << std::endl;
         sort_by_criteria(ds, boost::adaptors::transform(m_sort_fields, [](auto&& var) {
             auto bs = var.toString().toUtf8();
             return boost::string_ref(bs, bs.size());
         }));
         std::transform(ds.begin(), std::unique(ds.begin(), ds.end()),
                        std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
-        std::clog << qPrintable(this->objectName()) << ": filtered results: " << docs.size() << std::endl;
     }
 
     //TODO: replicate selection in new results
