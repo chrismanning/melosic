@@ -35,6 +35,7 @@ class FilterPane : public QObject {
     Q_PROPERTY(QString header MEMBER m_header NOTIFY headerChanged FINAL)
     Q_PROPERTY(QVariant query READ query WRITE setQuery NOTIFY queryChanged FINAL)
     Q_PROPERTY(QVariantMap paths READ paths WRITE setPaths NOTIFY pathsChanged FINAL)
+    Q_PROPERTY(QVariantList sortFields MEMBER m_sort_fields NOTIFY sortFieldsChanged FINAL)
 
     Q_PROPERTY(Melosic::FilterPane* dependsOn READ dependsOn WRITE setDependsOn NOTIFY dependsOnChanged FINAL)
     Q_PROPERTY(QVariantList dependSelection READ dependSelection NOTIFY dependSelectionChanged FINAL)
@@ -48,12 +49,12 @@ class FilterPane : public QObject {
     QString m_header;
     QVariant m_query;
     QVariantMap m_paths;
+    QVariantList m_sort_fields;
     FilterPane* m_depends;
     QVariantList m_depend_selection;
     QString m_depends_path;
     JsonDocModel* m_model;
     SelectionModel* m_selection_model;
-    LibraryManager* libman;
     QQmlComponent* m_delegate{nullptr};
 
 public:
@@ -79,6 +80,7 @@ Q_SIGNALS:
     void queryChanged(QVariant);
     void headerChanged(QString);
     void pathsChanged(QVariantMap);
+    void sortFieldsChanged(QVariantList);
     void dependsOnChanged(Melosic::FilterPane*);
     void dependSelectionChanged(QVariantList);
     void delegateChanged(QQmlComponent*);

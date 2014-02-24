@@ -77,10 +77,10 @@ struct QVariantVisitor {
 
     template <typename T>
     void operator()(boost::string_ref, T&&, jbson::element_type, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
-        assert(false);
+//        assert(false);
     }
     void operator()(boost::string_ref, jbson::element_type) {
-        assert(false);
+//        assert(false);
     }
 };
 

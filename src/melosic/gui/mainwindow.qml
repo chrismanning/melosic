@@ -9,6 +9,7 @@ import Melosic.Playlist 1.0
 import Melosic.Browser 1.0
 
 import "secstomins.js" as SecsToMins
+import "Log.js" as Log
 
 ApplicationWindow {
     id: mainWindow
@@ -321,8 +322,26 @@ ApplicationWindow {
                             }
                         }
                     }
-                    if(dependSelection.length === 0)
-                        delete tmp.metadata.$elemMatch.value
+
+                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
+                    if(new_dependSelection.length === 0)
+                        delete tmp.metadata
+                    else
+                        tmp.metadata.$elemMatch.value.$in = new_dependSelection
+                    if(new_dependSelection.length !== dependSelection.length) {
+                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
+//                        var u_qry = { metadata: {$not: {$elemMatch: {key: "genre"} } } }
+                        var u_qry = //{ $or:[
+//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
+                                {'metadata.0': { $exists: false } }
+                            //]}
+                        if(tmp.metadata === undefined)
+                            tmp = u_qry
+                        else
+                            tmp = { $or: [tmp, u_qry] }
+                    }
+                    console.debug(objectName,"query:",Log.serialize(tmp))
+
                     query = tmp
                 }
 
@@ -340,16 +359,19 @@ ApplicationWindow {
                 dependsPath: "$.artist"
                 objectName: "albumpane"
 
+                sortFields: ["date", "year", "album"]
+
                 delegate: Row {
                     x: 1
                     spacing: 5
                     Label {
                         width: 30
+                        visible: document.album !== undefined
                         text: document.date === undefined ? "0000" : document.date
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.album === undefined ? "Unknown Artist" : document.album
+                        text: document.album === undefined ? "Unknown Album" : document.album
                         color: styleData.textColor
                     }
                 }
@@ -361,20 +383,35 @@ ApplicationWindow {
                         ]
                     }
 
-                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0) {
-                        if(dependsOn.query.$and !== undefined)
-                            tmp.$and = tmp.$and.concat(dependsOn.query.$and)
-                        else
-                            tmp.$and.push(dependsOn.query)
-                    }
+                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0 && dependsOn.query.length !== 0)
+                        tmp.$and.push(dependsOn.query)
 
-                    if(dependSelection.length === 0)
+                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
+
+                    if(new_dependSelection.length === 0)
                         tmp.$and.splice(0, 1)
+                    else
+                        tmp.$and[0].metadata.$elemMatch.value.$in = new_dependSelection
 
                     if(tmp.$and.length === 0)
                         delete tmp.$and
                     else if(tmp.$and.length === 1)
                         tmp = tmp.$and[0]
+
+                    if(new_dependSelection.length !== dependSelection.length) {
+                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
+//                        var u_qry = { metadata: {$not: {$elemMatch: {key: "genre"} } } }
+                        var u_qry = //{ $or:[
+//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
+                                {'metadata.0': { $exists: false } }
+                            //]}
+                        if(tmp.$and === undefined && tmp.metadata === undefined)
+                            tmp = u_qry
+                        else
+                            tmp = { $or: [tmp, u_qry] }
+                    }
+                    console.debug(objectName,"query:",Log.serialize(tmp))
+
                     query = tmp
                 }
 
@@ -397,15 +434,18 @@ ApplicationWindow {
                 dependsPath: "$.album"
                 objectName: "trackpane"
 
+                sortFields: ["tracknumber", "title"]
+
                 delegate: Row {
                     x: 1
                     spacing: 5
                     Label {
+                        visible: document.title !== undefined
                         text: document.tracknumber === undefined ? "00" : document.tracknumber
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.title === undefined ? "Unknown Title" : document.title
+                        text: document.title === undefined ? document.path : document.title
                         color: styleData.textColor
                     }
                 }
@@ -445,7 +485,8 @@ ApplicationWindow {
                     init_query()
                     paths = {
                         title: "metadata[?(@.key == 'title')].value",
-                        tracknumber: "metadata[?(@.key == 'tracknumber')].value"
+                        tracknumber: "metadata[?(@.key == 'tracknumber')].value",
+                        path: "path"
                     }
                 }
                 onDependSelectionChanged: init_query()
