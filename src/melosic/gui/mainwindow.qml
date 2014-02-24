@@ -330,7 +330,6 @@ ApplicationWindow {
                         tmp.metadata.$elemMatch.value.$in = new_dependSelection
                     if(new_dependSelection.length !== dependSelection.length) {
                         console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
-//                        var u_qry = { metadata: {$not: {$elemMatch: {key: "genre"} } } }
                         var u_qry = //{ $or:[
 //                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
                                 {'metadata.0': { $exists: false } }
@@ -400,7 +399,6 @@ ApplicationWindow {
 
                     if(new_dependSelection.length !== dependSelection.length) {
                         console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
-//                        var u_qry = { metadata: {$not: {$elemMatch: {key: "genre"} } } }
                         var u_qry = //{ $or:[
 //                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
                                 {'metadata.0': { $exists: false } }
@@ -471,13 +469,28 @@ ApplicationWindow {
                             tmp.$and.push(dependsOn.query)
                     }
 
-                    if(dependSelection.length === 0)
+                    var new_dependSelection = dependSelection.filter(function(v) {return v !== ""})
+
+                    if(new_dependSelection.length === 0)
                         tmp.$and.splice(0, 1)
 
                     if(tmp.$and.length === 0)
                         delete tmp.$and
                     else if(tmp.$and.length === 1)
                         tmp = tmp.$and[0]
+
+                    if(new_dependSelection.length !== dependSelection.length) {
+                        console.debug(dependSelection.length-new_dependSelection.length,"empty vals removed")
+                        var u_qry = //{ $or:[
+//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
+                                {'metadata.0': { $exists: false } }
+                            //]}
+                        if(tmp.$and === undefined && tmp.metadata === undefined)
+                            tmp = u_qry
+                        else
+                            tmp = { $or: [tmp, u_qry] }
+                    }
+
                     query = tmp
                 }
 
