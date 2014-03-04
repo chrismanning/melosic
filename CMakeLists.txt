@@ -1,7 +1,9 @@
 project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8.11)
 
-option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" ON)
+option(MELOSIC_ENABLE_TESTING "Enable testing" ON)
+option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
+option(MELOSIC_DETECT_LEAKS "Use -fsanitize=leak where available" OFF)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
@@ -36,9 +38,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++1y")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O1")
 
 if(MELOSIC_SANITIZE_ADDRESS AND NOT WIN32)
- message(STATUS "MELOSIC_SANITIZE_ADDRESS")
+ message(STATUS "Address sanitizer enabled")
  set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address")
 endif()
+
+if(MELOSIC_DETECT_LEAKS AND NOT WIN32)
+ message(STATUS "Leak detection enabled")
+ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak")
+endif()
+
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS}")
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -Os")
@@ -100,7 +108,10 @@ ExternalProject_Get_Property(gtest_${PROJECT_NAME} binary_dir)
 set(GTEST_LIBRARY_DIR ${binary_dir})
 set(GTEST_LIBRARIES "-L${GTEST_LIBRARY_DIR} -lgtest")
 
+if(${MELOSIC_ENABLE_TESTING})
 enable_testing()
+endif()
+
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main> $<TARGET_OBJECTS:${PN}objects>)
   add_dependencies(${test_name} gtest_${PROJECT_NAME})
