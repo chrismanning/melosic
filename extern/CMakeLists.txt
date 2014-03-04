@@ -25,6 +25,10 @@ FILE(GLOB_RECURSE rapidjson_headers ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/includ
 add_library(rapidjson_headers_lib STATIC ${rapidjson_headers})
 set_target_properties(rapidjson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
+set(JBSON_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
+add_subdirectory(jbson)
+set(JBSON_INCLUDE_DIR jbson/include)
+
 #ejdb
 include(ExternalProject)
 ExternalProject_Add(ejdb
@@ -40,7 +44,9 @@ INSTALL_COMMAND ${MAKE_INSTALL}
 set(ENV{PKG_CONFIG_PATH} "${LIBRARY_OUTPUT_PATH}/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
 #ejpp
+set(EJPP_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
 add_subdirectory(ejpp)
+add_dependencies(ejpp jbson)
 add_dependencies(ejpp ejdb)
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/include ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/jbson/include)
 

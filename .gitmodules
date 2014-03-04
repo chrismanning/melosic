@@ -25,3 +25,6 @@
 [submodule "extern/asio"]
 	path = extern/asio
 	url = https://github.com/chriskohlhoff/asio.git
+[submodule "extern/jbson"]
+	path = extern/jbson
+	url = https://github.com/chrismanning/jbson.git
