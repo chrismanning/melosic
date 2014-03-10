@@ -46,9 +46,8 @@ enum class Severity {
 typedef logging::sources::severity_channel_logger_mt<Severity> Logger;
 
 template <typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<< (
-    std::basic_ostream<CharT, TraitsT>& strm, Severity lvl)
-{
+MELOSIC_EXPORT
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, Severity lvl) {
     switch(lvl) {
         case Severity::info:
             strm << "info";
@@ -65,10 +64,11 @@ std::basic_ostream<CharT, TraitsT>& operator<< (
         case Severity::trace:
             strm << "trace";
             break;
+        default:
+            assert(false);
     }
     return strm;
 }
-extern template std::ostream& operator<<(std::ostream&, Severity);
 
 MELOSIC_EXPORT void init();
 
@@ -83,15 +83,15 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 
 #ifndef MELOSIC_DISABLE_LOGGING
 #define LOG(lg) BOOST_LOG(lg)
-#define ERROR_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::error)
-#define WARN_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::warning)
-#define DEBUG_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::debug)
-#define TRACE_LOG(lg) BOOST_LOG_SEV(lg, Melosic::Logger::Severity::trace)
+#define ERROR_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::error)
+#define WARN_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::warning)
+#define DEBUG_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::debug)
+#define TRACE_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::trace)
 #define CHAN_LOG(lg, chan) BOOST_LOG_CHANNEL(lg, chan)
-#define CHAN_ERROR_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::error)
-#define CHAN_WARN_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::warning)
-#define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::debug)
-#define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, Melosic::Logger::Severity::trace)
+#define CHAN_ERROR_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::error)
+#define CHAN_WARN_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::warning)
+#define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::debug)
+#define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::trace)
 #else
 #define LOG(lg) Melosic::Logger::nullstream()
 #define ERROR_LOG(lg) Melosic::Logger::nullstream()

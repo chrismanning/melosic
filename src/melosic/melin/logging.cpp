@@ -31,8 +31,6 @@ template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Sev
 namespace Melosic {
 namespace Logger {
 
-template std::ostream& operator<<(std::ostream&, Severity);
-
 void init() {
     typedef sinks::synchronous_sink<sinks::text_ostream_backend > text_sink;
     boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
@@ -55,7 +53,7 @@ void init() {
         strm << logging::extract<boost::posix_time::ptime>("TimeStamp", rec) << " ";
 
         strm << "[" << logging::extract<std::string>("Channel", rec) << "] ";
-        strm << "<" << logging::extract<Severity>("Severity", rec) << "> ";
+        strm << "<" << logging::extract_or_default<Severity>("Severity", rec, Severity::info) << "> ";
 
         // Finally, put the record message to the stream
         strm << rec[expr::smessage];
