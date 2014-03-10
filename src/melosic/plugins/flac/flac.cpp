@@ -22,6 +22,7 @@
 #include <cmath>
 #include <fstream>
 
+#include <boost/config.hpp>
 #include <boost/iostreams/read.hpp>
 #include <boost/iostreams/positioning.hpp>
 #include <boost/iostreams/seek.hpp>
@@ -53,7 +54,7 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
     FlacDecoderImpl(std::unique_ptr<std::istream> input, std::deque<char>& buf, AudioSpecs& as)
         : m_input(std::move(input)), buf(buf), as(as), lastSample(0)
     {
-        assert(m_input);
+        assert(m_input != nullptr);
         m_input->exceptions(std::ifstream::badbit | std::ifstream::failbit);
         FLAC_THROW_IF(DecoderInitException, init() == FLAC__STREAM_DECODER_INIT_STATUS_OK, this);
         FLAC_THROW_IF(MetadataException, process_until_end_of_metadata(), this);
@@ -266,15 +267,16 @@ private:
     FlacDecoderImpl impl;
 };
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::flacInfo;
     funs << registerDecoder;
 }
 
-extern "C" MELOSIC_EXPORT void registerDecoder(Decoder::Manager* decman) {
+using namespace boost::literals;
+extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
     decman->addAudioFormat([](auto input) { return std::make_unique<FlacDecoder>(std::move(input)); },
-    ".flac"s);
+    "audio/flac"_s_ref, "audio/x-flac"_s_ref);
 }
 
-extern "C" MELOSIC_EXPORT void destroyPlugin() {
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
 }

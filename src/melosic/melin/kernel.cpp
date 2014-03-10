@@ -43,10 +43,10 @@ struct Kernel::impl {
         tman(&io_service),
         null_worker_(std::move(null_worker)),
         inman(),
-        decman(tman),
+        decman(inman, tman),
         encman(),
         libman(confman, decman, plugman),
-        playlistman(decman)
+        playlistman()
     {}
 
     Config::Manager confman;

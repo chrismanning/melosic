@@ -17,7 +17,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
 endif()
 
-find_package(Boost COMPONENTS system thread locale filesystem iostreams log log_setup chrono date_time REQUIRED)
+find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time REQUIRED)
 
 include_directories(include)
 add_subdirectory(extern)
@@ -49,8 +49,8 @@ endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS}")
 
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -Os")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -Os")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
@@ -62,10 +62,10 @@ find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z network-uri)
 
 if(UNIX)
- SET(LINK_LIBS ${LINK_LIBS} dl)
+ SET(LINK_LIBS ${LINK_LIBS} dl magic)
 endif()
 
 SET(PN ${PROJECT_NAME})
@@ -113,9 +113,9 @@ enable_testing()
 endif()
 
 function(cxx_test test_name)
-  add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main> $<TARGET_OBJECTS:${PN}objects>)
+  add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
   add_dependencies(${test_name} gtest_${PROJECT_NAME})
-  target_link_libraries(${test_name} ${LINK_LIBS} ejpp ${GTEST_LIBRARIES})
+  target_link_libraries(${test_name} ${LINK_LIBS} ejpp ${GTEST_LIBRARIES} ${PN}lib)
   set_target_properties(${test_name} PROPERTIES COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING=1")
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()

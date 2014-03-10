@@ -13,6 +13,7 @@ import Melosic.Browser 1.0
 SplitView {
     id: root
     orientation: Qt.Vertical
+    signal activated(SelectionModel items)
 
     default property alias __panes: panes.data
 
@@ -34,6 +35,7 @@ SplitView {
             if(__panes[i].delegate !== null)
                 props.itemDelegate = __panes[i].delegate
             var pane = paneLoader.createObject(root, props)
+            pane.activated.connect(root.activated)
             root.addItem(pane)
         }
     }

@@ -18,6 +18,10 @@ ScrollView {
     property Component styleDelegate
     property Component focusDelegate
 
+    property bool activateItemOnSingleClick: false
+
+    signal activated(SelectionModel selection)
+
     ListView {
         id: listView
         focus: true
@@ -79,14 +83,13 @@ ScrollView {
                 selectionModel.currentRow = index
             }
 
-//            onDoubleClicked: {
-//                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
-//                if (clickIndex > -1) {
-//                    if (!root.__activateItemOnSingleClick)
-//                        root.activated(clickIndex)
-//                    root.doubleClicked(clickIndex)
-//                }
-//            }
+            onDoubleClicked: {
+                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
+                if(clickIndex > -1) {
+                    if(!root.activateItemOnSingleClick)
+                        root.activated(selectionModel)
+                }
+            }
         }
 
         delegate: Item {

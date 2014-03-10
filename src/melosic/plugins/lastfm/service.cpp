@@ -36,10 +36,8 @@ using boost::algorithm::hex;
 #include <openssl/md5.h>
 
 #include <network/uri.hpp>
-#include <network/http/client.hpp>
-#include <network/http/request.hpp>
-#include <network/http/response.hpp>
 #include <network/uri/uri_builder.hpp>
+#include <network/http/v2/client.hpp>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/core/playlist.hpp>
@@ -69,7 +67,7 @@ public:
 
     std::string postMethod(const Method& method) {
         std::stringstream strstr;
-        network::uri_builder url;
+        network::uri_builder uri_build;
         const Parameter& param = method.getParameters().front();
 
         strstr << "method=" << method.methodName;
@@ -78,27 +76,27 @@ public:
         }
         std::string qstr(strstr.str());
         std::replace(qstr.begin(), qstr.end(), ' ', '+');
-        url.scheme("http")
+        uri_build.scheme("http")
            .host("ws.audioscrobbler.com")
            .path("/2.0/")
            .query(qstr);
-        TRACE_LOG(logject) << "Query uri: " << network::uri(url);
-        request.set_uri(network::uri(url));
+        auto uri = network::uri(uri_build);
+        TRACE_LOG(logject) << "Query uri: " << uri;
+        request.url(uri);
 
-        network::http::response response = client.post(request);
+        network::http::v2::response response = client.post(request).get();
 
         std::string str;
-        uint16_t status = 0;
         try {
-            response.get_status(status);
-            TRACE_LOG(logject) << "HTTP response status: " << status;
-            if(status != 200) {
-                response.get_status_message(str);
+            auto status = response.status();
+            TRACE_LOG(logject) << "HTTP response status: " << (int)status;
+            if(status != network::http::v2::status::code::ok) {
+                str = response.status_message();
                 ERROR_LOG(logject) << str;
-                BOOST_THROW_EXCEPTION(Melosic::HttpException() << Melosic::ErrorTag::HttpStatus({status, str}));
+//                BOOST_THROW_EXCEPTION(Melosic::HttpException() << Melosic::ErrorTag::HttpStatus({status, str}));
             }
 
-            response.get_body(str);
+            str = response.body();
         }
         catch(Melosic::HttpException& e) {
             str.clear();
@@ -110,11 +108,14 @@ public:
                 ss << "unknown error";
             ERROR_LOG(logject) << ss.str();
         }
+        catch(std::future_error& e) {
+            ERROR_LOG(logject) << "Network: " << e.what();
+        }
         catch(std::runtime_error& e) {
             ERROR_LOG(logject) << "Network: " << e.what();
         }
 
-        request.set_uri("");
+        request.url(network::uri());
 
         return str;
     }
@@ -130,8 +131,8 @@ public:
     }
 
 private:
-    network::http::client client;
-    network::http::request request;
+    network::http::v2::client client;
+    network::http::v2::request request;
     const std::string apiKey;
     const std::string sharedSecret;
     Melosic::Thread::Manager*& tman;

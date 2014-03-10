@@ -261,8 +261,10 @@ void FilterPane::refresh() {
             sp.emplace_back(it.key().toStdString(), it->toString().toStdString());
         }
         auto ds = lm.query(qry, sp);
-        sort_by_criteria(ds, boost::adaptors::transform(m_sort_fields, [](auto&& var) {
-            auto bs = var.toString().toUtf8();
+        std::vector<QByteArray> sort_fields;
+        for(auto&& sf : m_sort_fields)
+            sort_fields.emplace_back(sf.toString().toUtf8());
+        sort_by_criteria(ds, boost::adaptors::transform(sort_fields, [](auto&& bs) {
             return boost::string_ref(bs, bs.size());
         }));
         std::transform(ds.begin(), std::unique(ds.begin(), ds.end()),

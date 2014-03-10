@@ -42,10 +42,10 @@ QString CategoryTag::result(const QModelIndex& index) const {
     Q_ASSERT(index.isValid());
     if(!m_playlist_model)
         return m_field;
-    auto track = m_playlist_model->playlist.getTrack(index.row());
+    auto track = m_playlist_model->m_playlist.getTrack(index.row());
     if(!track)
         return m_field;
-    auto tag = track->getTag(m_field.toStdString());
+    auto tag = track->tag(m_field.toStdString());
     if(!tag)
         return m_field;
     return QString::fromStdString(*tag);

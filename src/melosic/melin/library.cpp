@@ -39,6 +39,8 @@ using namespace jbson::literal;
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/decoder.hpp>
+#include <melosic/melin/input.hpp>
+#include <melosic/common/typeid.hpp>
 #include "library.hpp"
 
 namespace Melosic {
@@ -173,23 +175,27 @@ void Manager::impl::scan(const fs::path& dir) {
         return;
     }
 
-    auto range = boost::make_iterator_range(fs::recursive_directory_iterator{dir}, {});
-
-    for(fs::directory_entry& entry : range) {
+    for(fs::directory_entry& entry : fs::recursive_directory_iterator{dir}) {
         auto p = entry.path();
         if(!fs::is_regular_file(p))
             continue;
-        TRACE_LOG(logject) << p;
-        auto tracks = decman.openPath(p);
-        if(tracks.empty())
-            continue;
-        for(const auto& t : tracks) {
-            auto oid = coll.save_document(t.bson(), ec);
-            if(ec) {
-                ERROR_LOG(logject) << "document save error: " << ec.message();
+        TRACE_LOG(logject) << "Scanning: " << p;
+        try {
+            auto tracks = decman.tracks(Input::to_uri(p));
+            if(tracks.empty())
                 continue;
+            for(const auto& t : tracks) {
+                auto oid = coll.save_document(t.bson(), ec);
+                if(ec) {
+                    ERROR_LOG(logject) << "document save error: " << ec.message();
+                    continue;
+                }
+                assert(oid);
             }
-            assert(oid);
+        }
+        catch(...) {
+            ERROR_LOG(logject) << "Scan error";
+            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
         }
     }
     r = coll.sync(ec);
@@ -264,7 +270,7 @@ std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
     std::error_code ec;
     ejdb::query q;
     try {
-        q = pimpl->db.create_query(qdoc, ec);
+        q = pimpl->db.create_query(qdoc, ec).set_hints(R"({ "$orderby": { "location": 1 } })"_json_doc);
         if(ec)
             return {};
     }

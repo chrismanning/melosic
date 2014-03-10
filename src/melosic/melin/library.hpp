@@ -46,7 +46,6 @@ class Manager;
 }
 
 namespace Core {
-struct AudioFile;
 class Track;
 }
 

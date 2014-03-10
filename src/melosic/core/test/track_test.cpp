@@ -15,41 +15,21 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_INPUTMANAGER_HPP
-#define MELOSIC_INPUTMANAGER_HPP
+#include <gtest/gtest.h>
 
-#include <memory>
-#include <istream>
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
+#include <boost/utility/string_ref.hpp>
+using namespace boost::literals;
 
-#include <network/uri.hpp>
+#define private public
 
-#include <melosic/common/common.hpp>
+#include <melosic/melin/input.hpp>
+#include <melosic/core/track.hpp>
+using namespace Melosic;
 
-namespace Melosic {
-struct AudioSpecs;
-namespace Input {
-
-class MELOSIC_EXPORT Manager {
-public:
-    Manager();
-    ~Manager();
-
-    Manager(Manager&&) = delete;
-    Manager(const Manager&&) = delete;
-    Manager& operator=(const Manager&) = delete;
-
-    MELOSIC_EXPORT std::unique_ptr<std::istream> open(const network::uri& uri) const;
-
-private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
-};
-
-MELOSIC_EXPORT boost::filesystem::path uri_to_path(const network::uri& uri);
-
-MELOSIC_EXPORT network::uri to_uri(const boost::filesystem::path& path);
-
-} // namespace Input
-} // namespace Melosic
-
-#endif // MELOSIC_INPUTMANAGER_HPP
+TEST(TrackTest, TestTrack1) {
+    auto track = Core::Track{Input::to_uri("/tmp/some track.flac")};
+    EXPECT_EQ("file:///tmp/some%20track.flac", track.uri().string());
+}

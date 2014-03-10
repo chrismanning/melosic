@@ -21,7 +21,7 @@ using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 
 #include <melosic/common/optional.hpp>
-
+#include <melosic/melin/kernel.hpp>
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/gui/playlistmodel.hpp>
@@ -31,17 +31,17 @@ using unique_lock = std::unique_lock<mutex>;
 
 namespace Melosic {
 
-PlaylistManagerModel::PlaylistManagerModel(Playlist::Manager& playman, Thread::Manager& tman, QObject* parent)
+PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
     : QAbstractListModel(parent),
-      playman(playman),
-      tman(tman),
+      playman(k.getPlaylistManager()),
+      tman(k.getThreadManager()),
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {
-    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this] (optional<Core::Playlist> p) {
+    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this, &k] (optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p) {
-           auto pm = new PlaylistModel(*p, this->tman);
+           auto pm = new PlaylistModel(*p, k);
            pm->moveToThread(this->thread());
            playlists.insert({*p, pm});
         }
@@ -86,7 +86,7 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
         case Qt::EditRole: {
             auto v = playman.getPlaylist(index.row());
             assert(v);
-            return QString::fromStdString(v->getName());
+            return QString::fromUtf8(v->name().data(), v->name().size());
         }
         case PlaylistModelRole: {
             auto v = playman.getPlaylist(index.row());

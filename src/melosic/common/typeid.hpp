@@ -20,9 +20,11 @@
 
 #include <ostream>
 #include <typeinfo>
+#include <typeindex>
 #include <cxxabi.h>
 
 namespace std {
+
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, const std::type_info& t) {
     const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
@@ -32,6 +34,17 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
     }
     return strm;
 }
+
+template <typename CharT, typename TraitsT>
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, const std::type_index& t) {
+    const auto str = abi::__cxa_demangle(t.name(), nullptr, nullptr, nullptr);
+    if(str) {
+        strm << str;
+        ::free(str);
+    }
+    return strm;
+}
+
 } //std
 
 #endif // MELOSIC_TYPEID_HPP

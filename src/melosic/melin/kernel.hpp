@@ -58,7 +58,7 @@ class Manager;
 
 namespace Core {
 
-class Kernel final {
+class MELOSIC_EXPORT Kernel final {
 public:
     Kernel();
 
@@ -69,17 +69,17 @@ public:
 
     ~Kernel();
 
-    MELOSIC_EXPORT Config::Manager& getConfigManager();
-    MELOSIC_EXPORT Plugin::Manager& getPluginManager();
-    MELOSIC_EXPORT Input::Manager& getInputManager();
-    MELOSIC_EXPORT Decoder::Manager& getDecoderManager();
-    MELOSIC_EXPORT Output::Manager& getOutputManager();
-    MELOSIC_EXPORT Encoder::Manager& getEncoderManager();
-    MELOSIC_EXPORT Thread::Manager& getThreadManager();
-    MELOSIC_EXPORT Melosic::Playlist::Manager& getPlaylistManager();
-    MELOSIC_EXPORT Library::Manager& getLibraryManager();
+    Config::Manager& getConfigManager();
+    Plugin::Manager& getPluginManager();
+    Input::Manager& getInputManager();
+    Decoder::Manager& getDecoderManager();
+    Output::Manager& getOutputManager();
+    Encoder::Manager& getEncoderManager();
+    Thread::Manager& getThreadManager();
+    Melosic::Playlist::Manager& getPlaylistManager();
+    Library::Manager& getLibraryManager();
 
-    MELOSIC_EXPORT asio::io_service& getIOService();
+    asio::io_service& getIOService();
 
 private:
     struct impl;

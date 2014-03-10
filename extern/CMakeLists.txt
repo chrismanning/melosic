@@ -3,6 +3,7 @@ SET(CMAKE_BUILD_TYPE Release)
 
 #cpp-netlib
 add_subdirectory(cpp-netlib)
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/cpp-netlib/config/src/)
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/cpp-netlib/http/src/)
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/cpp-netlib/uri/src/)
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/cpp-netlib/message/src/)
@@ -27,7 +28,7 @@ set_target_properties(rapidjson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
 set(JBSON_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
 add_subdirectory(jbson)
-set(JBSON_INCLUDE_DIR jbson/include)
+set(JBSON_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jbson/include)
 
 #ejdb
 include(ExternalProject)
@@ -48,6 +49,6 @@ set(EJPP_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
 add_subdirectory(ejpp)
 add_dependencies(ejpp jbson)
 add_dependencies(ejpp ejdb)
-set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/include ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/jbson/include)
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/include ${CMAKE_CURRENT_SOURCE_DIR}/jbson/include)
 
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} PARENT_SCOPE)

@@ -15,6 +15,13 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <boost/utility/string_ref.hpp>
+using namespace boost::literals;
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+namespace fs = boost::filesystem;
+#include <boost/algorithm/string/replace.hpp>
+
 #include "input.hpp"
 
 namespace Melosic {
@@ -24,10 +31,51 @@ class Manager::impl {
 
 };
 
-Manager::Manager() : pimpl(new impl) {
+Manager::Manager()
+//    : pimpl(new impl)
+{}
+
+std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
+    try {
+        if(!uri.scheme())
+            return nullptr;
+        if(uri.scheme() == "file"_s_ref) {
+            return std::make_unique<fs::ifstream>(uri_to_path(uri));
+        }
+        else if(uri.scheme() == "http"_s_ref) {
+        }
+    }
+    catch(...) {
+        return nullptr;
+    }
+
+    return nullptr;
 }
 
 Manager::~Manager() {}
+
+boost::filesystem::path uri_to_path(const network::uri& uri) {
+    boost::filesystem::path p/*{"/"}*/;
+    if(uri.host())
+        p /= uri.host()->to_string();
+    if(uri.path()) {
+        boost::string_ref str_ref = *uri.path();
+        str_ref = boost::string_ref{str_ref.data()-1, str_ref.size()};
+        auto str = std::string{};
+        network::uri::decode(str_ref.begin(), str_ref.end(), std::back_inserter(str));
+        p /= std::move(str);
+    }
+    return std::move(p);
+}
+
+network::uri to_uri(const boost::filesystem::path& path) {
+    network::uri_builder uri{};
+    uri.scheme("file");
+    uri.authority("");
+    uri.path(path);
+
+    return network::uri{uri};
+}
 
 } // namespace Input
 } // namespace Melosic

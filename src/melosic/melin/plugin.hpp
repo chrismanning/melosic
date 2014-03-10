@@ -48,7 +48,7 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    void loadPlugins(Core::Kernel& kernel);
+    MELOSIC_EXPORT void loadPlugins(Core::Kernel& kernel);
 
     ForwardRange<const Info> getPlugins() const;
     Signals::Plugin::PluginsLoaded& getPluginsLoadedSignal() const;

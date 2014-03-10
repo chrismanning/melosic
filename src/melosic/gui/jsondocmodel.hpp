@@ -28,10 +28,14 @@
 namespace Melosic {
 
 class JsonDocModel : public QAbstractListModel {
-    std::vector<jbson::document> m_docs;
+    Q_OBJECT
+
+    struct impl;
+    std::unique_ptr<impl> pimpl;
 
 public:
     explicit JsonDocModel(QObject *parent = nullptr);
+    virtual ~JsonDocModel();
 
     enum Roles { DocumentStringRole = Qt::UserRole * 7, DocumentRole };
 

@@ -43,7 +43,7 @@ class Kernel;
 class Playlist;
 class Track;
 
-class Player final {
+class MELOSIC_EXPORT Player final {
 public:
     explicit Player(Core::Kernel&);
 
@@ -54,21 +54,21 @@ public:
     Player(Player&&) = delete;
     Player& operator=(Player&&) = delete;
 
-    MELOSIC_EXPORT void play();
-    MELOSIC_EXPORT void pause();
-    MELOSIC_EXPORT void stop();
-    MELOSIC_EXPORT DeviceState state() const;
-    MELOSIC_EXPORT void seek(chrono::milliseconds dur);
-    MELOSIC_EXPORT chrono::milliseconds tell() const;
+    void play();
+    void pause();
+    void stop();
+    DeviceState state() const;
+    void seek(chrono::milliseconds dur);
+    chrono::milliseconds tell() const;
 
-    MELOSIC_EXPORT optional<Playlist> currentPlaylist() const;
-    MELOSIC_EXPORT optional<Track> currentTrack() const;
-    MELOSIC_EXPORT void next();
-    MELOSIC_EXPORT void previous();
-    MELOSIC_EXPORT void jumpTo(int);
-    MELOSIC_EXPORT tuple<optional<Playlist>, optional<Track>> current() const;
+    optional<Playlist> currentPlaylist() const;
+    optional<Track> currentTrack() const;
+    void next();
+    void previous();
+    void jumpTo(int);
+    tuple<optional<Playlist>, optional<Track>> current() const;
 
-    MELOSIC_EXPORT Signals::Player::StateChanged& stateChangedSignal() const;
+    Signals::Player::StateChanged& stateChangedSignal() const;
 
     struct impl;
 private:

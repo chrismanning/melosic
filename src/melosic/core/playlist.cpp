@@ -24,10 +24,6 @@ using mutex = std::shared_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
-#include <boost/format.hpp>
-using boost::format;
-#include <boost/iostreams/read.hpp>
-namespace io = boost::iostreams;
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/container/stable_vector.hpp>
 
@@ -64,12 +60,11 @@ struct MultiTagsChanged : Signals::Signal<Signals::Playlist::MultiTagsChanged> {
     using Super::Signal;
 };
 
-class Playlist::impl {
+class Playlist::impl : public std::enable_shared_from_this<impl> {
 public:
     using Container = boost::container::stable_vector<Playlist::value_type>;
 
-    impl(Decoder::Manager& decman, std::string name) :
-        decman(decman),
+    impl(std::string name) :
         name(name)
     {}
 
@@ -120,43 +115,28 @@ public:
 
         trackAdded(pos, *r, l);
 
-        return *r;
+        return +std::distance(std::begin(tracks), r);
     }
 
-    Playlist::size_type emplace(Playlist::size_type pos, boost::filesystem::path filename,
-                                unique_lock& l)
-    {
-        if(pos > size())
-            pos = size();
-        auto v = decman.openPath(filename);
-        if(v.empty())
-            return 0;
-        for(auto& x : v) {
-            auto r = tracks.emplace(std::next(std::begin(tracks), pos++), x);
-
-            trackAdded(pos, {*r}, l);
-        }
-
-        return v.size();
-    }
-
-    Playlist::size_type emplace(Playlist::size_type pos,
-                                ForwardRange<const boost::filesystem::path> values,
+    Playlist::size_type insert(Playlist::size_type pos,
+                                ForwardRange<Playlist::value_type> values,
                                 unique_lock& l)
     {
         if(pos > size())
             pos = size();
 
+        const auto old_size = size();
         Playlist::size_type s{0};
 
         if(values.empty())
             return s;
 
-        for(const auto& path : values) {
-            auto n = emplace(pos, path, l);
-            pos += n;
-            s += n;
+        for(const auto& val : values) {
+            insert(pos, val, l);
+            pos++;
+            s++;
         }
+        assert(size() == old_size + s);
 
         return s;
     }
@@ -165,10 +145,6 @@ public:
         tracks.push_back(std::move(value));
 
         trackAdded(tracks.size()-1, tracks.back(), l);
-    }
-
-    Playlist::size_type emplace_back(boost::filesystem::path filename, unique_lock& l) {
-        return emplace(tracks.size(), filename, l);
     }
 
     void erase(Playlist::size_type pos) {
@@ -201,12 +177,11 @@ public:
     TagsChanged tagsChangedSignal;
     MultiTagsChanged multiTagsChangedSignal;
 
-    Decoder::Manager& decman;
     std::string name;
 };
 
-Playlist::Playlist(Decoder::Manager& decman, std::string name) :
-    pimpl(new impl(decman, std::move(name))) {}
+Playlist::Playlist(std::string name) :
+    pimpl(std::make_shared<impl>(std::move(name))) {}
 
 Playlist::~Playlist() {}
 
@@ -271,40 +246,19 @@ Playlist::size_type Playlist::max_size() const {
     return std::numeric_limits<size_type>::max();
 }
 
-Playlist::value_type Playlist::insert(size_type pos, Playlist::value_type value) {
+size_t Playlist::insert(size_type pos, Playlist::value_type value) {
     unique_lock l(pimpl->mu);
     return pimpl->insert(pos, std::move(value), l);
 }
 
-Playlist::size_type Playlist::emplace(size_type pos, boost::filesystem::path filename) {
-    unique_lock l(pimpl->mu);
-    return pimpl->emplace(pos, std::move(filename), l);
-}
-
 Playlist::size_type Playlist::insert(size_type pos, ForwardRange<value_type> values) {
     unique_lock l(pimpl->mu);
-    size_type s{0};
-    for(const auto& v : values) {
-        pimpl->insert(pos++, v, l);
-        ++s;
-    }
-    return s;
-}
-
-Playlist::size_type Playlist::emplace(size_type pos, ForwardRange<const boost::filesystem::path> values) {
-    unique_lock l(pimpl->mu);
-    return pimpl->emplace(pos, values, l);
+    return pimpl->insert(pos, values, l);
 }
 
 void Playlist::push_back(Playlist::value_type value) {
     unique_lock l(pimpl->mu);
     pimpl->push_back(std::move(value), l);
-}
-
-bool Playlist::emplace_back(boost::filesystem::path filename)
-{
-    unique_lock l(pimpl->mu);
-    return pimpl->emplace_back(std::move(filename), l);
 }
 
 void Playlist::erase(size_type pos) {
@@ -322,24 +276,28 @@ void Playlist::clear() {
     pimpl->clear();
 }
 
-void Playlist::swap(Playlist& b)  {
-    lock_guard l1(pimpl->mu);
-    lock_guard l2(b.pimpl->mu);
+void Playlist::swap(Playlist& b) {
+    unique_lock l{pimpl->mu, std::defer_lock}, l2{b.pimpl->mu, std::defer_lock};
+    std::lock(l, l2);
     std::swap(pimpl, b.pimpl);
 }
 
-const std::string& Playlist::getName() const {
+boost::string_ref Playlist::name() const {
     shared_lock l(pimpl->mu);
     return pimpl->getName();
 }
 
-void Playlist::setName(std::string name) {
+void Playlist::name(std::string name) {
     lock_guard l(pimpl->mu);
     pimpl->setName(std::move(name));
 }
 
 bool Playlist::operator==(const Playlist& b) const {
     return pimpl == b.pimpl;
+}
+
+bool Playlist::operator!=(const Playlist& b) const {
+    return !(*this == b);
 }
 
 Signals::Playlist::TagsChanged& Playlist::getTagsChangedSignal() const noexcept {
@@ -350,70 +308,102 @@ Signals::Playlist::MultiTagsChanged& Playlist::getMutlipleTagsChangedSignal() co
     return pimpl->multiTagsChangedSignal;
 }
 
-struct Playlist::Iterator : boost::iterator_facade<Iterator,
-                                         optional<Track>,
-                                         boost::random_access_traversal_tag,
-                                         optional<Track>>
+template <typename Value>
+struct Playlist::Iterator :
+        boost::iterator_facade<Iterator<Value>,
+                               Value,
+                               boost::random_access_traversal_tag>
 {
+    static_assert(!std::is_reference<Value>::value, "");
+
+    Iterator() = default;
+    Iterator(const Iterator&) = default;
+
+    template <typename OtherValue, typename = std::enable_if_t<std::is_convertible<OtherValue*,Value*>::value>>
+    Iterator(const Iterator<OtherValue>& b) :
+        m_playlist_pimpl(b.m_playlist_pimpl),
+        m_iterator(b.m_iterator),
+        m_track(b.m_track)
+    {}
+
     explicit Iterator(std::shared_ptr<impl> playlist);
     Iterator(std::shared_ptr<impl> playlist, Playlist::impl::Container::iterator it);
 
 private:
-    optional<Track> dereference() const;
-    bool equal(Iterator b) const;
+    Value& dereference() const;
+    template <class OtherValue>
+    bool equal(const Iterator<OtherValue>& b) const;
     void increment();
     void decrement();
-    void advance(iterator_facade_::difference_type n);
-    difference_type distance_to(Iterator b) const;
+    void advance(std::ptrdiff_t n);
+    template <class OtherValue>
+    std::ptrdiff_t distance_to(const Iterator<OtherValue>& b) const;
 
     friend class boost::iterator_core_access;
     std::shared_ptr<Playlist::impl> m_playlist_pimpl;
     Playlist::impl::Container::iterator m_iterator;
-    optional<Track> m_track;
+    mutable optional<std::decay_t<Value>> m_track;
 };
 
-Playlist::iterator Playlist::begin() const {
+Playlist::const_iterator Playlist::begin() const {
     shared_lock l(pimpl->mu);
-    return Playlist::iterator{Iterator{pimpl, pimpl->tracks.begin()}};
+    return Playlist::const_iterator{Iterator<const value_type>{pimpl, pimpl->tracks.begin()}};
 }
 
-Playlist::iterator Playlist::end() const {
+Playlist::const_iterator Playlist::end() const {
     shared_lock l(pimpl->mu);
-    return Playlist::iterator{Iterator{pimpl, pimpl->tracks.end()}};
+    return Playlist::const_iterator{Iterator<const value_type>{pimpl, pimpl->tracks.end()}};
 }
 
-Playlist::Iterator::Iterator(std::shared_ptr<impl> playlist)
+Playlist::iterator Playlist::begin() {
+    shared_lock l(pimpl->mu);
+    return Playlist::iterator{Iterator<value_type>{pimpl, pimpl->tracks.begin()}};
+}
+
+Playlist::iterator Playlist::end() {
+    shared_lock l(pimpl->mu);
+    return Playlist::iterator{Iterator<value_type>{pimpl, pimpl->tracks.end()}};
+}
+
+template <typename Value>
+Playlist::Iterator<Value>::Iterator(std::shared_ptr<impl> playlist)
     : m_playlist_pimpl(playlist),
-      m_iterator(playlist ? playlist->tracks.end() : Playlist::impl::Container::iterator{})
+      m_iterator(playlist->tracks.end())
 {
-    if(!m_playlist_pimpl || m_iterator == m_playlist_pimpl->tracks.end())
+    assert(m_playlist_pimpl);
+    if(m_iterator == m_playlist_pimpl->tracks.end() || m_playlist_pimpl->tracks.empty())
         return;
     m_track = *m_iterator;
 }
 
-Playlist::Iterator::Iterator(std::shared_ptr<impl> playlist, Playlist::impl::Container::iterator it)
+template <typename Value>
+Playlist::Iterator<Value>::Iterator(std::shared_ptr<impl> playlist, Playlist::impl::Container::iterator it)
     :  m_playlist_pimpl(playlist), m_iterator(it)
 {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
-    if(!m_playlist_pimpl || m_iterator == m_playlist_pimpl->tracks.end())
+    if(m_iterator == m_playlist_pimpl->tracks.end() || m_playlist_pimpl->tracks.empty())
         return;
     m_track = *m_iterator;
 }
 
-optional<Track> Playlist::Iterator::dereference() const {
-    if(!m_playlist_pimpl)
-        assert(false);
-    return m_track;
+template <typename Value>
+Value& Playlist::Iterator<Value>::dereference() const {
+    assert(m_playlist_pimpl);
+    return *m_track;
 }
 
-bool Playlist::Iterator::equal(Playlist::Iterator b) const {
+template <typename Value>
+template <class OtherValue>
+bool Playlist::Iterator<Value>::equal(const Playlist::Iterator<OtherValue>& b) const {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
     return b.m_iterator == m_iterator;
 }
 
-void Playlist::Iterator::increment() {
-    if(!m_playlist_pimpl)
-        assert(false);
+template <typename Value>
+void Playlist::Iterator<Value>::increment() {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
     if(m_playlist_pimpl->tracks.end() == m_iterator)
         return;
@@ -424,18 +414,18 @@ void Playlist::Iterator::increment() {
         m_track = *m_iterator;
 }
 
-void Playlist::Iterator::decrement() {
-    if(!m_playlist_pimpl)
-        assert(false);
+template <typename Value>
+void Playlist::Iterator<Value>::decrement() {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
     if(m_playlist_pimpl->tracks.begin() == m_iterator)
         return;
     m_track = *--m_iterator;
 }
 
-void Playlist::Iterator::advance(iterator_facade_::difference_type n) {
-    if(!m_playlist_pimpl)
-        assert(false);
+template <typename Value>
+void Playlist::Iterator<Value>::advance(std::ptrdiff_t n) {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
     if(n >= std::distance(m_iterator, m_playlist_pimpl->tracks.end())) {
         m_iterator = m_playlist_pimpl->tracks.end();
@@ -445,7 +435,10 @@ void Playlist::Iterator::advance(iterator_facade_::difference_type n) {
         m_track = *(m_iterator = std::next(m_iterator, n));
 }
 
-Playlist::Iterator::iterator_facade_::difference_type Playlist::Iterator::distance_to(Playlist::Iterator b) const {
+template <typename Value>
+template <class OtherValue>
+std::ptrdiff_t Playlist::Iterator<Value>::distance_to(const Playlist::Iterator<OtherValue>& b) const {
+    assert(m_playlist_pimpl);
     shared_lock l(m_playlist_pimpl->mu);
     return std::distance(b.m_iterator, m_iterator);
 }

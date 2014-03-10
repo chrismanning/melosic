@@ -32,6 +32,10 @@
 
 namespace Melosic {
 
+namespace Core {
+class Kernel;
+}
+
 namespace Playlist {
 class Manager;
 }
@@ -57,7 +61,7 @@ class PlaylistManagerModel : public QAbstractListModel {
     PlaylistModel* m_current{nullptr};
 
 public:
-    explicit PlaylistManagerModel(Playlist::Manager&, Thread::Manager&, QObject* parent = nullptr);
+    explicit PlaylistManagerModel(Core::Kernel&, QObject* parent = nullptr);
 
     enum {
         PlaylistModelRole = Qt::UserRole * 12,

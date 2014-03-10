@@ -30,9 +30,6 @@ namespace Melosic {
 namespace Core {
 class Playlist;
 }
-namespace Decoder {
-class Manager;
-}
 
 namespace Playlist {
 
@@ -40,7 +37,7 @@ class Manager final {
 public:
     typedef int size_type;
 
-    explicit Manager(Decoder::Manager&);
+    Manager();
     ~Manager();
 
     Manager(Manager&&) = delete;

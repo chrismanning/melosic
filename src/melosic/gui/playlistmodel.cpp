@@ -24,10 +24,7 @@
 #include <QQmlContext>
 #include <QQuickItem>
 #include <QQmlEngine>
-#include <QDebug>
-
-#include <boost/range/adaptors.hpp>
-using namespace boost::adaptors;
+#include <QItemSelectionModel>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -36,63 +33,71 @@ using namespace boost::adaptors;
 #include <melosic/common/signal_core.hpp>
 #include <melosic/common/thread.hpp>
 #include <melosic/common/optional.hpp>
+#include <melosic/melin/library.hpp>
+#include <melosic/melin/decoder.hpp>
+#include <melosic/melin/input.hpp>
+
+#include "jsondocmodel.hpp"
+
+#include <jbson/builder.hpp>
 
 #include <taglib/tpropertymap.h>
 
 #include "playlistmodel.hpp"
 
 namespace Melosic {
+namespace fs = boost::filesystem;
 
 Logger::Logger PlaylistModel::logject(logging::keywords::channel = "PlaylistModel");
 
-PlaylistModel::PlaylistModel(Core::Playlist playlist, Thread::Manager& tman, QObject* parent)
+PlaylistModel::PlaylistModel(Core::Playlist playlist, Core::Kernel& k, QObject* parent)
     : QAbstractListModel(parent),
-      playlist(playlist),
-      tman(tman)
+      m_playlist(playlist),
+      m_kernel(k)
 {
-    this->playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
+    this->m_playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
         Q_EMIT dataChanged(index(start), index(end-1));
     });
 
     connect(this, &PlaylistModel::dataChanged, [this] (const QModelIndex&, const QModelIndex&, const QVector<int>&) {
-        m_duration = chrono::duration_cast<chrono::seconds>(this->playlist.duration()).count();
+        m_duration = chrono::duration_cast<chrono::seconds>(this->m_playlist.duration()).count();
         Q_EMIT durationChanged(m_duration);
     });
 }
 
 QString PlaylistModel::name() const {
-    return QString::fromStdString(playlist.getName());
+    return QString::fromLocal8Bit(m_playlist.name().data(), m_playlist.name().size());
 }
 
 void PlaylistModel::setName(QString name) {
-    playlist.setName(name.toStdString());
+    m_playlist.name(name.toStdString());
     Q_EMIT nameChanged(name);
 }
 
 int PlaylistModel::rowCount(const QModelIndex& /*parent*/) const {
-    return playlist.size();
+    return m_playlist.size();
 }
 
 QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
     if(!index.isValid())
         return {};
 
-    if(index.row() >= playlist.size())
+    if(index.row() >= m_playlist.size())
         return {};
 
     try {
-        auto track = playlist.getTrack(index.row());
+        auto track = m_playlist.getTrack(index.row());
         if(!track)
             return {};
         switch(role) {
             case Qt::DisplayRole:
                 return data(index, TrackRoles::FileName);
             case TrackRoles::FileName:
-                return QString::fromStdString(track->filePath().filename().string());
+                return QString::fromUtf8(Input::uri_to_path(track->uri()).filename().c_str());
             case TrackRoles::FilePath:
-                return QString::fromStdString(track->filePath().string());
+                return QString::fromUtf8(Input::uri_to_path(track->uri()).c_str());
             case TrackRoles::FileExtension:
-                return QString::fromStdString(track->filePath().extension().string());
+                return QString::fromUtf8(Input::uri_to_path(track->uri()).extension().c_str());
             case TrackRoles::TagsReadable:
                 return QVariant::fromValue(track->tagsReadable());
             case TrackRoles::Duration: {
@@ -150,24 +155,6 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
     return roles.unite(QAbstractListModel::roleNames());
 }
 
-bool PlaylistModel::insertTracks(int row, QList<QUrl> filenames) {
-    LOG(logject) << "In insertTracks(int, QList<QUrl>)";
-    qSort(filenames);
-    auto fun = [] (QUrl url) {
-        return url.toLocalFile().toStdString();
-    };
-    TRACE_LOG(logject) << "Inserting " << filenames.count() << " files";
-
-    auto range = filenames | transformed(fun);
-    std::vector<boost::filesystem::path> tmp{range.begin(), range.end()};
-    Q_ASSERT(static_cast<int>(tmp.size()) == filenames.size());
-#ifndef MELOSIC_DISABLE_LOGGING
-    for(auto&& v : tmp)
-        TRACE_LOG(logject) << v;
-#endif
-    return insertTracks(row, tmp);
-}
-
 struct Refresher {
     Refresher(Core::Playlist p, Thread::Manager& tman, int start, int end, int stride = 1) noexcept
         :
@@ -180,7 +167,7 @@ struct Refresher {
         assert(stride > 0);
     }
 
-    void operator()() {
+    void operator()() const {
         while(start+stride > end)
             --stride;
         p.refreshTracks(start, start+stride);
@@ -189,36 +176,115 @@ struct Refresher {
             tman.enqueue(Refresher(p, tman, start, end, stride));
     }
 
-    Core::Playlist p;
+    mutable Core::Playlist p;
     Thread::Manager& tman;
-    int start;
-    int end;
-    int stride;
+    mutable int start;
+    mutable int end;
+    mutable int stride;
 };
 
-bool PlaylistModel::insertTracks(int row, ForwardRange<const boost::filesystem::path> filenames) {
-    TRACE_LOG(logject) << "In insertTracks(ForwardRange<path>)";
+static network::uri to_uri(QUrl url) {
+    std::error_code ec;
+    auto str = url.toEncoded();
+    auto uri = network::make_uri(std::begin(str), std::end(str), ec);
+    network::uri_builder build(uri);
+    build.authority("");
+    uri = build.uri();
+    assert(ec ? uri.empty() : !uri.empty());
+    return uri;
+}
 
-    row = ++row > playlist.size() ? playlist.size() : row;
+bool PlaylistModel::insertTracks(int row, QVariant var) {
+    TRACE_LOG(logject) << "In insertTracks(int, QVariant)";
+    TRACE_LOG(logject) << "QVariant type: " << var.typeName();
+    if(var.canConvert<QVariantList>()) {
+        TRACE_LOG(logject) << "var is list";
+        return insertTracks(row, var.value<QSequentialIterable>());
+    }
+    else if(static_cast<QMetaType::Type>(var.type()) == QMetaType::QObjectStar) {
+        TRACE_LOG(logject) << "var is QObject*";
+        auto obj = var.value<QObject*>();
+        assert(obj != nullptr);
+        if(auto qobj = qobject_cast<QItemSelectionModel*>(obj))
+            return insertTracks(row, QVariant::fromValue(qobj->selectedIndexes()));
+    }
+    return false;
+}
 
-    beginInsertRows(QModelIndex(), row, row + boost::distance(filenames) -1);
+bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
+    TRACE_LOG(logject) << "In insertTracks(int, QSequentialIterable)";
+    TRACE_LOG(logject) << "Inserting " << var_list.size() << " files";
 
-    auto n = playlist.emplace(row, filenames);
+    const auto i = rowCount();
+    for(auto&& var : var_list) {
+        if(var.canConvert<QUrl>()) {
+            auto uri = to_uri(var.toUrl());
+            row = ++row > m_playlist.size() ? m_playlist.size() : row;
 
-    TRACE_LOG(logject) << n << " tracks inserted";
+            auto tracks = m_kernel.getDecoderManager().tracks(uri);
+            TRACE_LOG(logject) << tracks.size() << " tracks inserting";
 
-    endInsertRows();
+            beginInsertRows(QModelIndex(), row, row + boost::distance(tracks) -1);
 
-    tman.enqueue(Refresher(playlist, tman, row, row+n, 1));
+            auto n = m_playlist.insert(row, tracks);
+            TRACE_LOG(logject) << n << " tracks inserted";
 
-    return n == boost::distance(filenames);
+            endInsertRows();
+
+            m_kernel.getThreadManager().enqueue(Refresher(m_playlist, m_kernel.getThreadManager(), row, row+n, 1));
+            row += n;
+        }
+        else if(var.canConvert<QModelIndex>()) {
+            auto idx = var.value<QModelIndex>();
+            auto obj = idx.model();
+            row = ++row > m_playlist.size() ? m_playlist.size() : row;
+            if(qobject_cast<const JsonDocModel*>(obj) != nullptr) {
+                auto doc_var = idx.data(JsonDocModel::DocumentRole);
+                auto& lm = m_kernel.getLibraryManager();
+                const auto doc_map = doc_var.value<QVariantMap>();
+                auto end = doc_map.end();
+                auto metadata_query = jbson::builder{};
+
+                std::vector<jbson::document> tracks;
+                try {
+                    //build
+                    for(auto i = doc_map.begin(); i != end; ++i) {
+                        if(i.key() == "path" || i.key() == "location" || i.key() == "_id")
+                            continue;
+                        auto str = i.key().toStdString();
+                        metadata_query.emplace("key", boost::string_ref(str));
+                        str = i.value().toString().toStdString();
+                        metadata_query.emplace("value", boost::string_ref(str));
+                    }
+                    tracks = lm.query(jbson::builder
+                                         ("metadata", jbson::element_type::document_element, metadata_query)
+                                     );
+                }
+                catch(...) {
+                    ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+                }
+
+                const auto old_row = row;
+                for(auto&& track_doc : tracks) {
+                    beginInsertRows(QModelIndex(), row, row);
+
+                    m_playlist.insert(row++, Core::Track{track_doc});
+
+                    endInsertRows();
+                }
+                m_kernel.getThreadManager().enqueue(Refresher(m_playlist,
+                                                              m_kernel.getThreadManager(), old_row, row, 1));
+            }
+        }
+    }
+    return rowCount() > i;
 }
 
 void PlaylistModel::refreshTags(int start, int end) {
     Q_ASSERT(start >= 0);
     TRACE_LOG(logject) << "refreshing tags of tracks " << start << " - " << end;
-    end = end < start ? playlist.size() : end+1;
-    for(auto& t : playlist.getTracks(start, end)) {
+    end = end < start ? m_playlist.size() : end+1;
+    for(auto& t : m_playlist.getTracks(start, end)) {
         try {
 //            t.reOpen();
 //            t.close();
@@ -255,7 +321,7 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
         filenames << text;
     }
 
-    return insertTracks(row, filenames);
+    return insertTracks(row, QVariant::fromValue(filenames));
 }
 
 bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
@@ -268,10 +334,10 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
     if(!beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild))
         return false;
 
-    std::vector<Core::Playlist::value_type> tmp(playlist.getTracks(sourceRow, sourceRow + count));
+    std::vector<Core::Playlist::value_type> tmp(m_playlist.getTracks(sourceRow, sourceRow + count));
 
-    playlist.erase(sourceRow, sourceRow + count);
-    auto s = playlist.insert(destinationChild < sourceRow ? destinationChild : destinationChild - count, tmp);
+    m_playlist.erase(sourceRow, sourceRow + count);
+    auto s = m_playlist.insert(destinationChild < sourceRow ? destinationChild : destinationChild - count, tmp);
 
     endMoveRows();
 
@@ -287,16 +353,16 @@ bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
         return false;
     TRACE_LOG(logject) << "removing tracks " << row << " - " << row+count;
 
-    const auto s = playlist.size();
+    const auto s = m_playlist.size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
-    playlist.erase(row, row + count);
+    m_playlist.erase(row, row + count);
     endRemoveRows();
-    assert(playlist.size() == s - count);
+    assert(m_playlist.size() == s - count);
 
-    m_duration = chrono::duration_cast<chrono::seconds>(this->playlist.duration()).count();
+    m_duration = chrono::duration_cast<chrono::seconds>(this->m_playlist.duration()).count();
     Q_EMIT durationChanged(m_duration);
 
-    return playlist.size() == s - count;
+    return m_playlist.size() == s - count;
 }
 
 long PlaylistModel::duration() const {
@@ -325,7 +391,7 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     bool b;
     auto index = v.toInt(&b);
     assert(b);
-    auto track = pm->playlist.getTrack(index);
+    auto track = pm->m_playlist.getTrack(index);
     assert(track);
     m_target_property = property;
     auto t = track->format_string(m_format_string.toStdString());

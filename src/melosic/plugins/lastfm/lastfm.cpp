@@ -15,6 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <boost/variant.hpp>
+#include <boost/config.hpp>
+
 #include <melosic/melin/exports.hpp>
 #include <melosic/core/player.hpp>
 #include <melosic/core/playlist.hpp>
@@ -23,8 +26,6 @@
 #include <melosic/common/connection.hpp>
 #include <melosic/common/thread.hpp>
 using namespace Melosic;
-
-#include <boost/variant.hpp>
 
 #include "lastfm.hpp"
 #include "scrobbler.hpp"
@@ -80,7 +81,7 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 
 static Signals::ScopedConnection varConnection;
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
     funs << registerConfig << registerTasks;
 
@@ -89,7 +90,7 @@ extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsI
                                tman));
 }
 
-extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
+extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::confman = confman;
 
     ::conf.putNode("username", std::string(""));
@@ -97,10 +98,10 @@ extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("enable scrobbling", false);
 }
 
-extern "C" MELOSIC_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
+extern "C" BOOST_SYMBOL_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
     ::tman = tman;
 }
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
 
-extern "C" MELOSIC_EXPORT void destroyPlugin() {}
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}

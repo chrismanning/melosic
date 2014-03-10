@@ -27,6 +27,8 @@ using lock_guard = std::lock_guard<mutex>;
 #include <boost/spirit/include/phoenix.hpp>
 #include <boost/thread/synchronized_value.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 #include <jbson/document.hpp>
 #include <jbson/builder.hpp>
@@ -50,11 +52,6 @@ struct TagsChanged : Signals::Signal<Signals::Track::TagsChanged> {
 
 class Track::impl {
   public:
-    impl(boost::filesystem::path filename, chrono::milliseconds start, chrono::milliseconds end)
-        : filepath(std::move(filename)), start(start), end(end) {}
-
-    ~impl() {}
-
     chrono::milliseconds duration() {
         if(end > start)
             return end - start;
@@ -96,13 +93,13 @@ class Track::impl {
     //        return static_cast<bool>(taglibfile);
     //    }
 
-    const boost::filesystem::path& filePath() { return filepath; }
+    const network::uri& uri() { return m_uri; }
 
     optional<std::string> parse_format(std::string, std::error_code&);
 
   private:
     friend class Track;
-    boost::filesystem::path filepath;
+    network::uri m_uri;
     chrono::milliseconds start, end;
     boost::synchronized_value<TagMap> m_tags;
     AudioSpecs as;
@@ -110,28 +107,106 @@ class Track::impl {
     mutex mu;
 };
 
-Track::Track(boost::filesystem::path filename, chrono::milliseconds end, chrono::milliseconds start)
-    : pimpl(std::make_shared<impl>(std::move(filename), start, end)) {}
+Track::Track(const network::uri& location, chrono::milliseconds end, chrono::milliseconds start)
+    : pimpl(std::make_shared<impl>())
+{
+    pimpl->m_uri = location;
+    pimpl->end = end;
+    pimpl->start = start;
+}
+
+Track::Track(const jbson::document& track_doc)
+    : pimpl(std::make_shared<impl>())
+{
+    auto it = track_doc.find("type");
+    if(it == track_doc.end() ||
+            it->type() != jbson::element_type::string_element ||
+            it->value<boost::string_ref>() != "track")
+    {
+        BOOST_THROW_EXCEPTION(std::runtime_error("document is not a track"));
+    }
+
+    using jbson::element_type;
+    for(auto&& element : track_doc) {
+        if(element.name() == "location") {
+            assert(element.type() == element_type::string_element);
+            pimpl->m_uri = network::uri(element.value<std::string>());
+        }
+        else if(element.name() == "start") {
+            if(element.type() == element_type::int32_element)
+                pimpl->start = chrono::milliseconds{element.value<int32_t>()};
+            else if(element.type() == element_type::int64_element)
+                pimpl->start = chrono::milliseconds{element.value<int64_t>()};
+            else
+                BOOST_THROW_EXCEPTION(std::runtime_error("'start' should be an integer"));
+        }
+        else if(element.name() == "end") {
+            if(element.type() == element_type::int32_element)
+                pimpl->end = chrono::milliseconds{element.value<int32_t>()};
+            else if(element.type() == element_type::int64_element)
+                pimpl->end = chrono::milliseconds{element.value<int64_t>()};
+            else
+                BOOST_THROW_EXCEPTION(std::runtime_error("'end' should be an integer"));
+        }
+        else if(element.name() == "metadata") {
+            TagMap tags;
+            assert(element.type() == element_type::array_element);
+            auto metadata = jbson::get<element_type::array_element>(element);
+            for(auto&& tag : metadata) {
+                assert(tag.type() == element_type::document_element);
+                auto tag_doc = jbson::get<element_type::document_element>(tag);
+
+                std::pair<std::string, std::string> pair;
+                auto it = tag_doc.find("key");
+                if(it == tag_doc.end() || it->type() != element_type::string_element)
+                    BOOST_THROW_EXCEPTION(std::runtime_error("tag must have key"));
+                pair.first = it->value<std::string>();
+
+                it = tag_doc.find("value");
+                if(it == tag_doc.end() || it->type() != element_type::string_element)
+                    BOOST_THROW_EXCEPTION(std::runtime_error("tag must have value"));
+                pair.second = it->value<std::string>();
+
+                tags.emplace(std::move(pair));
+            }
+            pimpl->m_tags = boost::synchronized_value<TagMap>(tags);
+        }
+    }
+}
 
 Track::~Track() {}
 
-bool Track::operator==(const Track& b) const noexcept { return pimpl == b.pimpl; }
+bool Track::operator==(const Track& b) const noexcept {
+    return pimpl == b.pimpl || (pimpl->m_uri == b.pimpl->m_uri &&
+                                pimpl->end == b.pimpl->end &&
+                                pimpl->start == b.pimpl->start);
+}
 
-bool Track::operator!=(const Track& b) const noexcept { return pimpl != b.pimpl; }
+bool Track::operator!=(const Track& b) const noexcept { return !(*this == b); }
 
-void Track::setAudioSpecs(AudioSpecs as) {
+void Track::audioSpecs(AudioSpecs as) {
     unique_lock l(pimpl->mu);
     pimpl->as = as;
 }
 
-void Track::setStart(chrono::milliseconds start) {
+void Track::start(chrono::milliseconds start) {
     lock_guard l(pimpl->mu);
     pimpl->start = start;
 }
 
-void Track::setEnd(chrono::milliseconds end) {
+void Track::end(chrono::milliseconds end) {
     lock_guard l(pimpl->mu);
     pimpl->end = end;
+}
+
+chrono::milliseconds Track::start() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->start;
+}
+
+chrono::milliseconds Track::end() const {
+    shared_lock l(pimpl->mu);
+    return pimpl->end;
 }
 
 chrono::milliseconds Track::duration() const {
@@ -139,32 +214,32 @@ chrono::milliseconds Track::duration() const {
     return pimpl->duration();
 }
 
-Melosic::AudioSpecs Track::getAudioSpecs() const {
+Melosic::AudioSpecs Track::audioSpecs() const {
     shared_lock l(pimpl->mu);
     return pimpl->as;
 }
 
-optional<std::string> Track::getTag(const std::string& key) const {
+optional<std::string> Track::tag(const std::string& key) const {
     shared_lock l(pimpl->mu);
     return pimpl->getTag(key);
 }
 
-const boost::filesystem::path& Track::filePath() const {
+const network::uri& Track::uri() const {
     shared_lock l(pimpl->mu);
-    return pimpl->filePath();
+    return pimpl->m_uri;
 }
 
-boost::synchronized_value<TagMap>& Track::getTags() {
+boost::synchronized_value<TagMap>& Track::tags() {
     unique_lock l(pimpl->mu);
     return pimpl->m_tags;
 }
 
-const boost::synchronized_value<TagMap>& Track::getTags() const {
+const boost::synchronized_value<TagMap>& Track::tags() const {
     unique_lock l(pimpl->mu);
     return pimpl->m_tags;
 }
 
-void Track::setTags(TagMap tags) {
+void Track::tags(TagMap tags) {
     {
         lock_guard l(pimpl->mu);
         pimpl->m_tags = std::move(tags);
@@ -199,18 +274,20 @@ jbson::document Track::bson() const {
     using std::get;
     using jbson::element_type;
 
-    jbson::builder ob;
-    ob("type", element_type::string_element, "track")
-    ("path", element_type::string_element, filePath().generic_string())(
-        "channels", element_type::int32_element, pimpl->as.channels)("sample rate", element_type::int32_element,
-                                                                     pimpl->as.sample_rate);
+    shared_lock l(pimpl->mu);
+
+    auto ob = jbson::builder("type", "track")
+                            ("location", element_type::string_element, uri().string())
+                            ("channels", element_type::int32_element, pimpl->as.channels)
+                            ("sample rate", element_type::int64_element, pimpl->as.sample_rate)
+                            ("start", element_type::int64_element, pimpl->start.count())
+                            ("end", element_type::int64_element, pimpl->end.count());
     auto arr = pimpl->m_tags([](auto&& metadata) {
-        jbson::builder arb;
-        size_t i = 0;
+        jbson::array_builder arb;
         for(auto&& pair : metadata)
-            arb(std::to_string(i++), jbson::element_type::document_element,
-                jbson::builder("key", element_type::string_element, boost::to_lower_copy(get<0>(pair)))
-                              ("value", element_type::string_element, get<1>(pair)));
+            arb(jbson::element_type::document_element, jbson::builder
+                ("key", element_type::string_element, boost::to_lower_copy(get<0>(pair)))
+                ("value", element_type::string_element, get<1>(pair)));
         return std::move(arb);
     });
     ob("metadata", element_type::array_element, arr);

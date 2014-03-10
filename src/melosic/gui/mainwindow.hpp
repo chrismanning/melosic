@@ -22,6 +22,14 @@
 
 #include <list>
 
+#include <boost/config.hpp>
+
+#ifdef QT_GUI_EXPORTS
+#define QT_GUI_EXPORT BOOST_SYMBOL_EXPORT
+#else
+#define QT_GUI_EXPORT BOOST_SYMBOL_IMPORT
+#endif
+
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/connection.hpp>
 
@@ -53,7 +61,7 @@ class Manager;
 
 class PlaylistManagerModel;
 
-class MELOSIC_EXPORT MainWindow {
+class QT_GUI_EXPORT MainWindow {
 public:
     explicit MainWindow(Core::Kernel& kernel, Core::Player& player);
     ~MainWindow();

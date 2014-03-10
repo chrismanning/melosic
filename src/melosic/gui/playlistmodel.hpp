@@ -30,13 +30,16 @@ namespace chrono = std::chrono;
 #include <QHash>
 #include <QQmlPropertyValueSource>
 #include <QQmlProperty>
+#include <QSequentialIterable>
 
-#include <boost/filesystem/path.hpp>
+#include <network/uri.hpp>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/range.hpp>
 #include <melosic/common/connection.hpp>
+
+#include <jbson/document_fwd.hpp>
 
 namespace Melosic {
 
@@ -54,14 +57,14 @@ struct TrackRoles {
 namespace Core {
 class Playlist;
 }
-namespace Thread {
-class Manager;
+namespace Core {
+class Kernel;
 }
 
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
-    Core::Playlist playlist;
-    Thread::Manager& tman;
+    Core::Playlist m_playlist;
+    Core::Kernel& m_kernel;
     static Logger::Logger logject;
     long m_duration{0};
 
@@ -72,8 +75,7 @@ class PlaylistModel : public QAbstractListModel {
     friend class TagBinding;
 
 public:
-    explicit PlaylistModel(Core::Playlist playlist, Thread::Manager&,
-                           QObject* parent = nullptr);
+    explicit PlaylistModel(Core::Playlist m_playlist, Core::Kernel&, QObject* parent = nullptr);
 
     QString name() const;
     void setName(QString name);
@@ -89,11 +91,8 @@ public:
                       const QModelIndex& parent) override;
     QHash<int, QByteArray> roleNames() const override;
 
-    Q_INVOKABLE bool insertTracks(int row, QList<QUrl>);
-    bool insertTracks(int row, ForwardRange<const boost::filesystem::path>);
-    bool insertTracks(int row, std::initializer_list<const boost::filesystem::path> filenames) {
-        return insertTracks(row, ForwardRange<const boost::filesystem::path>(filenames));
-    }
+    Q_INVOKABLE bool insertTracks(int row, QVariant);
+    bool insertTracks(int row, QSequentialIterable);
 
     Q_INVOKABLE void refreshTags(int start, int end = -1);
 

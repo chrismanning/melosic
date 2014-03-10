@@ -55,7 +55,7 @@
 #include "jsondocmodel.hpp"
 
 static Melosic::Config::Conf conf{"QML"};
-static bool enable_logging{true};
+static bool enable_logging{false};
 
 namespace Melosic {
 
@@ -66,7 +66,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.data())),
-    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getThreadManager()))
+    playlistManagerModel(new PlaylistManagerModel(kernel))
 {
     ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));

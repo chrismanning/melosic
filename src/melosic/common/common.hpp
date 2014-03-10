@@ -23,37 +23,22 @@
 namespace chrono = std::chrono;
 #include <string>
 
+#include <boost/config.hpp>
+
 namespace Melosic {
 using namespace std::literals;
 }
 
-#ifdef _WIN32
-#   define MELOSIC_LOCAL
-#   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT [[gnu::dllexport]]
-#   else
-#       define MELOSIC_EXPORT [[gnu::dllimport]]
-#   endif
-#   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT [[gnu::dllexport]]
-#   else
-#       define MELOSIC_EXPORT [[gnu::dllimport]]
-#   endif
-#   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT [[gnu::dllexport]]
-#   else
-#       define MELOSIC_EXPORT [[gnu::dllimport]]
-#   endif
-#elif __GNUC__ >= 4
-#   ifdef MELOSIC_EXPORTS
-#       define MELOSIC_EXPORT [[gnu::visibility("default")]]
-#   else
-#       define MELOSIC_EXPORT
-#   endif
-#   define MELOSIC_LOCAL [[gnu::visibility("hidden")]]
+#ifdef MELOSIC_EXPORTS
+#   define MELOSIC_EXPORT BOOST_SYMBOL_EXPORT
 #else
-#   define MELOSIC_EXPORT
-#   define MELOSIC_LOCAL
+#   define MELOSIC_EXPORT BOOST_SYMBOL_IMPORT
+#endif
+
+#ifndef _WIN32
+#define MELOSIC_LOCAL [[gnu::visibility("hidden")]]
+#else
+#define MELOSIC_LOCAL
 #endif
 
 #endif // MELOSIC_COMMON_HPP

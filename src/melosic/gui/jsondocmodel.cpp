@@ -23,26 +23,32 @@
 
 namespace Melosic {
 
-JsonDocModel::JsonDocModel(QObject* parent) : QAbstractListModel(parent) {}
+struct JsonDocModel::impl {
+    std::vector<jbson::document> m_docs;
+};
+
+JsonDocModel::JsonDocModel(QObject* parent) : QAbstractListModel(parent), pimpl(new impl) {}
+
+JsonDocModel::~JsonDocModel() {}
 
 void JsonDocModel::setDocs(std::vector<jbson::document>&& docs) {
     Q_EMIT beginResetModel();
-    m_docs = std::move(docs);
+    pimpl->m_docs = std::move(docs);
     Q_EMIT endResetModel();
 }
 
 void JsonDocModel::setDocs(const std::vector<jbson::document>& docs) {
     Q_EMIT beginResetModel();
-    m_docs = docs;
+    pimpl->m_docs = docs;
     Q_EMIT endResetModel();
 }
 
 Qt::ItemFlags JsonDocModel::flags(const QModelIndex& index) const { return QAbstractItemModel::flags(index); }
 
 int JsonDocModel::rowCount(const QModelIndex&) const {
-    if(m_docs.size() > std::numeric_limits<int>::max())
+    if(pimpl->m_docs.size() > std::numeric_limits<int>::max())
         return -1;
-    return static_cast<int>(m_docs.size());
+    return static_cast<int>(pimpl->m_docs.size());
 }
 
 static QString toQString(boost::string_ref str) {
@@ -101,11 +107,11 @@ QVariant JsonDocModel::data(const QModelIndex& index, int role) const {
         case Qt::DisplayRole:
         case DocumentStringRole: {
             std::string str;
-            jbson::write_json(m_docs[index.row()], std::back_inserter(str));
+            jbson::write_json(pimpl->m_docs[index.row()], std::back_inserter(str));
             return QString::fromStdString(str);
         }
         case DocumentRole:
-            return doc_to_map(m_docs[index.row()]);
+            return doc_to_map(pimpl->m_docs[index.row()]);
         default:
             break;
     }

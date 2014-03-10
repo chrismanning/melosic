@@ -22,6 +22,7 @@
 #include <memory>
 
 #include <boost/variant.hpp>
+#include <boost/config.hpp>
 #include <asio/posix/stream_descriptor.hpp>
 
 #include <melosic/common/error.hpp>
@@ -139,6 +140,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
             case 32:
                 fmt = SND_PCM_FORMAT_S32_LE;
                 break;
+            default:
+                BOOST_THROW_EXCEPTION(std::runtime_error("unknown bps"));
         }
 
         if(snd_pcm_hw_params_test_format(m_pdh, m_params, fmt) < 0) {
@@ -482,17 +485,17 @@ void loadedSlot(Config::Conf& base) {
     });
 }
 
-extern "C" MELOSIC_EXPORT void registerConfig(Config::Manager* confman) {
+extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", ::frames);
     ::conf.putNode("resample", ::resample);
     auto base = confman->getConfigRoot().synchronize();
     loadedSlot(*base);
 }
 
-extern "C" MELOSIC_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::alsaInfo;
     funs << registerOutput << registerConfig;
 }
 
-extern "C" MELOSIC_EXPORT void destroyPlugin() {
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
 }

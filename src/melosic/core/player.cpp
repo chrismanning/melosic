@@ -159,7 +159,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
         auto r(currentState_);
         assert(r);
-        currentState_.reset(new S(stateChanged));
+        currentState_ = std::make_shared<S>(stateChanged);
         assert(currentState_);
         return std::move(r);
     }
@@ -235,7 +235,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                 if(nt != m_current_playlist->end() && !m_next_source) {
                     assert(nt != m_current_iterator);
                     TRACE_LOG(logject) << "Pre-loading next track in list";
-                    m_next_source = kernel.getDecoderManager().openTrack(**nt);
+                    m_next_source = kernel.getDecoderManager().open(*nt);
                     assert(m_next_source);
                 }
             }
@@ -268,7 +268,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                 if(m_next_source)
                     m_current_source = std::move(m_next_source);
                 else
-                    m_current_source = kernel.getDecoderManager().openTrack(**m_current_iterator);
+                    m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
             }
             const auto as = m_current_source->getAudioSpecs();
 
@@ -423,7 +423,10 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         }
     }
 
-    static bool valid_iterator(Playlist::iterator it, const Playlist& p) {
+    static bool valid_iterator(Playlist::iterator it, Playlist& p) {
+        return it != p.end();
+    }
+    static bool valid_iterator(Playlist::const_iterator it, const Playlist& p) {
         return it != p.end();
     }
 };
@@ -472,12 +475,21 @@ struct Stopped : State {
                 stateMachine->jumpTo_impl(0);
             if(!stateMachine->valid_iterator(stateMachine->m_current_iterator, *stateMachine->m_current_playlist))
                 return;
+            assert(stateMachine->valid_iterator(stateMachine->m_current_iterator, *stateMachine->m_current_playlist));
 
             stateMachine->changeDevice();
+
+            assert(stateMachine->asioOutput);
             if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
 
-            const auto as = (*stateMachine->m_current_iterator)->getAudioSpecs();
+            stateMachine->m_current_source = stateMachine->kernel.getDecoderManager()
+                                                                 .open(*stateMachine->m_current_iterator);
+
+            if(!stateMachine->m_current_source)
+                return;
+            const AudioSpecs as = stateMachine->m_current_source->getAudioSpecs();
+
             stateMachine->asioOutput->prepare(as);
             TRACE_LOG(stateMachine->logject) << "sink prepared with specs:\n" << as;
             stateMachine->asioOutput->play();

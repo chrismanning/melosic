@@ -27,11 +27,17 @@
 #include <boost/mpl/lambda.hpp>
 namespace { namespace mpl = boost::mpl; }
 
+#include <network/uri.hpp>
+
 #include <melosic/common/optional_fwd.hpp>
 #include <melosic/common/traits.hpp>
 #include <melosic/common/audiospecs.hpp>
 
 namespace Melosic {
+
+namespace Input {
+class Manager;
+}
 namespace Thread {
 class Manager;
 }
@@ -49,34 +55,30 @@ typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)>
 
 class Manager final {
 public:
-    explicit Manager(Thread::Manager&);
+    explicit Manager(Input::Manager&, Thread::Manager&);
     ~Manager();
 
     Manager(Manager&&) = delete;
     Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string extension);
+    MELOSIC_EXPORT void addAudioFormat(Factory fact, boost::string_ref mime_type);
 
-    template <template <class...> class List, typename ...ListArgs>
-    void addAudioFormat(Factory fact, List<std::string, ListArgs...> extensions) {
-        for(std::string& ext : extensions) {
-            addAudioFormat(fact, std::move(ext));
-        }
+    template <typename StringT, template <class...> class List, typename ...ListArgs>
+    void addAudioFormat(Factory fact, List<StringT, ListArgs...> mime_types) {
+        for(auto&& mime_type : mime_types)
+            addAudioFormat(fact, std::move(mime_type));
     }
 
     template <typename ...Strings, class = typename std::enable_if<(sizeof...(Strings) > 1)>::type>
-    void addAudioFormat(Factory fact, Strings&&... extensions) {
-        static_assert(MultiArgsTrait<mpl::lambda<std::is_same<std::string, mpl::_1>>::type, Strings...>::value,
-                      "extensions must be std::strings or convertible to");
-        addAudioFormat(fact, {std::move(extensions)...});
+    void addAudioFormat(Factory fact, Strings&&... mime_types) {
+        for(auto&& mime_type : {std::forward<Strings>(mime_types)...})
+            addAudioFormat(fact, mime_type);
     }
 
-    optional<Core::AudioFile> getFile(boost::filesystem::path) const;
-    std::future<bool> initialiseAudioFile(Core::AudioFile&) const;
-    std::vector<Melosic::Core::Track> openPath(boost::filesystem::path) const;
+    MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const network::uri&) const;
 
-    std::unique_ptr<PCMSource> openTrack(const Core::Track&) const;
+    std::unique_ptr<PCMSource> open(const Core::Track&) const;
 
 private:
     class impl;

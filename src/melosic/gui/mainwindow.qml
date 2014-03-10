@@ -280,6 +280,13 @@ ApplicationWindow {
         FilterView {
             Layout.minimumWidth: 100
             Layout.alignment: Qt.AlignLeft
+            onActivated: {
+                console.debug("FilterView.activated")
+                console.debug("items:", typeof(items))
+                var pm = playlistManager.currentModel
+                if(pm !== null)
+                    pm.insertTracks(currentPlaylist.currentIndex, items)
+            }
 
             FilterPane {
                 id: genre
@@ -441,7 +448,7 @@ ApplicationWindow {
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.title === undefined ? document.path : document.title
+                        text: document.title === undefined ? document.location : document.title
                         color: styleData.textColor
                     }
                 }
@@ -498,7 +505,7 @@ ApplicationWindow {
                     paths = {
                         title: "metadata[?(@.key == 'title')].value",
                         tracknumber: "metadata[?(@.key == 'tracknumber')].value",
-                        path: "path"
+                        location: "location"
                     }
                 }
                 onDependSelectionChanged: init_query()

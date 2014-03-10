@@ -52,13 +52,12 @@ struct PlaylistRemoved : Signals::Signal<Signals::Playlist::PlaylistRemoved> {
 
 class Manager::impl {
 public:
-    impl(Decoder::Manager& decman) : decman(decman)
-    {}
+    impl() = default;
 
     optional<Core::Playlist> insert(size_type pos, const std::string& name, unique_lock& l) {
         assert(pos >= 0);
         TRACE_LOG(logject) << "inserting playlist \"" << name << "\" at position " << pos;
-        auto it = playlists.emplace(std::next(std::begin(playlists), pos), decman, name);
+        auto it = playlists.emplace(std::next(std::begin(playlists), pos), name);
         assert(!playlists.empty());
         playlistAdded(*it, l);
         if(size() == 1)
@@ -137,8 +136,6 @@ public:
     }
 
 private:
-    Decoder::Manager& decman;
-
     mutex mu;
     Logger::Logger logject{logging::keywords::channel = "Playlist::Manager"};
 
@@ -151,7 +148,7 @@ private:
     friend class Manager;
 };
 
-Manager::Manager(Decoder::Manager& decman) : pimpl(new impl(decman)) {}
+Manager::Manager() : pimpl(std::make_unique<impl>()) {}
 
 Manager::~Manager() {}
 
