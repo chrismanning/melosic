@@ -168,207 +168,8 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
     std::list<PCMBuffer> in_buf;
 
-    struct Widener : io::multichar_input_filter {
-        struct category : io::multichar_input_filter::category, io::optimally_buffered_tag {};
-
-        Widener(std::size_t buffer_size, uint16_t from, uint16_t to) noexcept :
-            buffer_size(buffer_size),
-            from(from/8),
-            to(to/8)
-        {
-            assert(from);
-            assert(to);
-            assert(!(to % 8));
-            assert(!(from % 8));
-        }
-
-        template <typename Source>
-        std::streamsize read(Source& src, char* s, std::streamsize n) {
-            if(to == from)
-                return io::read(src, s, n);
-
-            assert(!(n % to));
-
-            std::streamsize i{0}, r;
-            if(to > from)
-                for(i = 0; i < n; i += to) {
-                    for(int j = 0; j < (to - from); j++)
-                        *s++ = 0;
-                    r = io::read(src, s, from);
-                    if(r <= 0)
-                        return -1;
-                    s += r;
-                }
-            else if(to < from)
-                for(i = 0; i < n; i += to) {
-                    char c[from - to];
-                    r = io::read(src, c, from - to);
-                    assert(r == from - to);
-                    r = io::read(src, s, to);
-                    if(r <= 0)
-                        return -1;
-                    s += to;
-                }
-            else assert(false);
-
-            return i;
-        }
-
-        std::streamsize optimal_buffer_size() const noexcept {
-            return buffer_size;
-        }
-
-    private:
-        const std::size_t buffer_size;
-        const uint16_t from, to;
-    };
-
-    void write_handler(std::error_code ec, std::size_t n) {
-        unique_lock l(mu);
-        if(state_impl() != Output::DeviceState::Playing)
-            return;
-
-        if(m_current_source) {
-            notifyPlayPosition(m_current_source->tell(), m_current_source->duration());
-            if(m_current_playlist && m_current_source->duration() - m_current_source->tell() < m_gapless_preload) {
-                auto nt = m_current_iterator + 1;
-                if(nt != m_current_playlist->end() && !m_next_source) {
-                    assert(nt != m_current_iterator);
-                    TRACE_LOG(logject) << "Pre-loading next track in list";
-                    m_next_source = kernel.getDecoderManager().open(*nt);
-                    assert(m_next_source);
-                }
-            }
-        }
-        TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
-        if(ec) {
-            if(ec == std::errc::operation_canceled) {
-                TRACE_LOG(logject) << ec.message();
-                return;
-            }
-            ERROR_LOG(logject) << "write error: " << ec.message();
-            stop_impl();
-            return;
-        }
-        ec.clear();
-
-        if(!m_current_playlist || m_current_iterator == m_current_playlist->end()) {
-            TRACE_LOG(logject) << "no current track; stopping";
-            ec = ASIO::error::make_error_code(ASIO::error::eof);
-            n = 0;
-        }
-//        else if(!m_current_track->valid()) {
-//            TRACE_LOG(logject) << "current track not playable; stopping & resetting playlist";
-//            ec = ASIO::error::make_error_code(ASIO::error::eof);
-//            n = 0;
-//            jumpTo(0);
-//        }
-        else try {
-            if(!m_current_source) {
-                if(m_next_source)
-                    m_current_source = std::move(m_next_source);
-                else
-                    m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
-            }
-            const auto as = m_current_source->getAudioSpecs();
-
-            if(!in_buf.empty()) {
-                if(ASIO::buffer_size(ASIO::mutable_buffer(in_buf.front())) <= 0)
-                    in_buf.pop_front();
-                else {
-                    read_handler(ec, ASIO::buffer_size(ASIO::mutable_buffer(in_buf.front())));
-                    return;
-                }
-            }
-
-            n = as.time_to_bytes(buffer_time);
-            PCMBuffer tmp{::operator new(n), n};
-            tmp.audio_specs = as;
-
-            Widener widen{n, as.bps, asioOutput->current_specs().bps};
-            if(as.bps != asioOutput->current_specs().bps)
-                TRACE_LOG(logject) << "widening from " << (unsigned)as.bps
-                                   << " to " << (unsigned)asioOutput->current_specs().bps;
-
-//            auto composite = io::compose(widen, boost::ref(*m_current_track));
-
-//            std::streamsize n_;
-//            auto n_ = io::read(composite, ASIO::buffer_cast<char*>(tmp), n);
-            auto n_ = m_current_source->decode(tmp, ec);
-
-            if(n_ < n && !m_current_source->valid()) {
-                TRACE_LOG(logject) << "track ended, starting next, if any";
-//                m_current_track->close();
-                next_impl();
-            }
-            if(n_ == 0) {
-                TRACE_LOG(logject) << "end of track";
-                ::operator delete(ASIO::buffer_cast<void*>(tmp));
-            }
-            else
-                in_buf.emplace_back(tmp);
-            assert(!in_buf.empty());
-            n = n_;
-        }
-        catch(...) {
-            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
-            stop_impl();
-            next_impl();
-            if(m_current_iterator != m_current_playlist->end())
-                play_impl();
-        }
-        read_handler(ec, n);
-    }
-
-    void read_handler(std::error_code ec, std::size_t n) {
-        TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
-        if(ec || (in_buf.empty() && (ec = ASIO::error::make_error_code(ASIO::error::no_data)))) {
-            if(ec.value() == ASIO::error::eof && m_current_source) {
-                ec.clear();
-                write_handler(ec, 0);
-            }
-            if(ec == std::errc::operation_canceled) {
-                TRACE_LOG(logject) << ec.message();
-                assert(in_buf.empty());
-                return;
-            }
-            if(ec.value() == ASIO::error::eof) {
-                TRACE_LOG(logject) << ec.message();
-                assert(in_buf.empty());
-                std::this_thread::sleep_for(buffer_time);
-                stop_impl();
-                return;
-            }
-            ERROR_LOG(logject) << "read error: " << ec.message();
-            stop_impl();
-            return;
-        }
-        assert(n > 0);
-        assert(!in_buf.empty());
-
-        PCMBuffer tmp{ASIO::buffer_cast<void*>(in_buf.front()), n};
-        assert(ASIO::buffer_cast<void*>(in_buf.front()) != nullptr);
-        in_buf.pop_front();
-        assert(asioOutput);
-        kernel.getThreadManager().enqueue([self=shared_from_this(),tmp]() mutable {
-            unique_lock l(self->mu);
-            ASIO::async_write(*self->asioOutput, ASIO::buffer(tmp),
-                [tmp, self] (std::error_code ec, std::size_t n) {
-                    assert(ASIO::buffer_cast<void*>(tmp) != nullptr);
-                    if(n < ASIO::buffer_size(ASIO::mutable_buffer(tmp))) {
-                        const auto s = ASIO::buffer_size(ASIO::mutable_buffer(tmp)) - n;
-                        assert(s > 0);
-                        auto* ptr = ::operator new(s);
-                        std::memmove(ptr, ASIO::buffer_cast<uint8_t*>(tmp) + n, s);
-
-                        self->in_buf.emplace_front(ptr, s);
-                    }
-                    ::operator delete(ASIO::buffer_cast<void*>(tmp));
-
-                    self->write_handler(ec, n);
-                });
-        });
-    }
+    void write_handler(std::error_code ec, std::size_t n);
+    void read_handler(std::error_code ec, std::size_t n);
 
     optional<Playlist> m_current_playlist;
     Signals::ScopedConnection currentPlaylistConnection;
@@ -430,6 +231,192 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
         return it != p.end();
     }
 };
+
+static PCMBuffer widen(const char* in, const size_t n, const uint8_t bps_from, const uint8_t bps_to) {
+    assert(bps_from);
+    assert(bps_to);
+    assert(!(bps_to % 8));
+    assert(!(bps_from % 8));
+    assert(bps_from != bps_to);
+
+    auto from = bps_from/8;
+    auto to = bps_to/8;
+    assert(!(n % from));
+
+    PCMBuffer out{::operator new((n/from)*to), (n/from)*to};
+    assert(ASIO::buffer_size(out) == (n/from)*to);
+
+    auto ptr = ASIO::buffer_cast<char*>(out);
+
+    if(to > from) {
+        for(auto i = 0u; i < n; i += from) {
+            auto old_ptr = ptr;
+            ptr = std::fill_n(ptr, to - from, 0);
+            ptr = std::copy_n(std::next(in, i), from, ptr);
+            assert(std::distance(old_ptr, ptr) == to);
+        }
+        assert(std::distance(ASIO::buffer_cast<char*>(out), ptr) == static_cast<ptrdiff_t>((n/from)*to));
+    }
+    else if(to < from) {
+        assert(false);
+        std::abort();
+        for(auto i = 0u; i < n; i += from) {
+            ptr = std::copy(in + i, in + i + to, ptr);
+        }
+    }
+    else assert(false);
+
+    return out;
+}
+
+void Player::impl::write_handler(std::error_code ec, std::size_t n) {
+    unique_lock l(mu);
+    if(state_impl() != Output::DeviceState::Playing)
+        return;
+
+    if(m_current_source) {
+        notifyPlayPosition(m_current_source->tell(), m_current_source->duration());
+        if(m_current_playlist && m_current_source->duration() - m_current_source->tell() < m_gapless_preload) {
+            auto nt = m_current_iterator + 1;
+            if(nt != m_current_playlist->end() && !m_next_source) {
+                assert(nt != m_current_iterator);
+                TRACE_LOG(logject) << "Pre-loading next track in list";
+                m_next_source = kernel.getDecoderManager().open(*nt);
+                assert(m_next_source);
+            }
+        }
+    }
+    TRACE_LOG(logject) << "write_handler: " << n << " bytes written";
+    if(ec) {
+        if(ec == std::errc::operation_canceled) {
+            TRACE_LOG(logject) << ec.message();
+            return;
+        }
+        ERROR_LOG(logject) << "write error: " << ec.message();
+        stop_impl();
+        return;
+    }
+    ec.clear();
+
+    if(!m_current_playlist || m_current_iterator == m_current_playlist->end()) {
+        TRACE_LOG(logject) << "no current track; stopping";
+        ec = ASIO::error::make_error_code(ASIO::error::eof);
+        n = 0;
+    }
+//        else if(!m_current_track->valid()) {
+//            TRACE_LOG(logject) << "current track not playable; stopping & resetting playlist";
+//            ec = ASIO::error::make_error_code(ASIO::error::eof);
+//            n = 0;
+//            jumpTo(0);
+//        }
+    else try {
+        if(!m_current_source) {
+            if(m_next_source)
+                m_current_source = std::move(m_next_source);
+            else
+                m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
+        }
+        const auto as = m_current_source->getAudioSpecs();
+
+        if(!in_buf.empty()) {
+            if(ASIO::buffer_size(ASIO::mutable_buffer(in_buf.front())) <= 0)
+                in_buf.pop_front();
+            else {
+                read_handler(ec, ASIO::buffer_size(ASIO::mutable_buffer(in_buf.front())));
+                return;
+            }
+        }
+
+        n = as.time_to_bytes(buffer_time);
+        PCMBuffer tmp{::operator new(n), n};
+        tmp.audio_specs = as;
+
+        auto n_ = m_current_source->decode(tmp, ec);
+
+        if(n_ < n && !m_current_source->valid()) {
+            TRACE_LOG(logject) << "track ended, starting next, if any";
+            next_impl();
+        }
+        if(n_ == 0) {
+            TRACE_LOG(logject) << "end of track";
+            ::operator delete(ASIO::buffer_cast<void*>(tmp));
+        }
+        else if(as.bps != asioOutput->current_specs().bps) {
+            TRACE_LOG(logject) << "widening from " << (unsigned)as.bps
+                               << " to " << (unsigned)asioOutput->current_specs().bps;
+            auto buf = widen(ASIO::buffer_cast<char*>(tmp), n_, as.bps, asioOutput->current_specs().bps);
+            buf.audio_specs = tmp.audio_specs;
+            buf.audio_specs.bps = asioOutput->current_specs().bps;
+            n_ = ASIO::buffer_size(buf);
+            in_buf.emplace_back(buf);
+
+            ::operator delete(ASIO::buffer_cast<void*>(tmp));
+        }
+        else
+            in_buf.emplace_back(tmp);
+        assert(!in_buf.empty());
+        assert(in_buf.back().audio_specs == asioOutput->current_specs());
+        n = n_;
+    }
+    catch(...) {
+        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+        stop_impl();
+        next_impl();
+        if(m_current_iterator != m_current_playlist->end())
+            play_impl();
+    }
+    read_handler(ec, n);
+}
+
+void Player::impl::read_handler(std::error_code ec, std::size_t n) {
+    TRACE_LOG(logject) << "read_handler: " << n << " bytes read";
+    if(ec || (in_buf.empty() && (ec = ASIO::error::make_error_code(ASIO::error::no_data)))) {
+        if(ec.value() == ASIO::error::eof && m_current_source) {
+            ec.clear();
+            write_handler(ec, 0);
+        }
+        if(ec == std::errc::operation_canceled) {
+            TRACE_LOG(logject) << ec.message();
+            assert(in_buf.empty());
+            return;
+        }
+        if(ec.value() == ASIO::error::eof) {
+            TRACE_LOG(logject) << ec.message();
+            assert(in_buf.empty());
+            std::this_thread::sleep_for(buffer_time);
+            stop_impl();
+            return;
+        }
+        ERROR_LOG(logject) << "read error: " << ec.message();
+        stop_impl();
+        return;
+    }
+    assert(n > 0);
+    assert(!in_buf.empty());
+
+    PCMBuffer tmp{ASIO::buffer_cast<void*>(in_buf.front()), n};
+    assert(ASIO::buffer_cast<void*>(in_buf.front()) != nullptr);
+    in_buf.pop_front();
+    assert(asioOutput);
+    kernel.getThreadManager().enqueue([self=shared_from_this(),tmp]() mutable {
+        unique_lock l(self->mu);
+        ASIO::async_write(*self->asioOutput, ASIO::buffer(tmp),
+            [tmp, self] (std::error_code ec, std::size_t n) {
+                assert(ASIO::buffer_cast<void*>(tmp) != nullptr);
+                if(n < ASIO::buffer_size(ASIO::mutable_buffer(tmp))) {
+                    const auto s = ASIO::buffer_size(ASIO::mutable_buffer(tmp)) - n;
+                    assert(s > 0);
+                    auto* ptr = ::operator new(s);
+                    std::memmove(ptr, ASIO::buffer_cast<uint8_t*>(tmp) + n, s);
+
+                    self->in_buf.emplace_front(ptr, s);
+                }
+                ::operator delete(ASIO::buffer_cast<void*>(tmp));
+
+                self->write_handler(ec, n);
+            });
+    });
+}
 
 struct State {
 protected:
