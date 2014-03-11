@@ -25,6 +25,7 @@
 #include <QQuickItem>
 #include <QQmlEngine>
 #include <QItemSelectionModel>
+#include <QJsonDocument>
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
@@ -207,6 +208,12 @@ bool PlaylistModel::insertTracks(int row, QVariant var) {
         assert(obj != nullptr);
         if(auto qobj = qobject_cast<QItemSelectionModel*>(obj))
             return insertTracks(row, QVariant::fromValue(qobj->selectedIndexes()));
+        else if(auto qobj = qobject_cast<JsonDocModel*>(obj)) {
+            QModelIndexList items;
+            for(auto i = 0; i < qobj->rowCount(); i++)
+                items.append(qobj->index(i));
+            return insertTracks(row, QVariant::fromValue(items));
+        }
     }
     return false;
 }
@@ -215,7 +222,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
     TRACE_LOG(logject) << "In insertTracks(int, QSequentialIterable)";
     TRACE_LOG(logject) << "Inserting " << var_list.size() << " files";
 
-    const auto i = rowCount();
+    const auto old_rowcount = rowCount();
     for(auto&& var : var_list) {
         if(var.canConvert<QUrl>()) {
             auto uri = to_uri(var.toUrl());
@@ -242,23 +249,34 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                 auto doc_var = idx.data(JsonDocModel::DocumentRole);
                 auto& lm = m_kernel.getLibraryManager();
                 const auto doc_map = doc_var.value<QVariantMap>();
-                auto end = doc_map.end();
+                const auto end = doc_map.end();
+#ifndef NDEBUG
+                auto json = QJsonDocument::fromVariant(doc_map).toJson(QJsonDocument::Compact);
+                TRACE_LOG(logject) << json.data();
+#endif
+
+                auto query = jbson::builder{};
                 auto metadata_query = jbson::builder{};
 
                 std::vector<jbson::document> tracks;
                 try {
-                    //build
-                    for(auto i = doc_map.begin(); i != end; ++i) {
-                        if(i.key() == "path" || i.key() == "location" || i.key() == "_id")
-                            continue;
-                        auto str = i.key().toStdString();
-                        metadata_query.emplace("key", boost::string_ref(str));
-                        str = i.value().toString().toStdString();
-                        metadata_query.emplace("value", boost::string_ref(str));
+                    // build query
+                    auto it = doc_map.find("location");
+                    if(it != doc_map.end()) {
+                        query(it.key().toStdString(), jbson::element_type::string_element,
+                              it.value().toString().toStdString());
                     }
-                    tracks = lm.query(jbson::builder
-                                         ("metadata", jbson::element_type::document_element, metadata_query)
-                                     );
+                    else {
+                        for(auto i = doc_map.begin(); i != end; ++i) {
+                            assert(i.key() != "_id");
+                            auto str = i.key().toStdString();
+                            metadata_query.emplace("key", boost::string_ref(str));
+                            str = i.value().toString().toStdString();
+                            metadata_query.emplace("value", boost::string_ref(str));
+                        }
+                        query("metadata", jbson::element_type::document_element, metadata_query);
+                    }
+                    tracks = lm.query(std::move(query));
                 }
                 catch(...) {
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
@@ -277,7 +295,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
             }
         }
     }
-    return rowCount() > i;
+    return rowCount() > old_rowcount;
 }
 
 void PlaylistModel::refreshTags(int start, int end) {

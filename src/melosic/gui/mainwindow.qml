@@ -273,19 +273,29 @@ ApplicationWindow {
     minimumHeight: 400
     minimumWidth: 400
 
+    Action {
+        id: appendToPlaylist
+        text: "Append to current playlist"
+        onTriggered: {
+            var pm = playlistManager.currentModel
+            if(pm !== null)
+                pm.insertTracks(currentPlaylist.currentIndex, filterView.filterResultPane.model)
+        }
+    }
+
     SplitView {
         anchors.fill: parent
         orientation: Qt.Horizontal
 
         FilterView {
+            id: filterView
             Layout.minimumWidth: 100
             Layout.alignment: Qt.AlignLeft
             onActivated: {
                 console.debug("FilterView.activated")
-                console.debug("items:", typeof(items))
                 var pm = playlistManager.currentModel
                 if(pm !== null)
-                    pm.insertTracks(currentPlaylist.currentIndex, items)
+                    pm.insertTracks(currentPlaylist.currentIndex, model)
             }
 
             FilterPane {
@@ -431,6 +441,8 @@ ApplicationWindow {
                 target: album.dependsOn
                 onDependSelectionChanged: album.init_query()
             }
+
+            filterResultPane: track
             FilterPane {
                 id: track
                 dependsOn: album
