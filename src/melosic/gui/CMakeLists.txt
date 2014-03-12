@@ -7,8 +7,6 @@ find_package(Boost COMPONENTS log log_setup REQUIRED)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_subdirectory(test)
-
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} mainwindow.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} playlistmodel.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} playlistmanagermodel.cpp)
@@ -24,6 +22,8 @@ SET(qt_gui_SOURCES ${qt_gui_SOURCES} selectionmodel.cpp)
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} . ${Boost_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${Qt5Quick_PRIVATE_INCLUDE_DIRS})
+
+add_subdirectory(test)
 
 QT5_ADD_RESOURCES(RCS_FILES resources.qrc)
 
