@@ -19,7 +19,6 @@
 #define MELOSIC_CATEGORYPROXYMODEL_HPP
 
 #include <QIdentityProxyModel>
-#include <QSharedPointer>
 #include <qqml.h>
 
 namespace Melosic {
@@ -70,12 +69,12 @@ private:
 class CategoryProxyModelAttached : public QObject {
     Q_OBJECT
     Q_PROPERTY(Melosic::Block* block READ block NOTIFY blockChanged)
-    mutable QSharedPointer<Block> m_block;
-    CategoryProxyModel* model;
+    mutable std::shared_ptr<Block> m_block;
+    CategoryProxyModel* m_model{nullptr};
     QList<QMetaObject::Connection> modelConns;
 
-    void setBlock(QSharedPointer<Block> b);
-    QPersistentModelIndex index;
+    void setBlock(std::shared_ptr<Block> b);
+    QPersistentModelIndex m_index;
 
 public:
     explicit CategoryProxyModelAttached(QObject* parent);
@@ -93,64 +92,28 @@ class Block : public QObject {
     Q_PROPERTY(int count READ count WRITE setCount NOTIFY countChanged)
     Q_PROPERTY(QPersistentModelIndex firstIndex READ firstIndex WRITE setFirstIndex NOTIFY firstIndexChanged)
     Q_PROPERTY(int firstRow READ firstRow NOTIFY firstRowChanged)
-    bool collapsed_ = false;
-    int count_ = 0;
-    QPersistentModelIndex firstIndex_ = QModelIndex();
-    QString category;
+    bool m_collapsed = false;
+    int m_count = 0;
+    QPersistentModelIndex m_firstIndex = QModelIndex();
     friend class CategoryProxyModel;
 
 public:
     ~Block();
 
-    bool operator==(const Block& b) const {
-        return firstIndex_ == b.firstIndex_;
-    }
+    bool operator==(const Block& b) const;
 
     bool adjacent(const Block& b);
+    bool collapsed() const;
+    int count() const;
+    QPersistentModelIndex firstIndex() const;
+    int firstRow() const;
 
-    bool collapsed() const {
-        return collapsed_;
-    }
-
-    void setCollapsed(bool c) {
-        collapsed_ = c;
-        Q_EMIT collapsedChanged(c);
-    }
-
-    bool contains(const QModelIndex& idx) {
-        return firstRow() <= idx.row() && firstRow() + count() > idx.row();
-    }
-
-    int count() const {
-        return count_;
-    }
-
-    void setCount(int count) {
-        count_ = count;
-        Q_EMIT countChanged(count_);
-    }
-
-    QPersistentModelIndex firstIndex() const {
-        return firstIndex_;
-    }
-
-    void setFirstIndex(QPersistentModelIndex index) {
-        if(!index.isValid())
-            return;
-        firstIndex_ = index;
-        if(category.size() == 0)
-            category = qobject_cast<CategoryProxyModel*>(const_cast<QAbstractItemModel*>(index.model()))->
-                    indexCategory(firstIndex_);
-        Q_EMIT firstIndexChanged(firstIndex_);
-        Q_EMIT firstRowChanged(firstIndex_.row());
-    }
-
-    template <typename UpgradeableLock>
-    void setFirstIndex(QPersistentModelIndex index, UpgradeableLock& l);
-
-    int firstRow() const {
-        return firstIndex_.row();
-    }
+    // emits collapsedChanged
+    void setCollapsed(bool c);
+    // emits countChanged
+    void setCount(int count);
+    // emits firstIndexChanged & firstRowChanged
+    void setFirstIndex(QPersistentModelIndex index);
 
 Q_SIGNALS:
     void collapsedChanged(bool collapsed);
