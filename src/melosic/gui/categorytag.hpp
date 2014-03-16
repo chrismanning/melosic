@@ -28,7 +28,7 @@ namespace Melosic {
 
 class PlaylistModel;
 
-class CategoryTag : public Criteria {
+class CategoryTag : public Criterion {
     Q_OBJECT
     QString m_field;
     Q_PROPERTY(QString field MEMBER m_field NOTIFY fieldChanged FINAL)

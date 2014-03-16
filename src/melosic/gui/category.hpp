@@ -28,27 +28,27 @@
 namespace Melosic {
 
 class CategoryProxyModel;
-class Criteria;
+class Criterion;
 
 class Category : public QObject {
     Q_OBJECT
 
-    Q_PROPERTY(QQmlListProperty<Melosic::Criteria> categoryCriteria READ categoryCriteria FINAL)
-    QList<Criteria*> criteria_;
+    Q_PROPERTY(QQmlListProperty<Melosic::Criterion> categoryCriterion READ categoryCriterion FINAL)
+    QList<Criterion*> m_criteria;
 
     Q_PROPERTY(CategoryProxyModel* model READ model WRITE setModel NOTIFY modelChanged)
-    CategoryProxyModel* m_category_model;
+    CategoryProxyModel* m_category_model{nullptr};
     friend class CategoryProxyModel;
 
     Q_PROPERTY(QQmlComponent* delegate READ delegate WRITE setDelegate NOTIFY delegateChanged FINAL)
-    QQmlComponent* delegate_;
+    QQmlComponent* m_delegate;
 
-    Q_CLASSINFO("DefaultProperty", "categoryCriteria")
+    Q_CLASSINFO("DefaultProperty", "categoryCriterion")
 
 public:
     explicit Category(QObject* parent = nullptr);
 
-    QQmlListProperty<Criteria> categoryCriteria();
+    QQmlListProperty<Criterion> categoryCriterion();
 
     QQmlComponent* delegate() const;
     void setDelegate(QQmlComponent* d);
@@ -61,7 +61,7 @@ Q_SIGNALS:
     void delegateChanged(QQmlComponent* delegate);
 };
 
-class Criteria : public QObject {
+class Criterion : public QObject {
     Q_OBJECT
     Q_PROPERTY(QString pattern READ pattern WRITE setPattern NOTIFY patternChanged)
     QString m_pattern;
@@ -73,8 +73,8 @@ protected:
     QRegularExpression m_regex;
 
 public:
-    explicit Criteria(QObject* parent = nullptr);
-    virtual ~Criteria() {}
+    explicit Criterion(QObject* parent = nullptr);
+    virtual ~Criterion() {}
 
     QString pattern() const;
     void setPattern(QString p);
@@ -89,7 +89,7 @@ Q_SIGNALS:
     void modelChanged(CategoryProxyModel* model);
 };
 
-class Role : public Criteria {
+class Role : public Criterion {
     Q_OBJECT
     Q_PROPERTY(QString role READ role WRITE setRole NOTIFY roleChanged FINAL)
     QString m_role;
@@ -108,6 +108,6 @@ Q_SIGNALS:
 
 } // namespace Melosic
 QML_DECLARE_TYPE(Melosic::Category)
-QML_DECLARE_TYPE(Melosic::Criteria)
+QML_DECLARE_TYPE(Melosic::Criterion)
 
 #endif // MELOSIC_CATEGORY_HPP

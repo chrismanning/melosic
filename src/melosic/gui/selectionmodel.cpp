@@ -15,6 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <cassert>
+
 #include "selectionmodel.hpp"
 
 namespace Melosic {
@@ -34,23 +36,23 @@ void SelectionModel::setCurrentRow(int row) {
 }
 
 bool SelectionModel::isSelected(int row) const {
-    Q_ASSERT(model() != nullptr);
+    assert(model() != nullptr);
     return isSelected(model()->index(row, 0));
 }
 
 void SelectionModel::select(int row, QItemSelectionModel::SelectionFlags command) {
-    Q_ASSERT(model() != nullptr);
+    assert(model() != nullptr);
     select(model()->index(row, 0), command);
 }
 
 void SelectionModel::select(int from_row, int to_row, QItemSelectionModel::SelectionFlags command) {
-    Q_ASSERT(model() != nullptr);
+    assert(model() != nullptr);
     select(QItemSelection(model()->index(from_row, 0), model()->index(to_row, 0)), command);
 }
 
 void SelectionModel::setCurrentIndex(int row, QItemSelectionModel::SelectionFlags command)
 {
-    Q_ASSERT(model() != nullptr);
+    assert(model() != nullptr);
     setCurrentIndex(model()->index(row, 0), command);
 }
 

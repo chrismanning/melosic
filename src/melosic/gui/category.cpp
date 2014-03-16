@@ -15,8 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <cassert>
+
 #include <QRegExp>
-#include <QDebug>
 
 #include "category.hpp"
 #include "categoryproxymodel.hpp"
@@ -25,23 +26,23 @@ namespace Melosic {
 
 Category::Category(QObject* parent) : QObject(parent) {
     connect(this, &Category::modelChanged, [this] (CategoryProxyModel* m) {
-        for(Criteria* c : criteria_)
+        for(Criterion* c : m_criteria)
             c->setModel(m);
     });
     if(parent && qobject_cast<CategoryProxyModel*>(parent))
         this->setProperty("model", QVariant::fromValue(parent));
 }
 
-QQmlListProperty<Criteria> Category::categoryCriteria() {
-    return {this, criteria_};
+QQmlListProperty<Criterion> Category::categoryCriterion() {
+    return {this, m_criteria};
 }
 
 QQmlComponent* Category::delegate() const {
-    return delegate_;
+    return m_delegate;
 }
 
 void Category::setDelegate(QQmlComponent* d) {
-    delegate_ = d;
+    m_delegate = d;
     Q_EMIT delegateChanged(d);
 }
 
@@ -54,30 +55,29 @@ void Category::setModel(CategoryProxyModel* m) {
     Q_EMIT modelChanged(m);
 }
 
-Criteria::Criteria(QObject* parent) : QObject(parent) {
-    connect(this, &Criteria::patternChanged, [this] (QString p) { m_regex.setPattern(p); });
+Criterion::Criterion(QObject* parent) : QObject(parent) {
+    connect(this, &Criterion::patternChanged, [this] (QString p) { m_regex.setPattern(p); });
 }
 
-QString Criteria::pattern() const {
+QString Criterion::pattern() const {
     return m_pattern;
 }
 
-void Criteria::setPattern(QString p) {
+void Criterion::setPattern(QString p) {
     m_pattern = p;
-    qDebug() << "Pattern set: " << p;
     Q_EMIT patternChanged(p);
 }
 
-void Criteria::setModel(CategoryProxyModel* model) {
+void Criterion::setModel(CategoryProxyModel* model) {
     m_category_model = model;
     Q_EMIT modelChanged(m_category_model);
 }
 
-CategoryProxyModel* Criteria::model() const {
+CategoryProxyModel* Criterion::model() const {
     return m_category_model;
 }
 
-Role::Role(QObject* parent) : Criteria(parent) {}
+Role::Role(QObject* parent) : Criterion(parent) {}
 
 QString Role::role() const {
     return m_role;
@@ -89,7 +89,7 @@ void Role::setRole(QString str) {
 }
 
 QString Role::result(const QModelIndex& index) const {
-    Q_ASSERT(index.isValid());
+    assert(index.isValid());
     if(!m_category_model)
         return m_role;
 
