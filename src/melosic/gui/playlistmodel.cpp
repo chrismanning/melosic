@@ -220,26 +220,19 @@ bool PlaylistModel::insertTracks(int row, QVariant var) {
 
 bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
     TRACE_LOG(logject) << "In insertTracks(int, QSequentialIterable)";
-    TRACE_LOG(logject) << "Inserting " << var_list.size() << " files";
 
     const auto old_rowcount = rowCount();
+    std::vector<Core::Track> tracks;
     for(auto&& var : var_list) {
         if(var.canConvert<QUrl>()) {
             auto uri = to_uri(var.toUrl());
             row = ++row > m_playlist.size() ? m_playlist.size() : row;
 
-            auto tracks = m_kernel.getDecoderManager().tracks(uri);
-            TRACE_LOG(logject) << tracks.size() << " tracks inserting";
+            auto new_tracks = m_kernel.getDecoderManager().tracks(uri);
+            for(auto&& t : new_tracks)
+                tracks.push_back(std::move(t));
 
-            beginInsertRows(QModelIndex(), row, row + boost::distance(tracks) -1);
-
-            auto n = m_playlist.insert(row, tracks);
-            TRACE_LOG(logject) << n << " tracks inserted";
-
-            endInsertRows();
-
-            m_kernel.getThreadManager().enqueue(Refresher(m_playlist, m_kernel.getThreadManager(), row, row+n, 1));
-            row += n;
+            row += new_tracks.size();
         }
         else if(var.canConvert<QModelIndex>()) {
             auto idx = var.value<QModelIndex>();
@@ -252,13 +245,13 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                 const auto end = doc_map.end();
 #ifndef NDEBUG
                 auto json = QJsonDocument::fromVariant(doc_map).toJson(QJsonDocument::Compact);
-                TRACE_LOG(logject) << json.data();
+                TRACE_LOG(logject) << "From JSON: " << json.data();
 #endif
 
                 auto query = jbson::builder{};
                 auto metadata_query = jbson::builder{};
 
-                std::vector<jbson::document> tracks;
+                std::vector<jbson::document> track_docs;
                 try {
                     // build query
                     auto it = doc_map.find("location");
@@ -276,30 +269,42 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                         }
                         query("metadata", jbson::element_type::document_element, metadata_query);
                     }
-                    tracks = lm.query(std::move(query));
+                    track_docs = lm.query(std::move(query));
                 }
                 catch(...) {
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 }
 
-                const auto old_row = row;
-                for(auto&& track_doc : tracks) {
-                    beginInsertRows(QModelIndex(), row, row);
-
-                    m_playlist.insert(row++, Core::Track{track_doc});
-
-                    endInsertRows();
+                for(auto&& track_doc : track_docs) {
+                    try {
+                        tracks.emplace_back(track_doc);
+                    }
+                    catch(...) {
+                        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+                    }
                 }
-                m_kernel.getThreadManager().enqueue(Refresher(m_playlist,
-                                                              m_kernel.getThreadManager(), old_row, row, 1));
             }
         }
     }
+
+    if(tracks.empty()) {
+        ERROR_LOG(logject) << "No tracks to insert";
+        return false;
+    }
+
+    TRACE_LOG(logject) << "Inserting " << tracks.size() << " tracks";
+    beginInsertRows(QModelIndex(), row, row + tracks.size() -1);
+    m_playlist.insert(row, tracks);
+    endInsertRows();
+
+    Q_EMIT dataChanged(index(row), index(row + tracks.size()-1));
+//    m_kernel.getThreadManager().enqueue(Refresher(m_playlist, m_kernel.getThreadManager(), row, row+tracks.size(), 1));
+
     return rowCount() > old_rowcount;
 }
 
 void PlaylistModel::refreshTags(int start, int end) {
-    Q_ASSERT(start >= 0);
+    assert(start >= 0);
     TRACE_LOG(logject) << "refreshing tags of tracks " << start << " - " << end;
     end = end < start ? m_playlist.size() : end+1;
     for(auto& t : m_playlist.getTracks(start, end)) {
@@ -347,7 +352,7 @@ bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
 {
     if(sourceRow == destinationChild)
         return false;
-    Q_ASSERT(destinationChild >= 0);
+    assert(destinationChild >= 0);
 
     if(!beginMoveRows(QModelIndex(), sourceRow, sourceRow + count - 1, QModelIndex(), destinationChild))
         return false;
