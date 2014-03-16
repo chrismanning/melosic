@@ -321,11 +321,26 @@ void CategoryProxyModel::impl::onRowsMoved(const QModelIndex&, int sourceStart,
                                            int sourceEnd, const QModelIndex&,
                                            int destinationRow, upgrade_lock& l)
 {
+    TRACE_LOG(logject) << boost::format("Rows moved: [%1% .. %2%] -> %3%") % sourceStart % sourceEnd % destinationRow;
     assert(sourceEnd >= sourceStart);
     auto s = sourceEnd - sourceStart;
     auto dest = destinationRow < sourceStart ? destinationRow : destinationRow - (s + 1);
 
-    onDataChanged(this->parent.index(dest, 0), this->parent.index(dest+s, 0), {}, l);
+    {
+        boost::upgrade_to_unique_lock<mutex> ul(l);
+        block_index.erase(std::next(block_index.begin(), sourceStart), std::next(block_index.begin(), sourceEnd+1));
+    }
+    sourceEnd = sourceStart;
+    if(--sourceStart > (int)block_index.size())
+        sourceStart = block_index.size()-1;
+    if(++sourceEnd >= (int)block_index.size())
+        sourceEnd = block_index.size()-1;
+
+    onRowsInserted({}, dest, dest+s, l);
+    // update blocks around source rows
+    onDataChanged(parent.index(sourceStart, 0), parent.index(sourceEnd, 0), {}, l);
+    // update block around destination
+    onDataChanged(parent.index(dest, 0), parent.index(dest+s, 0), {}, l);
 }
 
 void CategoryProxyModel::impl::onRowsAboutToBeMoved(const QModelIndex& parent, int sourceStart, int sourceEnd,
