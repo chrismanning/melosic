@@ -15,16 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/gui/categoryproxymodel.hpp>
-#include <melosic/gui/category.hpp>
-
 #include <QtTest/QtTest>
 
 struct CategoryProxyModelTest : QObject {
     Q_OBJECT
 private Q_SLOTS:
     void Test1() {
-        QVERIFY(false);
     }
 };
 
