@@ -20,6 +20,15 @@ SET(qt_gui_SOURCES ${qt_gui_SOURCES} jsondocmodel.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} librarymanager.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} selectionmodel.cpp)
 
+SET(QT_LIBS Qt5::Widgets Qt5::Qml Qt5::Quick)
+
+IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+ SET(qt_gui_SOURCES ${qt_gui_SOURCES} modeltest.cpp)
+ SET(qt_gui_SOURCES ${qt_gui_SOURCES} dynamictreemodel.cpp)
+ FIND_PACKAGE(Qt5Test REQUIRED)
+ SET(QT_LIBS ${QT_LIBS} Qt5::Test)
+ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR} . ${Boost_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${Qt5Quick_PRIVATE_INCLUDE_DIRS})
 
@@ -29,4 +38,4 @@ QT5_ADD_RESOURCES(RCS_FILES resources.qrc)
 
 ADD_LIBRARY(qt_gui SHARED ${qt_gui_SOURCES} ${RCS_FILES})
 set_target_properties(qt_gui PROPERTIES PREFIX "" COMPILE_DEFINITIONS QT_GUI_EXPORTS=qt_gui_EXPORTS)
-TARGET_LINK_LIBRARIES(qt_gui Qt5::Widgets Qt5::Qml Qt5::Quick -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} ${PN}lib)
+TARGET_LINK_LIBRARIES(qt_gui ${QT_LIBS} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} ${PN}lib)

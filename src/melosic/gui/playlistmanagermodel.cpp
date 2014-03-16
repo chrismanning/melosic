@@ -27,6 +27,10 @@ using unique_lock = std::unique_lock<mutex>;
 #include <melosic/gui/playlistmodel.hpp>
 #include <melosic/common/signal_core.hpp>
 
+#ifndef NDEBUG
+#include "modeltest.h"
+#endif
+
 #include "playlistmanagermodel.hpp"
 
 namespace Melosic {
@@ -42,6 +46,10 @@ PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p) {
            auto pm = new PlaylistModel(*p, k);
+#ifndef NDEBUG
+           auto mt = new ModelTest(pm);
+           mt->moveToThread(this->thread());
+#endif
            pm->moveToThread(this->thread());
            playlists.insert({*p, pm});
         }
