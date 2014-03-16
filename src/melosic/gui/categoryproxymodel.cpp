@@ -335,13 +335,25 @@ void CategoryProxyModel::impl::onRowsAboutToBeMoved(const QModelIndex& parent, i
 
 void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int end, upgrade_lock& l) {
     assert(l);
-    boost::upgrade_to_unique_lock<mutex> ul(l);
     if(!m_category || parent.rowCount() == 0) {
+        boost::upgrade_to_unique_lock<mutex> ul(l);
         block_index.clear();
         return;
     }
     TRACE_LOG(logject) << "Rows removed: " << start << " - " << end;
-    block_index.erase(std::next(block_index.begin(), start), std::next(block_index.begin(), end+1));
+    {
+        boost::upgrade_to_unique_lock<mutex> ul(l);
+        block_index.erase(std::next(block_index.begin(), start), std::next(block_index.begin(), end+1));
+    }
+
+    end = start;
+    if(--start > (int)block_index.size())
+        start = block_index.size()-1;
+    if(end >= (int)block_index.size())
+        end = block_index.size()-1;
+
+    scope_unlock_exit_lock<upgrade_lock> sl(l);
+    Q_EMIT parent.dataChanged(parent.index(start, 0), parent.index(end, 0));
 }
 
 void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end, upgrade_lock& l) {
@@ -354,9 +366,9 @@ void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int st
     TRACE_LOG(logject) << "Rows about to be removed: " << start << " - " << end;
 
     assert(end < std::distance(block_index.begin(), block_index.end()));
-    for(auto i = start; i < end; ++i) {
+    for(auto i = start; i <= end; ++i) {
         TRACE_LOG(logject) << "Decreasing block count";
-        block_index[i]->setCount(block_index[i]->count());
+        block_index[i]->setCount(block_index[i]->count()-1);
         if(block_index[i]->firstRow() == i && (i+1 < parent.rowCount())) {
             TRACE_LOG(logject) << "Moving block forward 1";
             block_index[i]->setFirstIndex(parent.index(i+1, 0));
@@ -414,9 +426,7 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
     }
 
     scope_unlock_exit_lock<upgrade_lock> sl(l);
-    Q_EMIT parent.blocksNeedUpdating(start, end+1);
-
-    return;
+    Q_EMIT parent.blocksNeedUpdating(start, end+n);
 }
 
 CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* object) {
