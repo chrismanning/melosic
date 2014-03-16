@@ -129,8 +129,12 @@ Track::Track(const jbson::document& track_doc)
     using jbson::element_type;
     for(auto&& element : track_doc) {
         if(element.name() == "location") {
-            assert(element.type() == element_type::string_element);
-            pimpl->m_uri = network::uri(element.value<std::string>());
+            try {
+                pimpl->m_uri = network::uri(element.value<std::string>());
+            }
+            catch(...) {
+                std::throw_with_nested(std::runtime_error("'location' should be a string"));
+            }
         }
         else if(element.name() == "start") {
             if(element.type() == element_type::int32_element)
@@ -150,11 +154,23 @@ Track::Track(const jbson::document& track_doc)
         }
         else if(element.name() == "metadata") {
             TagMap tags;
-            assert(element.type() == element_type::array_element);
-            auto metadata = jbson::get<element_type::array_element>(element);
+
+            decltype(jbson::get<element_type::array_element>(element)) metadata;
+            try {
+                metadata = jbson::get<element_type::array_element>(element);
+            }
+            catch(...) {
+                std::throw_with_nested(std::runtime_error("'metadata' should be an array"));
+            }
+
             for(auto&& tag : metadata) {
-                assert(tag.type() == element_type::document_element);
-                auto tag_doc = jbson::get<element_type::document_element>(tag);
+                decltype(jbson::get<element_type::document_element>(tag)) tag_doc;
+                try {
+                    tag_doc = jbson::get<element_type::document_element>(tag);
+                }
+                catch(...) {
+                    std::throw_with_nested(std::runtime_error("'metadata' elements should all be document"));
+                }
 
                 std::pair<std::string, std::string> pair;
                 auto it = tag_doc.find("key");
@@ -169,9 +185,14 @@ Track::Track(const jbson::document& track_doc)
 
                 tags.emplace(std::move(pair));
             }
-            pimpl->m_tags = boost::synchronized_value<TagMap>(tags);
+            pimpl->m_tags = boost::synchronized_value<TagMap>(std::move(tags));
         }
     }
+
+    if(pimpl->m_uri.empty())
+        BOOST_THROW_EXCEPTION(std::runtime_error("track must have a location"));
+    if(pimpl->end == 0ms)
+        BOOST_THROW_EXCEPTION(std::runtime_error("track should have an end"));
 }
 
 Track::~Track() {}

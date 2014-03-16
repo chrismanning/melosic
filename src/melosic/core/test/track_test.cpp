@@ -23,6 +23,9 @@ namespace fs = boost::filesystem;
 #include <boost/utility/string_ref.hpp>
 using namespace boost::literals;
 
+#include <jbson/json_reader.hpp>
+using namespace jbson;
+
 #define private public
 
 #include <melosic/melin/input.hpp>
@@ -32,4 +35,44 @@ using namespace Melosic;
 TEST(TrackTest, TestTrack1) {
     auto track = Core::Track{Input::to_uri("/tmp/some track.flac")};
     EXPECT_EQ("file:///tmp/some%20track.flac", track.uri().string());
+}
+
+static boost::exception_ptr to_boost_exception_ptr(std::exception_ptr e) {
+    try {
+        std::rethrow_exception(e);
+    }
+    catch(...) {
+        return boost::current_exception();
+    }
+}
+
+TEST(TrackTest, TestTrack2) {
+    Core::Track track(Input::to_uri("/tmp/some track.flac"));
+    EXPECT_NO_THROW(track = Core::Track{R"({
+        "type": "track",
+        "location": "file:///tmp/some%20track.flac"
+    })"_json_doc});
+
+    EXPECT_ANY_THROW(track = Core::Track{R"({
+        "type": "track",
+        "location": 123
+    })"_json_doc});
+
+    EXPECT_ANY_THROW(track = Core::Track{R"({
+        "type": "track",
+        "location": "file:///tmp/some%20track.flac",
+        "metadata": {}
+    })"_json_doc});
+
+    EXPECT_ANY_THROW(track = Core::Track{R"({
+        "type": "track",
+        "location": "file:///tmp/some%20track.flac",
+        "metadata": [ { "key": "tracknumber", "value": 12 } ]
+    })"_json_doc});
+
+    EXPECT_NO_THROW(track = Core::Track{R"({
+        "type": "track",
+        "location": "file:///tmp/some%20track.flac",
+        "metadata": [ { "key": "tracknumber", "value": "12" } ]
+    })"_json_doc});
 }
