@@ -18,6 +18,7 @@
 #ifndef MELOSIC_LOGGING_HPP
 #define MELOSIC_LOGGING_HPP
 
+#ifndef MELOSIC_DISABLE_LOGGING
 #include <boost/log/core.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
@@ -72,16 +73,11 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
 
 MELOSIC_EXPORT void init();
 
-struct nullstream : std::ostream {
-    nullstream() : std::ios(0), std::ostream(0) {}
-};
-
 }//end namespace Logger
 }//end namespace Melosic
 
 extern template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
 
-#ifndef MELOSIC_DISABLE_LOGGING
 #define LOG(lg) BOOST_LOG(lg)
 #define ERROR_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::error)
 #define WARN_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::warning)
@@ -93,6 +89,21 @@ extern template class logging::sources::severity_channel_logger_mt<Melosic::Logg
 #define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::debug)
 #define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::trace)
 #else
+
+#include <ostream>
+
+namespace Melosic {
+namespace Logger {
+
+struct nullstream : std::ostream {
+    nullstream() : std::ios(0), std::ostream(0) {}
+};
+
+inline void init() {}
+
+}//end namespace Logger
+}//end namespace Melosic
+
 #define LOG(lg) Melosic::Logger::nullstream()
 #define ERROR_LOG(lg) Melosic::Logger::nullstream()
 #define WARN_LOG(lg) Melosic::Logger::nullstream()

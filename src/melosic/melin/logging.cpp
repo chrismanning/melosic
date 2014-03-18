@@ -15,6 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+
+#ifndef MELOSIC_DISABLE_LOGGING
 #include <memory>
 
 #include <boost/log/sinks.hpp>
@@ -24,6 +26,9 @@
 #include <boost/log/support/date_time.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
 
+#include <melosic/common/directories.hpp>
+#endif
+
 #include "logging.hpp"
 
 template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
@@ -31,24 +36,22 @@ template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Sev
 namespace Melosic {
 namespace Logger {
 
-void init() {
-    typedef sinks::synchronous_sink<sinks::text_ostream_backend > text_sink;
-    boost::shared_ptr<text_sink> sink = boost::make_shared<text_sink>();
-
-#ifndef MELOSIC_DISABLE_LOGGING
-    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
+#ifdef MELOSIC_DISABLE_LOGGING
+void init() {}
 #else
-    boost::shared_ptr<std::ostream> stream(boost::make_shared<nullstream>());
-#endif
-    sink->locked_backend()->add_stream(stream);
+void init() {
+    auto con_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_ostream_backend>>();
 
-    logging::core::get()->add_sink(sink);
+    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
+    con_sink->locked_backend()->add_stream(stream);
+
+    logging::core::get()->add_sink(con_sink);
 
     auto date_facet = new boost::posix_time::time_facet;
 
     date_facet->format("%d/%m/%y %H:%M:%S");
     auto loc = std::locale(std::locale(), date_facet);
-    sink->set_formatter([loc](logging::record_view const& rec, logging::formatting_ostream& strm) {
+    auto formatter = [loc](logging::record_view const& rec, logging::formatting_ostream& strm) {
         strm.imbue(loc);
         strm << logging::extract<boost::posix_time::ptime>("TimeStamp", rec) << " ";
 
@@ -57,8 +60,22 @@ void init() {
 
         // Finally, put the record message to the stream
         strm << rec[expr::smessage];
-    });
+    };
+
+    con_sink->set_formatter(formatter);
+
+    auto file_backend = boost::make_shared<sinks::text_file_backend>(
+                keywords::file_name = Directories::dataHome()/"melosic"/"melosic.log");
+    auto file_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_file_backend>>(file_backend);
+    file_backend->auto_flush(true);
+
+    logging::core::get()->add_sink(file_sink);
+    file_sink->set_formatter(formatter);
+
     logging::add_common_attributes();
 }
-}
-}
+
+#endif
+
+} // namespace Logger
+} // namespace Melosic
