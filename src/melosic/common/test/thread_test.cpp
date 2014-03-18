@@ -18,35 +18,35 @@
 #include <chrono>
 #include <cstdlib>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/thread.hpp>
 
-struct ThreadTest : ::testing::Test {
-protected:
+TEST_CASE("Thread test") {
     Melosic::Thread::Manager tman;
-    std::chrono::milliseconds defaultTimeout{500};
-};
+    auto defaultTimeout = 500ms;
 
-TEST_F(ThreadTest, ThreadPoolEnqueue) {
+SECTION("ThreadPoolEnqueue") {
     int32_t i{rand()}, scalar{rand()};
     auto fut = tman.enqueue([=] () -> int64_t {
         return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
     });
 
     auto r(fut.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Task deferred or timed-out";
+    REQUIRE(std::future_status::ready == r);
     int64_t result{0};
-    ASSERT_NO_THROW(result = fut.get()) << "Task should not throw anything";
-    EXPECT_EQ(static_cast<int64_t>(i) * static_cast<int64_t>(scalar), result) << "Task failed";
+    REQUIRE_NOTHROW(result = fut.get());
+    CHECK((static_cast<int64_t>(i) * static_cast<int64_t>(scalar)) == result);
 }
 
-TEST_F(ThreadTest, ThreadPoolEnqueueException) {
+SECTION("ThreadPoolEnqueueException") {
     auto fut = tman.enqueue([] () {
         throw std::exception();
     });
 
     auto r(fut.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Task deferred or timed-out";
-    ASSERT_THROW(fut.get(), std::exception) << "Task should throw an exception and copy it through the promise";
+    REQUIRE(std::future_status::ready == r);
+    REQUIRE_THROWS_AS(fut.get(), std::exception);
+}
+
 }

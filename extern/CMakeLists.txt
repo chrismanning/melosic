@@ -26,9 +26,11 @@ FILE(GLOB_RECURSE rapidjson_headers ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/includ
 add_library(rapidjson_headers_lib STATIC ${rapidjson_headers})
 set_target_properties(rapidjson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
 
+#jbson
 set(JBSON_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
 add_subdirectory(jbson)
 set(JBSON_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/jbson/include)
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${JBSON_INCLUDE_DIR})
 
 #ejdb
 include(ExternalProject)
@@ -49,6 +51,6 @@ set(EJPP_ENABLE_TESTING ${MELOSIC_ENABLE_TESTING})
 add_subdirectory(ejpp)
 add_dependencies(ejpp jbson)
 add_dependencies(ejpp ejdb)
-set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/include ${CMAKE_CURRENT_SOURCE_DIR}/jbson/include)
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/ejpp/include)
 
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} PARENT_SCOPE)

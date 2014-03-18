@@ -68,9 +68,9 @@ if(UNIX)
  SET(LINK_LIBS ${LINK_LIBS} dl magic)
 endif()
 
-SET(PN ${PROJECT_NAME})
 #test stuff
 
+#gets all cached vars
 get_cmake_property(CACHE_VARS CACHE_VARIABLES)
 foreach(CACHE_VAR ${CACHE_VARS})
   get_property(CACHE_VAR_HELPSTRING CACHE ${CACHE_VAR} PROPERTY HELPSTRING)
@@ -86,27 +86,18 @@ foreach(CACHE_VAR ${CACHE_VARS})
 endforeach()
 
 include(ExternalProject)
+
 ExternalProject_Add(
-    gtest_${PROJECT_NAME}
-    SVN_REPOSITORY http://googletest.googlecode.com/svn/trunk/
-    SVN_REVISION -r 660
-    UPDATE_COMMAND ""
+    catch_${PROJECT_NAME}
+    GIT_REPOSITORY https://github.com/philsquared/Catch.git
     TIMEOUT 10
-    CMAKE_ARGS --no-warn-unused-cli ${PARENT_CMAKE_ARGS} "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -std=c++11" -DBUILD_SHARED_LIBS=OFF
-    # Disable install step
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
     INSTALL_COMMAND ""
     LOG_DOWNLOAD ON
-    LOG_CONFIGURE ON
-    LOG_BUILD ON)
-ExternalProject_Get_Property(gtest_${PROJECT_NAME} source_dir)
-set(GTEST_INCLUDE_DIRS ${source_dir}/include)
-message(STATUS "Gtest include dirs: ${GTEST_INCLUDE_DIRS}")
-
-include_directories(${GTEST_INCLUDE_DIRS})
-
-ExternalProject_Get_Property(gtest_${PROJECT_NAME} binary_dir)
-set(GTEST_LIBRARY_DIR ${binary_dir})
-set(GTEST_LIBRARIES "-L${GTEST_LIBRARY_DIR} -lgtest")
+   )
+ExternalProject_Get_Property(catch_${PROJECT_NAME} source_dir)
+set(CATCH_INCLUDE_DIR ${source_dir}/include CACHE INTERNAL "Path to include folder for Catch")
 
 if(${MELOSIC_ENABLE_TESTING})
 enable_testing()
@@ -114,9 +105,10 @@ endif()
 
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
-  add_dependencies(${test_name} gtest_${PROJECT_NAME})
-  target_link_libraries(${test_name} ${LINK_LIBS} ejpp ${GTEST_LIBRARIES} ${PN}lib)
-  set_target_properties(${test_name} PROPERTIES COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING=1")
+  add_dependencies(${test_name} catch_${PROJECT_NAME})
+  target_link_libraries(${test_name} ${LINK_LIBS} ejpp ${PROJECT_NAME}lib)
+  set_property(TARGET ${test_name} APPEND PROPERTY COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING")
+  set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()
 
@@ -124,4 +116,4 @@ add_subdirectory(src/melosic)
 
 add_subdirectory(test)
 
-add_dependencies(${PN}_test_main gtest_${PROJECT_NAME})
+add_dependencies(${PROJECT_NAME}_test_main catch_${PROJECT_NAME})

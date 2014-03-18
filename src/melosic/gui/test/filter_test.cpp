@@ -60,7 +60,7 @@ std::ostream& operator<<(std::ostream& os, const basic_document<C1,C2>& ds) {
 
 } // jbson
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 template <typename AssocT, typename ValueT>
 auto find_optional(AssocT&& rng, ValueT&& val) {
@@ -95,7 +95,7 @@ static void sort_by_criteria(AssocRangeT& rng, std::initializer_list<StringT> so
     sort_by_criteria_impl(rng, sort_fields);
 }
 
-TEST(FilterTest, SortTest1) {
+TEST_CASE("SortTest1") {
     std::vector<document_set> docs;
     docs.push_back(R"({"title":"some title","tracknumber":"2"})"_json_set);
     docs.push_back(R"({"title":"some title","tracknumber":"9"})"_json_set);
@@ -104,8 +104,8 @@ TEST(FilterTest, SortTest1) {
     ex_docs.push_back(R"({"title":"some title","tracknumber":"2"})"_json_set);
     ex_docs.push_back(R"({"title":"some title II","tracknumber":"2"})"_json_set);
     ex_docs.push_back(R"({"title":"some title","tracknumber":"9"})"_json_set);
-    ASSERT_EQ(3u, docs.size());
+    REQUIRE(3u == docs.size());
 
     sort_by_criteria(docs, {"tracknumber", "title"});
-    EXPECT_TRUE(ex_docs == docs);
+    CHECK(ex_docs == docs);
 }

@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/filesystem.hpp>
@@ -30,40 +30,28 @@ using namespace boost::literals;
 #include <melosic/core/track.hpp>
 using namespace Melosic;
 
-struct PlaylistTest : ::testing::Test {
-    virtual void SetUp() {
-        ASSERT_EQ(0, playlist.size());
-    }
-
-    virtual void TearDown() {
-    }
-
-protected:
+TEST_CASE("Playlist Test 1") {
     Core::Playlist playlist{"Playlist 1"};
-    std::chrono::milliseconds defaultTimeout{500};
-};
-
-TEST_F(PlaylistTest, PlaylistTest1) {
     auto track = Core::Track{Input::to_uri("/tmp/some track.flac")};
-    EXPECT_EQ("file:///tmp/some%20track.flac", track.uri().string());
+    CHECK("file:///tmp/some%20track.flac" == track.uri().string());
 
     auto end = playlist.end();
-    ASSERT_EQ(end, playlist.begin());
+    REQUIRE(end == playlist.begin());
 
     auto i = playlist.insert(0, track);
-    ASSERT_EQ(playlist.end(), end);
-    EXPECT_NE(playlist.begin(), end);
-    EXPECT_EQ(track, *playlist.begin());
-    EXPECT_EQ(track, playlist.getTrack(i));
-    ASSERT_EQ(playlist.end(), end);
+    REQUIRE(playlist.end() == end);
+    CHECK(playlist.begin() != end);
+    CHECK(track == *playlist.begin());
+    CHECK(track == playlist.getTrack(i));
+    REQUIRE(playlist.end() == end);
 
     auto track2 = Core::Track{Input::to_uri("/tmp/some other track.flac")};
-    EXPECT_EQ("file:///tmp/some%20other%20track.flac", track2.uri().string());
+    CHECK("file:///tmp/some%20other%20track.flac" == track2.uri().string());
 
     i = playlist.insert(0, track2);
-    ASSERT_EQ(playlist.end(), end);
-    EXPECT_NE(playlist.begin(), end);
-    EXPECT_EQ(track, *playlist.begin());
-    EXPECT_EQ(track2, playlist.getTrack(i));
-    ASSERT_EQ(playlist.end(), end);
+    REQUIRE(playlist.end() == end);
+    CHECK(playlist.begin() != end);
+    CHECK(track == *playlist.begin());
+    CHECK(track2 == playlist.getTrack(i));
+    REQUIRE(playlist.end() == end);
 }

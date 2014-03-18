@@ -8,8 +8,8 @@ add_subdirectory(common)
 set(MELIN_SRC_LIST)
 add_subdirectory(melin)
 
-add_library(${PN}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
-set_target_properties(${PN}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PN}lib_EXPORTS)
+add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
+set_target_properties(${PROJECT_NAME}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PROJECT_NAME}lib_EXPORTS)
 
 add_subdirectory(gui)
 
@@ -18,19 +18,21 @@ include_directories(${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDE
 add_subdirectory(plugins)
 
 #create main executable
-add_executable(${PN} main.cpp)
-target_link_libraries(${PN} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} ${PN}lib)
-add_library(${PN}_test_main OBJECT test_main.cpp)
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} ${PROJECT_NAME}lib)
 
-add_dependencies(${PN}_test_main gtest_${PROJECT_NAME})
+add_library(${PROJECT_NAME}_test_main OBJECT test_main.cpp)
+set_property(TARGET ${PROJECT_NAME}_test_main APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
 
-qt5_use_modules(${PN} Widgets Qml)
+add_dependencies(${PROJECT_NAME}_test_main catch_${PROJECT_NAME})
+
+qt5_use_modules(${PROJECT_NAME} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES})
 SET(LINK_LIBS ${LINK_LIBS} PARENT_SCOPE)
 
-target_link_libraries(${PN}lib ${LINK_LIBS} ejpp)
+target_link_libraries(${PROJECT_NAME}lib ${LINK_LIBS} ejpp)
 
-qt5_use_modules(${PN} Widgets Qml)
+qt5_use_modules(${PROJECT_NAME} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})
 
-target_link_libraries(${PN} ${LINK_LIBS} qt_gui ejpp)
+target_link_libraries(${PROJECT_NAME} ${LINK_LIBS} qt_gui ejpp)

@@ -18,48 +18,48 @@
 #include <chrono>
 using namespace std::literals;
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/audiospecs.hpp>
 using AS = Melosic::AudioSpecs;
 
-TEST(AudioSpecsTest, SamplesToBytesTest) {
+TEST_CASE("SamplesToBytesTest") {
     AS as{1, 8, 44100};
-    EXPECT_EQ(44100u, as.samples_to_bytes(44100));
+    CHECK(44100u == as.samples_to_bytes(44100));
     as = {2, 8, 44100};
-    EXPECT_EQ(88200u, as.samples_to_bytes(44100));
+    CHECK(88200u == as.samples_to_bytes(44100));
     as = {2, 16, 44100};
-    EXPECT_EQ(176400u, as.samples_to_bytes(44100));
+    CHECK(176400u == as.samples_to_bytes(44100));
 
-    EXPECT_EQ(40u, as.samples_to_bytes(10));
+    CHECK(40u == as.samples_to_bytes(10));
 }
 
-TEST(AudioSpecsTest, BytesToSamplesTest) {
+TEST_CASE("BytesToSamplesTest") {
     AS as{1, 8, 44100};
-    EXPECT_EQ(44100u, as.bytes_to_samples(44100));
+    CHECK(44100u == as.bytes_to_samples(44100));
     as = {2, 8, 44100};
-    EXPECT_EQ(44100u, as.bytes_to_samples(88200));
+    CHECK(44100u == as.bytes_to_samples(88200));
     as = {2, 16, 44100};
-    EXPECT_EQ(44100u, as.bytes_to_samples(176400u));
-    EXPECT_EQ(10u, as.bytes_to_samples(40));
+    CHECK(44100u == as.bytes_to_samples(176400u));
+    CHECK(10u == as.bytes_to_samples(40));
 }
 
 constexpr AS as{2, 16, 44100};
 static_assert(22050u == as.time_to_samples(500ms), "");
 
-TEST(AudioSpecsTest, TimeToSamplesTest) {
+TEST_CASE("TimeToSamplesTest") {
     constexpr AS as{2, 16, 44100};
     static_assert(22050u == as.time_to_samples(500ms), "");
 
-    EXPECT_EQ(44100u, as.time_to_samples(1s));
-    EXPECT_EQ(44100u, as.time_to_samples(1000ms));
-    EXPECT_EQ(22050u, as.time_to_samples(500ms));
+    CHECK(44100u == as.time_to_samples(1s));
+    CHECK(44100u == as.time_to_samples(1000ms));
+    CHECK(22050u == as.time_to_samples(500ms));
 }
 
-TEST(AudioSpecsTest, SamplesToTimeTest) {
+TEST_CASE("SamplesToTimeTest") {
     constexpr AS as{2, 16, 44100};
     static_assert(500ms == as.samples_to_time<chrono::milliseconds>(22050u), "");
 
-    EXPECT_EQ(1s, as.samples_to_time<chrono::seconds>(44100u));
-    EXPECT_EQ(500ms, as.samples_to_time<chrono::milliseconds>(22050u));
+    CHECK(1s == as.samples_to_time<chrono::seconds>(44100u));
+    CHECK(500ms == as.samples_to_time<chrono::milliseconds>(22050u));
 }

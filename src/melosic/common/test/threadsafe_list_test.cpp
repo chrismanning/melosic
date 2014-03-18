@@ -21,95 +21,94 @@ using namespace std::literals;
 
 #include <boost/range/algorithm/equal.hpp>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/threadsafe_list.hpp>
 using namespace Melosic;
 
-struct ListTest : ::testing::Test {
-
-    struct ThrowCopy {
-        ThrowCopy() = default;
-        ThrowCopy(const ThrowCopy&) {
-            throw std::exception();
-        }
-        ThrowCopy(ThrowCopy&&) = default;
-    };
-
-    threadsafe_list<int> int_list;
-    threadsafe_list<ThrowCopy> thrower_list;
-    threadsafe_list<std::string> string_list;
+struct ThrowCopy {
+    ThrowCopy() = default;
+    ThrowCopy(const ThrowCopy&) {
+        throw std::exception();
+    }
+    ThrowCopy(ThrowCopy&&) = default;
 };
 
-TEST_F(ListTest, PushFront) {
-    ASSERT_EQ(0u, int_list.size());
+TEST_CASE("Thread-safe list test") {
+    threadsafe_list<int> int_list;
+    REQUIRE(0u == int_list.size());
+    threadsafe_list<ThrowCopy> thrower_list;
+    REQUIRE(0u == thrower_list.size());
+    threadsafe_list<std::string> string_list;
+    REQUIRE(0u == string_list.size());
+
+SECTION("PushFront") {
     int_list.push_front(123);
-    EXPECT_EQ(1u, int_list.size());
+    CHECK(1u == int_list.size());
     int_list.push_front(321);
     int_list.push_front(4566578);
-    EXPECT_EQ(3u, int_list.size());
+    CHECK(3u == int_list.size());
 
     ThrowCopy tmp;
-    ASSERT_THROW(thrower_list.push_front(tmp), std::exception);
-    EXPECT_EQ(0u, thrower_list.size());
-    ASSERT_NO_THROW(thrower_list.push_front(ThrowCopy()));
-    EXPECT_EQ(1u, thrower_list.size());
-    ASSERT_THROW(thrower_list.push_front(tmp), std::exception);
-    EXPECT_EQ(1u, thrower_list.size());
+    REQUIRE_THROWS_AS(thrower_list.push_front(tmp), std::exception);
+    CHECK(0u == thrower_list.size());
+    REQUIRE_NOTHROW(thrower_list.push_front(ThrowCopy()));
+    CHECK(1u == thrower_list.size());
+    REQUIRE_THROWS_AS(thrower_list.push_front(tmp), std::exception);
+    CHECK(1u == thrower_list.size());
 }
 
-TEST_F(ListTest, PushBack) {
-    ASSERT_EQ(0u, int_list.size());
+SECTION("PushBack") {
     int_list.push_back(123);
-    EXPECT_EQ(1u, int_list.size());
+    CHECK(1u == int_list.size());
     int_list.push_back(321);
     int_list.push_back(4566578);
-    EXPECT_EQ(3u, int_list.size());
+    CHECK(3u == int_list.size());
 
     ThrowCopy tmp;
-    ASSERT_THROW(thrower_list.push_back(tmp), std::exception);
-    EXPECT_EQ(0u, thrower_list.size());
-    ASSERT_NO_THROW(thrower_list.push_back(ThrowCopy()));
-    EXPECT_EQ(1u, thrower_list.size());
-    ASSERT_THROW(thrower_list.push_back(tmp), std::exception);
-    EXPECT_EQ(1u, thrower_list.size());
+    REQUIRE_THROWS_AS(thrower_list.push_back(tmp), std::exception);
+    CHECK(0u == thrower_list.size());
+    REQUIRE_NOTHROW(thrower_list.push_back(ThrowCopy()));
+    CHECK(1u == thrower_list.size());
+    REQUIRE_THROWS_AS(thrower_list.push_back(tmp), std::exception);
+    CHECK(1u == thrower_list.size());
 }
 
-TEST_F(ListTest, Find) {
+SECTION("Find") {
     int_list.push_front(123);
     int_list.push_front(321);
     const int x = 4566578;
     int_list.push_front(x);
-    ASSERT_EQ(3u, int_list.size());
+    REQUIRE(3u == int_list.size());
 
     {
         auto ptr = int_list.find_first_if([] (int i) { return !(i % 2); });
-        EXPECT_EQ(x, *ptr);
+        CHECK(x == *ptr);
 
         ptr = int_list.find_first_if([] (int) { return false; });
-        EXPECT_EQ(nullptr, ptr);
+        CHECK(nullptr == ptr);
     }
 
     {
         const auto& const_ref = int_list;
         auto ptr = const_ref.find_first_if([] (int i) { return !(i % 2); });
-        EXPECT_EQ(x, *ptr);
+        CHECK(x == *ptr);
     }
 
     std::string str1("abc43"s);
     string_list.push_front(str1);
     std::string str2("defdfg134"s);
     string_list.push_front(str2);
-    ASSERT_EQ(2u, string_list.size());
+    REQUIRE(2u == string_list.size());
 
     {
         auto ptr = string_list.find_first_if([] (const std::string& str) {
             return str.size() == 5;
         });
-        EXPECT_EQ(str1, *ptr);
+        CHECK(str1 == *ptr);
 
         ptr = string_list.find_first_if([] (const std::string&) { return false; });
-        EXPECT_EQ(nullptr, ptr);
+        CHECK(nullptr == ptr);
     }
 
     {
@@ -117,16 +116,16 @@ TEST_F(ListTest, Find) {
         auto ptr = const_ref.find_first_if([] (const std::string& str) {
             return str[0] == 'd';
         });
-        EXPECT_EQ(str2, *ptr);
+        CHECK(str2 == *ptr);
     }
 }
 
-TEST_F(ListTest, ForEach) {
+SECTION("ForEach") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
-    ASSERT_EQ(3u, int_list.size());
+    REQUIRE(3u == int_list.size());
 
     {
         const auto& const_ref = int_list;
@@ -134,7 +133,7 @@ TEST_F(ListTest, ForEach) {
         const_ref.for_each([&] (const int& val) {
             std_int_list.push_front(val);
         });
-        EXPECT_EQ(std_int_list, std::list<int>({a,b,c}));
+        CHECK(std_int_list == std::list<int>({a,b,c}));
     }
 
     {
@@ -145,31 +144,31 @@ TEST_F(ListTest, ForEach) {
         int_list.for_each([&] (const int& val) {
             std_int_list.push_front(val);
         });
-        EXPECT_EQ(std_int_list, std::list<int>({a+1,b+1,c+1}));
+        CHECK(std_int_list == std::list<int>({a+1,b+1,c+1}));
     }
 }
 
-TEST_F(ListTest, Stream) {
+SECTION("Stream") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
     std::stringstream str;
     str << int_list;
-    EXPECT_EQ("[4566578,321,123]", str.str());
+    CHECK("[4566578,321,123]" == str.str());
 }
 
-TEST_F(ListTest, Stream2) {
+SECTION("Stream2") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_back(a);
     int_list.push_back(b);
     int_list.push_back(c);
     std::stringstream str;
     str << int_list;
-    EXPECT_EQ("[123,321,4566578]", str.str());
+    CHECK("[123,321,4566578]" == str.str());
 }
 
-TEST_F(ListTest, Equality) {
+SECTION("Equality") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
@@ -180,20 +179,20 @@ TEST_F(ListTest, Equality) {
     b_list.push_front(b);
     b_list.push_front(c);
 
-    EXPECT_EQ(b_list, int_list);
+    CHECK(b_list == int_list);
 }
 
-TEST_F(ListTest, CopyConstructor) {
+SECTION("CopyConstructor") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
 
     decltype(int_list) b_list(int_list);
-    EXPECT_EQ(int_list, b_list);
+    CHECK(int_list == b_list);
 }
 
-TEST_F(ListTest, Assign) {
+SECTION("Assign") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
@@ -202,24 +201,24 @@ TEST_F(ListTest, Assign) {
     decltype(int_list) b_list;
     b_list.push_back(2);
     b_list.push_back(4);
-    EXPECT_EQ(2u, b_list.size());
+    CHECK(2u == b_list.size());
 
     b_list = int_list;
-    EXPECT_EQ(int_list, b_list);
+    CHECK(int_list == b_list);
 }
 
-TEST_F(ListTest, MoveConstructor) {
+SECTION("MoveConstructor") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
 
     decltype(int_list) copy_list(int_list), b_list(std::move(int_list));
-    EXPECT_EQ(copy_list, b_list);
-    EXPECT_EQ(0u, int_list.size());
+    CHECK(copy_list == b_list);
+    CHECK(0u == int_list.size());
 }
 
-TEST_F(ListTest, MoveAssign) {
+SECTION("MoveAssign") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
@@ -228,39 +227,41 @@ TEST_F(ListTest, MoveAssign) {
     decltype(int_list) b_list;
     b_list.push_back(2);
     b_list.push_back(4);
-    EXPECT_EQ(2u, b_list.size());
+    CHECK(2u == b_list.size());
 
     decltype(int_list) copy_list(int_list);
 
     b_list = std::move(int_list);
-    EXPECT_EQ(copy_list, b_list);
-    EXPECT_EQ(0u, int_list.size());
+    CHECK(copy_list == b_list);
+    CHECK(0u == int_list.size());
 }
 
-TEST_F(ListTest, RemoveIf) {
+SECTION("RemoveIf") {
     const int a = 123, b = 321, c = 4566578;
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
 
     int_list.remove_if([=] (int i) { return i == b; });
-    EXPECT_EQ(2u, int_list.size());
+    CHECK(2u == int_list.size());
     decltype(int_list) b_list;
     b_list.push_front(a);
     b_list.push_front(c);
-    EXPECT_EQ(b_list, int_list);
+    CHECK(b_list == int_list);
 
     int_list.clear();
-    ASSERT_EQ(0u, int_list.size());
+    REQUIRE(0u == int_list.size());
 
     int_list.push_front(a);
     int_list.push_front(b);
     int_list.push_front(c);
-    EXPECT_EQ(3u, int_list.size());
+    CHECK(3u == int_list.size());
 
     int_list.remove_if([] (int i) -> bool { return i % 2; });
-    EXPECT_EQ(1u, int_list.size());
+    CHECK(1u == int_list.size());
 
     auto x = int_list.find_first_if([] (int) { return true; });
-    EXPECT_EQ(c, *x);
+    CHECK(c == *x);
+}
+
 }

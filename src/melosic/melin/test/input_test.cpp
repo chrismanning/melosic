@@ -15,61 +15,58 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/utility/string_ref.hpp>
 using namespace boost::literals;
+#include <chrono>
+using namespace std::literals;
 
 #include <network/uri.hpp>
 
 #include <melosic/melin/input.hpp>
 using namespace Melosic::Input;
 
-struct InputTest : ::testing::Test {
-protected:
+TEST_CASE("InputTest") {
     Manager inman;
-    std::chrono::milliseconds defaultTimeout{500};
-};
-
-TEST_F(InputTest, InputManagerTest1) {
-
+    auto defaultTimeout = 500ms;
 }
 
-TEST(InputMiscTest, PathToUrlTest1) {
+TEST_CASE("PathToUrlTest1") {
     fs::path p;
-    ASSERT_NO_THROW(p = "/some/file path/with spaces");
+    REQUIRE_NOTHROW(p = "/some/file path/with spaces");
     network::uri uri;
-    ASSERT_NO_THROW(uri = ::to_uri(p));
+    REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    EXPECT_EQ("file:///some/file%20path/with%20spaces", uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20spaces" == uri.to_string<char>());
 }
 
-TEST(InputMiscTest, PathToUrlTest2) {
+TEST_CASE("PathToUrlTest2") {
     fs::path p;
-    ASSERT_NO_THROW(p = "/some/file path/with (parens) abc.ext");
+    REQUIRE_NOTHROW(p = "/some/file path/with (parens) abc.ext");
     network::uri uri;
-    ASSERT_NO_THROW(uri = ::to_uri(p));
+    REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    EXPECT_EQ("file:///some/file%20path/with%20%28parens%29%20abc.ext", uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20%28parens%29%20abc.ext" == uri.to_string<char>());
 }
 
-TEST(InputMiscTest, UrlToPathTest1) {
+TEST_CASE("UrlToPathTest1") {
     network::uri uri;
-    ASSERT_NO_THROW(uri = network::uri("file:///some/file%20path/with%20spaces"));
+    REQUIRE_NOTHROW(uri = network::uri("file:///some/file%20path/with%20spaces"));
     fs::path p;
-    ASSERT_NO_THROW(p = uri_to_path(uri));
+    REQUIRE_NOTHROW(p = uri_to_path(uri));
 
-    EXPECT_EQ("/some/file path/with spaces", p.string());
+    CHECK("/some/file path/with spaces" == p.string());
 }
 
-TEST(InputMiscTest, UrlToPathTest2) {
+TEST_CASE("UrlToPathTest2") {
     network::uri uri;
-    ASSERT_NO_THROW(uri = network::uri("file:///some/file%20path/with%20%28parens%29%20abc.ext"));
+    REQUIRE_NOTHROW(uri = network::uri("file:///some/file%20path/with%20%28parens%29%20abc.ext"));
     fs::path p;
-    ASSERT_NO_THROW(p = uri_to_path(uri));
+    REQUIRE_NOTHROW(p = uri_to_path(uri));
 
-    EXPECT_EQ("/some/file path/with (parens) abc.ext", p.string());
+    CHECK("/some/file path/with (parens) abc.ext" == p.string());
 }

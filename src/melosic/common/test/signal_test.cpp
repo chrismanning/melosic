@@ -20,32 +20,30 @@
 
 #include <boost/smart_ptr/make_shared.hpp>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/signal.hpp>
 
 typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
 
-struct SignalTest : ::testing::Test {
-protected:
+TEST_CASE("Signal Test") {
     SignalType sig1;
-    std::chrono::milliseconds defaultTimeout{500};
-};
+    const auto defaultTimeout = 500ms;
 
-TEST_F(SignalTest, SignalConnectTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+    REQUIRE(0u == sig1.slotCount());
+
+SECTION("SignalConnectTest") {
     auto c = sig1.connect([] (int32_t) {});
-    EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
+    CHECK(1u == sig1.slotCount());
     c.disconnect();
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
+    CHECK(0u == sig1.slotCount());
     Melosic::Signals::ScopedConnection sc = sig1.connect([] (int32_t) {});
-    EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
+    CHECK(1u == sig1.slotCount());
     sc = Melosic::Signals::ScopedConnection{};
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
+    CHECK(0u == sig1.slotCount());
 }
 
-TEST_F(SignalTest, SignalCallTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+SECTION("SignalCallTest") {
     int64_t a{rand()}, b{rand()};
     const int64_t a_{a}, b_{b};
     sig1.connect([&] (int32_t s) { a *= s; });
@@ -53,9 +51,9 @@ TEST_F(SignalTest, SignalCallTest) {
     int scalar{rand()};
     auto f(sig1(scalar));
     auto r(f.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(a_*scalar, a) << "First slot call failed";
-    EXPECT_EQ(b_*scalar, b) << "Second slot call failed";
+    REQUIRE(std::future_status::ready == r);
+    CHECK((a_*scalar) == a);
+    CHECK((b_*scalar) == b);
 }
 
 struct S {
@@ -65,22 +63,20 @@ struct S {
     int32_t m_a{0};
 };
 
-TEST_F(SignalTest, SignalBindTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+SECTION("SignalBindTest") {
     S s;
     auto c = sig1.connect(&S::fun, &s);
-    EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
+    CHECK(1u == sig1.slotCount());
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(i, s.m_a) << "Slot call failed";
+    REQUIRE(std::future_status::ready == r);
+    CHECK(i == s.m_a);
     c.disconnect();
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
+    CHECK(0u == sig1.slotCount());
 }
 
-TEST_F(SignalTest, SignalSharedBindTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+SECTION("SignalSharedBindTest") {
     auto s(std::make_shared<S>());
 
     auto c = sig1.connect(&S::fun, s);
@@ -88,20 +84,19 @@ TEST_F(SignalTest, SignalSharedBindTest) {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(i, s->m_a) << "Slot call failed";
+    REQUIRE(std::future_status::ready == r);
+    CHECK(i == s->m_a);
 
     s.reset();
     i = rand();
     f = sig1(i);
     r = f.wait_for(defaultTimeout);
-    EXPECT_NO_THROW(f.get()) << "std::function threw";
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected when expired";
+    CHECK_NOTHROW(f.get());
+    REQUIRE(std::future_status::ready == r);
+    CHECK(0u == sig1.slotCount());
 }
 
-TEST_F(SignalTest, BoostSignalSharedBindTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+SECTION("BoostSignalSharedBindTest") {
     auto s(boost::make_shared<S>());
 
     auto c = sig1.connect(&S::fun, s);
@@ -109,28 +104,29 @@ TEST_F(SignalTest, BoostSignalSharedBindTest) {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(i, s->m_a) << "Slot call failed";
+    REQUIRE(std::future_status::ready == r);
+    CHECK(i == s->m_a);
 
     s.reset();
     i = rand();
     f = sig1(i);
     r = f.wait_for(defaultTimeout);
-    EXPECT_NO_THROW(f.get()) << "std::function threw";
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected when expired";
+    CHECK_NOTHROW(f.get());
+    REQUIRE(std::future_status::ready == r);
+    CHECK(0u == sig1.slotCount());
 }
 
-TEST_F(SignalTest, ObjSignalBindTest) {
-    ASSERT_EQ(0u, sig1.slotCount()) << "Should not be any slots connected";
+SECTION("ObjSignalBindTest") {
     S s;
     auto c = sig1.connect(&S::fun, s);
-    EXPECT_EQ(1u, sig1.slotCount()) << "Slot not added";
+    CHECK(1u == sig1.slotCount());
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    ASSERT_EQ(std::future_status::ready, r) << "Signal call deferred or timed-out";
-    EXPECT_EQ(i, s.m_a) << "Slot call failed";
+    REQUIRE(std::future_status::ready == r);
+    CHECK(i == s.m_a);
     c.disconnect();
-    EXPECT_EQ(0u, sig1.slotCount()) << "Slot wasn't disconnected";
+    CHECK(0u == sig1.slotCount());
+}
+
 }

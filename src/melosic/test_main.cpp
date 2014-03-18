@@ -15,20 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <boost/config.hpp>
 #include <boost/locale.hpp>
-#include "gtest/gtest.h"
 
-class MelosicTestEnvironment : public ::testing::Environment {
-    void SetUp() override {
-        boost::locale::generator gen;
-        std::locale::global(gen("en_GB.UTF-8"));
-    }
+#define CATCH_CONFIG_RUNNER
+#include "catch.hpp"
 
-    void TearDown() override {}
-};
+int main(int argc, char** argv) {
+    boost::locale::generator gen;
+    std::locale::global(gen("en_GB.UTF-8"));
 
-GTEST_API_ int main(int argc, char **argv) {
-  testing::InitGoogleTest(&argc, argv);
-  testing::AddGlobalTestEnvironment(new MelosicTestEnvironment);
-  return RUN_ALL_TESTS();
+    return Catch::Session().run(argc, argv);
 }

@@ -15,8 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
-TEST(test1, first_test_case) {
-    ASSERT_NE(1, 2) << " 1 != 2 ?!?!?";
+TEST_CASE("first_test_case") {
+    REQUIRE(1 != 2);
 }

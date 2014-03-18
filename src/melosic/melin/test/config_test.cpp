@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -30,107 +30,107 @@ using namespace Melosic;
 template <typename T>
 static constexpr int TypeIndex = boost::mpl::index_of<Config::VarType::types, T>::type::value;
 
-TEST(ConfigTest, ConfVars) {
+TEST_CASE("ConfVars") {
     Config::VarType var = "The quick brown fox jumped over the lazy dog."s;
-    EXPECT_EQ(TypeIndex<std::string>, var.which());
+    CHECK(TypeIndex<std::string> == var.which());
     var = true;
-    EXPECT_EQ(TypeIndex<bool>, var.which());
+    CHECK(TypeIndex<bool> == var.which());
     var = 125U;
-    EXPECT_EQ(TypeIndex<uint32_t>, var.which());
+    CHECK(TypeIndex<uint32_t> == var.which());
     var = -125;
-    EXPECT_EQ(TypeIndex<int32_t>, var.which());
+    CHECK(TypeIndex<int32_t> == var.which());
     var = 125UL;
-    EXPECT_EQ(TypeIndex<uint64_t>, var.which());
+    CHECK(TypeIndex<uint64_t> == var.which());
     var = -125L;
-    EXPECT_EQ(TypeIndex<int64_t>, var.which());
+    CHECK(TypeIndex<int64_t> == var.which());
     var = 6573.738504;
-    EXPECT_EQ(TypeIndex<double>, var.which());
+    CHECK(TypeIndex<double> == var.which());
 }
 
-TEST(ConfigTest, ConfNodes) {
+TEST_CASE("ConfNodes") {
     const std::string name("Test Conf Tree");
     Config::Conf c(name);
-    EXPECT_EQ(name, c.getName());
-    EXPECT_EQ(0u, c.nodeCount());
+    CHECK(name == c.getName());
+    CHECK(0u == c.nodeCount());
 
     std::string str_node("adf");
     c.putNode("str_key", str_node);
-    EXPECT_EQ(1u, c.nodeCount());
+    CHECK(1u == c.nodeCount());
     auto node = c.getNode("str_key")->second;
-    EXPECT_EQ(TypeIndex<std::string>, node.which());
-    EXPECT_EQ(str_node, boost::get<std::string>(node));
+    CHECK(TypeIndex<std::string> == node.which());
+    CHECK(str_node == boost::get<std::string>(node));
 
     c.putNode("str_key", 24564235465UL);
     node = c.getNode("str_key")->second;
-    EXPECT_EQ(TypeIndex<uint64_t>, node.which());
-    EXPECT_EQ(24564235465UL, boost::get<uint64_t>(node));
+    CHECK(TypeIndex<uint64_t> == node.which());
+    CHECK(24564235465UL == boost::get<uint64_t>(node));
 
     c.removeNode("str_key");
-    EXPECT_EQ(0u, c.nodeCount());
+    CHECK(0u == c.nodeCount());
 }
 
-TEST(ConfigTest, ConfChild) {
+TEST_CASE("ConfChild") {
     Config::Conf base("root");
     const std::string name("Test Conf Tree");
     Config::Conf tmp(name);
     base.putChild(std::move(tmp));
-    EXPECT_EQ(0u, base.nodeCount());
-    EXPECT_EQ(1u, base.childCount());
+    CHECK(0u == base.nodeCount());
+    CHECK(1u == base.childCount());
 
     auto child = base.getChild(name);
-    ASSERT_NE(nullptr, child);
-    EXPECT_EQ(name, child->getName());
+    REQUIRE(nullptr != child);
+    CHECK(name == child->getName());
 
     base.removeChild(name);
-    EXPECT_EQ(0u, base.childCount());
+    CHECK(0u == base.childCount());
 }
 
-TEST(ConfigTest, ConfCopy) {
+TEST_CASE("ConfCopy") {
     Config::Conf c1("root sdf asdr");
     c1.putNode("test", 1066);
-    EXPECT_EQ(1u, c1.nodeCount());
+    CHECK(1u == c1.nodeCount());
     Config::Conf c2(c1);
-    EXPECT_EQ(1u, c2.nodeCount());
+    CHECK(1u == c2.nodeCount());
 
     auto node = c1.getNode("test")->second;
-    EXPECT_EQ(TypeIndex<int32_t>, node.which());
-    EXPECT_EQ(1066, boost::get<int32_t>(node));
+    CHECK(TypeIndex<int32_t> == node.which());
+    CHECK(1066 == boost::get<int32_t>(node));
 
     c1.removeNode("test");
-    EXPECT_EQ(0u, c1.nodeCount());
-    EXPECT_EQ(1u, c2.nodeCount());
+    CHECK(0u == c1.nodeCount());
+    CHECK(1u == c2.nodeCount());
 }
 
-TEST(ConfigTest, ConfMerge) {
+TEST_CASE("ConfMerge") {
     Config::Conf c1("root");
     c1.putNode("PI", 3.1415926);
     c1.putNode("PI_Str", "3.1415926"s);
-    EXPECT_EQ(2u, c1.nodeCount());
+    CHECK(2u == c1.nodeCount());
 
     Config::Conf c2("root2");
     c2.putNode("PI_Int", 3);
 
     c1.merge(c2);
-    EXPECT_EQ(1u, c2.nodeCount());
-    EXPECT_EQ(3u, c1.nodeCount());
+    CHECK(1u == c2.nodeCount());
+    CHECK(3u == c1.nodeCount());
 
     auto node = c1.getNode("PI");
-    ASSERT_NE(nullptr, node);
-    EXPECT_EQ(TypeIndex<double>, node->second.which());
-    EXPECT_EQ(3.1415926, boost::get<double>(node->second));
+    REQUIRE(nullptr != node);
+    CHECK(TypeIndex<double> == node->second.which());
+    CHECK(3.1415926 == boost::get<double>(node->second));
 
     node = c1.getNode("PI_Str");
-    ASSERT_NE(nullptr, node);
-    EXPECT_EQ(TypeIndex<std::string>, node->second.which());
-    EXPECT_EQ("3.1415926", boost::get<std::string>(node->second));
+    REQUIRE(nullptr != node);
+    CHECK(TypeIndex<std::string> == node->second.which());
+    CHECK("3.1415926" == boost::get<std::string>(node->second));
 
     node = c1.getNode("PI_Int");
-    ASSERT_NE(nullptr, node);
-    EXPECT_EQ(TypeIndex<int>, node->second.which());
-    EXPECT_EQ(3, boost::get<int>(node->second));
+    REQUIRE(nullptr != node);
+    CHECK(TypeIndex<int> == node->second.which());
+    CHECK(3 == boost::get<int>(node->second));
 }
 
-TEST(ConfigTest, ConfDefault) {
+TEST_CASE("ConfDefault") {
     Config::Conf c("root");
     c.addDefaultFunc([=] () {
         return c;
@@ -138,29 +138,25 @@ TEST(ConfigTest, ConfDefault) {
 
     c.putChild(Config::Conf("child1"));
     c.putChild(Config::Conf("child2"));
-    EXPECT_EQ(2u, c.childCount());
+    CHECK(2u == c.childCount());
 
     c.putNode("node1", 123);
     c.putNode("node2", 456);
-    EXPECT_EQ(2u, c.nodeCount());
+    CHECK(2u == c.nodeCount());
 
     c.resetToDefault();
-    EXPECT_EQ("root", c.getName());
-    EXPECT_EQ(0u, c.childCount());
-    EXPECT_EQ(0u, c.nodeCount());
+    CHECK("root" == c.getName());
+    CHECK(0u == c.childCount());
+    CHECK(0u == c.nodeCount());
 }
 
-struct ConfigManagerTest : ::testing::Test {
-    ~ConfigManagerTest() {
-        fs::remove(confPath);
-    }
-
-    fs::path confPath{Directories::configHome() / "melosic" / "test.conf"};
+TEST_CASE("ConfigManagerTest") {
+    const fs::path confPath{Directories::configHome() / "melosic" / "test.conf"};
     Config::Manager confman{confPath};
-};
 
-TEST_F(ConfigManagerTest, ConfigManagerTest1) {
-    ASSERT_EQ(Directories::configHome() / "melosic" / "test.conf", confPath);
+    REQUIRE((Directories::configHome() / "melosic" / "test.conf") == confPath);
     confman.loadConfig();
-    ASSERT_TRUE(fs::exists(confPath)) << "config file not found:" << confPath;
+    REQUIRE(fs::exists(confPath));
+
+    fs::remove(confPath);
 }

@@ -22,7 +22,7 @@ namespace ph = std::placeholders;
 
 #include <boost/smart_ptr.hpp>
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/ptr_adaptor.hpp>
 
@@ -33,47 +33,47 @@ struct S {
     int32_t m_a{0};
 };
 
-TEST(PtrBindTest, BoostWeakPtrAdaptorTest) {
+TEST_CASE("BoostWeakPtrAdaptorTest") {
     auto s(boost::make_shared<S>());
     auto fun = Melosic::bindObj(s);
-    EXPECT_NO_THROW(fun()) << "Ptr should be good";
+    CHECK_NOTHROW(fun());
 
     s.reset();
-    EXPECT_THROW(fun(), std::bad_weak_ptr) << "Ptr should be bad";
+    CHECK_THROWS_AS(fun(), std::bad_weak_ptr);
 }
 
-TEST(PtrBindTest, BoostWeakPtrAdaptorBindTest) {
+TEST_CASE("BoostWeakPtrAdaptorBindTest") {
     auto s(boost::make_shared<S>());
 
     auto mf = std::bind(&S::fun, Melosic::bindObj(s), ph::_1);
-    EXPECT_NO_THROW(mf(std::rand())) << "Ptr should be good";
+    CHECK_NOTHROW(mf(std::rand()));
     s.reset();
-    EXPECT_THROW(mf(std::rand()), std::bad_weak_ptr) << "Ptr should be bad";
+    CHECK_THROWS_AS(mf(std::rand()), std::bad_weak_ptr);
 }
 
-TEST(PtrBindTest, WeakPtrAdaptorTest) {
+TEST_CASE("WeakPtrAdaptorTest") {
     auto s(std::make_shared<S>());
     auto fun = Melosic::bindObj(s);
-    EXPECT_NO_THROW(fun()) << "Ptr should be good";
+    CHECK_NOTHROW(fun());
 
     s.reset();
-    EXPECT_THROW(fun(), std::bad_weak_ptr) << "Ptr should be bad";
+    CHECK_THROWS_AS(fun(), std::bad_weak_ptr);
 }
 
-TEST(PtrBindTest, WeakPtrAdaptorBindTest) {
+TEST_CASE("WeakPtrAdaptorBindTest") {
     auto s(std::make_shared<S>());
 
     auto mf = std::bind(&S::fun, Melosic::bindObj(s), ph::_1);
-    EXPECT_NO_THROW(mf(std::rand())) << "Ptr should be good";
+    CHECK_NOTHROW(mf(std::rand()));
     s.reset();
-    EXPECT_THROW(mf(std::rand()), std::bad_weak_ptr) << "Ptr should be bad";
+    CHECK_THROWS_AS(mf(std::rand()), std::bad_weak_ptr);
 }
 
-TEST(PtrBindTest, ObjBindTest) {
+TEST_CASE("ObjBindTest") {
     S s;
 
     auto mf = std::bind(&S::fun, Melosic::bindObj(s), ph::_1);
-    int32_t i{std::rand()};
+    const int32_t i{std::rand()};
     mf(i);
-    EXPECT_EQ(i, s.m_a) << "Bind call failed";
+    REQUIRE(i == s.m_a);
 }

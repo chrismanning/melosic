@@ -15,15 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/melin/decoder.hpp>
-
-struct DecoderTest : ::testing::Test {
-protected:
-    Melosic::Decoder::Manager decman;
-    std::chrono::milliseconds defaultTimeout{500};
-};
 
 //TEST_F(DecoderTest, DecoderTestASDd) {
 

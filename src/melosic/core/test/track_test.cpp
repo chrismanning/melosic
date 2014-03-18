@@ -15,7 +15,7 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include "catch.hpp"
 
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/filesystem.hpp>
@@ -32,11 +32,6 @@ using namespace jbson;
 #include <melosic/core/track.hpp>
 using namespace Melosic;
 
-TEST(TrackTest, TestTrack1) {
-    auto track = Core::Track{Input::to_uri("/tmp/some track.flac")};
-    EXPECT_EQ("file:///tmp/some%20track.flac", track.uri().string());
-}
-
 static boost::exception_ptr to_boost_exception_ptr(std::exception_ptr e) {
     try {
         std::rethrow_exception(e);
@@ -46,31 +41,31 @@ static boost::exception_ptr to_boost_exception_ptr(std::exception_ptr e) {
     }
 }
 
-TEST(TrackTest, TestTrack2) {
+TEST_CASE("Tracks can be constructed with uris & json docs with certain fields") {
     Core::Track track(Input::to_uri("/tmp/some track.flac"));
-    EXPECT_NO_THROW(track = Core::Track{R"({
+    CHECK_NOTHROW(track = Core::Track{R"({
         "type": "track",
         "location": "file:///tmp/some%20track.flac"
     })"_json_doc});
 
-    EXPECT_ANY_THROW(track = Core::Track{R"({
+    CHECK_THROWS(track = Core::Track{R"({
         "type": "track",
         "location": 123
     })"_json_doc});
 
-    EXPECT_ANY_THROW(track = Core::Track{R"({
+    CHECK_THROWS(track = Core::Track{R"({
         "type": "track",
         "location": "file:///tmp/some%20track.flac",
         "metadata": {}
     })"_json_doc});
 
-    EXPECT_ANY_THROW(track = Core::Track{R"({
+    CHECK_THROWS(track = Core::Track{R"({
         "type": "track",
         "location": "file:///tmp/some%20track.flac",
         "metadata": [ { "key": "tracknumber", "value": 12 } ]
     })"_json_doc});
 
-    EXPECT_NO_THROW(track = Core::Track{R"({
+    CHECK_NOTHROW(track = Core::Track{R"({
         "type": "track",
         "location": "file:///tmp/some%20track.flac",
         "metadata": [ { "key": "tracknumber", "value": "12" } ]

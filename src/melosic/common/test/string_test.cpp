@@ -15,17 +15,17 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <gtest/gtest.h>
+#include <catch.hpp>
 
 #include <melosic/common/string.hpp>
 
 static const std::string testString1("The Quick Brown Fox Jumps Over The Lazy Dog");
 
-TEST(StringTest, ToLowerCaseTest) {
-    EXPECT_EQ("the quick brown fox jumps over the lazy dog", toLower(testString1));
+TEST_CASE("ToLowerCaseTest") {
+    CHECK("the quick brown fox jumps over the lazy dog" == toLower(testString1));
 }
 
-TEST(StringTest, ToTitleCaseTest) {
-    EXPECT_EQ(testString1, toTitle(toUpper(testString1)));
-    EXPECT_EQ(testString1, toTitle(toLower(testString1)));
+TEST_CASE("ToTitleCaseTest") {
+    CHECK(testString1 == toTitle(toUpper(testString1)));
+    CHECK(testString1 == toTitle(toLower(testString1)));
 }
