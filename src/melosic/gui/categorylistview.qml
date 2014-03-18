@@ -44,6 +44,7 @@ ScrollView {
         console.debug("clearing selection; count: ", count)
         if(count)
             delegateModel.deselect(0, count)
+        currentIndex = -1
     }
 
     function selectAll() {

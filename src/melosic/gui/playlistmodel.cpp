@@ -225,23 +225,23 @@ bool PlaylistModel::insertTracks(int row, QVariant var) {
 bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
     TRACE_LOG(logject) << "In insertTracks(int, QSequentialIterable)";
 
+    if(row < 0)
+        row = m_playlist.size();
+    else if(row > m_playlist.size())
+        row = m_playlist.size();
+
     const auto old_rowcount = rowCount();
     std::vector<Core::Track> tracks;
     for(auto&& var : var_list) {
         if(var.canConvert<QUrl>()) {
             auto uri = to_uri(var.toUrl());
-            row = ++row > m_playlist.size() ? m_playlist.size() : row;
 
-            auto new_tracks = m_kernel.getDecoderManager().tracks(uri);
-            for(auto&& t : new_tracks)
+            for(auto&& t : m_kernel.getDecoderManager().tracks(uri))
                 tracks.push_back(std::move(t));
-
-            row += new_tracks.size();
         }
         else if(var.canConvert<QModelIndex>()) {
             auto idx = var.value<QModelIndex>();
             auto obj = idx.model();
-            row = ++row > m_playlist.size() ? m_playlist.size() : row;
             if(qobject_cast<const JsonDocModel*>(obj) != nullptr) {
                 auto doc_var = idx.data(JsonDocModel::DocumentRole);
                 auto& lm = m_kernel.getLibraryManager();
@@ -311,13 +311,13 @@ void PlaylistModel::refreshTags(int start, int end) {
     assert(start >= 0);
     TRACE_LOG(logject) << "refreshing tags of tracks " << start << " - " << end;
     end = end < start ? m_playlist.size() : end+1;
-    for(auto& t : m_playlist.getTracks(start, end)) {
-        try {
+//    for(auto& t : m_playlist.getTracks(start, end)) {
+//        try {
 //            t.reOpen();
 //            t.close();
-        }
-        catch(...) {}
-    }
+//        }
+//        catch(...) {}
+//    }
     Q_EMIT dataChanged(index(start), index(end-1));
 }
 
