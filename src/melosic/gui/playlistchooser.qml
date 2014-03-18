@@ -158,6 +158,7 @@ Rectangle {
                 readonly property bool previousSelected: loader.lv.currentIndex === index - 1
                 readonly property alias hovered: internalMouseItem.containsMouse
                 readonly property bool activeFocus: loader.lv.activeFocus
+                readonly property bool enabled: true
 //                readonly property real availableWidth: loader.availableWidth
             }
 
