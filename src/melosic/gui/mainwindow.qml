@@ -13,8 +13,8 @@ import "Log.js" as Log
 
 ApplicationWindow {
     id: mainWindow
-    width: 600
-    height: 500
+    width: 700
+    height: 700
     title: "Melosic"
 
     menuBar: MenuBar {
