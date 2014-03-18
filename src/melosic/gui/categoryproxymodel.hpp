@@ -18,6 +18,8 @@
 #ifndef MELOSIC_CATEGORYPROXYMODEL_HPP
 #define MELOSIC_CATEGORYPROXYMODEL_HPP
 
+#include <memory>
+
 #include <QIdentityProxyModel>
 #include <qqml.h>
 
@@ -62,7 +64,7 @@ private:
 
 private:
     struct impl;
-    QScopedPointer<impl> pimpl;
+    std::unique_ptr<impl> pimpl;
     friend class Block;
 };
 

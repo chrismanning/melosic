@@ -20,8 +20,8 @@
 
 #include <QObject>
 #include <QString>
-#include <QScopedPointer>
 
+#include <memory>
 #include <chrono>
 namespace chrono = std::chrono;
 
@@ -37,7 +37,7 @@ class PlaylistModel;
 class PlayerControls : public QObject {
     Q_OBJECT
     struct impl;
-    const QScopedPointer<impl> pimpl;
+    std::unique_ptr<impl> pimpl;
 
     Q_ENUMS(DeviceState)
     Q_PROPERTY(DeviceState state READ state NOTIFY stateChanged)

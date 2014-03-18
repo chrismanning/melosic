@@ -65,7 +65,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     libman(kernel.getLibraryManager()),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
-    component(new QQmlComponent(engine.data())),
+    component(new QQmlComponent(engine.get())),
     playlistManagerModel(new PlaylistManagerModel(kernel))
 {
     ::conf.putNode("enable logging", ::enable_logging);
@@ -99,8 +99,8 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     engine->rootContext()->setContextProperty("enable_logging", ::enable_logging);
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
-    engine->rootContext()->setContextProperty("PlayerControls", playerControls.data());
-    engine->rootContext()->setContextProperty("LibraryManager", qmllibman.data());
+    engine->rootContext()->setContextProperty("PlayerControls", playerControls.get());
+    engine->rootContext()->setContextProperty("LibraryManager", qmllibman.get());
     engine->addImportPath("qrc:/");
     engine->addImportPath("qrc:/qml");
 
@@ -123,7 +123,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
         BOOST_THROW_EXCEPTION(Exception() << ErrorTag::DecodeErrStr(str));
     }
 //    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close);
-    QObject::connect(engine.data(), SIGNAL(quit()), qApp, SLOT(quit()), Qt::DirectConnection);
+    QObject::connect(engine.get(), SIGNAL(quit()), qApp, SLOT(quit()), Qt::DirectConnection);
     window->show();
 }
 

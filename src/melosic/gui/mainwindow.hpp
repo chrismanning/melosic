@@ -18,8 +18,7 @@
 #ifndef MELOSIC_MAINWINDOW_H
 #define MELOSIC_MAINWINDOW_H
 
-#include <QScopedPointer>
-
+#include <memory>
 #include <list>
 
 #include <boost/config.hpp>
@@ -72,12 +71,12 @@ private:
     Library::Manager& libman;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
-    QScopedPointer<PlayerControls> playerControls;
-    QScopedPointer<LibraryManager> qmllibman;
+    std::unique_ptr<PlayerControls> playerControls;
+    std::unique_ptr<LibraryManager> qmllibman;
 
-    QScopedPointer<QQmlEngine> engine;
-    QScopedPointer<QQmlComponent> component;
-    QScopedPointer<QQuickWindow> window;
+    std::unique_ptr<QQmlEngine> engine;
+    std::unique_ptr<QQmlComponent> component;
+    std::unique_ptr<QQuickWindow> window;
     PlaylistManagerModel* playlistManagerModel;
 };
 
