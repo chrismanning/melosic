@@ -206,9 +206,12 @@ bool PlaylistModel::insertTracks(int row, QVariant var) {
         TRACE_LOG(logject) << "var is QObject*";
         auto obj = var.value<QObject*>();
         assert(obj != nullptr);
-        if(auto qobj = qobject_cast<QItemSelectionModel*>(obj))
+        if(auto qobj = qobject_cast<QItemSelectionModel*>(obj)) {
+            TRACE_LOG(logject) << "qobj is QItemSelectionModel*";
             return insertTracks(row, QVariant::fromValue(qobj->selectedIndexes()));
+        }
         else if(auto qobj = qobject_cast<JsonDocModel*>(obj)) {
+            TRACE_LOG(logject) << "qobj is JsonDocModel*";
             QModelIndexList items;
             for(auto i = 0; i < qobj->rowCount(); i++)
                 items.append(qobj->index(i));

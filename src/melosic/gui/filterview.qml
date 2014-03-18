@@ -25,6 +25,7 @@ SplitView {
     property var filterResultPane
 
     Component.onCompleted: {
+        console.assert(filterResultPane, "The default result filter should be set.")
         for (var i=0; i<__panes.length; ++i) {
             if(!__panes[i].hasOwnProperty("header"))
                 continue
@@ -37,12 +38,19 @@ SplitView {
             if(__panes[i].delegate !== null)
                 props.itemDelegate = __panes[i].delegate
             var pane = paneLoader.createObject(root, props)
-            pane.activated.connect(function(items) {
-                root.activated(filterResultPane.model)
-            })
+
+            if(__panes[i] === filterResultPane) {
+                pane.activated.connect(function(items) {
+                    root.activated(items)
+                })
+            }
+            else
+                pane.activated.connect(function(items) {
+                    root.activated(filterResultPane.model)
+                })
+
             root.addItem(pane)
         }
-        console.assert(filterResultPane)
     }
 
     Component {
