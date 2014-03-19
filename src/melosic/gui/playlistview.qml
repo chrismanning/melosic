@@ -218,6 +218,18 @@ ListView {
         }
     }
 
+    DropArea {
+        anchors.fill: parent
+        onDropped: {
+            if(drop.hasUrls && drop.proposedAction === Qt.CopyAction) {
+                if(!manager.currentModel)
+                    return
+                manager.currentModel.insertTracks(-1, drop.urls)
+                drop.acceptProposedAction()
+            }
+        }
+    }
+
     orientation: Qt.Horizontal
     currentIndex: manager.currentIndex
     highlightFollowsCurrentItem: true
