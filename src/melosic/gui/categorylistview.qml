@@ -213,6 +213,9 @@ ScrollView {
                     Loader {
                         id: itemDelegateLoader
                         anchors.fill: parent
+                        anchors.leftMargin: root.padding
+                        anchors.rightMargin: root.padding
+
                         sourceComponent: root.delegate
                         property var model: itemModel
                         property bool itemSelected: rowitem.DelegateModel.inSelected

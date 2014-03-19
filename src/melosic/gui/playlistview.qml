@@ -168,13 +168,12 @@ ListView {
             delegate: Loader {
                 Component {
                     id: tagComponent
-                    Row {
+                    RowLayout {
                         id: track
                         spacing: root.padding
-                        x: spacing
                         Row {
+                            Layout.fillWidth: true
                             spacing: parent.spacing
-                            width: itemWidth - durationLbl.width - (spacing*3)
                             Label {
                                 id: trackno
                                 elide: Text.ElideRight
@@ -191,7 +190,6 @@ ListView {
                                 TagBinding on text {
                                     formatString: "%{title}"
                                 }
-                                width: parent.width - trackno.width - spacing
                             }
                         }
                         Label {
@@ -205,11 +203,21 @@ ListView {
                 }
                 Component {
                     id: fileComponent
-                    Label {
-                        x: padding
-                        elide: Text.ElideRight
-                        color: textColor
-                        text: model.file
+                    RowLayout {
+                        spacing: root.padding
+                        Label {
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            color: textColor
+                            text: model.file
+                        }
+
+                        Label {
+                            id: durationLbl
+
+                            color: textColor
+                            text: SecsToMins.secsToMins(model.duration)
+                        }
                     }
                 }
 
