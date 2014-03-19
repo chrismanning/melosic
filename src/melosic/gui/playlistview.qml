@@ -45,7 +45,7 @@ ListView {
             model: playlistModel
             frameVisible: true
             focus: viewerItem.ListView.isCurrentItem
-            padding: 3
+            padding: root.padding
             removeCallback: function(from,count) { return playlistModel.removeRows(from, count) }
             moveCallback: function(from,count,to) { return playlistModel.moveRows(from, count, to) }
 
@@ -74,13 +74,8 @@ ListView {
                 delegate: Loader {
                     Component {
                         id: tagCategoryComponent
-                        Column {
-                            spacing: root.padding
-
-                            y: spacing
-                            x: spacing
-                            height: childrenRect.height + spacing*(children.length)
-                            width: root.width
+                        ColumnLayout {
+                            spacing: clv.padding
 
                             property string cat_line
                             TagBinding on cat_line {
@@ -90,7 +85,7 @@ ListView {
                                 text: cat_line
                                 elide: Text.ElideRight
                                 color: textColor
-                                width: parent.width
+                                Layout.fillWidth: true
                             }
 
                             property string cat_line2
@@ -101,14 +96,14 @@ ListView {
                                 text: cat_line2 + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
-                                width: parent.width
+                                Layout.fillWidth: true
                             }
                         }
                     }
                     Component {
                         id: fileCategoryComponent
                         Column {
-                            spacing: root.padding
+                            spacing: clv.padding
 
                             y: spacing
                             x: spacing
@@ -170,7 +165,7 @@ ListView {
                     id: tagComponent
                     RowLayout {
                         id: track
-                        spacing: root.padding
+                        spacing: clv.padding
                         Row {
                             Layout.fillWidth: true
                             spacing: parent.spacing
@@ -204,7 +199,7 @@ ListView {
                 Component {
                     id: fileComponent
                     RowLayout {
-                        spacing: root.padding
+                        spacing: clv.padding
                         Label {
                             Layout.fillWidth: true
                             elide: Text.ElideRight

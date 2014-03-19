@@ -160,7 +160,7 @@ ScrollView {
 
             delegate: Item {
                 id: rowitem
-                x: 5
+                x: root.padding
                 z: -index
                 width: listView.width - (x*2)
                 property bool drawCategory: category && block && block.firstRow === index
@@ -321,7 +321,6 @@ ScrollView {
 
                     sourceComponent: Item {
                         id: categoryItem
-                        anchors.fill: parent
                         StyleItem {
                             anchors.fill: parent
                             elementType: "itemrow"
@@ -330,12 +329,18 @@ ScrollView {
                         }
                         Loader {
                             id: categoryDelegateLoader
+                            y: root.padding
                             active: categoryItemLoader.active
                             sourceComponent: category.delegate
+
+                            anchors.margins: root.padding
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+
                             Binding {
                                 target: categoryItemLoader
                                 property: "height"
-                                value: categoryDelegateLoader.height
+                                value: categoryDelegateLoader.height + root.padding*2
                             }
 
                             Binding on height {
@@ -344,7 +349,7 @@ ScrollView {
                             }
 
                             property var model: itemModel
-                            property bool categorySelected//: rowitem.DelegateModel.inSelected
+                            property bool categorySelected: rowitem.DelegateModel.inSelected
                             property int rowIndex: rowitem.rowIndex
                             property color textColor: categorySelected ? palette.highlightedText : palette.text
                             property int itemCount: block ? block.count : 0
