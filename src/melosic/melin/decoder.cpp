@@ -31,6 +31,7 @@ using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/filesystem/fstream.hpp>
+#include <boost/range/algorithm_ext/push_back.hpp>
 
 #include <taglib/fileref.h>
 #include <taglib/tpropertymap.h>
@@ -87,36 +88,58 @@ void Manager::addAudioFormat(Factory fact, boost::string_ref mime_type) {
 }
 
 std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
-    Core::Track t{uri};
     using namespace boost::literals;
-    if(uri.scheme() == "file"_s_ref) {
-        auto path = Input::uri_to_path(uri);
+    if(uri.scheme() == "file"_s_ref)
+        return tracks(Input::uri_to_path(uri));
+    return {};
+}
+
+std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
+    std::vector<Core::Track> ret;
+
+    boost::system::error_code ec;
+    const auto status = fs::status(path, ec);
+    if(ec)
+        return {};
+
+    if(fs::is_directory(status)) {
+        for(auto&& entry : fs::recursive_directory_iterator(path))
+            boost::range::push_back(ret, tracks(entry.path()));
+        std::sort(ret.begin(), ret.end());
+    }
+    else if(fs::is_regular_file(status)) {
+        // TODO: detect files, including playlists
         FileRef taglib_file{path.c_str()};
-        TRACE_LOG(logject) << "in tracks(uri); path: " << path;
-        TRACE_LOG(logject) << "in tracks(uri); path.c_str(): " << path.c_str();
         if(taglib_file.isNull())
-            return {};
+            return std::move(ret);
+
         assert(taglib_file.tag() != nullptr);
         auto taglib_tags = taglib_file.tag()->properties();
         if(/*is playlist or cue*/taglib_tags.contains("CUEFILE"))
-            return {};
+            return std::move(ret);
+
         Core::TagMap tags;
         for(const auto& tag : taglib_tags) {
             for(const auto& v : tag.second)
                 tags.emplace(tag.first.to8Bit(true), v.to8Bit(true));
         }
+        Core::Track t{Input::to_uri(path)};
         t.tags(tags);
 
         auto ap = taglib_file.audioProperties();
         t.audioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
         t.end(chrono::seconds{ap->length()});
+
+        auto pcm_src = open(t);
+        if(pcm_src) {
+            t.end(pcm_src->duration());
+            t.audioSpecs(pcm_src->getAudioSpecs());
+        }
+
+        ret.push_back(std::move(t));
     }
-    auto pcm_src = open(t);
-    if(pcm_src) {
-        t.end(pcm_src->duration());
-        t.audioSpecs(pcm_src->getAudioSpecs());
-    }
-    return {t};
+
+    return std::move(ret);
 }
 
 struct libmagic_handle final {

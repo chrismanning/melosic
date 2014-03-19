@@ -77,6 +77,7 @@ public:
     }
 
     MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const network::uri&) const;
+    MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const boost::filesystem::path&) const;
 
     std::unique_ptr<PCMSource> open(const Core::Track&) const;
 

@@ -100,6 +100,8 @@ private:
     friend size_t hash_value(const Track &b);
 };
 
+bool operator<(const Track&, const Track&);
+
 size_t hash_value(const Track& b);
 
 } // namespace Core

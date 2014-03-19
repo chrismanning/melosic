@@ -316,6 +316,18 @@ jbson::document Track::bson() const {
     return ob;
 }
 
+bool operator<(const Track& a, const Track& b) {
+#ifdef _GNU_SOURCE
+    auto a_str = a.uri().string(), b_str = b.uri().string();
+    auto cmp = ::strverscmp(a_str.c_str(), b_str.c_str());
+#else
+    auto cmp = a.uri().compare(b.uri());
+#endif
+    if(cmp == 0)
+        return a.start() < b.start();
+    return cmp < 0;
+}
+
 optional<std::string> Track::impl::parse_format(std::string str, std::error_code&) {
     if(str.empty())
         return nullopt;
