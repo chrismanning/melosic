@@ -10,7 +10,7 @@ import QtQuick.Controls.Styles 1.1
 import Melosic.Playlist 1.0
 import Melosic.Browser 1.0
 
-SplitView {
+DynamicSplitView {
     id: root
     orientation: Qt.Vertical
     signal activated(var model)

@@ -6,3 +6,4 @@ PlaylistManager 1.0 playlistmanager.qml
 ToolTip 1.0 tooltip.qml
 FilterView 1.0 filterview.qml
 SelectorView 1.0 selectorview.qml
+DynamicSplitView 1.0 DynamicSplitView.qml

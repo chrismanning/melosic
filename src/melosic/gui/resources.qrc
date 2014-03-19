@@ -12,6 +12,7 @@
         <file>tooltip.qml</file>
         <file>filterview.qml</file>
         <file>selectorview.qml</file>
+        <file>DynamicSplitView.qml</file>
         <file>Log.js</file>
     </qresource>
 </RCC>
