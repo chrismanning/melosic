@@ -20,8 +20,6 @@ ScrollView {
     property int itemHeight: 14
     property var removeItems
     property var moveItems
-    property Component tooltip
-    property Component categoryTooltip
     property Component contextMenu: null
 
     property DelegateModelGroup selected: selectedGroup
@@ -228,51 +226,11 @@ ScrollView {
                         property color textColor: rowitem.DelegateModel.inSelected ? palette.highlightedText : palette.text
                     }
 
-                    Loader {
-                        id: tooltipLoader
-                        active: false
-                        property var model: itemModel
-                        sourceComponent: root.tooltip
-
-                        Timer {
-                            id: tooltipTimer
-                            interval: 500
-                            onTriggered: {
-                                tooltipLoader.active = true
-                                tooltipLoader.item.state = "poppedUp"
-                                stop()
-                                tooltipDestructionTimer.restart()
-                            }
-                        }
-                        Timer {
-                            id: tooltipDestructionTimer
-                            interval: 3000
-                            onTriggered: {
-                                tooltipLoader.item.state = "poppedDown"
-                                stop()
-                            }
-                        }
-                    }
-
                     MouseArea {
                         id: itemMouseArea
                         anchors.fill: parent
                         acceptedButtons: Qt.LeftButton | Qt.RightButton
-                        hoverEnabled: true
                         cursorShape: mouseDragArea.cursorShape
-
-                        onEntered: {
-                            if(!tooltipLoader.sourceComponent)
-                                return
-                            tooltipLoader.x = mouseX
-                            tooltipLoader.y = mouseY
-                            tooltipTimer.restart()
-                        }
-                        onExited: {
-                            tooltipTimer.stop()
-                            tooltipDestructionTimer.stop()
-                            tooltipLoader.active = false
-                        }
 
                         onPressed: {
                             console.debug("item pressed")

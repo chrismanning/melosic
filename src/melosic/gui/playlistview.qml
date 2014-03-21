@@ -129,37 +129,6 @@ ListView {
                 }
             }
 
-            tooltip: ToolTip {
-                width: rowId.width + 20
-                height: rowId.height + 10
-                radius: 3
-                fadeInDelay: 500
-                fadeOutDelay: 700
-
-                RowLayout {
-                    id: rowId
-                    spacing: 10
-                    x: spacing
-                    anchors.centerIn: parent
-
-                    Rectangle {
-                        height: 10
-                        width: 10
-                        color: "red"
-                    }
-
-                    Label {
-                        id: txt
-                        color: pal.highlightedText
-                        property string title
-                        TagBinding on title {
-                            formatString: "%{title}"
-                        }
-                        text: model.tags_readable ? title : model.filepath
-                    }
-                }
-            }
-
             delegate: Loader {
                 Component {
                     id: tagComponent
