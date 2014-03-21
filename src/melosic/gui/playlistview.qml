@@ -132,23 +132,19 @@ ListView {
                         Column {
                             spacing: clv.padding
 
-                            y: spacing
-                            x: spacing
-                            height: childrenRect.height + spacing*(children.length)
-                            width: root.width
                             Label {
                                 property var arr: model ? model.filepath.match(pat) : null
                                 text: arr ? arr[0] : ""
                                 elide: Text.ElideRight
                                 color: textColor
-                                width: parent.width
+                                Layout.fillWidth: true
                                 property var pat: new RegExp(pathCriteria.pattern)
                             }
                             Label {
                                 text: !model ? "NO MODEL WTF" : model.extension + " | " + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
-                                width: parent.width
+                                Layout.fillWidth: true
                             }
                         }
                     }
