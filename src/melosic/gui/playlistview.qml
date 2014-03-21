@@ -110,7 +110,7 @@ ListView {
                             height: childrenRect.height + spacing*(children.length)
                             width: root.width
                             Label {
-                                property var arr: model.filepath.match(pat)
+                                property var arr: model ? model.filepath.match(pat) : null
                                 text: arr ? arr[0] : ""
                                 elide: Text.ElideRight
                                 color: textColor
@@ -118,14 +118,14 @@ ListView {
                                 property var pat: new RegExp(pathCriteria.pattern)
                             }
                             Label {
-                                text: model.extension + " | " + itemCount + " tracks"
+                                text: !model ? "NO MODEL WTF" : model.extension + " | " + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
                                 width: parent.width
                             }
                         }
                     }
-                    sourceComponent: model.tags_readable ? tagCategoryComponent : fileCategoryComponent
+                    sourceComponent: model && model.tags_readable ? tagCategoryComponent : fileCategoryComponent
                 }
             }
 
@@ -192,7 +192,7 @@ ListView {
                             width: contentWidth
 
                             color: textColor
-                            text: SecsToMins.secsToMins(model.duration)
+                            text: SecsToMins.secsToMins(model ? model.duration : 0)
                         }
                     }
                 }
@@ -204,19 +204,19 @@ ListView {
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             color: textColor
-                            text: model.file
+                            text: model ? model.file : ""
                         }
 
                         Label {
                             id: durationLbl
 
                             color: textColor
-                            text: SecsToMins.secsToMins(model.duration)
+                            text: SecsToMins.secsToMins(model ? model.duration : 0)
                         }
                     }
                 }
 
-                sourceComponent: model.tags_readable ? tagComponent : fileComponent
+                sourceComponent: model && model.tags_readable ? tagComponent : fileComponent
             }
         }
     }
@@ -244,6 +244,10 @@ ListView {
                     drop.acceptProposedAction()
                 }
             }
+        }
+
+        onPositionChanged: {
+
         }
     }
 
