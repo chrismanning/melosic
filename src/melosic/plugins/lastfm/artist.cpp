@@ -25,7 +25,7 @@ using std::unique_lock; using std::lock_guard;
 using namespace boost::property_tree::xml_parser;
 #include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
-using shared_mutex = std::shared_mutex;
+using shared_mutex = std::shared_timed_mutex;
 template <typename Mutex>
 using shared_lock = boost::shared_lock_guard<Mutex>;
 

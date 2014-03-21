@@ -20,7 +20,7 @@
 #include <mutex>
 
 #include <shared_mutex>
-using mutex = std::shared_mutex;
+using mutex = std::shared_timed_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
