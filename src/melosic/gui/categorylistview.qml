@@ -8,7 +8,6 @@ import "naturalsort.js" as NaturalSort
 
 ScrollView {
     id: root
-    property alias frameVisible: root.frameVisible
 
     property var model
 

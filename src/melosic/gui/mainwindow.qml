@@ -264,6 +264,8 @@ ApplicationWindow {
         if(!playlistManagerModel.rowCount())
             playlistManagerModel.insertRows(playlistManagerModel.rowCount(),1)
         playlistManager.currentIndex = 0
+
+        playlistView.forceActiveFocus()
     }
 
     PlaylistManager {
@@ -572,6 +574,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 manager: playlistManager
+                focus: true
 
                 contextMenu: Menu {
                     MenuItem { action: jumpPlayAction }

@@ -14,8 +14,36 @@ ListView {
     property int padding: 3
 
     property PlaylistManager manager
-
     property Component contextMenu
+
+    focus: true
+    Keys.onTabPressed: {
+        console.debug("PlaylistView: Tab pressed")
+        if(count == 1)
+            return
+        if(manager.currentIndex + 1 >= count)
+            manager.currentIndex = 0
+        else
+            manager.currentIndex++
+    }
+
+    Keys.onBacktabPressed: {
+        console.debug("PlaylistView: Shift+Tab pressed")
+        if(count == 1)
+            return
+        if(manager.currentIndex - 1 < 0)
+            manager.currentIndex = count-1
+        else
+            manager.currentIndex--
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        onPressed: {
+            root.forceActiveFocus()
+            mouse.accepted = false
+        }
+    }
 
     model: playlistManagerModel
     delegate: Item {
@@ -44,7 +72,6 @@ ListView {
             anchors.fill: parent
             model: playlistModel
             frameVisible: true
-            focus: viewerItem.ListView.isCurrentItem
             padding: root.padding
             removeCallback: function(from,count) { return playlistModel.removeRows(from, count) }
             moveCallback: function(from,count,to) { return playlistModel.moveRows(from, count, to) }
