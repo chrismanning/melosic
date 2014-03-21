@@ -11,6 +11,8 @@ ScrollView {
     property alias model: listView.model
     frameVisible: true
 
+    property string selectionMimeType
+
     property var selectionModel
 
     property alias delegate: listView.delegate
@@ -18,9 +20,11 @@ ScrollView {
     property Component styleDelegate
     property Component focusDelegate
 
+    property Component draggable
+
     property bool activateItemOnSingleClick: false
 
-    signal activated(SelectionModel selection)
+    signal activated(var selection)
 
     ListView {
         id: listView
@@ -46,29 +50,59 @@ ScrollView {
             id: mouseArea
             anchors.fill: parent
             z: -1
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
             preventStealing: !Settings.hasTouchScreen
+            drag.threshold: 5
 
-//            onClicked: {
-//                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
-//                if (clickIndex > -1) {
-//                    if (root.__activateItemOnSingleClick)
-//                        root.activated(clickIndex)
-//                    root.clicked(clickIndex)
-//                }
-//            }
+            Component.onCompleted: {
+                var mime = {}
+                mime[root.selectionMimeType] = root.selectionModel
+                drag.target = draggable.createObject(mouseArea, {
+                                                         "Drag.active":
+                                                            Qt.binding(function(){ return mouseArea.drag.active }),
+                                                         "Drag.mimeData": mime
+                                                     })
+            }
 
+            onClicked: {
+                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
+                if(clickIndex > -1) {
+                    if(root.activateItemOnSingleClick)
+                        root.activated(selectionModel)
+                }
+            }
+
+            property var pressModifiers
             onPressed: {
+                pressModifiers = mouse.modifiers
                 var newIndex = listView.indexAt(0, mouseY + listView.contentY)
-                listView.forceActiveFocus()
+                root.forceActiveFocus()
 
                 if(!selectionModel)
                     return
 
                 if(newIndex <= -1)
                     selectionModel.clearSelection()
-                else
+                else if(!selectionModel.isSelected(newIndex)) {
                     mouseSelect(newIndex, mouse.modifiers)
+                    selectionModel.currentRow = newIndex
+                }
+            }
+
+            onPositionChanged: {
+                if(!pressModifiers)
+                    pressModifiers = 1
+            }
+
+            onReleased: {
+                var newIndex = listView.indexAt(0, mouseY + listView.contentY)
+                if(!(pressModifiers & Qt.ShiftModifier) && !(pressModifiers & Qt.ControlModifier) &&
+                        selectionModel.isSelected(newIndex))
+                {
+                    mouseSelect(newIndex, pressModifiers)
+                    selectionModel.currentRow = newIndex
+                }
             }
 
             function mouseSelect(index, modifiers) {
@@ -80,7 +114,6 @@ ScrollView {
                     selectionModel.select(index, SelectionModel.Toggle)
                 else
                     selectionModel.select(index, SelectionModel.ClearAndSelect)
-                selectionModel.currentRow = index
             }
 
             onDoubleClicked: {

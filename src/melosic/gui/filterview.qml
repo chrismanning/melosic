@@ -24,6 +24,28 @@ DynamicSplitView {
 
     property var filterResultPane
 
+    Component {
+        id: dragComponent
+        Item {
+            objectName: "filterDragItem"
+
+            Drag.hotSpot.x: 0
+            Drag.hotSpot.y: 0
+            Drag.dragType: Drag.Automatic
+
+            function getSelectionModel() {
+                return filterResultPane.selectionModel
+            }
+
+            Drag.onDragStarted: {
+                console.debug("Filter drag started")
+            }
+            Drag.onDragFinished: {
+                console.debug("Filter drag finished")
+            }
+        }
+    }
+
     Component.onCompleted: {
         console.assert(filterResultPane, "The default result filter should be set.")
         for (var i=0; i<__panes.length; ++i) {
@@ -33,7 +55,8 @@ DynamicSplitView {
                 continue
             var props = {
                 model: __panes[i].model,
-                selectionModel: __panes[i].selectionModel
+                selectionModel: __panes[i].selectionModel,
+                draggable: dragComponent
             }
             if(__panes[i].delegate !== null)
                 props.itemDelegate = __panes[i].delegate
@@ -60,13 +83,9 @@ DynamicSplitView {
             Layout.minimumHeight: 100
             Layout.alignment: Qt.AlignLeft
             Layout.fillWidth: true
-            itemDelegate: Label {
-                id: lbl
-                x: 1
-                width: tableView.width-2
-                text: documentstring
-                color: styleData.textColor
-            }
+
+            selectionMimeType: "melo/filter.selection"
+
             styleDelegate: StyleItem {
                 elementType: "itemrow"
                 active: tableView.activeFocus

@@ -40,6 +40,10 @@ ScrollView {
         listView.incrementCurrentIndex()
     }
 
+    function indexAt(x, y) {
+        return listView.indexAt(x, y)
+    }
+
     function clearSelection() {
         console.debug("clearing selection; count: ", count)
         if(count)

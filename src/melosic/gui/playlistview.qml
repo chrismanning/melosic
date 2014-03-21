@@ -223,12 +223,26 @@ ListView {
 
     DropArea {
         anchors.fill: parent
+        keys: ["text/uri-list", "melo/filter.selection"]
+
         onDropped: {
+            if(!manager.currentPlaylist)
+                return
+            if(!manager.currentModel)
+                return
+
+            var index = manager.currentPlaylist.indexAt(drop.x, drop.y)
+
             if(drop.hasUrls && drop.proposedAction === Qt.CopyAction) {
-                if(!manager.currentModel)
-                    return
-                manager.currentModel.insertTracks(-1, drop.urls)
+                manager.currentModel.insertTracks(index, drop.urls)
                 drop.acceptProposedAction()
+            }
+            if(drop.formats.indexOf("melo/filter.selection" >= 0)) {
+                if(drop.source.mimeData !== "undefined" &&
+                        drop.source.mimeData["melo/filter.selection"] !== "undefined") {
+                    manager.currentModel.insertTracks(index, drop.source.mimeData["melo/filter.selection"])
+                    drop.acceptProposedAction()
+                }
             }
         }
     }
