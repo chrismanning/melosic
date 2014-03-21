@@ -227,7 +227,8 @@ ListView {
             if(!manager.currentModel)
                 return
 
-            var index = manager.currentPlaylist.indexAt(drop.x, drop.y)
+            var index = manager.currentPlaylist.indexAt(drop.x + manager.currentPlaylist.flickableItem.contentX,
+                                                        drop.y + manager.currentPlaylist.flickableItem.contentY)
 
             if(drop.hasUrls && drop.proposedAction === Qt.CopyAction) {
                 manager.currentModel.insertTracks(index, drop.urls)
