@@ -134,7 +134,7 @@ ListView {
 
                             Label {
                                 property var arr: model ? model.filepath.match(pat) : null
-                                text: arr ? arr[0] : ""
+                                text: arr ? arr[0] : "NO RESULT"
                                 elide: Text.ElideRight
                                 color: textColor
                                 Layout.fillWidth: true
@@ -196,7 +196,7 @@ ListView {
                             Layout.fillWidth: true
                             elide: Text.ElideRight
                             color: textColor
-                            text: model ? model.file : ""
+                            text: model ? model.file : "NO FILE"
                         }
 
                         Label {
