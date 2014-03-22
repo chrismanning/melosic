@@ -196,16 +196,20 @@ void CategoryProxyModel::impl::checkForConsistency(upgrade_lock& l) {
         assert(parent.hasIndex(i, 0));
         const auto category = indexCategory(i);
         const auto block = block_index[i];
-        BOOST_ASSERT_MSG(block, (boost::format("index %1% has null block")%i).str().c_str());
+        BOOST_ASSERT_MSG(block,
+                         (boost::format("Category Model Inconsistent: index %1% has null block")%i).str().c_str());
         assert(!category.isNull());
         if(category == prev_category) {
-            BOOST_ASSERT_MSG(block == prev_block, (boost::format("index %1% has wrong block")%i).str().c_str());
+            BOOST_ASSERT_MSG(block == prev_block,
+                             (boost::format("Category Model Inconsistent: index %1% has wrong block")%i).str().c_str());
         }
         else {
-            BOOST_ASSERT_MSG(block != prev_block, (boost::format("index %1% has wrong block")%i).str().c_str());
+            BOOST_ASSERT_MSG(block != prev_block,
+                             (boost::format("Category Model Inconsistent: index %1% has wrong block")%i).str().c_str());
             if(prev_block)
                 BOOST_ASSERT_MSG(prev_block->firstRow() + prev_block->count() == i,
-                                 (boost::format("prev_block should end before current index.\n"
+                                 (boost::format(
+                                      "Category Model Inconsistent: prev_block should end before current index.\n"
                                                "prev_block: 1st: %1%; count: %2%; i: %3%")
                                  % prev_block->firstRow() % prev_block->count() % i).str().c_str());
         }
