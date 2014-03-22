@@ -114,6 +114,8 @@ void CategoryProxyModel::setCategory(Category* c) {
 
 void CategoryProxyModel::onRowsInserted(const QModelIndex& p, int start, int end) {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onRowsInserted(p, start, end, l);
 #ifndef NDEBUG
 //    pimpl->checkForConsistency(l);
@@ -127,6 +129,8 @@ void CategoryProxyModel::onRowsMoved(const QModelIndex& sp,
                                      int destinationRow)
 {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onRowsMoved(sp, sourceStart, sourceEnd, dp, destinationRow, l);
 #ifndef NDEBUG
     pimpl->checkForConsistency(l);
@@ -140,6 +144,8 @@ void CategoryProxyModel::onRowsAboutToBeMoved(const QModelIndex& sp,
                                               int destinationRow)
 {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onRowsAboutToBeMoved(sp, sourceStart, sourceEnd, dp, destinationRow, l);
 #ifndef NDEBUG
     pimpl->checkForConsistency(l);
@@ -148,6 +154,8 @@ void CategoryProxyModel::onRowsAboutToBeMoved(const QModelIndex& sp,
 
 void CategoryProxyModel::onRowsRemoved(const QModelIndex& p, int start, int end) {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onRowsRemoved(p, start, end, l);
 #ifndef NDEBUG
     pimpl->checkForConsistency(l);
@@ -156,6 +164,8 @@ void CategoryProxyModel::onRowsRemoved(const QModelIndex& p, int start, int end)
 
 void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex& p, int start, int end) {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onRowsAboutToBeRemoved(p, start, end, l);
 #ifndef NDEBUG
     pimpl->checkForConsistency(l);
@@ -167,6 +177,8 @@ void CategoryProxyModel::onDataChanged(const QModelIndex& topleft,
                                        const QVector<int>& roles)
 {
     upgrade_lock l(pimpl->mu);
+    if(!pimpl->m_category)
+        return;
     pimpl->onDataChanged(topleft, bottomright, roles, l);
 #ifndef NDEBUG
     pimpl->checkForConsistency(l);
@@ -175,6 +187,8 @@ void CategoryProxyModel::onDataChanged(const QModelIndex& topleft,
 
 void CategoryProxyModel::impl::checkForConsistency(upgrade_lock& l) {
     assert(l);
+    if(!m_category)
+        return;
     assert(block_index.size() == (size_t)parent.rowCount());
     std::shared_ptr<Block> prev_block;
     QString prev_category;
@@ -201,6 +215,8 @@ void CategoryProxyModel::impl::checkForConsistency(upgrade_lock& l) {
 }
 
 void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>& block, upgrade_lock& l) {
+    if(!m_category)
+        return;
     assert(idx >= 0);
     assert(idx < (int)block_index.size());
 
@@ -484,6 +500,8 @@ CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObjec
     TRACE_LOG(logject) << "index: " << m_index.isValid() << " " << m_index.row();
     assert(m_index.isValid());
     upgrade_lock l(m_model->pimpl->mu);
+    if(!m_model->pimpl->m_category)
+        return;
     m_block = m_model->pimpl->block_index[m_index.row()];
 }
 
