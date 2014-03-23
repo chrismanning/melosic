@@ -70,22 +70,36 @@ private:
 
 class CategoryProxyModelAttached : public QObject {
     Q_OBJECT
+
     Q_PROPERTY(Melosic::Block* block READ block NOTIFY blockChanged)
+    Q_PROPERTY(bool drawCategory READ drawCategory NOTIFY drawCategoryChanged)
+    Q_PROPERTY(CategoryProxyModel* model READ model NOTIFY modelChanged)
+
     mutable std::shared_ptr<Block> m_block;
     CategoryProxyModel* m_model{nullptr};
     QList<QMetaObject::Connection> modelConns;
-
-    void setBlock(std::shared_ptr<Block> b);
     QPersistentModelIndex m_index;
+
+    Block* block() const;
+    bool drawCategory() const;
+    CategoryProxyModel* model() const;
+
+    void setModel(CategoryProxyModel* model);
+    void setBlock(std::shared_ptr<Block> b);
+
+    void internal_update();
+
+private Q_SLOTS:
+    void setModelFromParent();
 
 public:
     explicit CategoryProxyModelAttached(QObject* parent);
     ~CategoryProxyModelAttached();
 
-    Block* block() const;
-
 Q_SIGNALS:
-    void blockChanged(Block*);
+    void blockChanged(Block* block);
+    void drawCategoryChanged(bool drawCategory);
+    void modelChanged(CategoryProxyModel* model);
 };
 
 class Block : public QObject {

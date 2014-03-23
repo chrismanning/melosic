@@ -164,7 +164,7 @@ ScrollView {
                 x: root.padding
                 z: -index
                 width: listView.width - (x*2)
-                property bool drawCategory: category && block && block.firstRow === index
+                property bool drawCategory: category && rowitem.CategoryProxyModel.drawCategory
 
                 property int baseHeight: category && block && block.collapsed ? 0 : itemHeight
 
@@ -182,6 +182,7 @@ ScrollView {
                 property int rowIndex: model.index
                 property var itemModel: model
                 property CategoryProxyModel categoryModel: root.categoryModel
+
                 property Block block: CategoryProxyModel.block
 
                 Item {
@@ -301,12 +302,7 @@ ScrollView {
                             Binding {
                                 target: categoryItemLoader
                                 property: "height"
-                                value: categoryDelegateLoader.height + root.padding*2
-                            }
-
-                            Binding on height {
-                                when: !drawCategory
-                                value: 0
+                                value: !drawCategory ? 0 : categoryDelegateLoader.height + root.padding*2
                             }
 
                             property var model: itemModel

@@ -471,42 +471,26 @@ CategoryProxyModelAttached* CategoryProxyModel::qmlAttachedProperties(QObject* o
 CategoryProxyModelAttached::CategoryProxyModelAttached(QObject* parent) : QObject(parent) {
     assert(parent != nullptr);
 
-    auto v = parent->property("categoryModel");
-    if(v == QVariant())
+    auto meta = parent->metaObject();
+    assert(meta);
+    auto pIdx = meta->indexOfProperty("categoryModel");
+    if(pIdx == -1)
         return;
-    QObject* obj = qvariant_cast<QObject*>(v);
+    auto prop = meta->property(pIdx);
+    if(!prop.hasNotifySignal())
+        return;
+    auto sig = prop.notifySignal();
 
-    m_model = qobject_cast<CategoryProxyModel*>(obj);
-    if(!m_model)
-        return;
-    modelConns.push_back(connect(m_model, &CategoryProxyModel::rowsAboutToBeRemoved, [this] (const QModelIndex&, int start, int end) {
-        if(m_index.row() >= start && m_index.row() <= end) {
-            setBlock(nullptr);
-        }
-    }));
-    modelConns.push_back(connect(m_model, &CategoryProxyModel::blocksNeedUpdating, [this] (int start, int end) {
-        if(m_index.row() >= start && m_index.row() <= end) {
-            upgrade_lock l(m_model->pimpl->mu);
-            TRACE_LOG(logject) << "updating block; index: " << m_index.row();
-            auto b = m_model->pimpl->block_index[m_index.row()];
-            l.unlock();
-            setBlock(b);
-        }
-    }));
+    auto set_model_fun = staticMetaObject.method(staticMetaObject.indexOfMethod("setModelFromParent()"));
+    assert(set_model_fun.isValid());
+    modelConns.push_back(connect(parent, sig, this, set_model_fun));
 
-    v = parent->property("rowIndex");
-    bool b;
-    auto i = v.toInt(&b);
-    if(v == QVariant() || !b)
-        return;
-    TRACE_LOG(logject) << "i: " << i;
-    m_index = m_model->index(i, 0);
-    TRACE_LOG(logject) << "index: " << m_index.isValid() << " " << m_index.row();
-    assert(m_index.isValid());
-    upgrade_lock l(m_model->pimpl->mu);
-    if(!m_model->pimpl->m_category)
-        return;
-    m_block = m_model->pimpl->block_index[m_index.row()];
+    connect(this, &CategoryProxyModelAttached::modelChanged, this, &CategoryProxyModelAttached::internal_update);
+
+    auto v = prop.read(parent);
+    auto ptr = v.value<CategoryProxyModel*>();
+    if(ptr)
+        setModel(ptr);
 }
 
 CategoryProxyModelAttached::~CategoryProxyModelAttached() {
@@ -521,9 +505,75 @@ Block* CategoryProxyModelAttached::block() const {
     return m_block.get();
 }
 
+bool CategoryProxyModelAttached::drawCategory() const {
+    if(!m_index.isValid())
+        return false;
+    return m_block && m_index.row() == m_block->firstRow();
+}
+
+CategoryProxyModel* CategoryProxyModelAttached::model() const {
+    return m_model;
+}
+
+void CategoryProxyModelAttached::setModel(CategoryProxyModel* model) {
+    assert(model);
+    m_model = model;
+    Q_EMIT modelChanged(model);
+}
+
 void CategoryProxyModelAttached::setBlock(std::shared_ptr<Block> b) {
     m_block = b;
     Q_EMIT blockChanged(m_block.get());
+}
+
+void CategoryProxyModelAttached::internal_update() {
+    if(!m_model)
+        return;
+    assert(m_model);
+    modelConns.push_back(connect(m_model, &CategoryProxyModel::rowsAboutToBeRemoved,
+    [this](const QModelIndex&, int start, int end) {
+        if(m_index.row() >= start && m_index.row() <= end) {
+            setBlock(nullptr);
+        }
+    }));
+    modelConns.push_back(connect(m_model, &CategoryProxyModel::blocksNeedUpdating, [this] (int start, int end) {
+        if(m_index.row() >= start && m_index.row() <= end) {
+            upgrade_lock l(m_model->pimpl->mu);
+            TRACE_LOG(logject) << "updating block; index: " << m_index.row();
+            auto b = m_model->pimpl->block_index[m_index.row()];
+            l.unlock();
+            setBlock(b);
+        }
+    }));
+    modelConns.push_back(connect(this, &CategoryProxyModelAttached::blockChanged, [this](auto&& block) {
+        if(block)
+            modelConns.push_back(connect(block, &Block::firstIndexChanged, [this](auto&& index) {
+                Q_EMIT drawCategoryChanged(drawCategory());
+            }));
+        Q_EMIT drawCategoryChanged(drawCategory());
+    }));
+
+    auto v = parent()->property("rowIndex");
+    assert(v.isValid() && !v.isNull());
+    bool b;
+    auto i = v.toInt(&b);
+    assert(b);
+    TRACE_LOG(logject) << "i: " << i;
+    m_index = m_model->index(i, 0);
+    TRACE_LOG(logject) << "index: " << m_index.isValid() << " " << m_index.row();
+    assert(m_index.isValid());
+    upgrade_lock l(m_model->pimpl->mu);
+    if(!m_model->pimpl->m_category)
+        return;
+    setBlock(m_model->pimpl->block_index[m_index.row()]);
+    assert(m_block);
+}
+
+void CategoryProxyModelAttached::setModelFromParent() {
+    auto v = parent()->property("categoryModel");
+    auto ptr = v.value<CategoryProxyModel*>();
+    if(ptr)
+        setModel(ptr);
 }
 
 Block::~Block() {
