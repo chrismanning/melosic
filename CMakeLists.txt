@@ -90,6 +90,7 @@ include(ExternalProject)
 ExternalProject_Add(
     catch_${PROJECT_NAME}
     GIT_REPOSITORY https://github.com/philsquared/Catch.git
+    GIT_TAG origin/master
     TIMEOUT 10
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
