@@ -15,6 +15,8 @@ ScrollView {
 
     property var selectionModel
 
+    property alias header: listView.header
+
     property alias delegate: listView.delegate
     property Component itemDelegate
     property Component styleDelegate
@@ -48,7 +50,13 @@ ScrollView {
 
         MouseArea {
             id: mouseArea
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.topMargin: listView.headerItem ? listView.headerItem.height : 0
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: listView.footerItem ? listView.footerItem.height : 0
+            anchors.left: parent.left
+            anchors.right: parent.right
+
             z: -1
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             propagateComposedEvents: true
@@ -66,7 +74,7 @@ ScrollView {
             }
 
             onClicked: {
-                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
+                var clickIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(clickIndex > -1) {
                     if(root.activateItemOnSingleClick)
                         root.activated(selectionModel)
@@ -76,7 +84,7 @@ ScrollView {
             property var pressModifiers
             onPressed: {
                 pressModifiers = mouse.modifiers
-                var newIndex = listView.indexAt(0, mouseY + listView.contentY)
+                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 root.forceActiveFocus()
 
                 if(!selectionModel)
@@ -96,7 +104,7 @@ ScrollView {
             }
 
             onReleased: {
-                var newIndex = listView.indexAt(0, mouseY + listView.contentY)
+                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(!(pressModifiers & Qt.ShiftModifier) && !(pressModifiers & Qt.ControlModifier) &&
                         selectionModel.isSelected(newIndex))
                 {
@@ -117,7 +125,7 @@ ScrollView {
             }
 
             onDoubleClicked: {
-                var clickIndex = listView.indexAt(0, mouseY + listView.contentY)
+                var clickIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(clickIndex > -1) {
                     if(!root.activateItemOnSingleClick)
                         root.activated(selectionModel)

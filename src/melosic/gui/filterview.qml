@@ -49,7 +49,7 @@ DynamicSplitView {
     Component.onCompleted: {
         console.assert(filterResultPane, "The default result filter should be set.")
         for (var i=0; i<__panes.length; ++i) {
-            if(!__panes[i].hasOwnProperty("header"))
+            if(!__panes[i].hasOwnProperty("selectionModel"))
                 continue
             if(!__panes[i].hasOwnProperty("model"))
                 continue
@@ -58,8 +58,12 @@ DynamicSplitView {
                 selectionModel: __panes[i].selectionModel,
                 draggable: dragComponent
             }
+
             if(__panes[i].delegate !== null)
                 props.itemDelegate = __panes[i].delegate
+            if(__panes[i].header !== undefined)
+                props.headerText = __panes[i].header
+
             var pane = paneLoader.createObject(root, props)
 
             if(__panes[i] === filterResultPane) {
@@ -83,6 +87,14 @@ DynamicSplitView {
             Layout.minimumHeight: 100
             Layout.alignment: Qt.AlignLeft
             Layout.fillWidth: true
+
+            property var headerText
+            header: Loader {
+                active: headerText
+                sourceComponent: Label {
+                    text: headerText
+                }
+            }
 
             selectionMimeType: "melo/filter.selection"
 
