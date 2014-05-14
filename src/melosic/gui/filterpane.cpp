@@ -224,8 +224,7 @@ bool FilterPane::impl::on_selection_changed(const QItemSelection& selected, cons
 void FilterPane::impl::generate_query(const bool unknown) {
     jbson::document inner;
 
-    if(!m_selection_values.empty()) {
-        assert(m_query_generator);
+    if(!m_selection_values.empty() && m_query_generator) {
         inner = m_query_generator(m_selection_values);
     }
 

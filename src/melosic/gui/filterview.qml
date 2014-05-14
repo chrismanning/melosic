@@ -83,7 +83,7 @@ DynamicSplitView {
     Component {
         id: paneLoader
         SelectorView {
-            id: tableView
+            id: selectorView
             Layout.minimumHeight: 100
             Layout.alignment: Qt.AlignLeft
             Layout.fillWidth: true
@@ -100,7 +100,7 @@ DynamicSplitView {
 
             styleDelegate: StyleItem {
                 elementType: "itemrow"
-                active: tableView.activeFocus
+                active: selectorView.activeFocus
                 selected: isSelected
             }
             focusDelegate: StyleItem {

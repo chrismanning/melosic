@@ -34,6 +34,7 @@ ScrollView {
         anchors.fill: parent
         currentIndex: selectionModel ? selectionModel.currentRow : -1
         interactive: Settings.hasTouchScreen
+        boundsBehavior: Flickable.StopAtBounds
 
         SystemPalette {
             id: palette
