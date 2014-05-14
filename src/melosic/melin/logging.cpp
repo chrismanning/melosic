@@ -31,8 +31,6 @@
 
 #include "logging.hpp"
 
-template class logging::sources::severity_channel_logger_mt<Melosic::Logger::Severity>;
-
 namespace Melosic {
 namespace Logger {
 

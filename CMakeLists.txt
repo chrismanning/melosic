@@ -17,11 +17,15 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
 endif()
 
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
+
 find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time REQUIRED)
+find_package(Asio 1.10.1 REQUIRED)
 
 include_directories(include)
 add_subdirectory(extern)
 include_directories(${EXTERN_INCLUDES})
+link_directories(${CMAKE_BINARY_DIR}/extern/lib)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer -pthread")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs -Wno-missing-field-initializers")
@@ -54,15 +58,14 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
-set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
-
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
 
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z network-uri)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z)
+SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp -lnetwork-uri)
 
 if(UNIX)
  SET(LINK_LIBS ${LINK_LIBS} dl magic)
@@ -90,8 +93,9 @@ include(ExternalProject)
 ExternalProject_Add(
     catch_${PROJECT_NAME}
     GIT_REPOSITORY https://github.com/philsquared/Catch.git
-    GIT_TAG origin/master
+#    GIT_TAG origin/master
     TIMEOUT 10
+    UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""
@@ -106,8 +110,8 @@ endif()
 
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
-  add_dependencies(${test_name} catch_${PROJECT_NAME})
-  target_link_libraries(${test_name} ${LINK_LIBS} ejpp ${PROJECT_NAME}lib)
+  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
+  target_link_libraries(${test_name} ${LINK_LIBS} ${PROJECT_NAME}lib)
   set_property(TARGET ${test_name} APPEND PROPERTY COMPILE_DEFINITIONS "MELOSIC_DISABLE_LOGGING")
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})

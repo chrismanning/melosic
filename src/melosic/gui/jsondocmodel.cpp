@@ -60,20 +60,20 @@ struct QVariantVisitor {
     explicit QVariantVisitor(QVariantMap& map) : m_map(map) {}
 
     template <typename T>
-    void operator()(boost::string_ref name, T v, jbson::element_type e, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
+    void operator()(boost::string_ref name, jbson::element_type e, T v, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
         m_map.insert(toQString(name), QVariant::fromValue(v));
     }
 
-    void operator()(boost::string_ref name, std::string str, jbson::element_type) {
+    void operator()(boost::string_ref name, jbson::element_type, std::string str) {
         m_map.insert(toQString(name), QString::fromStdString(str));
     }
 
-    void operator()(boost::string_ref name, boost::string_ref str, jbson::element_type) {
+    void operator()(boost::string_ref name, jbson::element_type, boost::string_ref str) {
         m_map.insert(toQString(name), toQString(str));
     }
 
     template <typename T>
-    void operator()(boost::string_ref name, jbson::basic_document<T>&& doc, jbson::element_type) {
+    void operator()(boost::string_ref name, jbson::element_type, jbson::basic_document<T>&& doc) {
         QVariantMap map{};
         QVariantVisitor v{map};
         for(auto&& e : doc)
@@ -82,7 +82,16 @@ struct QVariantVisitor {
     }
 
     template <typename T>
-    void operator()(boost::string_ref, T&&, jbson::element_type, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
+    void operator()(boost::string_ref name, jbson::element_type, jbson::basic_array<T>&& doc) {
+        QVariantMap map{};
+        QVariantVisitor v{map};
+        for(auto&& e : doc)
+            e.visit(v);
+        m_map.insert(toQString(name), map);
+    }
+
+    template <typename T>
+    void operator()(boost::string_ref, jbson::element_type, T&&, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
 //        assert(false);
     }
     void operator()(boost::string_ref, jbson::element_type) {

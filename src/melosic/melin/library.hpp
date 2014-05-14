@@ -25,8 +25,12 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash_fwd.hpp>
 #include <boost/thread/synchronized_value.hpp>
+#include <boost/utility/string_ref_fwd.hpp>
 
 #include <ejpp/ejdb.hpp>
+
+#include <jbson/element_fwd.hpp>
+#include <jbson/document_fwd.hpp>
 
 #include <melosic/common/optional_fwd.hpp>
 #include <melosic/common/signal_fwd.hpp>
@@ -70,16 +74,16 @@ public:
     MELOSIC_EXPORT const boost::synchronized_value<SetType>& getDirectories() const;
     void scan();
 
-    MELOSIC_EXPORT ejdb::ejdb& getDataBase() const;
+    MELOSIC_EXPORT ejdb::db& getDataBase() const;
 
     MELOSIC_EXPORT
     std::vector<jbson::document> query(const jbson::document&) const;
-    MELOSIC_EXPORT
-    std::vector<jbson::element>
-    query(const jbson::document&, boost::string_ref) const;
+//    MELOSIC_EXPORT
+//    std::vector<jbson::element>
+//    query(const jbson::document&, boost::string_ref) const;
 
     MELOSIC_EXPORT std::vector<jbson::document_set>
-    query(const jbson::document&, ForwardRange<const std::tuple<std::string, std::string>>) const;
+    query(const jbson::document&, ForwardRange<std::tuple<std::string, std::string> >) const;
 
     MELOSIC_EXPORT std::vector<jbson::document_set>
     query(const jbson::document&, std::initializer_list<std::tuple<std::string, std::string>>) const;
@@ -91,6 +95,16 @@ private:
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
+
+MELOSIC_EXPORT
+std::vector<jbson::element> apply_path(const std::vector<jbson::document>&, boost::string_ref);
+
+MELOSIC_EXPORT
+std::vector<jbson::document_set> apply_named_paths(const std::vector<jbson::document>&,
+                                                  ForwardRange<std::tuple<std::string, std::string>>);
+MELOSIC_EXPORT
+std::vector<jbson::document_set> apply_named_paths(const std::vector<jbson::document>&,
+                                                  std::initializer_list<std::tuple<std::string, std::string>>);
 
 } // namespace Library
 } // namespace Melosic

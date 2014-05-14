@@ -73,7 +73,7 @@ struct Manager::impl {
     Decoder::Manager& decman;
     Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
     Config::Conf conf{"Library"};
-    ejdb::ejdb db;
+    ejdb::db db;
     ScanStarted scanStarted;
     ScanEnded scanEnded;
     boost::synchronized_value<Manager::SetType> m_dirs;
@@ -86,7 +86,7 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman) : decman
         fs::create_directory(DataDir);
     assert(fs::exists(DataDir) && fs::is_directory(DataDir));
     std::error_code ec;
-    db.open((DataDir / "medialibrary").c_str(),
+    db.open((DataDir / "medialibrary").generic_string(),
             ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create | ejdb::db_mode::trans_sync, ec);
 
     //    TRACE_LOG(logject) << "db metadata:" << db.metadata();
@@ -162,13 +162,13 @@ void Manager::impl::scan(const fs::path& dir) {
     auto coll = db.create_collection("tracks", ec);
 
     // remove all tracks in current prefix
-    auto qry = db.create_query(R"({"$dropall":true})"_json_doc, ec);
+    auto qry = db.create_query(R"({"$dropall":true})"_json_doc.data(), ec);
     if(!qry || ec) {
         ERROR_LOG(logject) << "query creation error: " << ec.message();
         return;
     }
-    auto res = coll.execute_query(qry, ejdb::query::count_only);
-    assert(res.empty());
+    coll.execute_query<ejdb::query_search_mode::count_only>(qry);
+
     auto r = coll.sync(ec);
     if(!r || ec) {
         ERROR_LOG(logject) << "collection sync error: " << ec.message();
@@ -185,7 +185,7 @@ void Manager::impl::scan(const fs::path& dir) {
             if(tracks.empty())
                 continue;
             for(const auto& t : tracks) {
-                auto oid = coll.save_document(t.bson(), ec);
+                auto oid = coll.save_document(t.bson().data(), ec);
                 if(ec) {
                     ERROR_LOG(logject) << "document save error: " << ec.message();
                     continue;
@@ -211,7 +211,7 @@ void Manager::impl::scan(const fs::path& dir) {
     TRACE_LOG(logject) << dir << " scanned";
 
 #ifndef NDEBUG
-    qry = db.create_query("{}"_json_doc, ec);
+    qry = db.create_query("{}"_json_doc.data(), ec);
     if(!qry || ec) {
         ERROR_LOG(logject) << "query creation error: " << ec.message();
         return;
@@ -224,7 +224,7 @@ void Manager::impl::scan(const fs::path& dir) {
             return;
         }
         auto doc_str = std::string{};
-        write_json(doc, std::back_inserter(doc_str));
+        jbson::write_json(jbson::document(std::move(doc)), std::back_inserter(doc_str));
         DEBUG_LOG(logject) << "track: " << doc_str;
     }
 #endif
@@ -264,47 +264,64 @@ void Manager::scan() {
     //    pimpl->scanEnded();
 }
 
-ejdb::ejdb& Manager::getDataBase() const { return pimpl->db; }
+ejdb::db& Manager::getDataBase() const { return pimpl->db; }
 
 std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
-    std::error_code ec;
     ejdb::query q;
     try {
-        q = pimpl->db.create_query(qdoc, ec).set_hints(R"({ "$orderby": { "location": 1 } })"_json_doc);
-        if(ec)
-            return {};
+        q = pimpl->db.create_query(qdoc.data()).set_hints(R"({ "$orderby": { "location": 1 } })"_json_doc.data());
+        auto coll = pimpl->db.create_collection("tracks");
+
+        std::vector<jbson::document> ret;
+
+        for(auto&& data : coll.execute_query(q))
+            ret.emplace_back(std::move(data));
+
+        return ret;
     }
     catch(...) {
         return {};
     }
-
-    auto coll = pimpl->db.create_collection("tracks", ec);
-    if(ec)
-        return {};
-
-    return coll.execute_query(q);
 }
 
-std::vector<jbson::element> Manager::query(const jbson::document& q, boost::string_ref json_path) const {
+//std::vector<jbson::element> Manager::query(const jbson::document& q, boost::string_ref json_path) const {
+//    return apply_path(query(q), json_path);
+//}
+
+std::vector<jbson::document_set>
+Manager::query(const jbson::document& q,
+               ForwardRange<std::tuple<std::string, std::string>> paths) const {
+    return apply_named_paths(query(q), paths);
+}
+
+std::vector<jbson::document_set>
+Manager::query(const jbson::document& q,
+               std::initializer_list<std::tuple<std::string, std::string>> paths) const {
+    return apply_named_paths(query(q), paths);
+}
+
+Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return pimpl->scanStarted; }
+
+Signals::Library::ScanEnded& Manager::getScanEndedSignal() noexcept { return pimpl->scanEnded; }
+
+std::vector<jbson::element> apply_path(const std::vector<jbson::document>& docs, boost::string_ref path) {
     std::vector<jbson::element> vec;
-    auto docs = query(q);
-    if(json_path.empty() || (json_path.size() == 1 && json_path.front() == '$')) {
+    if(path.empty() || (path.size() == 1 && path.front() == '$')) {
         for(auto&& doc : docs)
             for(auto&& e : doc)
                 vec.emplace_back(e);
         return std::move(vec);
     }
     for(auto&& doc : docs)
-        for(auto&& e : jbson::path_select(doc, json_path))
+        for(auto&& e : jbson::path_select(doc, path))
             vec.emplace_back(e);
     return std::move(vec);
 }
 
 std::vector<jbson::document_set>
-Manager::query(const jbson::document& q,
-               ForwardRange<const std::tuple<std::string, std::string>> paths) const {
+apply_named_paths(const std::vector<jbson::document>& docs, ForwardRange<std::tuple<std::string, std::string>> paths) {
     std::vector<jbson::document_set> res;
-    for(auto&& doc : query(q)) {
+    for(auto&& doc : docs) {
         jbson::document_set set;
         for(auto&& named_path : paths) {
             for(auto&& e : jbson::path_select(doc, std::get<1>(named_path))) {
@@ -319,15 +336,11 @@ Manager::query(const jbson::document& q,
 }
 
 std::vector<jbson::document_set>
-Manager::query(const jbson::document& q,
-               std::initializer_list<std::tuple<std::string, std::string>> paths) const {
-    const auto p = ForwardRange<const std::tuple<std::string, std::string>>(paths);
-    return query(q, p);
+apply_named_paths(const std::vector<jbson::document>& docs,
+                  std::initializer_list<std::tuple<std::string, std::string>> paths) {
+    const auto p = ForwardRange<std::tuple<std::string, std::string>>(paths);
+    return apply_named_paths(std::move(docs), p);
 }
-
-Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return pimpl->scanStarted; }
-
-Signals::Library::ScanEnded& Manager::getScanEndedSignal() noexcept { return pimpl->scanEnded; }
 
 } // namespace Library
 } // namespace Melosic

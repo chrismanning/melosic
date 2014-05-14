@@ -11,6 +11,8 @@ add_subdirectory(melin)
 add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
 set_target_properties(${PROJECT_NAME}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PROJECT_NAME}lib_EXPORTS)
 
+add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib)
+
 add_subdirectory(gui)
 
 include_directories(${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
@@ -30,9 +32,9 @@ qt5_use_modules(${PROJECT_NAME} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES})
 SET(LINK_LIBS ${LINK_LIBS} PARENT_SCOPE)
 
-target_link_libraries(${PROJECT_NAME}lib ${LINK_LIBS} ejpp)
+target_link_libraries(${PROJECT_NAME}lib ${LINK_LIBS})
 
 qt5_use_modules(${PROJECT_NAME} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})
 
-target_link_libraries(${PROJECT_NAME} ${LINK_LIBS} qt_gui ejpp)
+target_link_libraries(${PROJECT_NAME} ${LINK_LIBS} qt_gui)

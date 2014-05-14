@@ -44,7 +44,7 @@ private:
     std::atomic_bool connected;
 
 public:
-    void disconnect(Connection& conn) noexcept(noexcept(sig.disconnect(conn))) override {
+    void disconnect(Connection& conn) override {
         if(connected.load())
             connected.exchange(!sig.disconnect(conn));
     }
@@ -58,10 +58,6 @@ struct ConnHash;
 
 struct Connection {
     Connection() noexcept = default;
-    Connection(const Connection&) noexcept = default;
-    Connection& operator=(const Connection&) noexcept = default;
-    Connection(Connection&&) noexcept = default;
-    Connection& operator=(Connection&&) noexcept = default;
 
     bool operator==(const Connection& b) const noexcept {
         return pimpl == b.pimpl;
@@ -75,11 +71,12 @@ public:
     Connection(SignalCore<R(Args...)>& sig) :
         pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
 
-    void disconnect() noexcept(noexcept(pimpl->disconnect(*this))) {
+    void disconnect() {
         if(pimpl)
             pimpl->disconnect(*this);
     }
-    bool isConnected() const noexcept(noexcept(pimpl.operator ->())) {
+
+    bool isConnected() const noexcept {
         if(pimpl)
             return pimpl->isConnected();
         return false;
@@ -94,7 +91,7 @@ private:
     friend struct ConnHash;
 };
 
-inline void swap(Connection& a, Connection& b) noexcept {
+inline void swap(Connection& a, Connection& b) noexcept(noexcept(a.swap(b))) {
     a.swap(b);
 }
 
@@ -107,21 +104,19 @@ struct ConnHash {
 
 struct ScopedConnection : Connection {
     ScopedConnection() noexcept = default;
-    ScopedConnection(ScopedConnection&& conn) noexcept(noexcept(disconnect())) : Connection((disconnect(), conn)) {}
+    ScopedConnection(ScopedConnection&& conn) noexcept = default;
 
-    ScopedConnection& operator=(ScopedConnection&& conn)
-    noexcept(std::is_nothrow_move_constructible<ScopedConnection>::value)
-    {
-        using std::swap;
-        swap(conn, *this);
+    ScopedConnection& operator=(ScopedConnection&& conn) & {
+        disconnect();
+        swap(conn);
         return *this;
     }
 
     ScopedConnection(const Connection& conn) noexcept : Connection(conn) {}
 
-    ScopedConnection(Connection&& conn) noexcept : Connection(conn) {}
-    ScopedConnection& operator=(Connection conn) noexcept {
-        return *this = ScopedConnection(conn);
+    ScopedConnection(Connection&& conn) noexcept : Connection(std::move(conn)) {}
+    ScopedConnection& operator=(Connection conn) & {
+        return *this = ScopedConnection(std::move(conn));
     }
 
     ScopedConnection(const ScopedConnection&) noexcept = delete;
