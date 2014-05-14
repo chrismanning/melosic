@@ -303,6 +303,13 @@ ApplicationWindow {
             FilterPane {
                 id: genre
                 objectName: "genrepane"
+                generatorPath: "$.genre"
+
+                queryGenerator: function() {
+                    return { metadata: { $elemMatch: { key: "genre", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                }
+
+                header: "Genre"
 
                 Component.onCompleted: {
                     query = {}
@@ -315,14 +322,18 @@ ApplicationWindow {
                     text: document.genre === undefined ? "Unknown Genre" : document.genre
                     color: styleData.textColor
                 }
-
-                header: "Genre"
             }
             FilterPane {
                 id: artist
                 dependsOn: genre
-                dependsPath: "$.genre"
                 objectName: "artistpane"
+                generatorPath: "$.artist"
+
+                queryGenerator: function() {
+                    return { metadata: { $elemMatch: { key: "artist", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                }
+
+                header: "Artist"
 
                 delegate: Label {
                     x: 1
@@ -330,54 +341,23 @@ ApplicationWindow {
                     color: styleData.textColor
                 }
 
-                function init_query() {
-                    var tmp = {
-                        metadata: {
-                            $elemMatch: {
-                                key: "genre",
-                                value: {
-                                    $in: dependSelection
-                                }
-                            }
-                        }
-                    }
-
-                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
-
-                    if(has_unknowns)
-                        tmp.metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
-                    if(tmp.metadata.$elemMatch.value.$in.length === 0)
-                        delete tmp.metadata
-
-                    if(has_unknowns) {
-                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
-//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
-                                {'metadata.0': { $exists: false } }
-                            //]}
-                        if(tmp.metadata === undefined)
-                            tmp = u_qry
-                        else
-                            tmp = { $or: [tmp, u_qry] }
-                    }
-
-                    query = tmp
-                }
-
                 Component.onCompleted: {
-                    init_query()
                     paths = {
                         artist: "metadata[?(@.key == 'artist')].value"
                     }
                 }
-                onDependSelectionChanged: init_query()
             }
             FilterPane {
                 id: album
                 dependsOn: artist
-                dependsPath: "$.artist"
                 objectName: "albumpane"
+                generatorPath: "$.album"
 
-                sortFields: ["date", "year", "album"]
+                queryGenerator: function() {
+                    return { metadata: { $elemMatch: { key: "album", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                }
+
+                sortFields: ["date", "year", "album", "albumartist", "artist"]
 
                 delegate: Row {
                     x: 1
@@ -392,63 +372,28 @@ ApplicationWindow {
                         text: document.album === undefined ? "Unknown Album" : document.album
                         color: styleData.textColor
                     }
-                }
-
-                function init_query() {
-                    var tmp = {
-                        $and: [
-                            { metadata: { $elemMatch: { key: "artist", value: { $in: dependSelection } } } }
-                        ]
+                    Loader {
+                        active: document.comment !== undefined
+                        sourceComponent: Label {
+                            text: "("+document.comment+")"
+                            color: styleData.textColor
+                        }
                     }
-
-                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0 && dependsOn.query.length !== 0)
-                        tmp.$and.push(dependsOn.query)
-
-                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
-
-                    if(has_unknowns)
-                        tmp.$and[0].metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
-                    if(tmp.$and[0].metadata.$elemMatch.value.$in.length === 0)
-                        tmp.$and.splice(0, 1)
-
-                    if(tmp.$and.length === 0)
-                        delete tmp.$and
-                    else if(tmp.$and.length === 1)
-                        tmp = tmp.$and[0]
-
-                    if(has_unknowns) {
-                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
-//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
-                                {'metadata.0': { $exists: false } }
-                            //]}
-                        if(tmp.$and === undefined && tmp.metadata === undefined)
-                            tmp = u_qry
-                        else
-                            tmp = { $or: [tmp, u_qry] }
-                    }
-
-                    query = tmp
                 }
 
                 Component.onCompleted: {
-                    init_query()
                     paths = {
                         album: "metadata[?(@.key == 'album')].value",
-                        date: "metadata[?(@.key == 'date')].value"
+                        date: "metadata[?(@.key == 'date')].value",
+                        comment: "metadata[?(@.key == 'comment')].value"
                     }
                 }
-                onDependSelectionChanged: init_query()
-            }
-            Connections {
-                target: album.dependsOn
-                onDependSelectionChanged: album.init_query()
             }
 
             filterResultPane: track
             FilterPane {
                 id: track
                 dependsOn: album
-                dependsPath: "$.album"
                 objectName: "trackpane"
 
                 sortFields: ["tracknumber", "title"]
@@ -467,70 +412,13 @@ ApplicationWindow {
                     }
                 }
 
-                function init_query() {
-                    var tmp = {
-                        $and: [
-                            { metadata: { $elemMatch: { key: "album", value: { $in: dependSelection } } } }
-                        ]
-                    }
-
-                    if(dependsOn && dependsOn.dependsOn !== undefined && dependsOn.dependsOn.dependSelection.length > 0) {
-                        if(dependsOn.dependsOn.query.$and !== undefined)
-                            tmp.$and = tmp.$and.concat(dependsOn.dependsOn.query.$and)
-                        else
-                            tmp.$and.push(dependsOn.dependsOn.query)
-                    }
-
-                    if(dependsOn !== undefined && dependsOn.dependSelection.length > 0) {
-                        if(dependsOn.query.$and !== undefined)
-                            tmp.$and = tmp.$and.concat(dependsOn.query.$and)
-                        else
-                            tmp.$and.push(dependsOn.query)
-                    }
-
-                    var has_unknowns = dependSelection.some(function(v) {return v === ""})
-
-                    if(has_unknowns)
-                        tmp.$and[0].metadata.$elemMatch.value.$in = dependSelection.filter(function(v) {return v !== ""})
-                    if(tmp.$and[0].metadata.$elemMatch.value.$in.length === 0)
-                        tmp.$and.splice(0, 1)
-
-                    if(tmp.$and.length === 0)
-                        delete tmp.$and
-                    else if(tmp.$and.length === 1)
-                        tmp = tmp.$and[0]
-
-                    if(has_unknowns) {
-                        var u_qry = //{ $or:[//TODO: negate an elemMatch when it's supported
-//                                { metadata: {$not: {$elemMatch: {key: "genre"} } } },
-                                {'metadata.0': { $exists: false } }
-                            //]}
-                        if(tmp.$and === undefined && tmp.metadata === undefined)
-                            tmp = u_qry
-                        else
-                            tmp = { $or: [tmp, u_qry] }
-                    }
-
-                    query = tmp
-                }
-
                 Component.onCompleted: {
-                    init_query()
                     paths = {
                         title: "metadata[?(@.key == 'title')].value",
                         tracknumber: "metadata[?(@.key == 'tracknumber')].value",
                         location: "location"
                     }
                 }
-                onDependSelectionChanged: init_query()
-            }
-            Connections {
-                target: track.dependsOn
-                onDependSelectionChanged: track.init_query()
-            }
-            Connections {
-                target: track.dependsOn.dependsOn
-                onDependSelectionChanged: track.init_query()
             }
         }
 

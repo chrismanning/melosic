@@ -361,29 +361,52 @@ QJSValue FilterPane::queryGenerator() const {
     return pimpl->m_qml_query_generator;
 }
 
+struct toJSValue {
+    QJSValue operator()(boost::string_ref, jbson::element_type, boost::string_ref str) const {
+        return QJSValue{QString::fromLocal8Bit(str.data(), str.size())};
+    }
+    QJSValue operator()(boost::string_ref, jbson::element_type, bool val) const {
+        return QJSValue{val};
+    }
+    QJSValue operator()(boost::string_ref, jbson::element_type, int32_t val) const {
+        return QJSValue{val};
+    }
+    QJSValue operator()(boost::string_ref, jbson::element_type, double val) const {
+        return QJSValue{val};
+    }
+
+    template <typename T>
+    QJSValue operator()(boost::string_ref, jbson::element_type, T&&) const {
+        return QJSValue{};
+    }
+
+    QJSValue operator()(boost::string_ref, jbson::element_type) const {
+        return QJSValue{};
+    }
+};
+
 void FilterPane::setQueryGenerator(QJSValue val) {
     pimpl->m_qml_query_generator = val;
-//    pimpl->m_query_generator = [&val = pimpl->m_qml_query_generator](auto&& selection) {
-//        assert(val.isCallable());
-//        if(!val.isCallable())
-//            return ""s;
-//        QJSValueList call_args;
-//        std::transform(selection.begin(), selection.end(), std::back_inserter(call_args),
-//                       [](auto&& str) {
-//            return QJSValue{QString::fromStdString(str)};
-//        });
-//        QVariant ret = val.call(call_args).toVariant();
-//        assert(ret.isValid() && !ret.isNull());
+    pimpl->m_query_generator = [&val = pimpl->m_qml_query_generator](const std::vector<jbson::element>& selection)
+    -> jbson::document {
+        assert(val.isCallable());
+        if(!val.isCallable())
+            return {};
+        QJSValueList call_args;
+        std::transform(selection.begin(), selection.end(), std::back_inserter(call_args),
+                       [](const jbson::element& elem) {
+            return elem.visit(toJSValue{});
+        });
+        auto ret = val.call(call_args);
+        assert(!ret.isError());
+        QVariant variant = ret.toVariant();
+        assert(variant.isValid() && !variant.isNull());
 
-//        if(ret.type() == QVariant::String)
-//            return ret.toString().toStdString();
-//        else if(ret.type() == QVariant::Map) {
-//            auto json = QJsonDocument::fromVariant(ret).toJson(QJsonDocument::Compact);
-//            return std::string{json.data(), static_cast<size_t>(json.size())};
-//        }
-//        else
-//            assert(false);
-//    };
+        if(variant.type() == QVariant::String || variant.type() == QVariant::Map)
+            return to_document(variant);
+        else
+            assert(false);
+    };
     Q_EMIT queryGeneratorChanged(val);
 }
 
