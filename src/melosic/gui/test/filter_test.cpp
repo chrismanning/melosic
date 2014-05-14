@@ -15,97 +15,488 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <vector>
-#include <set>
+#include <QtTest/QtTest>
+#include <QJsonDocument>
+#include <QVariant>
 
-#include <jbson/document.hpp>
+#include <boost/range/algorithm/transform.hpp>
+#include <ejpp/ejdb.hpp>
 #include <jbson/json_reader.hpp>
 #include <jbson/json_writer.hpp>
-using namespace jbson;
+#include <jbson/builder.hpp>
+using namespace jbson::literal;
 
-namespace std {
+#include <melosic/gui/filterpane.hpp>
+using namespace Melosic;
 
-template <typename T>
-ostream& operator<<(ostream& os, const vector<T>& ds) {
-    auto end = ds.end();
-    os << '[';
-    for(auto i = ds.begin(); i != end;) {
-        os << "\n\t" << *i;
-        if(++i != end)
-            os << ',';
-    }
-    os << ']';
-    return os;
-}
-
-} // std
-
-namespace jbson {
-
-template <typename C>
-std::ostream& operator<<(std::ostream& os, const basic_document_set<C>& ds) {
-    std::string str;
-    write_json(basic_document<C>(ds), std::back_inserter(str));
-    os << str;
-    return os;
-}
-
-template <typename C1, typename C2>
-std::ostream& operator<<(std::ostream& os, const basic_document<C1,C2>& ds) {
-    std::string str;
-    write_json(ds, std::back_inserter(str));
-    os << str;
-    return os;
-}
-
-} // jbson
-
-#include <catch.hpp>
-
-template <typename AssocT, typename ValueT>
-auto find_optional(AssocT&& rng, ValueT&& val) {
-    boost::optional<typename boost::range_value<std::decay_t<AssocT>>::type> ret;
-    auto it = rng.find(val);
-    if(it != std::end(rng))
-        return ret = *it;
-    return ret = boost::none;
-}
-
-template <typename AssocRangeT, typename StringRangeT>
-static inline void sort_by_criteria_impl(AssocRangeT& rng, const StringRangeT& sort_fields) {
-    boost::range::sort(rng, [&](auto&& a, auto&& b) {
-        for(const auto& sf: sort_fields) {
-            auto val1 = find_optional(a, sf);
-            auto val2 = find_optional(b, sf);
-            if(val1 == val2)
-                continue;
-            return val1 < val2;
-        }
-        return a < b;
+template <typename RangeT>
+static std::vector<jbson::element> to_array(RangeT&& range) {
+    std::vector<jbson::element> arr;
+    size_t i{0};
+    boost::transform(range, std::back_inserter(arr), [&i](auto&& val) {
+        jbson::element el{val};
+        el.name(std::to_string(i++));
+        return el;
     });
+    assert(boost::distance(arr) == boost::distance(range));
+    return std::move(arr);
 }
 
-template <typename AssocRangeT, typename StringRangeT>
-static void sort_by_criteria(AssocRangeT& rng, const StringRangeT& sort_fields) {
-    sort_by_criteria_impl(rng, sort_fields);
-}
+struct FilterTest : QObject {
+    Q_OBJECT
 
-template <typename AssocRangeT, typename StringT>
-static void sort_by_criteria(AssocRangeT& rng, std::initializer_list<StringT> sort_fields) {
-    sort_by_criteria_impl(rng, sort_fields);
-}
+    std::unique_ptr<FilterPane> pane1;
+    std::unique_ptr<FilterPane> pane2;
+    std::unique_ptr<FilterPane> pane3;
 
-TEST_CASE("SortTest1") {
-    std::vector<document_set> docs;
-    docs.push_back(R"({"title":"some title","tracknumber":"2"})"_json_set);
-    docs.push_back(R"({"title":"some title","tracknumber":"9"})"_json_set);
-    docs.push_back(R"({"title":"some title II","tracknumber":"2"})"_json_set);
-    decltype(docs) ex_docs;
-    ex_docs.push_back(R"({"title":"some title","tracknumber":"2"})"_json_set);
-    ex_docs.push_back(R"({"title":"some title II","tracknumber":"2"})"_json_set);
-    ex_docs.push_back(R"({"title":"some title","tracknumber":"9"})"_json_set);
-    REQUIRE(3u == docs.size());
+    ejdb::db db;
+    ejdb::collection coll;
+    std::error_code ec;
 
-    sort_by_criteria(docs, {"tracknumber", "title"});
-    CHECK(ex_docs == docs);
-}
+private Q_SLOTS:
+    // global
+    void initTestCase() {
+        db.open(QDir::tempPath().toStdString()+ "/testdb", ejdb::db_mode::read|
+                                                ejdb::db_mode::write|
+                                                ejdb::db_mode::create|
+                                                ejdb::db_mode::truncate|
+                                                ejdb::db_mode::trans_sync, ec);
+        QVERIFY(!ec);
+        QVERIFY(db.is_open());
+
+        coll = db.create_collection("test", ec);
+        QVERIFY(!ec);
+        QVERIFY(static_cast<bool>(coll));
+
+        // create data
+        coll.save_document(R"({"name": "Bill", "age": 32, "city": "London"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Alice", "age": 32, "city": "Bristol"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Steve", "age": 21, "city": "Birmingham"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Fred", "age": 46, "city": "Manchester"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Jim", "age": 46, "city": "London"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Jane", "age": 32, "city": "Liverpool"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Bob", "age": 21, "city": "Manchester"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Dave", "age": 32, "city": "London"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Alice", "age": 21, "city": "Manchester"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Bill", "age": 25, "city": "London"})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Bob", "age": 45})"_json_doc.data(), ec);
+        coll.save_document(R"({"name": "Bill", "city": "London"})"_json_doc.data(), ec);
+        coll.save_document(R"({"age": 42, "city": "Bristol"})"_json_doc.data(), ec);
+
+        coll.sync(ec);
+        QVERIFY(!ec);
+
+        auto all = coll.get_all();
+        QVERIFY(!all.empty());
+
+        coll = db.get_collection("test", ec);
+        QVERIFY(!ec);
+        QVERIFY(static_cast<bool>(coll));
+
+        all = coll.get_all();
+        QVERIFY(!all.empty());
+
+        QVERIFY(db.sync(ec));
+        QVERIFY(!ec);
+
+        QVERIFY(db.close(ec));
+        QVERIFY(!ec);
+        QVERIFY(!db.is_open());
+
+        QVERIFY(db.open(QDir::tempPath().toStdString()+ "/testdb", ejdb::db_mode::read|
+                        ejdb::db_mode::write|
+                        ejdb::db_mode::create|
+                        ejdb::db_mode::trans_sync, ec));
+        QVERIFY(!ec);
+        QVERIFY(db.is_open());
+
+        coll = db.get_collection("test", ec);
+        QVERIFY(!ec);
+        QVERIFY(static_cast<bool>(coll));
+
+        all = coll.get_all();
+        QVERIFY(!all.empty());
+    }
+
+    void cleanupTestCase() {
+        QVERIFY(!ec);
+        db.close(ec);
+        QVERIFY(!ec);
+    }
+
+    // every test
+    void init() {
+        QVERIFY(!ec);
+
+        pane1 = std::make_unique<FilterPane>(db, coll);
+        pane1->setObjectName(QStringLiteral("pane1"));
+        pane1->setPaths(QStringLiteral(R"({"city": "$.city"})"));
+        pane1->setQuery(QStringLiteral("{}"));
+        pane1->setUnknownQuery(QStringLiteral(R"({ "city": { "$exists": false } })"));
+
+        pane1->setQueryGenerator([](const std::vector<jbson::element>& selection) {
+            std::clog << "generating query from pane1 selection of " << selection.size() << " elements\n";
+            auto qry = jbson::builder("city", jbson::element_type::document_element, jbson::builder
+                                      ("$in", jbson::element_type::array_element, to_array(selection))
+                                     );
+            return jbson::document(qry);
+        });
+        pane1->setGeneratorPath(QStringLiteral("$.city"));
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+
+        pane2 = std::make_unique<FilterPane>(db, coll);
+        pane2->setObjectName(QStringLiteral("pane2"));
+        pane2->setPaths(QStringLiteral(R"({"age": "$.age"})"));
+        pane2->setDependsOn(pane1.get());
+        pane2->setUnknownQuery(QStringLiteral(R"({ "age": { "$exists": false } })"));
+
+        pane2->setQueryGenerator([](const std::vector<jbson::element>& selection) {
+            std::clog << "generating query from pane2 selection of " << selection.size() << " elements\n";
+            auto qry = jbson::builder("age", jbson::element_type::document_element, jbson::builder
+                                      ("$in", jbson::element_type::array_element, to_array(selection))
+                                     );
+            return jbson::document(qry);
+        });
+        pane2->setGeneratorPath(QStringLiteral("$.age"));
+
+        QCOMPARE(pane2->model()->rowCount(), 7);
+
+        pane3 = std::make_unique<FilterPane>(db, coll);
+        pane3->setObjectName(QStringLiteral("pane3"));
+        pane3->setPaths(QStringLiteral(R"({"name": "$.name"})"));
+        pane3->setDependsOn(pane2.get());
+
+        QCOMPARE(pane3->model()->rowCount(), 9);
+
+        std::clog << "finish init()" << std::endl;
+    }
+
+    void cleanup() {
+        QVERIFY(!ec);
+        pane3.reset();
+        pane2.reset();
+        pane1.reset();
+    }
+
+    // tests
+    void queryTest1() {
+        auto query = db.create_query("{}"_json_doc.data(), ec);
+        QVERIFY(!ec);
+        auto results = coll.execute_query(query);
+        QVERIFY(!results.empty());
+
+        QCOMPARE(results.size(), (size_t)13);
+    }
+    void queryTest2() {
+        auto query = db.create_query("{}"_json_doc.data(), ec);
+        QVERIFY(!ec);
+
+        std::vector<jbson::document> docs;
+        for(auto&& data : coll.execute_query(query))
+            docs.emplace_back(std::move(data));
+        auto results = Melosic::Library::apply_named_paths(docs, {{"age", "$.age"}});
+        QVERIFY(!results.empty());
+        boost::sort(results);
+
+        docs.clear();
+        std::transform(results.begin(), std::unique(results.begin(), results.end()),
+                       std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
+
+        QCOMPARE(docs.size(), (size_t)7);
+    }
+
+    void filterTest1() {
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+
+        QSignalSpy spy1{pane1.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy1.isValid());
+        QSignalSpy spy2{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy2.isValid());
+        QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy3.isValid());
+
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "London", 1,
+                                          Qt::MatchContains);
+        QCOMPARE(idxs.size(), 1);
+
+        pane1->selectionModel()->select(idxs[0], QItemSelectionModel::ClearAndSelect);
+        QCOMPARE(spy1.count(), 1);
+        QCOMPARE(spy2.count(), 1);
+        QCOMPARE(spy3.count(), 1);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 4);
+        QCOMPARE(pane3->model()->rowCount(), 3);
+
+        QVariant data;
+
+        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral("{  }"));
+
+        data = pane2->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 25 })"));
+
+        data = pane2->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 32 })"));
+
+        data = pane2->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 46 })"));
+
+        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
+
+        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Dave" })"));
+
+        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Jim" })"));
+
+        pane1->selectionModel()->clear();
+        QCOMPARE(spy1.count(), 2);
+        QCOMPARE(spy2.count(), 2);
+        QCOMPARE(spy3.count(), 2);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+    }
+
+    void filterTest2() {
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+
+        QSignalSpy spy1{pane1.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy1.isValid());
+        QSignalSpy spy2{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy2.isValid());
+        QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy3.isValid());
+
+        QItemSelection selection;
+
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "Manchester", 1,
+                                          Qt::MatchContains);
+        QCOMPARE(idxs.size(), 1);
+        selection.push_back(QItemSelectionRange(idxs[0]));
+
+        idxs = pane1->model()->match(pane1->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "Bristol", 1,
+                                          Qt::MatchContains);
+        QCOMPARE(idxs.size(), 1);
+        selection.push_back(QItemSelectionRange(idxs[0]));
+
+        pane1->selectionModel()->select(selection, QItemSelectionModel::ClearAndSelect);
+        QCOMPARE(spy1.count(), 1);
+        QCOMPARE(spy2.count(), 1);
+        QCOMPARE(spy3.count(), 1);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 4);
+        QCOMPARE(pane3->model()->rowCount(), 4);
+
+        QVariant data;
+
+        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 21 })"));
+
+        data = pane2->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 32 })"));
+
+        data = pane2->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 42 })"));
+
+        data = pane2->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 46 })"));
+
+        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({  })"));
+
+        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Alice" })"));
+
+        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bob" })"));
+
+        data = pane3->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Fred" })"));
+
+        pane1->selectionModel()->clear();
+        QCOMPARE(spy1.count(), 2);
+        QCOMPARE(spy2.count(), 2);
+        QCOMPARE(spy3.count(), 2);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+    }
+
+    void filterTest3() {
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QSignalSpy spy1{pane1.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy1.isValid());
+        QSignalSpy spy2{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy2.isValid());
+        QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy3.isValid());
+
+        auto idxs = pane2->model()->match(pane2->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "32", 1,
+                                          Qt::MatchContains);
+        QCOMPARE(idxs.size(), 1);
+
+        pane2->selectionModel()->select(idxs[0], QItemSelectionModel::ClearAndSelect);
+        QVERIFY(pane2->selectionModel()->isSelected(idxs[0]));
+
+        QCOMPARE(spy1.count(), 0);
+        QCOMPARE(spy2.count(), 1);
+        QCOMPARE(spy3.count(), 1);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 4);
+
+        QVariant data;
+
+        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Alice" })"));
+
+        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
+
+        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Dave" })"));
+
+        data = pane3->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Jane" })"));
+
+        pane2->selectionModel()->clear();
+        QCOMPARE(spy1.count(), 0);
+        QCOMPARE(spy2.count(), 2);
+        QCOMPARE(spy3.count(), 2);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+    }
+
+    void filterTest4() {
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+
+        QSignalSpy spy1{pane1.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy1.isValid());
+        QSignalSpy spy2{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy2.isValid());
+        QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy3.isValid());
+
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "{  }", 1,
+                                          Qt::MatchExactly);
+        QCOMPARE(idxs.size(), 1);
+
+        pane1->selectionModel()->select(idxs[0], QItemSelectionModel::ClearAndSelect);
+        QCOMPARE(spy1.count(), 1);
+        QCOMPARE(spy2.count(), 1);
+        QCOMPARE(spy3.count(), 1);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 1);
+        QCOMPARE(pane3->model()->rowCount(), 1);
+
+        QVariant data;
+
+        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 45 })"));
+
+        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bob" })"));
+
+        pane1->selectionModel()->clear();
+        QCOMPARE(spy1.count(), 2);
+        QCOMPARE(spy2.count(), 2);
+        QCOMPARE(spy3.count(), 2);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+    }
+
+    void filterTest5() {
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QSignalSpy spy1{pane1.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy1.isValid());
+        QSignalSpy spy2{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy2.isValid());
+        QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
+        QVERIFY(spy3.isValid());
+
+        auto idxs = pane2->model()->match(pane2->model()->index(0, 0),
+                                          JsonDocModel::DocumentStringRole,
+                                          "{  }", 1,
+                                          Qt::MatchExactly);
+        QCOMPARE(idxs.size(), 1);
+
+        pane2->selectionModel()->select(idxs[0], QItemSelectionModel::ClearAndSelect);
+        QVERIFY(pane2->selectionModel()->isSelected(idxs[0]));
+
+        QCOMPARE(spy1.count(), 0);
+        QCOMPARE(spy2.count(), 1);
+        QCOMPARE(spy3.count(), 1);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 1);
+
+        QVariant data;
+
+        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        QVERIFY(data.type() == QVariant::String);
+        QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
+
+        pane2->selectionModel()->clear();
+        QCOMPARE(spy1.count(), 0);
+        QCOMPARE(spy2.count(), 2);
+        QCOMPARE(spy3.count(), 2);
+
+        QCOMPARE(pane1->model()->rowCount(), 6);
+        QCOMPARE(pane2->model()->rowCount(), 7);
+        QCOMPARE(pane3->model()->rowCount(), 9);
+    }
+};
+
+QTEST_MAIN(FilterTest)
+#include "filter_test.moc"
