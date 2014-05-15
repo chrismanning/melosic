@@ -157,11 +157,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
         TRACE_LOG(logject) << "changeState(): changing state to " << typeid(S);
 
-        auto r(m_current_state);
-        assert(r);
-        m_current_state = std::make_shared<S>(stateChanged);
-        assert(m_current_state);
-        return std::move(r);
+        return std::exchange(m_current_state, std::make_shared<S>(stateChanged));
     }
 
     std::unique_ptr<ASIO::AudioOutputBase> asioOutput;
