@@ -328,17 +328,11 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
         ec = ASIO::error::make_error_code(ASIO::error::eof);
         n = 0;
     }
-//        else if(!m_current_track->valid()) {
-//            TRACE_LOG(logject) << "current track not playable; stopping & resetting playlist";
-//            ec = ASIO::error::make_error_code(ASIO::error::eof);
-//            n = 0;
-//            jumpTo(0);
-//        }
     else try {
         if(!m_current_source) {
-            if(m_next_source)
+            if(m_next_source) // get pre-loaded source if available
                 m_current_source = std::move(m_next_source);
-            else
+            else // otherwise open new source from playlist item. throws on error
                 m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
         }
         const auto as = m_current_source->getAudioSpecs();
@@ -370,6 +364,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
             auto new_as = as;
             new_as.bps = asioOutput->current_specs().bps;
             if(new_as != asioOutput->current_specs()) {
+                // stop + play to force device to re-prepare
                 TRACE_LOG(logject) << "AudioSpecs mismatch";
                 ::operator delete(ASIO::buffer_cast<void*>(tmp));
                 n_decoded = 0;
@@ -380,7 +375,8 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
                 return;
             }
             else {
-                TRACE_LOG(logject) << "widening from " << (unsigned)as.bps
+                // pad with zeroes or trim the fat
+                TRACE_LOG(logject) << "bps mismatch; widening from " << (unsigned)as.bps
                                    << " to " << (unsigned)asioOutput->current_specs().bps;
                 auto buf = widen(tmp, n_decoded, asioOutput->current_specs().bps);
                 buf.audio_specs = tmp.audio_specs;
