@@ -33,6 +33,8 @@ namespace fs = boost::filesystem;
 #include <boost/filesystem/fstream.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 
+#include <asio/error.hpp>
+
 #include <taglib/fileref.h>
 #include <taglib/tpropertymap.h>
 
@@ -99,8 +101,10 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
 
     boost::system::error_code ec;
     const auto status = fs::status(path, ec);
-    if(ec)
+    if(ec) {
+        ERROR_LOG(logject) << "Could not get tracks for path (" << path << "): " << ec.message();
         return {};
+    }
 
     if(fs::is_directory(status)) {
         for(auto&& entry : fs::recursive_directory_iterator(path))
@@ -150,6 +154,7 @@ struct libmagic_handle final {
         assert(m_handle != nullptr);
         int r = magic_load(m_handle, nullptr);
         assert(r == 0);
+        (void)r;
     }
 
     ~libmagic_handle() noexcept {
@@ -180,9 +185,58 @@ static std::string detect_mime_type(const network::uri& uri) {
     return {};
 }
 
+struct TrackSource : PCMSource {
+    explicit TrackSource(std::unique_ptr<PCMSource> impl, chrono::milliseconds start, chrono::milliseconds end)
+        : pimpl(std::move(impl)), m_start(start), m_end(end > m_start ? end : pimpl->duration()) {
+        assert(start >= 0ms);
+        assert(end >= 0ms);
+        if(start > 0ms)
+            pimpl->seek(start);
+    }
+
+    virtual ~TrackSource() {}
+
+    void seek(chrono::milliseconds dur) override {
+        dur += m_start;
+        if(dur >= m_end)
+            dur = pimpl->duration();
+        pimpl->seek(dur);
+    }
+    chrono::milliseconds tell() const override {
+        return std::max(pimpl->tell() - m_start, m_start);
+    }
+    chrono::milliseconds duration() const override {
+        if(m_end <= m_start)
+            return pimpl->duration();
+        return m_end - m_start;
+    }
+    AudioSpecs getAudioSpecs() const override {
+        return pimpl->getAudioSpecs();
+    }
+    size_t decode(PCMBuffer& buf, std::error_code& ec) override {
+        if(pimpl->tell() >= m_end)
+            return (ec = asio::error::eof, 0);
+        auto bytes = pimpl->decode(buf, ec);
+        auto time = pimpl->tell() + getAudioSpecs().bytes_to_time<std::chrono::milliseconds>(bytes);
+        if(time > m_end)
+            bytes -= getAudioSpecs().time_to_bytes(time - m_end);
+        return bytes;
+    }
+    bool valid() const override {
+        return pimpl->valid() && (tell() < duration() && tell() >= 0ms);
+    }
+    void reset() override {
+        pimpl->reset();
+    }
+
+  private:
+    std::unique_ptr<PCMSource> pimpl;
+    const chrono::milliseconds m_start;
+    const chrono::milliseconds m_end;
+};
+
 std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     unique_lock l(pimpl->mu);
-    // TODO: detect mime type here
     std::string mime_type = detect_mime_type(track.uri());
     if(mime_type.empty())
         return nullptr;
@@ -197,8 +251,8 @@ std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     if(fact != pimpl->inputFactories.end())
         ret = fact->second(std::move(is));
 
-    if(ret && track.start() != 0ms)
-        ret->seek(track.start());
+    if(ret)
+        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
     return std::move(ret);
 }
 

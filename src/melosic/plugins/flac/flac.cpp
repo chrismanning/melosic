@@ -68,7 +68,7 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
         finish();
     }
 
-    bool end() {
+    bool end() const {
         auto state = (::FLAC__StreamDecoderState)get_state();
         return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
     }
@@ -189,7 +189,7 @@ struct FlacDecoderImpl : FLAC::Decoder::Stream {
         }
     }
 
-    chrono::milliseconds tell() {
+    chrono::milliseconds tell() const {
         return as.samples_to_time<chrono::milliseconds>(lastSample);
     }
 
@@ -239,7 +239,7 @@ public:
         impl.seek(dur);
     }
 
-    chrono::milliseconds tell() override {
+    chrono::milliseconds tell() const override {
         return impl.tell();
     }
 
@@ -253,11 +253,11 @@ public:
         buf.clear();
     }
 
-    AudioSpecs getAudioSpecs() override {
+    AudioSpecs getAudioSpecs() const override {
         return as;
     }
 
-    bool valid() override {
+    bool valid() const override {
         return !(impl.end() && buf.empty());
     }
 

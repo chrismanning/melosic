@@ -91,11 +91,11 @@ public:
     typedef char char_type;
     virtual ~PCMSource() {}
     virtual void seek(chrono::milliseconds dur) = 0;
-    virtual chrono::milliseconds tell() = 0;
+    virtual chrono::milliseconds tell() const = 0;
     virtual chrono::milliseconds duration() const = 0;
-    virtual AudioSpecs getAudioSpecs() = 0;
+    virtual AudioSpecs getAudioSpecs() const = 0;
     virtual size_t decode(PCMBuffer& buf, std::error_code& ec) = 0;
-    virtual bool valid() = 0;
+    virtual bool valid() const = 0;
     virtual void reset() = 0;
 };
 
