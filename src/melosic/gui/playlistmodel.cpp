@@ -289,6 +289,9 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                 }
             }
         }
+        else {
+            TRACE_LOG(logject) << "Unsupported file type: " << var.typeName();
+        }
     }
 
     if(tracks.empty()) {
