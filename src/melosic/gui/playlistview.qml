@@ -230,7 +230,7 @@ ListView {
                 manager.currentModel.insertTracks(index, drop.urls)
                 drop.acceptProposedAction()
             }
-            if(drop.formats.indexOf("melo/filter.selection" >= 0)) {
+            if(drop.formats.indexOf("melo/filter.selection") >= 0) {
                 if(drop.source.mimeData !== "undefined" &&
                         drop.source.mimeData["melo/filter.selection"] !== "undefined") {
                     manager.currentModel.insertTracks(index, drop.source.mimeData["melo/filter.selection"])
