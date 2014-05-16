@@ -337,7 +337,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
         }
         const auto as = m_current_source->getAudioSpecs();
 
-        if(!in_buf.empty()) {
+        while(!in_buf.empty()) {
             if(ASIO::buffer_size(ASIO::mutable_buffer(in_buf.front())) <= 0)
                 in_buf.pop_front();
             else {
@@ -360,7 +360,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
             TRACE_LOG(logject) << "end of track";
             ::operator delete(ASIO::buffer_cast<void*>(tmp));
         }
-        else if(as.bps != asioOutput->current_specs().bps) {
+        else if(as != asioOutput->current_specs()) {
             auto new_as = as;
             new_as.bps = asioOutput->current_specs().bps;
             if(new_as != asioOutput->current_specs()) {
