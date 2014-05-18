@@ -147,12 +147,12 @@ protected:
                     }
                     catch(TaskQueueError& e) {
                         scope_unlock_exit_lock<unique_lock> s{l};
-                        i->second(std::forward<Args>(args)...);
+                        i->second(std::forward<A>(args)...);
                     }
                 }
                 else {
                     scope_unlock_exit_lock<unique_lock> s{l};
-                    i->second(std::forward<Args>(args)...);
+                    i->second(std::forward<A>(args)...);
                 }
                 ++i;
             }
