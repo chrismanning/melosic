@@ -32,6 +32,8 @@
 #include <jbson/element_fwd.hpp>
 #include <jbson/document_fwd.hpp>
 
+#include <network/uri.hpp>
+
 #include <melosic/common/optional_fwd.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/common.hpp>
@@ -48,6 +50,9 @@ class Manager;
 namespace Plugin {
 class Manager;
 }
+namespace Thread {
+class Manager;
+}
 
 namespace Core {
 class Track;
@@ -57,6 +62,10 @@ namespace Signals {
 namespace Library {
 using ScanStarted = SignalCore<void()>;
 using ScanEnded = SignalCore<void()>;
+
+using Added = SignalCore<void(network::uri)>;
+using Removed = SignalCore<void(network::uri)>;
+using Updated = SignalCore<void(network::uri)>;
 }
 }
 
@@ -67,20 +76,14 @@ struct PathEquivalence;
 class Manager final {
     using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
 public:
-    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&);
+    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&, Thread::Manager&);
 
     ~Manager();
 
     MELOSIC_EXPORT const boost::synchronized_value<SetType>& getDirectories() const;
-    void scan();
-
-    MELOSIC_EXPORT ejdb::db& getDataBase() const;
 
     MELOSIC_EXPORT
     std::vector<jbson::document> query(const jbson::document&) const;
-//    MELOSIC_EXPORT
-//    std::vector<jbson::element>
-//    query(const jbson::document&, boost::string_ref) const;
 
     MELOSIC_EXPORT std::vector<jbson::document_set>
     query(const jbson::document&, ForwardRange<std::tuple<std::string, std::string> >) const;

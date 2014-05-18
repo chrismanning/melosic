@@ -22,6 +22,7 @@
 namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
 #include <boost/functional/hash/hash.hpp>
+#include <boost/container/flat_map.hpp>
 
 #ifndef NDEBUG
 #include <jbson/json_writer.hpp>
@@ -41,7 +42,36 @@ using namespace jbson::literal;
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/input.hpp>
 #include <melosic/common/typeid.hpp>
+#include <melosic/common/thread.hpp>
 #include "library.hpp"
+
+namespace std {
+
+template <typename Container, typename RepT, typename RatioT>
+void value_set(jbson::basic_element<Container>& elem, std::chrono::duration<RepT, RatioT> dur) {
+    elem.value(std::chrono::duration_cast<std::chrono::duration<RepT, std::milli>>(dur).count());
+}
+
+template <typename Container, typename ClockT, typename DurT>
+void value_set(jbson::basic_element<Container>& elem, std::chrono::time_point<ClockT, DurT> time) {
+    value_set(elem, time.time_since_epoch());
+}
+
+template <typename Container, typename RepT, typename RatioT>
+void value_get(const jbson::basic_element<Container>& elem, std::chrono::duration<RepT, RatioT>& dur) {
+    RepT count = get<RepT>(elem);
+    dur = std::chrono::duration_cast<std::chrono::duration<RepT, RatioT>>(
+                std::chrono::duration<RepT, std::milli>{count});
+}
+
+template <typename Container, typename ClockT, typename DurT>
+void value_get(const jbson::basic_element<Container>& elem, std::chrono::time_point<ClockT, DurT>& time) {
+    DurT dur;
+    value_get(elem, dur);
+    time = std::chrono::time_point<ClockT, DurT>{dur};
+}
+
+}
 
 namespace Melosic {
 namespace Library {
@@ -52,6 +82,10 @@ using unique_lock = std::unique_lock<mutex>;
 struct ScanStarted : Signals::Signal<Signals::Library::ScanStarted> {};
 struct ScanEnded : Signals::Signal<Signals::Library::ScanEnded> {};
 
+struct Added : Signals::Signal<Signals::Library::Added> {};
+struct Removed : Signals::Signal<Signals::Library::Removed> {};
+struct Updated : Signals::Signal<Signals::Library::Updated> {};
+
 static const fs::path DataDir{Directories::dataHome() / "melosic"};
 
 struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, bool> {
@@ -59,7 +93,7 @@ struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, 
 };
 
 struct Manager::impl {
-    impl(Config::Manager&, Decoder::Manager&);
+    impl(Config::Manager&, Decoder::Manager&, Thread::Manager&);
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& ubase);
     void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val);
@@ -67,35 +101,76 @@ struct Manager::impl {
     void scan();
     void scan(const fs::path& dir);
 
-    void incremental_scan();
-    void incremental_scan(const fs::path& dir);
+    void add(const fs::path& file);
+    void add(const network::uri& uri);
+    void remove(const fs::path& file);
+    void remove(const network::uri& uri);
+    void remove_prefix(const fs::path& dir);
+    void update(const fs::path& file);
+    void update(const network::uri& uri);
+    std::vector<jbson::document> query(const jbson::document& qdoc);
 
     Decoder::Manager& decman;
+    Thread::Manager& tman;
     Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
     Config::Conf conf{"Library"};
-    ejdb::db db;
+    ejdb::db m_db;
     ScanStarted scanStarted;
     ScanEnded scanEnded;
+    Added added;
+    Removed removed;
+    Updated updated;
     boost::synchronized_value<Manager::SetType> m_dirs;
     mutex mu;
     std::atomic<bool> pluginsLoaded{false};
 };
 
-Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman) : decman(decman) {
+Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::Manager& tman)
+    : decman(decman), tman(tman) {
     if(!fs::exists(DataDir))
         fs::create_directory(DataDir);
     assert(fs::exists(DataDir) && fs::is_directory(DataDir));
-    std::error_code ec;
-    db.open((DataDir / "medialibrary").generic_string(),
-            ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create | ejdb::db_mode::trans_sync, ec);
+    m_db.open((DataDir / "medialibrary").generic_string(),
+            ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create);
 
-    //    TRACE_LOG(logject) << "db metadata:" << db.metadata();
+    m_db.create_collection("tracks");
 
     confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+
+    added.connect([this](network::uri uri) {
+        LOG(logject) << "Media added to library: " << uri;
+    });
+    removed.connect([this](network::uri uri) {
+        LOG(logject) << "Media removed from library: " << uri;
+    });
+    updated.connect([this](network::uri uri) {
+        LOG(logject) << "Media updated in library: " << uri;
+    });
+    scanEnded.connect([this]() {
+        TRACE_LOG(logject) << "Setting indexes on \"tracks\" collection";
+        std::error_code ec;
+        auto coll = m_db.get_collection("tracks", ec);
+        if(ec) {
+            ERROR_LOG(logject) << "Could not get collection: " << ec.message();
+            return;
+        }
+        assert(coll);
+        coll.set_index("modified", ejdb::index_mode::number|ejdb::index_mode::rebuild, ec);
+        if(ec) {
+            ERROR_LOG(logject) << "Could not set index on collection field \"modified\": " << ec.message();
+            ec.clear();
+        }
+
+        coll.set_index("location", ejdb::index_mode::string|ejdb::index_mode::rebuild, ec);
+        if(ec) {
+            ERROR_LOG(logject) << "Could not set index on collection field \"location\": " << ec.message();
+            ec.clear();
+        }
+        TRACE_LOG(logject) << "Indexes set on \"tracks\" collection";
+    });
 }
 
 void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
-    //    unique_lock l(mu);
     TRACE_LOG(logject) << "Library conf loaded";
 
     auto base = ubase.synchronize();
@@ -107,37 +182,78 @@ void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
     assert(c);
     c->merge(conf);
     c->addDefaultFunc([=]() { return conf; });
+
+    auto coll = m_db.get_collection("tracks");
+    assert(coll);
+    ejdb::unique_transaction trans(coll.transaction());
+
     c->iterateNodes([&](const std::tuple<Config::KeyType, Config::VarType>& pair) {
         using std::get;
-        //        scope_unlock_exit_lock<decltype(l)> rl{l};
         TRACE_LOG(logject) << "Config: variable loaded: " << get<0>(pair);
         variableUpdateSlot(get<0>(pair), get<1>(pair));
     });
+
+    {
+        TRACE_LOG(logject) << "Removing tracks not under a configured directory";
+
+        auto dirs = m_dirs.synchronize();
+        auto builder = jbson::builder("location", jbson::builder("$exists", true));
+        for(auto&& dir : boost::make_iterator_range(dirs->begin(), dirs->end())) {
+            TRACE_LOG(logject) << "Removing tracks not under prefix: " << dir;
+            builder("location", jbson::builder("$not", jbson::builder("$begin", Input::to_uri(dir).string())));
+        }
+        builder("$dropall", true);
+        auto qdoc = jbson::document(std::move(builder));
+        auto qry = m_db.create_query(qdoc.data());
+
+        auto n = coll.execute_query<ejdb::query_search_mode::count_only>(qry);
+        LOG(logject) << n << " tracks removed";
+    }
+
     c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
 }
 
 void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
     using std::get;
-    //    unique_lock l(mu);
     TRACE_LOG(logject) << "Config: variable updated: " << key;
     try {
         if(key == "directories") {
-            auto tmp_dirs = get<std::vector<Config::VarType>>(val);
-            scanStarted();
             auto dirs = m_dirs.synchronize();
-            for(auto&& dir : tmp_dirs) {
-                auto p = get<std::string>(dir);
+            auto config_vars = get<std::vector<Config::VarType>>(val);
+
+            std::set<fs::path> config_dirs, old_dirs{dirs->begin(), dirs->end()};
+            for(auto&& var : config_vars)
+                config_dirs.insert(get<std::string>(var));
+
+            std::vector<fs::path> missing_dirs;
+
+            std::set_difference(old_dirs.begin(), old_dirs.end(), config_dirs.begin(), config_dirs.end(),
+                                std::back_inserter(missing_dirs));
+            for(auto&& p : missing_dirs)
+                remove_prefix(p);
+
+            missing_dirs.clear();
+            for(auto&& p : config_dirs) {
                 if(!fs::is_directory(p))
                     continue;
-                auto ret = dirs->insert(std::move(fs::canonical(p)));
-                if(get<1>(ret))
-                    scan(p);
+                auto ret = dirs->insert(fs::canonical(p));
+                if(get<bool>(ret))
+                    missing_dirs.push_back(p);
             }
-            scanEnded();
+
+            tman.enqueue([this, missing_dirs] {
+                scanStarted();
+                for(auto&& p : missing_dirs)
+                    scan(p);
+                scanEnded();
+            });
         }
+        else
+            WARN_LOG(logject) << "Unknown variable: " << key;
     }
     catch(boost::bad_get&) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
+        scanEnded();
     }
 }
 
@@ -156,61 +272,162 @@ void Manager::impl::scan() {
 void Manager::impl::scan(const fs::path& dir) {
     if(!pluginsLoaded)
         return;
-    assert(fs::exists(dir) && fs::is_directory(dir));
-    TRACE_LOG(logject) << "scanning " << dir;
+    using jbson::get;
+
+    auto coll = m_db.get_collection("tracks");
+    assert(coll);
+    if(!coll)
+        return;
+
+    if(!fs::exists(dir)) {
+        ERROR_LOG(logject) << "Directory " << dir << " does not exist. Aborting scan.";
+        return;
+    }
+
     std::error_code ec;
-    auto coll = db.create_collection("tracks", ec);
 
-    // remove all tracks in current prefix
-    auto qry = db.create_query(R"({"$dropall":true})"_json_doc.data(), ec);
-    if(!qry || ec) {
-        ERROR_LOG(logject) << "query creation error: " << ec.message();
-        return;
-    }
-    coll.execute_query<ejdb::query_search_mode::count_only>(qry);
+    // query for finding all known files under this dir
+    const auto qdoc = jbson::document(jbson::builder
+                                      ("location", jbson::builder
+                                       ("$begin", Input::to_uri(dir).string())
+                                      )
+                                     );
 
-    auto r = coll.sync(ec);
-    if(!r || ec) {
-        ERROR_LOG(logject) << "collection sync error: " << ec.message();
-        return;
-    }
+    try { // find and remove files that no longer exist
+        TRACE_LOG(logject) << "Removing non-existent files";
+        ejdb::unique_transaction trans(coll.transaction());
 
-    for(fs::directory_entry& entry : fs::recursive_directory_iterator{dir}) {
-        auto p = entry.path();
-        if(!fs::is_regular_file(p))
-            continue;
-        TRACE_LOG(logject) << "Scanning: " << p;
-        try {
-            auto tracks = decman.tracks(Input::to_uri(p));
-            if(tracks.empty())
+        auto under_dir = apply_named_paths(query(qdoc), {{"oid", "$._id"}, {"location", "$.location"}});
+
+        for(auto&& entry : under_dir) {
+            assert(entry.size() == 2);
+
+            auto location = entry.begin();
+            auto oid = entry.begin();
+            if(location->name() != "location")
+                location++;
+            else if(oid->name() != "oid")
+                oid++;
+            assert(oid != entry.end());
+            assert(location != entry.end());
+
+            if(location->type() != jbson::element_type::string_element) {
+                ERROR_LOG(logject) << "Location should be string_element; instead of " << location->type();
                 continue;
-            for(const auto& t : tracks) {
-                auto oid = coll.save_document(t.bson().data(), ec);
-                if(ec) {
-                    ERROR_LOG(logject) << "document save error: " << ec.message();
-                    continue;
-                }
-                assert(oid);
+            }
+
+            network::uri uri;
+            uri = network::make_uri(get<std::string>(*location), ec);
+            if(ec) {
+                ERROR_LOG(logject) << "Could not make uri: " << ec.message();
+                continue;
+            }
+
+            if(uri.scheme() != boost::string_ref("file"))
+                continue;
+
+            boost::system::error_code bec;
+            auto path = Input::uri_to_path(uri);
+
+            if(fs::exists(path, bec) && !bec)
+                continue;
+
+            TRACE_LOG(logject) << "Removing file from library: " << path;
+            coll.remove_document(get<jbson::element_type::oid_element>(*oid));
+            removed(uri);
+        }
+    }
+    catch(std::runtime_error& e) {
+        ERROR_LOG(logject) << "Error removing files from db";
+        ERROR_LOG(logject) << e.what();
+        return;
+    }
+    catch(...) {
+        ERROR_LOG(logject) << "Error removing files from db: " << boost::current_exception_diagnostic_information();
+        return;
+    }
+
+    ec.clear();
+
+    if(!fs::exists(dir) || !fs::is_directory(dir))
+        return;
+
+    try {
+        TRACE_LOG(logject) << "Adding/updating files under " << dir;
+        ejdb::unique_transaction trans(coll.transaction());
+        auto under_dir = apply_named_paths(query(qdoc), {{"oid", "$._id"},
+                                                         {"location", "$.location"},
+                                                         {"modified", "$.modified"}});
+
+        using lib_container = boost::container::flat_multimap<fs::path,
+            std::tuple<std::chrono::system_clock::time_point, std::array<char, 12>>>;
+        lib_container lib;
+
+        for(auto&& set : under_dir) {
+            assert(set.size() == 3);
+            lib_container::value_type value;
+
+            auto it = set.find("location");
+            if(it == set.end() || it->type() != jbson::element_type::string_element) {
+                ERROR_LOG(logject) << "Track has no location.";
+                continue;
+            }
+
+            network::uri uri;
+            uri = network::make_uri(get<std::string>(*it), ec);
+            if(ec) {
+                ERROR_LOG(logject) << "Track has invalid location uri: " << ec.message();
+            }
+            get<0>(value) = Input::uri_to_path(uri);
+
+            it = set.find("modified");
+            if(it == set.end() || it->type() != jbson::element_type::date_element) {
+                ERROR_LOG(logject) << "Track has no modified time.";
+                continue;
+            }
+
+            get<0>(get<1>(value)) = get<std::chrono::system_clock::time_point>(*it);
+
+            it = set.find("oid");
+            if(it == set.end() || it->type() != jbson::element_type::oid_element) {
+                ERROR_LOG(logject) << "Track has no oid.";
+                continue;
+            }
+
+            get<1>(get<1>(value)) = get<jbson::element_type::oid_element>(*it);
+
+            lib.insert(std::move(value));
+        }
+
+        for(const fs::directory_entry& entry : fs::recursive_directory_iterator{dir}) {
+            auto p = entry.path();
+            if(!fs::is_regular_file(p))
+                continue;
+            auto tracks = lib.equal_range(p);
+            if(boost::distance(tracks) == 0)
+                add(p);
+            else {
+                auto modified = std::chrono::system_clock::from_time_t(fs::last_write_time(p));
+                bool needs_update = std::any_of(get<0>(tracks), get<1>(tracks), [modified] (auto&& track) {
+                    return get<0>(get<1>(track)) < modified;
+                });
+                if(needs_update)
+                    update(p);
             }
         }
-        catch(...) {
-            ERROR_LOG(logject) << "Scan error";
-            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
-        }
     }
-    r = coll.sync(ec);
-    if(!r || ec) {
-        ERROR_LOG(logject) << "collection sync error: " << ec.message();
+    catch(std::runtime_error& e) {
+        ERROR_LOG(logject) << "Error scanning files to db";
+        ERROR_LOG(logject) << e.what();
         return;
     }
-    r = db.sync(ec);
-    if(!r || ec) {
-        ERROR_LOG(logject) << "db sync error: " << ec.message();
+    catch(...) {
+        ERROR_LOG(logject) << "Error scanning files to db: " << boost::current_exception_diagnostic_information();
         return;
     }
     TRACE_LOG(logject) << dir << " scanned";
 
-#ifndef NDEBUG
+#if 0&& !defined(NDEBUG)
     qry = db.create_query("{}"_json_doc.data(), ec);
     if(!qry || ec) {
         ERROR_LOG(logject) << "query creation error: " << ec.message();
@@ -230,26 +447,103 @@ void Manager::impl::scan(const fs::path& dir) {
 #endif
 }
 
-void Manager::impl::incremental_scan() {
-    if(!pluginsLoaded)
-        return;
-    m_dirs([this](auto&& dirs) {
-        for(auto&& dir : dirs) {
-            incremental_scan(dir);
-        }
-    });
+void Manager::impl::add(const boost::filesystem::path& file) {
+    assert(fs::exists(file) && fs::is_regular_file(file));
+
+    add(Input::to_uri(file));
 }
 
-void Manager::impl::incremental_scan(const fs::path& dir) {
-    if(!pluginsLoaded)
+void Manager::impl::add(const network::uri& uri) {
+    auto tracks = decman.tracks(uri);
+    if(tracks.empty()) {
+        ERROR_LOG(logject) << "Could not get tracks from media at " << uri;
         return;
+    }
+    for(const auto& track : tracks) {
+        auto track_bson = track.bson();
+        track_bson.emplace(track_bson.end(), "modified", jbson::element_type::date_element,
+                           std::chrono::system_clock::now());
+
+        auto coll = m_db.get_collection("tracks");
+        assert(coll);
+        auto oid = coll.save_document(track_bson.data());
+        (void)oid;
+//        assert(oid);
+    }
+    TRACE_LOG(logject) << uri << " contains " << tracks.size() << " tracks";
+    added(uri);
 }
 
-Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman)
-    : pimpl(new impl(confman, decman)) {
-    plugman.getPluginsLoadedSignal().connect([this](auto&&) {
+void Manager::impl::remove(const boost::filesystem::path& file) {
+    assert(!fs::exists(file) || fs::is_regular_file(file));
+
+    remove(Input::to_uri(file));
+}
+
+void Manager::impl::remove(const network::uri& uri) {
+    auto coll = m_db.get_collection("tracks");
+    assert(coll);
+
+    auto qdoc = jbson::document(jbson::builder
+                                ("location", uri.string())
+                                ("$dropall", true)
+                               );
+    auto qry = m_db.create_query(qdoc.data());
+
+    auto n = coll.execute_query<ejdb::query_search_mode::count_only>(qry);
+    LOG(logject) << n << " tracks removed";
+    removed(uri);
+}
+
+void Manager::impl::remove_prefix(const boost::filesystem::path& dir) {
+    auto uri = Input::to_uri(dir);
+    auto coll = m_db.get_collection("tracks");
+    assert(coll);
+
+    auto qdoc = jbson::document(jbson::builder
+                                ("location", jbson::builder
+                                 ("$begin", uri.string())
+                                )
+                                ("$dropall", true)
+                               );
+    auto qry = m_db.create_query(qdoc.data());
+
+    auto n = coll.execute_query<ejdb::query_search_mode::count_only>(qry);
+    LOG(logject) << n << " tracks removed";
+    removed(uri);
+}
+
+void Manager::impl::update(const boost::filesystem::path& file) {
+    assert(fs::exists(file) && fs::is_regular_file(file));
+
+    remove(Input::to_uri(file));
+}
+
+void Manager::impl::update(const network::uri& uri) {
+    ERROR_LOG(logject) << "update library entry not implemented";
+}
+
+std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
+    auto q = m_db.create_query(qdoc.data()).set_hints(R"({ "$orderby": { "location": 1 } })"_json_doc.data());
+    assert(q);
+    auto coll = m_db.get_collection("tracks");
+    assert(coll);
+
+    std::vector<jbson::document> ret;
+
+    for(auto&& data : coll.execute_query(q))
+        ret.emplace_back(std::move(data));
+
+    return ret;
+}
+
+Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman, Thread::Manager& tman)
+    : pimpl(new impl(confman, decman, tman)) {
+    plugman.getPluginsLoadedSignal().connect([this, &tman](auto&&) {
         pimpl->pluginsLoaded.store(true);
-        pimpl->scan();
+        tman.enqueue([this]() {
+            pimpl->scan();
+        });
     });
 }
 
@@ -257,36 +551,23 @@ Manager::~Manager() {}
 
 const boost::synchronized_value<Manager::SetType>& Manager::getDirectories() const { return pimpl->m_dirs; }
 
-void Manager::scan() {
-    //    pimpl->scanStarted();
-    //    unique_lock l(pimpl->mu);
-    //    l.unlock();
-    //    pimpl->scanEnded();
-}
-
-ejdb::db& Manager::getDataBase() const { return pimpl->db; }
-
 std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
-    ejdb::query q;
     try {
-        q = pimpl->db.create_query(qdoc.data()).set_hints(R"({ "$orderby": { "location": 1 } })"_json_doc.data());
-        auto coll = pimpl->db.create_collection("tracks");
-
-        std::vector<jbson::document> ret;
-
-        for(auto&& data : coll.execute_query(q))
-            ret.emplace_back(std::move(data));
-
-        return ret;
+        auto coll = pimpl->m_db.get_collection("tracks");
+        if(!coll)
+            return {};
+        ejdb::unique_transaction trans(coll.transaction());
+        return pimpl->query(qdoc);
+    }
+    catch(std::runtime_error& e) {
+        ERROR_LOG(pimpl->logject) << e.what();
+        return {};
     }
     catch(...) {
+        ERROR_LOG(pimpl->logject) << "Query error: " << boost::current_exception_diagnostic_information();
         return {};
     }
 }
-
-//std::vector<jbson::element> Manager::query(const jbson::document& q, boost::string_ref json_path) const {
-//    return apply_path(query(q), json_path);
-//}
 
 std::vector<jbson::document_set>
 Manager::query(const jbson::document& q,
