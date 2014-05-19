@@ -94,6 +94,8 @@ public:
     MELOSIC_EXPORT Signals::Library::ScanStarted& getScanStartedSignal() noexcept;
     MELOSIC_EXPORT Signals::Library::ScanEnded& getScanEndedSignal() noexcept;
 
+    MELOSIC_EXPORT bool scanning() const noexcept;
+
 private:
     struct impl;
     std::unique_ptr<impl> pimpl;

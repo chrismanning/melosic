@@ -29,14 +29,19 @@ class Manager;
 class LibraryManager : public QObject {
     Q_OBJECT
 
-    Library::Manager& libman;
+    Library::Manager* m_libman{nullptr};
+    LibraryManager();
 
   public:
-    explicit LibraryManager(Library::Manager& libman, QObject* parent = nullptr);
+    static LibraryManager* instance();
 
-    Library::Manager& getLibraryManager() const;
+    Library::Manager* getLibraryManager() const;
+    void setLibraryManager(Library::Manager*);
 
 Q_SIGNALS:
+    void scanStarted();
+    void scanEnded();
+    void libraryManagerChanged(LibraryManager* context);
 
   public Q_SLOTS:
 };

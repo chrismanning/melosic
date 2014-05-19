@@ -23,6 +23,7 @@ namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/scope_exit.hpp>
 
 #ifndef NDEBUG
 #include <jbson/json_writer.hpp>
@@ -123,6 +124,7 @@ struct Manager::impl {
     boost::synchronized_value<Manager::SetType> m_dirs;
     mutex mu;
     std::atomic<bool> pluginsLoaded{false};
+    std::atomic<bool> m_scanning{false};
 };
 
 Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::Manager& tman)
@@ -146,7 +148,12 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::
     updated.connect([this](network::uri uri) {
         LOG(logject) << "Media updated in library: " << uri;
     });
+
+    scanStarted.connect([this]() {
+        m_scanning.store(true);
+    });
     scanEnded.connect([this]() {
+        m_scanning.store(false);
         TRACE_LOG(logject) << "Setting indexes on \"tracks\" collection";
         std::error_code ec;
         auto coll = m_db.get_collection("tracks", ec);
@@ -242,10 +249,11 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
             }
 
             tman.enqueue([this, missing_dirs] {
+                TRACE_LOG(logject) << "Scanning previously missing library dirs";
                 scanStarted();
+                BOOST_SCOPE_EXIT_ALL(this) { scanEnded(); };
                 for(auto&& p : missing_dirs)
                     scan(p);
-                scanEnded();
             });
         }
         else
@@ -258,20 +266,24 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
 }
 
 void Manager::impl::scan() {
-    if(!pluginsLoaded)
+    if(!pluginsLoaded) {
+        WARN_LOG(logject) << "Plugins not yet loaded. Aborting scan.";
         return;
+    }
     scanStarted();
+    BOOST_SCOPE_EXIT_ALL(this) { scanEnded(); };
     m_dirs([this](auto&& dirs) {
         for(auto&& dir : dirs) {
             scan(dir);
         }
     });
-    scanEnded();
 }
 
 void Manager::impl::scan(const fs::path& dir) {
-    if(!pluginsLoaded)
+    if(!pluginsLoaded) {
+        WARN_LOG(logject) << "Plugins not yet loaded. Aborting scan.";
         return;
+    }
     using jbson::get;
 
     auto coll = m_db.get_collection("tracks");
@@ -296,6 +308,7 @@ void Manager::impl::scan(const fs::path& dir) {
     try { // find and remove files that no longer exist
         TRACE_LOG(logject) << "Removing non-existent files";
         ejdb::unique_transaction trans(coll.transaction());
+        assert(trans);
 
         auto under_dir = apply_named_paths(query(qdoc), {{"oid", "$._id"}, {"location", "$.location"}});
 
@@ -404,15 +417,22 @@ void Manager::impl::scan(const fs::path& dir) {
             if(!fs::is_regular_file(p))
                 continue;
             auto tracks = lib.equal_range(p);
-            if(boost::distance(tracks) == 0)
-                add(p);
-            else {
-                auto modified = std::chrono::system_clock::from_time_t(fs::last_write_time(p));
-                bool needs_update = std::any_of(get<0>(tracks), get<1>(tracks), [modified] (auto&& track) {
-                    return get<0>(get<1>(track)) < modified;
-                });
-                if(needs_update)
-                    update(p);
+            try {
+                if(boost::distance(tracks) == 0)
+                    add(p);
+                else {
+                    auto modified = std::chrono::system_clock::from_time_t(fs::last_write_time(p));
+                    bool needs_update = std::any_of(get<0>(tracks), get<1>(tracks), [modified] (auto&& track) {
+                        return get<0>(get<1>(track)) < modified;
+                    });
+                    if(needs_update)
+                        update(p);
+                }
+            }
+            catch(std::exception& e) {
+                // TODO: fix uri (source of this exception)
+                ERROR_LOG(logject) << p << "; " << e.what();
+                continue;
             }
         }
     }
@@ -539,9 +559,10 @@ std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
 
 Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman, Thread::Manager& tman)
     : pimpl(new impl(confman, decman, tman)) {
-    plugman.getPluginsLoadedSignal().connect([this, &tman](auto&&) {
+    plugman.getPluginsLoadedSignal().connect([this](auto&&) {
+        TRACE_LOG(pimpl->logject) << "Plugins loaded. Scanning all...";
         pimpl->pluginsLoaded.store(true);
-        tman.enqueue([this]() {
+        pimpl->tman.enqueue([this]() {
             pimpl->scan();
         });
     });
@@ -579,6 +600,10 @@ std::vector<jbson::document_set>
 Manager::query(const jbson::document& q,
                std::initializer_list<std::tuple<std::string, std::string>> paths) const {
     return apply_named_paths(query(q), paths);
+}
+
+bool Manager::scanning() const noexcept {
+    return pimpl->m_scanning.load();
 }
 
 Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return pimpl->scanStarted; }

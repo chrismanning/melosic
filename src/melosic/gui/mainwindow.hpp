@@ -72,7 +72,6 @@ private:
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     std::unique_ptr<PlayerControls> playerControls;
-    std::unique_ptr<LibraryManager> qmllibman;
 
     std::unique_ptr<QQmlEngine> engine;
     std::unique_ptr<QQmlComponent> component;

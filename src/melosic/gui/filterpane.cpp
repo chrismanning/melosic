@@ -31,6 +31,8 @@ using namespace jbson::literal;
 #include <boost/range/adaptor/transformed.hpp>
 
 #include <melosic/melin/library.hpp>
+#include <melosic/common/signal.hpp>
+#include <melosic/melin/logging.hpp>
 
 #include "filterpane.hpp"
 
@@ -126,26 +128,8 @@ static QVariant document_to_variant(const jbson::document& doc) {
     return qdoc.toVariant();
 }
 
-static boost::optional<Library::Manager&> libman(const QObject* obj) {
-    auto ctx = QQmlEngine::contextForObject(obj);
-    if(!ctx)
-        return boost::none;
-    auto v = ctx->contextProperty("LibraryManager");
-    if(!v.isValid())
-        return boost::none;
-    auto libman = v.value<LibraryManager*>();
-    if(libman == nullptr)
-        return boost::none;
-
-    return libman->getLibraryManager();
-}
-
 struct FilterPane::impl {
-    explicit impl(FilterPane* parent) :
-        m_parent(parent),
-        m_model(),
-        m_selection_model(&m_model)
-    {}
+    explicit impl(FilterPane* parent);
 
     bool on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected);
 
@@ -154,7 +138,7 @@ struct FilterPane::impl {
 
     std::vector<jbson::document> execute_query(const jbson::document&);
 
-    FilterPane* m_parent;
+    FilterPane* m_parent{nullptr};
     JsonDocModel m_model;
     SelectionModel m_selection_model;
 
@@ -171,18 +155,50 @@ struct FilterPane::impl {
     QVariantMap m_paths;
     QVariantList m_sort_fields;
 
-    FilterPane* m_depends;
+    FilterPane* m_depends{nullptr};
     QString m_depends_path;
     QVariantList m_depend_selection;
 
-    boost::optional<Library::Manager&> m_libman;
+    LibraryManager* m_libman;
     boost::optional<ejdb::db> m_db;
     boost::optional<ejdb::collection> m_coll;
+
+    std::atomic<bool> m_lib_scanning{true};
+
+    Logger::Logger logject{logging::keywords::channel = "FilterPane"};
 };
 
+FilterPane::impl::impl(FilterPane* parent) :
+    m_parent(parent),
+    m_model(),
+    m_selection_model(&m_model)
+{
+    m_libman = LibraryManager::instance();
+    assert(m_libman);
+    bool r = QObject::connect(m_libman, &LibraryManager::scanStarted, m_parent, [this] () {
+        TRACE_LOG(logject) << "Scan started";
+        m_lib_scanning.store(true);
+    }, Qt::QueuedConnection);
+    assert(r);
+    r = QObject::connect(m_libman, &LibraryManager::scanEnded, m_parent, [this] () {
+        TRACE_LOG(logject) << "Scan ended";
+        m_lib_scanning.store(false);
+        refresh();
+    }, Qt::QueuedConnection);
+    assert(r);
+    m_lib_scanning.store(m_libman->getLibraryManager()&& m_libman->getLibraryManager()->scanning());
+
+    QObject::connect(m_parent, &QObject::objectNameChanged, m_parent, [this] (QString name) {
+        if(name.isEmpty())
+            logject = Logger::Logger{logging::keywords::channel = "FilterPane"};
+        else
+            logject = Logger::Logger{logging::keywords::channel = ("FilterPane<"s + name.toStdString() + ">")};
+    });
+}
+
 bool FilterPane::impl::on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected) {
-    std::clog << "selection changing; selected size: " << selected.size()
-              << "; deselected size: " << deselected.size() << std::endl;
+    TRACE_LOG(logject) << "selection changing; selected size: " << selected.size()
+              << "; deselected size: " << deselected.size();
     bool unknowns = false;
     for(auto&& range : selected) {
         for(auto&& i : range.indexes()) {
@@ -217,7 +233,7 @@ bool FilterPane::impl::on_selection_changed(const QItemSelection& selected, cons
             }
         }
     }
-    std::clog << "selection changed; size: " << m_selection_values.size() << std::endl;
+    TRACE_LOG(logject) << "selection changed; size: " << m_selection_values.size();
     return unknowns;
 }
 
@@ -249,7 +265,7 @@ void FilterPane::impl::generate_query(const bool unknown) {
 #ifndef NDEBUG
     std::string json_string;
     jbson::write_json(m_generated_query, std::back_inserter(json_string));
-    std::clog << qPrintable(m_parent->objectName()) << "; json_string: " << json_string << std::endl;
+    TRACE_LOG(logject) << "generated query json_string: " << json_string;
 #endif
     Q_EMIT m_parent->queryGenerated(document_to_variant(m_generated_query));
 }
@@ -260,25 +276,39 @@ void FilterPane::impl::refresh() {
     std::vector<jbson::document> docs;
     if(m_paths.empty())
         docs = execute_query(m_query);
-    else {
-        auto named_paths = std::vector<std::tuple<std::string, std::string>>{};
+    else try {
+        // prepare named paths in stl format
+        std::vector<std::tuple<std::string, std::string>> named_paths;
         for(auto it = m_paths.begin(); it != m_paths.end(); ++it) {
             assert(it->isValid());
             assert(it->type() == QVariant::String);
             named_paths.emplace_back(it.key().toStdString(), it->toString().toStdString());
         }
+
+        // run query and transform using named jsonpaths
+        TRACE_LOG(logject) << "transforming query results with named JSONPaths";
         auto ds = Library::apply_named_paths(execute_query(m_query), named_paths);
+
+        // prepare sort fields
         std::vector<QByteArray> sort_fields;
         for(auto&& sf : m_sort_fields)
             sort_fields.emplace_back(sf.toString().toUtf8());
+        // sort using fields with varying priorities
+        TRACE_LOG(logject) << "sorting query results";
         sort_by_criteria(ds, boost::adaptors::transform(sort_fields, [](auto&& bs) {
             return boost::string_ref(bs, bs.size());
         }));
+        // put all unique docs in a vector
         std::transform(ds.begin(), std::unique(ds.begin(), ds.end()),
                        std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
     }
+    catch(...) {
+        ERROR_LOG(logject) << "refresh(): " << boost::current_exception_diagnostic_information();
+    }
 
+    TRACE_LOG(logject) << "setting docs to processed query results";
     m_model.setDocs(std::move(docs));
+    TRACE_LOG(logject) << "set docs to processed query results";
 }
 
 std::vector<jbson::document> FilterPane::impl::execute_query(const jbson::document& doc) {
@@ -298,18 +328,11 @@ std::vector<jbson::document> FilterPane::impl::execute_query(const jbson::docume
         }
     }
 
-    if(!m_libman && m_parent)
-        m_libman = libman(m_parent);
-    if(m_libman)
-        return m_libman->query(doc);
+    assert(m_libman);
+    if(m_libman && !m_lib_scanning.load())
+        return m_libman->getLibraryManager()->query(doc);
 
-    assert(false);
     return {};
-}
-
-FilterPane::FilterPane(LibraryManager* libman, QObject* parent) : FilterPane(parent) {
-    assert(libman);
-    pimpl->m_libman = libman->getLibraryManager();
 }
 
 FilterPane::FilterPane(ejdb::db db, ejdb::collection coll, QObject* parent) : FilterPane(parent) {

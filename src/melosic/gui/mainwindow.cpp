@@ -73,7 +73,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 
     playerControls.reset(new PlayerControls(kernel, player));
 
-    qmllibman.reset(new LibraryManager(libman));
+    LibraryManager::instance()->setLibraryManager(&libman);
 
     //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
@@ -100,7 +100,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
     engine->rootContext()->setContextProperty("PlayerControls", playerControls.get());
-    engine->rootContext()->setContextProperty("LibraryManager", qmllibman.get());
+    engine->rootContext()->setContextProperty("LibraryManager", LibraryManager::instance());
     engine->addImportPath("qrc:/");
     engine->addImportPath("qrc:/qml");
 

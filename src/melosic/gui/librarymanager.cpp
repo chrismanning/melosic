@@ -16,13 +16,39 @@
 **************************************************************************/
 
 #include <melosic/melin/library.hpp>
+#include <melosic/common/signal.hpp>
 
 #include "librarymanager.hpp"
 
 namespace Melosic {
 
-LibraryManager::LibraryManager(Library::Manager& libman, QObject* parent) : QObject(parent), libman(libman) {}
+LibraryManager::LibraryManager() {
+    connect(this, &LibraryManager::libraryManagerChanged, [this](auto&&) {
+        assert(m_libman);
+        if(!m_libman)
+            return;
+        m_libman->getScanStartedSignal().connect([this]() {
+            std::clog << "LibraryManager: scan started\n";
+            Q_EMIT scanStarted();
+        });
+        m_libman->getScanEndedSignal().connect([this]() {
+            std::clog << "LibraryManager: scan ended\n";
+            Q_EMIT scanEnded();
+        });
+    });
+}
 
-Library::Manager& LibraryManager::getLibraryManager() const { return libman; }
+LibraryManager* LibraryManager::instance() {
+    static LibraryManager libman;
+    return &libman;
+}
+
+Library::Manager* LibraryManager::getLibraryManager() const { return m_libman; }
+
+void LibraryManager::setLibraryManager(Library::Manager* libman) {
+    m_libman = libman;
+    assert(m_libman);
+    Q_EMIT libraryManagerChanged(this);
+}
 
 } // namespace Melosic
