@@ -64,6 +64,8 @@ public:
     mutex mu;
     std::unordered_map<std::string, Factory> inputFactories;
     Core::FileCache m_file_cache;
+
+    std::unique_ptr<PCMSource> open(const network::uri&);
 };
 
 Manager::Manager(Input::Manager& inman, Thread::Manager& tman) : pimpl(new impl(inman, tman)) {}
@@ -90,8 +92,7 @@ void Manager::addAudioFormat(Factory fact, boost::string_ref mime_type) {
 }
 
 std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
-    using namespace boost::literals;
-    if(uri.scheme() == "file"_s_ref)
+    if(uri.scheme() == boost::string_ref("file"))
         return tracks(Input::uri_to_path(uri));
     return {};
 }
@@ -115,12 +116,12 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         // TODO: detect files, including playlists
         FileRef taglib_file{path.c_str()};
         if(taglib_file.isNull())
-            return std::move(ret);
+            return ret;
 
         assert(taglib_file.tag() != nullptr);
         auto taglib_tags = taglib_file.tag()->properties();
         if(/*is playlist or cue*/taglib_tags.contains("CUEFILE"))
-            return std::move(ret);
+            return ret;
 
         Core::TagMap tags;
         for(const auto& tag : taglib_tags) {
@@ -134,7 +135,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         t.audioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
         t.end(chrono::seconds{ap->length()});
 
-        auto pcm_src = open(t);
+        auto pcm_src = pimpl->open(t.uri());
         if(pcm_src) {
             t.end(pcm_src->duration());
             t.audioSpecs(pcm_src->getAudioSpecs());
@@ -143,7 +144,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         ret.push_back(std::move(t));
     }
 
-    return std::move(ret);
+    return ret;
 }
 
 struct libmagic_handle final {
@@ -170,10 +171,9 @@ private:
 };
 
 static std::string detect_mime_type(const network::uri& uri) {
-    using namespace boost::literals;
     thread_local libmagic_handle cookie(MAGIC_SYMLINK|MAGIC_MIME_TYPE|MAGIC_ERROR);
 
-    if(uri.scheme() == "file"_s_ref) {
+    if(uri.scheme() == boost::string_ref("file")) {
         auto p = Input::uri_to_path(uri);
         TRACE_LOG(logject) << "Detecting MIME for file " << p;
         if(auto str = magic_file(cookie, p.c_str())) {
@@ -188,10 +188,13 @@ static std::string detect_mime_type(const network::uri& uri) {
 struct TrackSource : PCMSource {
     explicit TrackSource(std::unique_ptr<PCMSource> impl, chrono::milliseconds start, chrono::milliseconds end)
         : pimpl(std::move(impl)), m_start(start), m_end(end > m_start ? end : pimpl->duration()) {
+        TRACE_LOG(logject) << "TrackSource created; start: " << m_start.count() << "ms; end: " << m_end.count() << "ms";
         assert(start >= 0ms);
         assert(end >= 0ms);
         if(start > 0ms)
             pimpl->seek(start);
+//        if(m_end != pimpl->duration() && +(m_end - pimpl->duration()) < 1000ms)
+//            m_end = pimpl->duration();
     }
 
     virtual ~TrackSource() {}
@@ -214,12 +217,18 @@ struct TrackSource : PCMSource {
         return pimpl->getAudioSpecs();
     }
     size_t decode(PCMBuffer& buf, std::error_code& ec) override {
-        if(pimpl->tell() >= m_end)
-            return (ec = asio::error::eof, 0);
+        if(pimpl->tell() >= m_end) {
+            ec = asio::error::eof;
+            return 0;
+        }
         auto bytes = pimpl->decode(buf, ec);
+        TRACE_LOG(logject) << "Decoded " << bytes << " bytes";
         auto time = pimpl->tell() + getAudioSpecs().bytes_to_time<std::chrono::milliseconds>(bytes);
-        if(time > m_end)
+        if(time > m_end) {
+            TRACE_LOG(logject) << "time: " << time.count() << "ms; m_end: " << m_end.count() << "ms";
             bytes -= getAudioSpecs().time_to_bytes(time - m_end);
+        }
+        TRACE_LOG(logject) << "Decoded " << bytes << " bytes; adjusted for time";
         return bytes;
     }
     bool valid() const override {
@@ -232,27 +241,31 @@ struct TrackSource : PCMSource {
   private:
     std::unique_ptr<PCMSource> pimpl;
     const chrono::milliseconds m_start;
-    const chrono::milliseconds m_end;
+    chrono::milliseconds m_end;
 };
 
-std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
-    unique_lock l(pimpl->mu);
-    std::string mime_type = detect_mime_type(track.uri());
+std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
+    unique_lock l(mu);
+    std::string mime_type = detect_mime_type(uri);
     if(mime_type.empty())
         return nullptr;
-    auto is = pimpl->inman.open(track.uri());
+    auto is = inman.open(uri);
     if(!is)
         return nullptr;
 
     TRACE_LOG(logject) << "Trying to open file with MIME " << mime_type;
-    auto fact = pimpl->inputFactories.find(mime_type);
+    auto fact = inputFactories.find(mime_type);
 
     std::unique_ptr<PCMSource> ret;
-    if(fact != pimpl->inputFactories.end())
+    if(fact != inputFactories.end())
         ret = fact->second(std::move(is));
+    return ret;
+}
 
-    if(ret)
-        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
+std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
+    auto ret = pimpl->open(track.uri());
+//    if(ret)
+//        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
     return std::move(ret);
 }
 

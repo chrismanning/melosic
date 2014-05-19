@@ -351,6 +351,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
         tmp.audio_specs = as;
 
         auto n_decoded = m_current_source->decode(tmp, ec);
+        TRACE_LOG(logject) << "decoded to " << n_decoded << " bytes of PCM; " << tmp.audio_specs;
 
         if(n_decoded < n && !m_current_source->valid()) {
             TRACE_LOG(logject) << "track ended, starting next, if any";
