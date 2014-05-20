@@ -56,6 +56,7 @@ class Manager;
 
 namespace Core {
 class Track;
+class Kernel;
 }
 
 namespace Signals {
@@ -75,8 +76,12 @@ struct PathEquivalence;
 
 class Manager final {
     using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
-public:
     Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&, Thread::Manager&);
+    friend class Core::Kernel;
+public:
+    Manager(const Manager&) = default;
+
+    Manager(Manager&&) = delete;
 
     ~Manager();
 
@@ -98,7 +103,7 @@ public:
 
 private:
     struct impl;
-    std::unique_ptr<impl> pimpl;
+    std::shared_ptr<impl> pimpl;
 };
 
 MELOSIC_EXPORT

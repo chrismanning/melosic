@@ -93,7 +93,9 @@ struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, 
     bool operator()(const fs::path& a, const fs::path& b) const { return fs::equivalent(a, b); }
 };
 
-struct Manager::impl {
+Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
+
+struct Manager::impl : std::enable_shared_from_this<impl> {
     impl(Config::Manager&, Decoder::Manager&, Thread::Manager&);
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& ubase);
@@ -111,9 +113,8 @@ struct Manager::impl {
     void update(const network::uri& uri);
     std::vector<jbson::document> query(const jbson::document& qdoc);
 
-    Decoder::Manager& decman;
+    Decoder::Manager decman;
     Thread::Manager& tman;
-    Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
     Config::Conf conf{"Library"};
     ejdb::db m_db;
     ScanStarted scanStarted;
@@ -127,8 +128,24 @@ struct Manager::impl {
     std::atomic<bool> m_scanning{false};
 };
 
+std::atomic<ejdb::db*> k_quick_db{nullptr};
+
+void run_on_quick_exit() {
+    auto ptr = k_quick_db.exchange(nullptr);
+    std::error_code ec;
+    if(ptr != nullptr)
+        ptr->close(ec);
+    if(ec)
+        TRACE_LOG(logject) << "could not close db on abrupt exit: " << ec.message();
+}
+
 Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::Manager& tman)
     : decman(decman), tman(tman) {
+    // cleanup db on quick_exit()
+    k_quick_db.store(&m_db);
+    std::at_quick_exit(&run_on_quick_exit);
+    std::atexit(&run_on_quick_exit);
+
     if(!fs::exists(DataDir))
         fs::create_directory(DataDir);
     assert(fs::exists(DataDir) && fs::is_directory(DataDir));
@@ -255,12 +272,22 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
                     missing_dirs.push_back(p);
             }
 
-            tman.enqueue([this, missing_dirs] {
+            tman.enqueue([this, missing_dirs, self=shared_from_this()] {
+                while(m_scanning.load()) {
+                    std::this_thread::sleep_for(10ms);
+                    std::this_thread::yield();
+                }
                 TRACE_LOG(logject) << "Scanning previously missing library dirs";
-                scanStarted();
-                BOOST_SCOPE_EXIT_ALL(this) { scanEnded(); };
-                for(auto&& p : missing_dirs)
-                    scan(p);
+                try {
+                    scanStarted();
+                    for(auto&& p : missing_dirs)
+                        scan(p);
+                    scanEnded();
+                }
+                catch(boost::thread_interrupted&){}
+                catch(...) {
+                    scanEnded();
+                }
             });
         }
         else
@@ -277,13 +304,23 @@ void Manager::impl::scan() {
         WARN_LOG(logject) << "Plugins not yet loaded. Aborting scan.";
         return;
     }
-    scanStarted();
-    BOOST_SCOPE_EXIT_ALL(this) { scanEnded(); };
-    m_dirs([this](auto&& dirs) {
-        for(auto&& dir : dirs) {
-            scan(dir);
-        }
-    });
+    while(m_scanning.load()) {
+        std::this_thread::sleep_for(10ms);
+        std::this_thread::yield();
+    }
+    try {
+        scanStarted();
+        m_dirs([this](auto&& dirs) {
+            for(auto&& dir : dirs) {
+                scan(dir);
+            }
+        });
+        scanEnded();
+    }
+    catch(boost::thread_interrupted&){}
+    catch(...) {
+        scanEnded();
+    }
 }
 
 void Manager::impl::scan(const fs::path& dir) {
@@ -320,6 +357,7 @@ void Manager::impl::scan(const fs::path& dir) {
         auto under_dir = apply_named_paths(query(qdoc), {{"oid", "$._id"}, {"location", "$.location"}});
 
         for(auto&& entry : under_dir) {
+            boost::this_thread::interruption_point();
             assert(entry.size() == 2);
 
             auto location = entry.begin();
@@ -357,6 +395,10 @@ void Manager::impl::scan(const fs::path& dir) {
             removed(uri);
         }
     }
+    catch(boost::thread_interrupted&) {
+        WARN_LOG(logject) << "library scan thread interrupted";
+        throw;
+    }
     catch(std::runtime_error& e) {
         ERROR_LOG(logject) << "Error removing files from db";
         ERROR_LOG(logject) << e.what();
@@ -384,6 +426,7 @@ void Manager::impl::scan(const fs::path& dir) {
         lib_container lib;
 
         for(auto&& set : under_dir) {
+            boost::this_thread::interruption_point();
             assert(set.size() == 3);
             lib_container::value_type value;
 
@@ -420,6 +463,7 @@ void Manager::impl::scan(const fs::path& dir) {
         }
 
         for(const fs::directory_entry& entry : fs::recursive_directory_iterator{dir}) {
+            boost::this_thread::interruption_point();
             auto p = entry.path();
             if(!fs::is_regular_file(p))
                 continue;
@@ -436,12 +480,19 @@ void Manager::impl::scan(const fs::path& dir) {
                         update(p);
                 }
             }
+            catch(boost::thread_interrupted&) {
+                throw;
+            }
             catch(std::exception& e) {
                 // TODO: fix uri (source of this exception)
                 ERROR_LOG(logject) << p << "; " << e.what();
                 continue;
             }
         }
+    }
+    catch(boost::thread_interrupted&) {
+        WARN_LOG(logject) << "library scan thread interrupted";
+        throw;
     }
     catch(std::runtime_error& e) {
         ERROR_LOG(logject) << "Error scanning files to db";
@@ -481,12 +532,14 @@ void Manager::impl::add(const boost::filesystem::path& file) {
 }
 
 void Manager::impl::add(const network::uri& uri) {
+    boost::this_thread::interruption_point();
     auto tracks = decman.tracks(uri);
     if(tracks.empty()) {
         ERROR_LOG(logject) << "Could not get tracks from media at " << uri;
         return;
     }
     for(const auto& track : tracks) {
+        boost::this_thread::interruption_point();
         auto track_bson = track.bson();
         track_bson.emplace(track_bson.end(), "modified", jbson::element_type::date_element,
                            std::chrono::system_clock::now());
@@ -502,12 +555,14 @@ void Manager::impl::add(const network::uri& uri) {
 }
 
 void Manager::impl::remove(const boost::filesystem::path& file) {
+    boost::this_thread::interruption_point();
     assert(!fs::exists(file) || fs::is_regular_file(file));
 
     remove(Input::to_uri(file));
 }
 
 void Manager::impl::remove(const network::uri& uri) {
+    boost::this_thread::interruption_point();
     auto coll = m_db.get_collection("tracks");
     assert(coll);
 
@@ -523,6 +578,7 @@ void Manager::impl::remove(const network::uri& uri) {
 }
 
 void Manager::impl::remove_prefix(const boost::filesystem::path& dir) {
+    boost::this_thread::interruption_point();
     auto uri = Input::to_uri(dir);
     auto coll = m_db.get_collection("tracks");
     assert(coll);
@@ -541,12 +597,14 @@ void Manager::impl::remove_prefix(const boost::filesystem::path& dir) {
 }
 
 void Manager::impl::update(const boost::filesystem::path& file) {
+    boost::this_thread::interruption_point();
     assert(fs::exists(file) && fs::is_regular_file(file));
 
     remove(Input::to_uri(file));
 }
 
 void Manager::impl::update(const network::uri& uri) {
+    boost::this_thread::interruption_point();
     ERROR_LOG(logject) << "update library entry not implemented";
 }
 
@@ -565,11 +623,11 @@ std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
 }
 
 Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman, Thread::Manager& tman)
-    : pimpl(new impl(confman, decman, tman)) {
+    : pimpl(std::make_shared<impl>(confman, decman, tman)) {
     plugman.getPluginsLoadedSignal().connect([this](auto&&) {
-        TRACE_LOG(pimpl->logject) << "Plugins loaded. Scanning all...";
+        TRACE_LOG(logject) << "Plugins loaded. Scanning all...";
         pimpl->pluginsLoaded.store(true);
-        pimpl->tman.enqueue([this]() {
+        pimpl->tman.enqueue([pimpl=this->pimpl]() {
             pimpl->scan();
         });
     });
@@ -588,11 +646,11 @@ std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
         return pimpl->query(qdoc);
     }
     catch(std::runtime_error& e) {
-        ERROR_LOG(pimpl->logject) << e.what();
+        ERROR_LOG(logject) << e.what();
         return {};
     }
     catch(...) {
-        ERROR_LOG(pimpl->logject) << "Query error: " << boost::current_exception_diagnostic_information();
+        ERROR_LOG(logject) << "Query error: " << boost::current_exception_diagnostic_information();
         return {};
     }
 }

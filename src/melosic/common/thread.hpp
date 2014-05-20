@@ -31,6 +31,8 @@ using namespace std::literals;
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
 #include <boost/mpl/bool.hpp>
+#include <boost/thread/thread.hpp>
+
 #include <asio/io_service.hpp>
 
 #include <melosic/common/error.hpp>
@@ -179,8 +181,8 @@ public:
     ~Manager() {
         done.store(true);
         for(auto& t : threads)
-            if(t.joinable())
-                t.join();
+            if(t.joinable() && !t.try_join_for(boost::chrono::milliseconds(1000)))
+                t.interrupt();
     }
 
     //throws: std::future_error, TaskQueueError, Task *may* throw
@@ -205,7 +207,7 @@ public:
         return std::move(fut);
     }
 
-    bool contains(std::thread::id id) const noexcept {
+    bool contains(boost::thread::id id) const noexcept {
         for(auto&& t : threads)
             if(t.get_id() == id)
                 return true;
@@ -214,7 +216,7 @@ public:
     }
 
 private:
-    std::vector<std::thread> threads;
+    std::vector<boost::thread> threads;
     TaskQueue tasks;
     std::atomic_bool done{false};
     asio::io_service* const asio_service;

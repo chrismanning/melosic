@@ -56,8 +56,7 @@ using namespace TagLib;
 
 Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
 
-class Manager::impl {
-public:
+struct Manager::impl : std::enable_shared_from_this<impl> {
     impl(Input::Manager& inman, Thread::Manager& tman) : inman(inman), tman(tman) {}
     Input::Manager& inman;
     Thread::Manager& tman;
@@ -68,7 +67,7 @@ public:
     std::unique_ptr<PCMSource> open(const network::uri&);
 };
 
-Manager::Manager(Input::Manager& inman, Thread::Manager& tman) : pimpl(new impl(inman, tman)) {}
+Manager::Manager(Input::Manager& inman, Thread::Manager& tman) : pimpl(std::make_shared<impl>(inman, tman)) {}
 
 Manager::~Manager() {}
 

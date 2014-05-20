@@ -58,8 +58,9 @@ public:
     explicit Manager(Input::Manager&, Thread::Manager&);
     ~Manager();
 
+    Manager(const Manager&) = default;
+
     Manager(Manager&&) = delete;
-    Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
 
     MELOSIC_EXPORT void addAudioFormat(Factory fact, boost::string_ref mime_type);
@@ -82,8 +83,8 @@ public:
     std::unique_ptr<PCMSource> open(const Core::Track&) const;
 
 private:
-    class impl;
-    std::unique_ptr<impl> pimpl;
+    struct impl;
+    std::shared_ptr<impl> pimpl;
 };
 
 class PCMSource {

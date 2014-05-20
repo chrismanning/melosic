@@ -141,7 +141,7 @@ protected:
         unique_lock l(mu);
         for(auto i(funs.begin()); i != funs.end();) {
             try {
-                if(!tman.contains(std::this_thread::get_id())) {
+                if(!tman.contains(boost::this_thread::get_id())) {
                     try {
                         futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
                     }
