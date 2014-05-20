@@ -21,11 +21,16 @@ using namespace boost::literals;
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/exception/diagnostic_information.hpp>
+
+#include <melosic/melin/logging.hpp>
 
 #include "input.hpp"
 
 namespace Melosic {
 namespace Input {
+
+Logger::Logger logject{logging::keywords::channel = "Input::Manager"};
 
 class Manager::impl {
 
@@ -46,6 +51,7 @@ std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
         }
     }
     catch(...) {
+        ERROR_LOG(logject) << "Could not open uri " << uri << ": " << boost::current_exception_diagnostic_information();
         return nullptr;
     }
 
