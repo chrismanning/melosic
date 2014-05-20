@@ -133,7 +133,7 @@ std::atomic<ejdb::db*> k_quick_db{nullptr};
 void run_on_quick_exit() {
     auto ptr = k_quick_db.exchange(nullptr);
     std::error_code ec;
-    if(ptr != nullptr)
+    if(ptr != nullptr && ptr->is_open())
         ptr->close(ec);
     if(ec)
         TRACE_LOG(logject) << "could not close db on abrupt exit: " << ec.message();
@@ -141,7 +141,7 @@ void run_on_quick_exit() {
 
 Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::Manager& tman)
     : decman(decman), tman(tman) {
-    // cleanup db on quick_exit()
+    // cleanup db on (quick_)exit()
     k_quick_db.store(&m_db);
     std::at_quick_exit(&run_on_quick_exit);
     std::atexit(&run_on_quick_exit);

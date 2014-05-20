@@ -59,9 +59,7 @@ struct Kernel::impl {
             if(ec)
                 return;
             WARN_LOG(logject) << "SIGNAL RAISED: " << signo;
-            if(signo == SIGABRT)
-                std::quick_exit(signo);
-            std::exit(signo);
+            std::quick_exit(signo);
         });
     }
 
