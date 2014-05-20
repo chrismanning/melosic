@@ -24,6 +24,7 @@ namespace fs = boost::filesystem;
 #include <boost/functional/hash/hash.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/scope_exit.hpp>
+#include <boost/unordered_set.hpp>
 
 #ifndef NDEBUG
 #include <jbson/json_writer.hpp>
@@ -123,6 +124,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     Removed removed;
     Updated updated;
     boost::synchronized_value<Manager::SetType> m_dirs;
+    boost::synchronized_value<boost::unordered::unordered_set<fs::path>> m_extension_blacklist;
     mutex mu;
     std::atomic<bool> pluginsLoaded{false};
     std::atomic<bool> m_scanning{false};
@@ -290,12 +292,17 @@ void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config:
                 }
             });
         }
+        else if(key == "extension blacklist") {
+            for(auto&& ext : get<std::vector<Config::VarType>>(val))
+                m_extension_blacklist->insert(get<std::string>(ext));
+        }
         else
             WARN_LOG(logject) << "Unknown variable: " << key;
     }
     catch(boost::bad_get&) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
-        scanEnded();
+        if(m_scanning.load())
+            scanEnded();
     }
 }
 
@@ -465,7 +472,10 @@ void Manager::impl::scan(const fs::path& dir) {
         for(const fs::directory_entry& entry : fs::recursive_directory_iterator{dir}) {
             boost::this_thread::interruption_point();
             auto p = entry.path();
-            if(!fs::is_regular_file(p))
+            auto skip = m_extension_blacklist([ext=p.extension()](auto&& list) {
+                return list.find(ext) != list.end();
+            });
+            if(!fs::is_regular_file(p) || skip)
                 continue;
             auto tracks = lib.equal_range(p);
             try {
