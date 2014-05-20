@@ -47,7 +47,15 @@
 #include <QtCore/QAbstractItemModel>
 #include <QtCore/QStack>
 
-class ModelTest : public QObject
+#include <boost/config.hpp>
+
+#ifdef QT_GUI_EXPORTS
+#define QT_GUI_EXPORT BOOST_SYMBOL_EXPORT
+#else
+#define QT_GUI_EXPORT BOOST_SYMBOL_IMPORT
+#endif
+
+class QT_GUI_EXPORT ModelTest : public QObject
 {
   Q_OBJECT
 

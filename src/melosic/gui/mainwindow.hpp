@@ -39,10 +39,6 @@ class QQmlContext;
 class QQmlComponent;
 class QQuickWindow;
 
-#ifdef Qt5Test_FOUND
-class ModelTest;
-#endif
-
 namespace Melosic {
 
 namespace Core {
