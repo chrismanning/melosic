@@ -36,20 +36,20 @@ namespace Melosic {
 namespace Core {
 
 struct Kernel::impl {
-    impl() :
-        confman("melosic.conf"),
-        plugman(confman),
-        io_service(),
-        signal_set(io_service),
-        outman(confman, io_service),
-        null_worker(new asio::io_service::work(io_service)),
-        tman(&io_service),
-        null_worker_(std::move(null_worker)),
-        inman(),
-        decman(inman, tman),
-        encman(),
-        libman(confman, decman, plugman, tman),
-        playlistman()
+    impl()
+        : confman("melosic.conf"),
+          plugman(confman),
+          io_service(),
+          signal_set(io_service),
+          outman(confman, io_service),
+          null_worker(new asio::io_service::work(io_service)),
+          tman(&io_service),
+          null_worker_(std::move(null_worker)),
+          inman(),
+          decman(inman, tman),
+          encman(),
+          libman(confman, decman, plugman, tman),
+          playlistman()
     {
         signal_set.add(SIGABRT);
         signal_set.add(SIGINT);
@@ -63,9 +63,7 @@ struct Kernel::impl {
         });
     }
 
-    ~impl() {
-        signal_set.cancel();
-    }
+    ~impl() { signal_set.cancel(); }
 
     Config::Manager confman;
     Plugin::Manager plugman;
@@ -88,52 +86,30 @@ Kernel::Kernel() : pimpl(new impl) {}
 Kernel::~Kernel() {
     try {
         getConfigManager().saveConfig();
-    }
-    catch(...) {
+    } catch(...) {
         std::clog << boost::current_exception_diagnostic_information() << std::endl;
     }
 }
 
-Config::Manager& Kernel::getConfigManager() {
-    return pimpl->confman;
-}
+Config::Manager& Kernel::getConfigManager() { return pimpl->confman; }
 
-Input::Manager& Kernel::getInputManager() {
-    return pimpl->inman;
-}
+Input::Manager& Kernel::getInputManager() { return pimpl->inman; }
 
-Decoder::Manager& Kernel::getDecoderManager() {
-    return pimpl->decman;
-}
+Decoder::Manager& Kernel::getDecoderManager() { return pimpl->decman; }
 
-Output::Manager& Kernel::getOutputManager() {
-    return pimpl->outman;
-}
+Output::Manager& Kernel::getOutputManager() { return pimpl->outman; }
 
-Encoder::Manager& Kernel::getEncoderManager() {
-    return pimpl->encman;
-}
+Encoder::Manager& Kernel::getEncoderManager() { return pimpl->encman; }
 
-Plugin::Manager& Kernel::getPluginManager() {
-    return pimpl->plugman;
-}
+Plugin::Manager& Kernel::getPluginManager() { return pimpl->plugman; }
 
-Thread::Manager& Kernel::getThreadManager() {
-    return pimpl->tman;
-}
+Thread::Manager& Kernel::getThreadManager() { return pimpl->tman; }
 
-Melosic::Playlist::Manager& Kernel::getPlaylistManager() {
-    return pimpl->playlistman;
-}
+Melosic::Playlist::Manager& Kernel::getPlaylistManager() { return pimpl->playlistman; }
 
-Library::Manager& Kernel::getLibraryManager() {
-    return pimpl->libman;
-}
+Library::Manager& Kernel::getLibraryManager() { return pimpl->libman; }
 
-asio::io_service& Kernel::getIOService() {
-    return pimpl->io_service;
-}
+asio::io_service& Kernel::getIOService() { return pimpl->io_service; }
 
 } // namespace Core
 } // namespace Melosic
-

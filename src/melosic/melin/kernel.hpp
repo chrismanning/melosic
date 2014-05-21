@@ -59,7 +59,7 @@ class Manager;
 namespace Core {
 
 class MELOSIC_EXPORT Kernel final {
-public:
+  public:
     Kernel();
 
     Kernel(const Kernel&) = delete;
@@ -81,7 +81,7 @@ public:
 
     asio::io_service& getIOService();
 
-private:
+  private:
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
