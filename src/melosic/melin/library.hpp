@@ -78,7 +78,8 @@ class Manager final {
     using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
     Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&, Thread::Manager&);
     friend class Core::Kernel;
-public:
+
+  public:
     Manager(const Manager&) = default;
 
     Manager(Manager&&) = delete;
@@ -90,8 +91,8 @@ public:
     MELOSIC_EXPORT
     std::vector<jbson::document> query(const jbson::document&) const;
 
-    MELOSIC_EXPORT std::vector<jbson::document_set>
-    query(const jbson::document&, ForwardRange<std::tuple<std::string, std::string> >) const;
+    MELOSIC_EXPORT std::vector<jbson::document_set> query(const jbson::document&,
+                                                          ForwardRange<std::tuple<std::string, std::string>>) const;
 
     MELOSIC_EXPORT std::vector<jbson::document_set>
     query(const jbson::document&, std::initializer_list<std::tuple<std::string, std::string>>) const;
@@ -101,7 +102,7 @@ public:
 
     MELOSIC_EXPORT bool scanning() const noexcept;
 
-private:
+  private:
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
@@ -110,11 +111,17 @@ MELOSIC_EXPORT
 std::vector<jbson::element> apply_path(const std::vector<jbson::document>&, boost::string_ref);
 
 MELOSIC_EXPORT
-std::vector<jbson::document_set> apply_named_paths(const std::vector<jbson::document>&,
-                                                  ForwardRange<std::tuple<std::string, std::string>>);
+jbson::document_set apply_named_paths(const jbson::document&, ForwardRange<std::tuple<std::string, std::string>>);
+MELOSIC_EXPORT
+jbson::document_set apply_named_paths(const jbson::document&,
+                                      std::initializer_list<std::tuple<std::string, std::string>>);
+
 MELOSIC_EXPORT
 std::vector<jbson::document_set> apply_named_paths(const std::vector<jbson::document>&,
-                                                  std::initializer_list<std::tuple<std::string, std::string>>);
+                                                   ForwardRange<std::tuple<std::string, std::string>>);
+MELOSIC_EXPORT
+std::vector<jbson::document_set> apply_named_paths(const std::vector<jbson::document>&,
+                                                   std::initializer_list<std::tuple<std::string, std::string>>);
 
 } // namespace Library
 } // namespace Melosic
