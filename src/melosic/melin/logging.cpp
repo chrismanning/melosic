@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-
-#ifndef MELOSIC_DISABLE_LOGGING
 #include <memory>
 
 #include <boost/log/sinks.hpp>
@@ -27,16 +25,12 @@
 #include <boost/date_time/local_time/local_time.hpp>
 
 #include <melosic/common/directories.hpp>
-#endif
 
 #include "logging.hpp"
 
 namespace Melosic {
 namespace Logger {
 
-#ifdef MELOSIC_DISABLE_LOGGING
-void init() {}
-#else
 void init() {
     auto con_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_ostream_backend>>();
 
@@ -72,8 +66,6 @@ void init() {
 
     logging::add_common_attributes();
 }
-
-#endif
 
 } // namespace Logger
 } // namespace Melosic

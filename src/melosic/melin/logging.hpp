@@ -18,7 +18,6 @@
 #ifndef MELOSIC_LOGGING_HPP
 #define MELOSIC_LOGGING_HPP
 
-#ifndef MELOSIC_DISABLE_LOGGING
 #include <boost/log/core.hpp>
 #include <boost/log/common.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
@@ -86,32 +85,5 @@ MELOSIC_EXPORT void init();
 #define CHAN_WARN_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::warning)
 #define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::debug)
 #define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::trace)
-#else
-
-#include <ostream>
-
-namespace Melosic {
-namespace Logger {
-
-struct nullstream : std::ostream {
-    nullstream() : std::ios(0), std::ostream(0) {}
-};
-
-inline void init() {}
-
-}//end namespace Logger
-}//end namespace Melosic
-
-#define LOG(lg) Melosic::Logger::nullstream()
-#define ERROR_LOG(lg) Melosic::Logger::nullstream()
-#define WARN_LOG(lg) Melosic::Logger::nullstream()
-#define DEBUG_LOG(lg) Melosic::Logger::nullstream()
-#define TRACE_LOG(lg) Melosic::Logger::nullstream()
-#define CHAN_LOG(lg, chan) Melosic::Logger::nullstream()
-#define CHAN_ERROR_LOG(lg) Melosic::Logger::nullstream()
-#define CHAN_WARN_LOG(lg) Melosic::Logger::nullstream()
-#define CHAN_DEBUG_LOG(lg) Melosic::Logger::nullstream()
-#define CHAN_TRACE_LOG(lg) Melosic::Logger::nullstream()
-#endif //MELOSIC_DISABLE_LOGGING
 
 #endif // MELOSIC_LOGGING_HPP
