@@ -303,10 +303,19 @@ ApplicationWindow {
             FilterPane {
                 id: genre
                 objectName: "genrepane"
-                generatorPath: "$.genre"
+                generatorPaths: '{ "genre": "$.genre" }'
 
                 queryGenerator: function() {
-                    return { metadata: { $elemMatch: { key: "genre", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                    return {
+                        metadata: {
+                            $elemMatch: {
+                                key: "genre",
+                                value: {
+                                    $in: Array.prototype.slice.call(arguments).map(function(val) { return val.genre })
+                                }
+                            }
+                        }
+                    }
                 }
 
                 header: "Genre"
@@ -327,10 +336,19 @@ ApplicationWindow {
                 id: artist
                 dependsOn: genre
                 objectName: "artistpane"
-                generatorPath: "$.artist"
+                generatorPaths: '{ "artist": "$.artist" }'
 
                 queryGenerator: function() {
-                    return { metadata: { $elemMatch: { key: "artist", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                    return {
+                        metadata: {
+                            $elemMatch: {
+                                key: "artist",
+                                value: {
+                                    $in: Array.prototype.slice.call(arguments).map(function(val) { return val.artist })
+                                }
+                            }
+                        }
+                    }
                 }
 
                 header: "Artist"
@@ -351,10 +369,37 @@ ApplicationWindow {
                 id: album
                 dependsOn: artist
                 objectName: "albumpane"
-                generatorPath: "$.album"
+                generatorPaths: '{ "album": "$.album", "date": "$.date", "comment": "$.comment" }'
 
                 queryGenerator: function() {
-                    return { metadata: { $elemMatch: { key: "album", value: { $in: Array.prototype.slice.call(arguments) } } } }
+                    var arr = Array.prototype.slice.call(arguments)
+
+                    var obj = {
+                        $or: []
+                    }
+
+                    arr.map(function(val) {
+                        var and = { $and: [] }
+                        if(val.album)
+                            and.$and.push({ metadata: { $elemMatch: { key: "album", value: val.album } } })
+                        if(val.date)
+                            and.$and.push({ metadata: { $elemMatch: { key: "date", value: val.date } } })
+                        if(val.comment)
+                            and.$and.push({ metadata: { $elemMatch: { key: "comment", value: val.comment } } })
+                        else
+                            and.$and.push({ metadata: { $not: { $elemMatch: { key: "comment" } } } })
+
+                        switch(and.$and.length) {
+                        case 0:
+                            break
+                        case 1:
+                            obj.$or.push(and.$and[0])
+                            break
+                        default:
+                            obj.$or.push(and)
+                        }
+                    })
+                    return obj
                 }
 
                 sortFields: ["date", "year", "album", "albumartist", "artist"]

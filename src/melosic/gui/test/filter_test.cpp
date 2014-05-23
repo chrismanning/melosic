@@ -27,14 +27,36 @@
 using namespace jbson::literal;
 
 #include <melosic/gui/filterpane.hpp>
+#include <melosic/melin/logging.hpp>
 using namespace Melosic;
 
 template <typename RangeT>
-static std::vector<jbson::element> to_array(RangeT&& range) {
+static std::vector<jbson::element>
+to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<RangeT,
+         boost::mpl::quote1<jbson::detail::is_element>>::value>* = nullptr) {
     std::vector<jbson::element> arr;
     size_t i{0};
     boost::transform(range, std::back_inserter(arr), [&i](auto&& val) {
         jbson::element el{val};
+        el.name(std::to_string(i++));
+        return el;
+    });
+    assert(boost::distance(arr) == boost::distance(range));
+    return std::move(arr);
+}
+
+template <typename RangeT>
+static std::vector<jbson::element>
+to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<
+         RangeT, boost::mpl::bind<boost::mpl::quote2<jbson::detail::is_range_of_value>, boost::mpl::arg<1>,
+         boost::mpl::quote1<jbson::detail::is_element>>>::value>* = nullptr) {
+    std::vector<jbson::element> arr;
+    size_t i{0};
+    boost::transform(range, std::back_inserter(arr), [&i](auto&& val) {
+        assert(boost::distance(val) == 1);
+        if(boost::distance(val) == 0)
+            return jbson::element{std::to_string(i++)};
+        jbson::element el{*val.begin()};
         el.name(std::to_string(i++));
         return el;
     });
@@ -56,6 +78,7 @@ struct FilterTest : QObject {
 private Q_SLOTS:
     // global
     void initTestCase() {
+        Logger::init();
         db.open(QDir::tempPath().toStdString()+ "/testdb", ejdb::db_mode::read|
                                                 ejdb::db_mode::write|
                                                 ejdb::db_mode::create|
@@ -134,14 +157,14 @@ private Q_SLOTS:
         pane1->setQuery(QStringLiteral("{}"));
         pane1->setUnknownQuery(QStringLiteral(R"({ "city": { "$exists": false } })"));
 
-        pane1->setQueryGenerator([](const std::vector<jbson::element>& selection) {
+        pane1->setQueryGenerator([](const std::vector<jbson::document_set>& selection) -> jbson::document {
             std::clog << "generating query from pane1 selection of " << selection.size() << " elements\n";
             auto qry = jbson::builder("city", jbson::element_type::document_element, jbson::builder
                                       ("$in", jbson::element_type::array_element, to_array(selection))
                                      );
             return jbson::document(qry);
         });
-        pane1->setGeneratorPath(QStringLiteral("$.city"));
+        pane1->setGeneratorPaths(QStringLiteral(R"({ "city": "$.city" })"));
 
         QCOMPARE(pane1->model()->rowCount(), 6);
 
@@ -151,14 +174,14 @@ private Q_SLOTS:
         pane2->setDependsOn(pane1.get());
         pane2->setUnknownQuery(QStringLiteral(R"({ "age": { "$exists": false } })"));
 
-        pane2->setQueryGenerator([](const std::vector<jbson::element>& selection) {
+        pane2->setQueryGenerator([](const std::vector<jbson::document_set>& selection) -> jbson::document {
             std::clog << "generating query from pane2 selection of " << selection.size() << " elements\n";
             auto qry = jbson::builder("age", jbson::element_type::document_element, jbson::builder
                                       ("$in", jbson::element_type::array_element, to_array(selection))
                                      );
             return jbson::document(qry);
         });
-        pane2->setGeneratorPath(QStringLiteral("$.age"));
+        pane2->setGeneratorPaths(QStringLiteral(R"({ "age": "$.age"})"));
 
         QCOMPARE(pane2->model()->rowCount(), 7);
 

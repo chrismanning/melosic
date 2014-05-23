@@ -25,6 +25,7 @@
 
 #include <melosic/melin/library.hpp>
 #include <ejpp/ejdb.hpp>
+#include <jbson/element.hpp>
 
 #include "jsondocmodel.hpp"
 #include "librarymanager.hpp"
@@ -49,7 +50,7 @@ class QT_GUI_EXPORT FilterPane : public QObject {
     Q_PROPERTY(QJSValue queryGenerator READ queryGenerator WRITE setQueryGenerator NOTIFY queryGeneratorChanged FINAL)
     Q_PROPERTY(QVariant generatedQuery READ generatedQuery NOTIFY queryGenerated FINAL)
 
-    Q_PROPERTY(QString generatorPath READ generatorPath WRITE setGeneratorPath NOTIFY generatorPathChanged FINAL)
+    Q_PROPERTY(QVariant generatorPaths READ generatorPaths WRITE setGeneratorPaths NOTIFY generatorPathsChanged FINAL)
 
     Q_PROPERTY(QVariant query READ query WRITE setQuery NOTIFY queryChanged FINAL)
     Q_PROPERTY(QVariant paths READ paths WRITE setPaths NOTIFY pathsChanged FINAL)
@@ -80,11 +81,10 @@ public:
 
     QJSValue queryGenerator() const;
     void setQueryGenerator(QJSValue);
-    void setQueryGenerator(const std::function<QVariant(const QVariantList&)>&);
-    void setQueryGenerator(std::function<jbson::document(const std::vector<jbson::element>&)>);
+    void setQueryGenerator(std::function<jbson::document(const std::vector<jbson::document_set>&)>);
 
-    QString generatorPath() const;
-    void setGeneratorPath(QString);
+    QVariant generatorPaths() const;
+    void setGeneratorPaths(QVariant);
 
     QVariant generatedQuery() const;
 
@@ -105,7 +105,7 @@ public:
 Q_SIGNALS:
     void unknownQueryChanged(QVariant);
     void queryGeneratorChanged(QJSValue);
-    void generatorPathChanged(QString);
+    void generatorPathsChanged(QVariant);
     void queryGenerated(QVariant);
     void queryChanged(QVariant);
     void headerChanged(QString);
