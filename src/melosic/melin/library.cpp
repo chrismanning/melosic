@@ -186,13 +186,6 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::
             ec.clear();
         }
 
-        coll.set_index("metadata", ejdb::index_mode::array | ejdb::index_mode::rebuild | ejdb::index_mode::optimize,
-                       ec);
-        if(ec) {
-            ERROR_LOG(logject) << "Could not set index on collection field \"metadata\": " << ec.message();
-            ec.clear();
-        }
-
         TRACE_LOG(logject) << "Indexes set on \"tracks\" collection";
     });
 }
