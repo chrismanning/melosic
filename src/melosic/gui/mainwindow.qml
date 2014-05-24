@@ -303,8 +303,10 @@ ApplicationWindow {
             FilterPane {
                 id: genre
                 objectName: "genrepane"
-                generatorPaths: '{ "genre": "$.genre" }'
+                query: new Object
+                paths: { "genre": "metadata[?(@.key == 'genre')].value" }
 
+                generatorPaths: { "genre": "$.genre" }
                 queryGenerator: function() {
                     return {
                         metadata: {
@@ -320,12 +322,6 @@ ApplicationWindow {
 
                 header: "Genre"
 
-                Component.onCompleted: {
-                    query = {}
-                    paths = {
-                        genre: "metadata[?(@.key == 'genre')].value"
-                    }
-                }
                 delegate: Label {
                     x: 1
                     text: document.genre === undefined ? "Unknown Genre" : document.genre
@@ -336,8 +332,9 @@ ApplicationWindow {
                 id: artist
                 dependsOn: genre
                 objectName: "artistpane"
-                generatorPaths: '{ "artist": "$.artist" }'
+                paths: { "artist": "metadata[?(@.key == 'artist')].value" }
 
+                generatorPaths: { "artist": "$.artist" }
                 queryGenerator: function() {
                     return {
                         metadata: {
@@ -358,19 +355,19 @@ ApplicationWindow {
                     text: document.artist === undefined ? "Unknown Artist" : document.artist
                     color: styleData.textColor
                 }
-
-                Component.onCompleted: {
-                    paths = {
-                        artist: "metadata[?(@.key == 'artist')].value"
-                    }
-                }
             }
             FilterPane {
                 id: album
                 dependsOn: artist
                 objectName: "albumpane"
-                generatorPaths: '{ "album": "$.album", "date": "$.date", "comment": "$.comment" }'
+                paths: {
+                    "album": "metadata[?(@.key == 'album')].value",
+                    "date": "metadata[?(@.key == 'date')].value",
+                    "comment": "metadata[?(@.key == 'comment')].value"
+                }
+                sortFields: ["date", "year", "album", "albumartist", "artist"]
 
+                generatorPaths: { "album": "$.album", "date": "$.date", "comment": "$.comment" }
                 queryGenerator: function() {
                     var arr = Array.prototype.slice.call(arguments)
 
@@ -402,8 +399,6 @@ ApplicationWindow {
                     return obj
                 }
 
-                sortFields: ["date", "year", "album", "albumartist", "artist"]
-
                 delegate: Row {
                     x: 1
                     spacing: 5
@@ -425,14 +420,6 @@ ApplicationWindow {
                         }
                     }
                 }
-
-                Component.onCompleted: {
-                    paths = {
-                        album: "metadata[?(@.key == 'album')].value",
-                        date: "metadata[?(@.key == 'date')].value",
-                        comment: "metadata[?(@.key == 'comment')].value"
-                    }
-                }
             }
 
             filterResultPane: track
@@ -440,7 +427,11 @@ ApplicationWindow {
                 id: track
                 dependsOn: album
                 objectName: "trackpane"
-
+                paths: {
+                    "title": "metadata[?(@.key == 'title')].value",
+                    "tracknumber": "metadata[?(@.key == 'tracknumber')].value",
+                    "location": "location"
+                }
                 sortFields: ["tracknumber", "title"]
 
                 delegate: Row {
@@ -454,14 +445,6 @@ ApplicationWindow {
                     Label {
                         text: document.title === undefined ? document.location : document.title
                         color: styleData.textColor
-                    }
-                }
-
-                Component.onCompleted: {
-                    paths = {
-                        title: "metadata[?(@.key == 'title')].value",
-                        tracknumber: "metadata[?(@.key == 'tracknumber')].value",
-                        location: "location"
                     }
                 }
             }
