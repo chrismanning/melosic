@@ -85,17 +85,21 @@ ScrollView {
             property var pressModifiers
             onPressed: {
                 pressModifiers = mouse.modifiers
-                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 root.forceActiveFocus()
 
                 if(!selectionModel)
                     return
 
+                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(newIndex <= -1)
                     selectionModel.clearSelection()
-                else if(!selectionModel.isSelected(newIndex)) {
-                    mouseSelect(newIndex, mouse.modifiers)
-                    selectionModel.currentRow = newIndex
+                else {
+                    if(mouse.modifiers & Qt.ShiftModifier)
+                        selectionModel.select(selectionModel.currentRow, newIndex, SelectionModel.Select)
+                    else if(mouse.modifiers & Qt.ControlModifier)
+                        selectionModel.select(newIndex, SelectionModel.Toggle)
+                    else
+                        selectionModel.select(newIndex, SelectionModel.Select)
                 }
             }
 
@@ -105,24 +109,21 @@ ScrollView {
             }
 
             onReleased: {
-                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
-                if(!(pressModifiers & Qt.ShiftModifier) && !(pressModifiers & Qt.ControlModifier) &&
-                        selectionModel.isSelected(newIndex))
-                {
-                    mouseSelect(newIndex, pressModifiers)
-                    selectionModel.currentRow = newIndex
-                }
-            }
-
-            function mouseSelect(index, modifiers) {
                 if(!selectionModel)
                     return
-                if(modifiers & Qt.ShiftModifier)
-                    selectionModel.select(selectionModel.currentRow, index, SelectionModel.ClearAndSelect)
-                else if(modifiers & Qt.ControlModifier)
-                    selectionModel.select(index, SelectionModel.Toggle)
-                else
-                    selectionModel.select(index, SelectionModel.ClearAndSelect)
+
+                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
+                if(selectionModel.isSelected(newIndex)) {
+                    if(pressModifiers & Qt.ShiftModifier) {
+                        var flag = SelectionModel.ClearAndSelect
+                        if(pressModifiers & Qt.ControlModifier)
+                            flag = SelectionModel.Select
+                        selectionModel.select(selectionModel.currentRow, newIndex, flag)
+                    }
+                    else if(!(pressModifiers & Qt.ControlModifier))
+                        selectionModel.select(newIndex, SelectionModel.ClearAndSelect)
+                }
+                selectionModel.currentRow = newIndex
             }
 
             onDoubleClicked: {
