@@ -469,9 +469,9 @@ void Manager::impl::scan(const fs::path& dir) {
                 }
             } catch(boost::thread_interrupted&) {
                 throw;
-            } catch(std::exception& e) {
+            } catch(...) {
                 // TODO: fix uri (source of this exception)
-                ERROR_LOG(logject) << p << "; " << e.what();
+                ERROR_LOG(logject) << p << "; " << boost::current_exception_diagnostic_information();
                 continue;
             }
         }

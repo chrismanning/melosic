@@ -134,10 +134,16 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         t.audioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
         t.end(chrono::seconds{ap->length()});
 
-        auto pcm_src = pimpl->open(t.uri());
-        if(pcm_src) {
-            t.end(pcm_src->duration());
-            t.audioSpecs(pcm_src->getAudioSpecs());
+        try {
+            auto pcm_src = pimpl->open(t.uri());
+            if(pcm_src) {
+                t.end(pcm_src->duration());
+                t.audioSpecs(pcm_src->getAudioSpecs());
+            }
+        }
+        catch(...) {
+            ERROR_LOG(logject) << "Could not open track at uri " << t.uri();
+            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
         }
 
         ret.push_back(std::move(t));
