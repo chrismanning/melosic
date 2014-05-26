@@ -98,8 +98,8 @@ Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
 struct Manager::impl : std::enable_shared_from_this<impl> {
     impl(Config::Manager&, Decoder::Manager&, Thread::Manager&);
 
-    void loadedSlot(boost::synchronized_value<Config::Conf>& ubase);
-    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val);
+    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base);
+    void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val);
 
     void scan();
     void scan(const fs::path& dir);
@@ -127,6 +127,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     mutex mu;
     std::atomic<bool> pluginsLoaded{false};
     std::atomic<bool> m_scanning{false};
+    std::vector<Signals::ScopedConnection> m_signal_connections;
 };
 
 std::atomic<ejdb::db*> k_quick_db{nullptr};
@@ -190,27 +191,21 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::
     });
 }
 
-void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
+void Manager::impl::loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
     TRACE_LOG(logject) << "Library conf loaded";
 
-    auto base = ubase.synchronize();
-    auto c = base->getChild("Library");
-    if(!c) {
-        base->putChild(conf);
-        c = base->getChild("Library");
-    }
-    assert(c);
+    auto c = base->createChild("Library", conf);
+
     c->merge(conf);
-    c->addDefaultFunc([=]() { return conf; });
+    c->setDefault(conf);
 
     auto coll = m_db.get_collection("tracks");
     assert(coll);
     ejdb::unique_transaction trans(coll.transaction());
 
-    c->iterateNodes([&](const std::tuple<Config::KeyType, Config::VarType>& pair) {
-        using std::get;
-        TRACE_LOG(logject) << "Config: variable loaded: " << get<0>(pair);
-        variableUpdateSlot(get<0>(pair), get<1>(pair));
+    c->iterateNodes([&](const std::string& key, auto&& var) {
+        TRACE_LOG(logject) << "Config: variable loaded: " << key;
+        variableUpdateSlot(key, var);
     });
 
     {
@@ -230,10 +225,10 @@ void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
         LOG(logject) << n << " tracks removed";
     }
 
-    c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+    m_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
 }
 
-void Manager::impl::variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+void Manager::impl::variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val) {
     using std::get;
     TRACE_LOG(logject) << "Config: variable updated: " << key;
     try {

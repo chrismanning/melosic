@@ -53,26 +53,20 @@ public:
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
-    void loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
+    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
         TRACE_LOG(logject) << "Output conf loaded";
 
-        auto base = ubase.synchronize();
-        auto c = base->getChild("Output"s);
-        if(!c) {
-            base->putChild(conf);
-            c = base->getChild("Output"s);
-        }
-        assert(c);
+        auto c = base->createChild("Output"s, conf);
         c->merge(conf);
-        c->addDefaultFunc([=]() -> Config::Conf { return conf; });
-        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
-            variableUpdateSlot(pair.first, pair.second);
+        c->setDefault(conf);
+        c->iterateNodes([&] (const std::string& key, auto&& var) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << key;
+            variableUpdateSlot(key, var);
         });
-        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+        m_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
     }
 
-    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+    void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val) {
         using std::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
@@ -137,6 +131,7 @@ private:
     Config::Conf conf{"Output"};
     PlayerSinkChanged playerSinkChanged;
     Logger::Logger logject{logging::keywords::channel = "Output::Manager"};
+    std::vector<Signals::ScopedConnection> m_signal_connections;
     friend class Manager;
 };
 

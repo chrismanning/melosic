@@ -168,7 +168,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     void read_handler(std::error_code ec, std::size_t n);
 
     optional<Playlist> m_current_playlist;
-    Signals::ScopedConnection currentPlaylistConnection;
+    std::vector<Signals::ScopedConnection> m_signal_connections;
     std::unique_ptr<Decoder::PCMSource> m_current_source;
     std::unique_ptr<Decoder::PCMSource> m_next_source;
     Playlist::iterator m_current_iterator;
@@ -177,35 +177,30 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     Config::Conf conf{"Player"};
     chrono::milliseconds buffer_time{1000};
 
-    void loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
+    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
         TRACE_LOG(logject) << "Player conf loaded";
 
-        auto base = ubase.synchronize();
-        auto c = base->getChild("Player");
-        if(!c) {
-            base->putChild(conf);
-            c = base->getChild("Player");
-        }
-        assert(c);
-        c->merge(conf);
-        c->addDefaultFunc([=]() { return conf; });
-        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-            TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
-            variableUpdateSlot(pair.first, pair.second);
-        });
-        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+        auto player_conf = base->createChild("Player", conf);
 
-        c = base->getChild("Output");
-        if(!c)
-            return;
-        assert(c);
-        c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-            variableUpdateSlot(pair.first, pair.second);
+        player_conf->merge(conf);
+        player_conf->setDefault(conf);
+        player_conf->iterateNodes([&] (const std::string& key, const Config::Conf::node_mapped_type& var) {
+            TRACE_LOG(logject) << "Config: variable loaded: " << key;
+            variableUpdateSlot(key, var);
         });
-        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+        m_signal_connections.emplace_back(player_conf
+                                          ->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
+
+        auto output_conf = base->createChild("Output");
+
+        output_conf->iterateNodes([&] (const std::string& key, const Config::Conf::node_mapped_type& var) {
+            variableUpdateSlot(key, var);
+        });
+        m_signal_connections.emplace_back(output_conf
+                                          ->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
     }
 
-    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+    void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
         using std::get;
         using Config::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;

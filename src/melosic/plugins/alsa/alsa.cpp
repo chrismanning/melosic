@@ -442,8 +442,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     }, names);
 }
 
-void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
-    using std::get;
+void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
     using Melosic::Config::get;
     try {
         if(key == "frames")
@@ -459,36 +458,32 @@ void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) 
     }
 }
 
+std::vector<Signals::ScopedConnection> g_signal_connections;
+
 void loadedSlot(Config::Conf& base) {
-    auto o = base.getChild("Output"s);
-    if(!o) {
-        base.putChild(Config::Conf("Output"s));
-        o = base.getChild("Output"s);
-    }
-    assert(o);
-    o->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-        variableUpdateSlot(pair.first, pair.second);
+    auto output_conf = base.createChild("Output"s);
+
+    output_conf->iterateNodes([&] (const std::string& key, auto&& var) {
+        variableUpdateSlot(key, var);
     });
 
-    auto c = o->getChild("ALSA"s);
-    if(!c) {
-        o->putChild(::conf);
-        c = o->getChild("ALSA"s);
-    }
-    assert(c);
+    auto c = output_conf->createChild("ALSA"s, ::conf);
+
     c->merge(::conf);
-    c->addDefaultFunc([=]() -> Config::Conf { return ::conf; });
-    c->getVariableUpdatedSignal().connect(variableUpdateSlot);
-    c->iterateNodes([&] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-        TRACE_LOG(logject) << "Config: variable loaded: " << pair.first;
-        variableUpdateSlot(pair.first, pair.second);
+    c->setDefault(::conf);
+
+    g_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(variableUpdateSlot));
+
+    c->iterateNodes([&] (const std::string& key, auto&& var) {
+        TRACE_LOG(logject) << "Config: variable loaded: " << key;
+        variableUpdateSlot(key, var);
     });
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", ::frames);
     ::conf.putNode("resample", ::resample);
-    auto base = confman->getConfigRoot().synchronize();
+    auto base = confman->getConfigRoot();
     loadedSlot(*base);
 }
 

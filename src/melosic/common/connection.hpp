@@ -72,13 +72,13 @@ public:
         pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
 
     void disconnect() {
-        if(pimpl)
-            pimpl->disconnect(*this);
+        if(auto nimpl = pimpl)
+            nimpl->disconnect(*this);
     }
 
     bool isConnected() const noexcept {
-        if(pimpl)
-            return pimpl->isConnected();
+        if(auto nimpl = pimpl)
+            return nimpl->isConnected();
         return false;
     }
 

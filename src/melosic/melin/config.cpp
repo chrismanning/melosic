@@ -25,11 +25,15 @@
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
 #include <boost/mpl/index_of.hpp>
-namespace { namespace mpl = boost::mpl; }
+namespace {
+namespace mpl = boost::mpl;
+}
 #include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
 #include <boost/format.hpp>
-namespace { using boost::format; }
+namespace {
+using boost::format;
+}
 
 #include <melosic/common/configvar.hpp>
 #include <melosic/common/signal.hpp>
@@ -57,11 +61,11 @@ struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
     using Super::Signal;
 };
 
-struct Manager::impl {
-    typedef std::mutex Mutex;
-    using lock_guard = std::lock_guard<Mutex>;
-    using unique_lock = std::unique_lock<Mutex>;
+using mutex = std::recursive_timed_mutex;
+using lock_guard = std::lock_guard<mutex>;
+using unique_lock = std::unique_lock<mutex>;
 
+struct Manager::impl {
     impl(fs::path p) : conf(Conf("root")) {
         if(p.empty())
             BOOST_THROW_EXCEPTION(Exception());
@@ -73,7 +77,10 @@ struct Manager::impl {
         TRACE_LOG(logject) << "Conf file path: " << confPath;
     }
 
-    ~impl() {}
+    ~impl() {
+        unique_lock l(mu, 100ms);
+        assert(l);
+    }
 
     VarType VarFromJson(json::Value& val) {
         if(val.IsString())
@@ -100,17 +107,16 @@ struct Manager::impl {
         assert(false);
     }
 
-    Conf ConfFromJson(json::Value& val, KeyType name) {
+    Conf ConfFromJson(json::Value& val, const Config::Conf::node_key_type& name) {
         assert(val.IsObject());
         auto members = boost::make_iterator_range(val.MemberBegin(), val.MemberEnd());
         Conf c(name);
         for(auto& member : members) {
-            KeyType name_str(member.name.GetString());
+            Config::Conf::node_key_type name_str(member.name.GetString());
             if(member.value.IsObject()) {
                 TRACE_LOG(logject) << "adding child conf from json: " << name_str;
                 c.putChild(ConfFromJson(member.value, std::move(name_str)));
-            }
-            else {
+            } else {
                 TRACE_LOG(logject) << "adding node from json: " << name_str;
                 c.putNode(std::move(name_str), VarFromJson(member.value));
             }
@@ -125,7 +131,8 @@ struct Manager::impl {
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
             l.unlock();
-            loaded(std::ref(conf));
+            auto locked_conf = getConfigRoot();
+            loaded(std::ref(locked_conf));
             saveConfig();
             return;
         }
@@ -135,9 +142,9 @@ struct Manager::impl {
 
         ifs.seekg(0, std::ios::end);
         auto confstring = std::vector<char>{};
-        confstring.resize(static_cast<std::streamoff>(ifs.tellg())+1);
+        confstring.resize(static_cast<std::streamoff>(ifs.tellg()) + 1);
         ifs.seekg(0, std::ios::beg);
-        ifs.read(confstring.data(), confstring.size()-1);
+        ifs.read(confstring.data(), confstring.size() - 1);
         ifs.close();
         confstring.back() = 0;
 
@@ -149,17 +156,16 @@ struct Manager::impl {
 
             using std::swap;
             swap(conf, tmp_conf);
-        }
-        else
+        } else
             ERROR_LOG(logject) << "JSON parse error: " << rootjson.GetParseError();
 
         l.unlock();
-        loaded(std::ref(conf));
+        auto locked_conf = getConfigRoot();
+        loaded(std::ref(locked_conf));
         saveConfig();
     }
 
-    template <typename T>
-    static constexpr int TypeIndex = mpl::index_of<VarType::types, T>::type::value;
+    template <typename T> static constexpr int TypeIndex = mpl::index_of<VarType::types, T>::type::value;
     json::Value JsonFromVar(const VarType& var) {
         try {
             switch(var.which()) {
@@ -189,31 +195,30 @@ struct Manager::impl {
                 }
             }
             assert(false);
-        }
-        catch(boost::bad_get& e) {
+        } catch(boost::bad_get& e) {
             return {};
         }
     }
 
     json::Value JsonFromConf(const Conf& c) {
         json::Value obj(json::kObjectType);
-        c.iterateNodes([&] (const std::pair<KeyType, VarType>& pair) {
-            TRACE_LOG(logject) << "adding node to json: " << pair.first;
-            auto val = JsonFromVar(pair.second);
+        c.iterateNodes([&](const std::string& key, auto&& locked_var) {
+            TRACE_LOG(logject) << "adding node to json: " << key;
+            auto val = JsonFromVar(locked_var);
             if(val.IsNull()) {
                 TRACE_LOG(logject) << "node is null. skipping...";
                 return;
             }
-            obj.AddMember(pair.first.c_str(), std::move(val), poolAlloc);
+            obj.AddMember(key.data(), std::move(val), poolAlloc);
         });
-        c.iterateChildren([&] (const Conf& childconf) {
-            TRACE_LOG(logject) << "adding conf to json: " << childconf.getName();
-            auto child = JsonFromConf(childconf);
+        c.iterateChildren([&](auto&& childconf) {
+            TRACE_LOG(logject) << "adding conf to json: " << childconf->name();
+            auto child = JsonFromConf(*childconf);
             if(std::distance(child.MemberBegin(), child.MemberEnd()) == 0) {
                 TRACE_LOG(logject) << "conf child is empty. skipping...";
                 return;
             }
-            obj.AddMember(childconf.getName().c_str(), std::move(child), poolAlloc);
+            obj.AddMember(childconf->name().data(), std::move(child), poolAlloc);
         });
         return obj;
     }
@@ -224,8 +229,7 @@ struct Manager::impl {
         lock_guard l(mu);
         assert(!confPath.empty());
 
-        auto c = conf.synchronize();
-        json::Document rootjson(JsonFromConf(*c));
+        json::Document rootjson(JsonFromConf(conf));
         json::StringBuffer strbuf;
         json::PrettyWriter<json::StringBuffer> writer(strbuf);
         rootjson.Accept(writer);
@@ -237,14 +241,14 @@ struct Manager::impl {
         ofs << stringified << std::endl;
     }
 
-    boost::synchronized_value<Conf>& getConfigRoot() {
-        return conf;
+    boost::unique_lock_ptr<Conf, mutex> getConfigRoot() {
+        return {conf, mu};
     }
 
-    Mutex mu;
+    mutex mu;
     json::Value::AllocatorType poolAlloc;
     fs::path confPath;
-    boost::synchronized_value<Conf> conf;
+    Conf conf;
     Loaded loaded;
 };
 
@@ -252,206 +256,293 @@ Manager::Manager(fs::path p) : pimpl(new impl(std::move(p))) {}
 
 Manager::~Manager() {}
 
-void Manager::loadConfig() {
-    pimpl->loadConfig();
-}
+void Manager::loadConfig() { pimpl->loadConfig(); }
 
-void Manager::saveConfig() {
-    pimpl->saveConfig();
-}
+void Manager::saveConfig() { pimpl->saveConfig(); }
 
-boost::synchronized_value<Conf>& Manager::getConfigRoot() {
-    return pimpl->getConfigRoot();
-}
+boost::unique_lock_ptr<Conf, mutex> Manager::getConfigRoot() { return pimpl->getConfigRoot(); }
 
-Signals::Config::Loaded& Manager::getLoadedSignal() const {
-    return pimpl->loaded;
-}
+Signals::Config::Loaded& Manager::getLoadedSignal() const { return pimpl->loaded; }
+
+struct ConfCompare {
+    using is_transparent = std::true_type;
+    bool operator()(const Conf& a, const Conf& b) const { return a < b; }
+    bool operator()(const boost::intrusive_ptr<Conf>& a, const boost::intrusive_ptr<Conf>& b) const {
+        assert(a);
+        assert(b);
+        return (*this)(*a, *b);
+    }
+    bool operator()(const boost::intrusive_ptr<Conf>& a, const Conf& b) const {
+        assert(a);
+        return (*this)(*a, b);
+    }
+    bool operator()(const Conf& a, const boost::intrusive_ptr<Conf>& b) const {
+        assert(b);
+        return (*this)(a, *b);
+    }
+    bool operator()(const Conf::child_key_type& a, const boost::intrusive_ptr<Conf>& b) const {
+        assert(b);
+        return (*this)(a, *b);
+    }
+    bool operator()(const boost::intrusive_ptr<Conf>& a, const Conf::child_key_type& b) const {
+        assert(a);
+        return (*this)(*a, b);
+    }
+    bool operator()(const Conf::child_key_type& a, const Conf& b) const { return a < b.name(); }
+    bool operator()(const Conf& a, const Conf::child_key_type& b) const { return a.name() < b; }
+};
 
 struct Conf::impl {
-    struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
-        using Super::Signal;
-    };
-    VariableUpdated variableUpdated;
-
     impl(std::string name) : name(std::move(name)) {}
 
-    impl(const impl& b)
-        : children(b.children),
-          nodes(b.nodes),
-          name(b.name),
-          resetDefault(b.resetDefault)
-    {}
+    impl(const impl& b) : children(b.children), nodes(b.nodes), name(b.name), m_default(b.m_default) {}
 
     impl(impl&&) = default;
 
-    threadsafe_list<Conf> children;
-    threadsafe_list<std::pair<std::add_const<KeyType>::type, VarType>> nodes;
-    KeyType name;
-    Conf::DefaultFunc resetDefault;
-
     void merge(impl& c);
 
-    void addDefaultFunc(Conf::DefaultFunc func);
+    void setDefault(Conf);
     Conf resetToDefault();
+
+    std::set<Conf::child_value_type, ConfCompare> children;
+    std::map<std::string, Conf::node_mapped_type> nodes;
+
+    std::string name;
+    std::experimental::optional<Conf> m_default;
+
+    mutex mu;
+
+    struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
+        using Super::Signal;
+    } variableUpdated;
 };
 
-void Conf::impl::addDefaultFunc(Conf::DefaultFunc func) {
-    resetDefault = func;
-}
+void Conf::impl::setDefault(Conf def) { m_default = def; }
 
 Conf Conf::impl::resetToDefault() {
-    if(!resetDefault)
-        return Conf();
-    return std::move(resetDefault());
+    if(!m_default)
+        return Conf(name);
+    return *m_default;
 }
 
 Conf::Conf() : Conf(""s) {}
 
-Conf::Conf(KeyType name) :
-    pimpl(std::make_unique<impl>(std::move(name)))
-{}
+Conf::Conf(std::string name) : pimpl(std::make_unique<impl>(std::move(name))) {}
 
-Conf::Conf(Conf&& b) {
-    using std::swap;
-    swap(*this, b);
-}
+Conf::Conf(Conf&& b) : pimpl(std::move(b.pimpl)) {}
 
 Conf::~Conf() {}
 
 Conf::Conf(const Conf& b) {
+    assert(b.pimpl);
+    unique_lock l(b.pimpl->mu);
     pimpl = std::make_unique<impl>(*b.pimpl);
 }
 
-Conf& Conf::operator=(Conf b) {
-    using std::swap;
-    swap(*this, b);
+Conf& Conf::operator=(Conf&& b) & {
+    pimpl = std::move(b.pimpl);
     return *this;
 }
 
-typename std::add_const<KeyType>::type& Conf::getName() const noexcept {
-    return pimpl->name;
+Conf& Conf::operator=(const Conf& b) & {
+    *this = Conf(b);
+    return *this;
 }
 
-std::shared_ptr<std::pair<KeyType, VarType>> Conf::getNode(std::add_const<KeyType>::type& key) {
-    TRACE_LOG(logject) << "Getting node: " << key;
-    return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
-        return pair.first == key;
-    });
+bool Conf::operator<(const Conf& b) const { return pimpl->name < b.pimpl->name; }
+
+bool Conf::operator==(const Conf& b) const {
+    return pimpl->name == b.pimpl->name && pimpl->children == b.pimpl->children && pimpl->nodes == b.pimpl->nodes;
 }
 
-std::shared_ptr<const std::pair<KeyType, VarType>> Conf::getNode(std::add_const<KeyType>::type& key) const {
-    TRACE_LOG(logject) << "Getting node: " << key;
-    return pimpl->nodes.find_first_if([&] (const std::pair<KeyType, VarType>& pair) {
-        return pair.first == key;
-    });
-}
+void Conf::swap(Conf& b) noexcept(noexcept(pimpl.swap(b.pimpl))) { pimpl.swap(b.pimpl); }
 
-std::shared_ptr<Conf::ChildType> Conf::getChild(std::add_const<KeyType>::type& key) {
+const std::string& Conf::name() const { return pimpl->name; }
+
+auto Conf::getChild(const child_key_type& key) -> child_value_type {
     TRACE_LOG(logject) << "Getting child: " << key;
-    return pimpl->children.find_first_if([&] (const Conf& c) {
-        return c.getName() == key;
-    });
+    unique_lock l(pimpl->mu);
+
+    auto it = pimpl->children.find(key);
+    if(it == pimpl->children.end())
+        return {};
+    return *it;
 }
 
-std::shared_ptr<const Conf::ChildType> Conf::getChild(std::add_const<KeyType>::type& key) const {
+auto Conf::getChild(const child_key_type& key) const -> child_const_value_type {
     TRACE_LOG(logject) << "Getting child: " << key;
-    return pimpl->children.find_first_if([&] (const Conf& c) {
-        return c.getName() == key;
-    });
+    unique_lock l(pimpl->mu);
+
+    auto it = pimpl->children.find(key);
+    if(it == pimpl->children.end())
+        return {};
+    return boost::const_pointer_cast<const Conf>(*it);
 }
 
-void Conf::putChild(Conf child) {
-    using std::swap;
-    auto c = getChild(child.getName());
-    if(c)
-        swap(*c, child);
+auto Conf::createChild(const child_key_type& key) -> child_value_type {
+    return createChild(key, Conf{key});
+}
+
+auto Conf::createChild(const child_key_type& key, const child_value_type& def) -> child_value_type {
+    assert(def);
+    return createChild(key, child_value_type(def));
+}
+
+auto Conf::createChild(const child_key_type& key, child_value_type&& def) -> child_value_type {
+    assert(def);
+    unique_lock l(pimpl->mu);
+
+    auto it = pimpl->children.find(key);
+    if(it == pimpl->children.end())
+        return putChild(std::move(def));
+    return *it;
+}
+
+auto Conf::createChild(const child_key_type& key, const Conf& def) -> child_value_type {
+    return createChild(key, Conf{def});
+}
+
+auto Conf::createChild(const child_key_type& key, Conf&& def) -> child_value_type {
+    return createChild(key, new Conf{std::move(def)});
+}
+
+auto Conf::putChild(const child_value_type& child) -> child_value_type {
+    return putChild(child_value_type{child});
+}
+
+auto Conf::putChild(child_value_type&& child) -> child_value_type {
+    assert(child);
+    using std::get;
+    TRACE_LOG(logject) << "Putting child: " << child->name();
+    unique_lock l(pimpl->mu);
+
+    auto& children = pimpl->children;
+    auto ret = children.insert(std::move(child));
+    if(get<1>(ret))
+        return *get<0>(ret);
+
+    TRACE_LOG(logject) << "Child \"" << child->name() << "\" already exists; replacing.";
+    return *children.insert(children.erase(get<0>(ret)), std::move(child));
+}
+
+auto Conf::putChild(const Conf& child) -> child_value_type {
+    return putChild(Conf{child});
+}
+
+auto Conf::putChild(Conf&& child) -> child_value_type {
+    return putChild(new Conf{std::move(child)});
+}
+
+void Conf::removeChild(const child_key_type& key) {
+    TRACE_LOG(logject) << "Removing child: " << key;
+    unique_lock l(pimpl->mu);
+
+    auto& children = pimpl->children;
+    auto it = children.find(key);
+    if(it != children.end())
+        children.erase(it);
     else
-        pimpl->children.push_front(std::move(child));
+        TRACE_LOG(logject) << "Cannot removing non-existant child: " << key;
 }
 
-void Conf::putNode(KeyType key, VarType value) {
-    using std::swap;
-    auto c = getNode(key);
-    std::pair<KeyType, VarType> pair(std::move(key), std::move(value));
-    if(c)
-        swap(c->second, pair.second);
-    else
-        pimpl->nodes.push_front(std::move(pair));
+auto Conf::getNode(const node_key_type& key) const -> std::experimental::optional<node_mapped_type> {
+    TRACE_LOG(logject) << "Getting node: " << key;
+    unique_lock l(pimpl->mu);
+
+    auto it = pimpl->nodes.find(key);
+    if(it == pimpl->nodes.end())
+        return std::experimental::nullopt;
+    return it->second;
 }
 
-void Conf::removeChild(std::add_const<KeyType>::type& key) {
-    return pimpl->children.remove_if([&] (const Conf& c) {
-        return c.getName() == key;
-    });
+auto Conf::createNode(const Conf::node_key_type& key) -> node_mapped_type {
+    return createNode(key, node_mapped_type{});
 }
 
-void Conf::removeNode(std::add_const<KeyType>::type& key) {
-    return pimpl->nodes.remove_if([&] (const std::pair<std::add_const<KeyType>::type, VarType>& pair) {
-        return pair.first == key;
-    });
+auto Conf::createNode(const node_key_type& key, const node_mapped_type& def) -> node_mapped_type {
+    return createNode(key, node_mapped_type{def});
 }
 
-uint32_t Conf::childCount() const noexcept {
-    return pimpl->children.size();
-}
-uint32_t Conf::nodeCount() const noexcept {
-    return pimpl->nodes.size();
+auto Conf::createNode(const node_key_type& key, node_mapped_type&& def) -> node_mapped_type {
+    using std::get;
+    unique_lock l(pimpl->mu);
+
+    auto it = pimpl->nodes.find(key);
+    if(it == pimpl->nodes.end()) {
+        auto ret = pimpl->nodes.emplace(std::make_pair(key, std::move(def)));
+        assert(get<1>(ret));
+        it = get<0>(ret);
+    }
+    return it->second;
 }
 
-void Conf::iterateChildren(std::function<void(const ChildType&)> fun) const {
-    pimpl->children.for_each(std::move(fun));
+void Conf::putNode(const node_key_type& key, const node_mapped_type& value) {
+    putNode(key, node_mapped_type{value});
 }
 
-void Conf::iterateChildren(std::function<void(ChildType&)> fun) {
-    pimpl->children.for_each(std::move(fun));
+void Conf::putNode(const node_key_type& key, node_mapped_type&& value) {
+    using std::get;
+    TRACE_LOG(logject) << "Putting node: " << key;
+    unique_lock l(pimpl->mu);
+
+    node_mapped_type node;
+
+    auto ret = pimpl->nodes.emplace(std::make_pair(key, std::move(value)));
+    if(get<1>(ret))
+        node = std::get<0>(ret)->second;
+    else {
+        TRACE_LOG(logject) << "Node \"" << key << "\" already exists; replacing.";
+        node = pimpl->nodes.insert(pimpl->nodes.erase(get<0>(ret)), std::make_pair(key, std::move(value)))->second;
+    }
+    pimpl->variableUpdated(std::cref(key), std::cref(node));
 }
 
-void Conf::iterateNodes(std::function<void(const std::pair<KeyType, VarType>&)> fun) const {
-    pimpl->nodes.for_each(std::move(fun));
+void Conf::removeNode(const node_key_type& key) {
+    TRACE_LOG(logject) << "Removing node: " << key;
+    unique_lock l(pimpl->mu);
+
+    pimpl->nodes.erase(key);
 }
 
-void Conf::iterateNodes(std::function<void(std::pair<KeyType, VarType>&)> fun) {
-    pimpl->nodes.for_each(std::move(fun));
+uint32_t Conf::childCount() const noexcept { return pimpl->children.size(); }
+uint32_t Conf::nodeCount() const noexcept { return pimpl->nodes.size(); }
+
+void Conf::iterateChildren(std::function<void(child_const_value_type)> fun) const {
+    using std::get;
+    unique_lock l(pimpl->mu);
+
+    for(auto val : pimpl->children) {
+        assert(val);
+        fun(val);
+    }
+}
+
+void Conf::iterateNodes(std::function<void(const node_key_type&, const node_mapped_type&)> fun) const {
+    using std::get;
+    unique_lock l(pimpl->mu);
+
+    for(const auto& pair : pimpl->nodes)
+        fun(get<0>(pair), get<1>(pair));
 }
 
 void Conf::merge(const Conf& c) {
-    c.iterateNodes([this] (const std::pair<KeyType, VarType>& pair) {
-        auto tmp = getNode(pair.first);
-        if(!tmp) {
-            putNode(pair.first, pair.second);
-            tmp = getNode(pair.first);
-        }
-        assert(tmp);
-    });
-    c.iterateChildren([this] (const Conf& child) {
-        auto tmp = getChild(child.getName());
-        if(!tmp) {
-            putChild(child);
-            tmp = getChild(child.getName());
-        }
-        assert(tmp);
-        tmp->merge(child);
+    unique_lock l1(pimpl->mu, std::defer_lock), l2(c.pimpl->mu, std::defer_lock);
+    std::lock(l1, l2);
+
+    pimpl->nodes.insert(c.pimpl->nodes.begin(), c.pimpl->nodes.end());
+
+    c.iterateChildren([this](auto&& child) {
+        auto tmp = createChild(child->name(), *child);
+        tmp->merge(*child);
     });
 }
 
-void Conf::addDefaultFunc(DefaultFunc df) {
-    pimpl->addDefaultFunc(std::move(df));
-}
-void Conf::resetToDefault() {
-    *this = pimpl->resetToDefault();
-}
+void Conf::setDefault(Conf def) { pimpl->setDefault(std::move(def)); }
+void Conf::resetToDefault() { *this = pimpl->resetToDefault(); }
 
-Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() noexcept {
-    return pimpl->variableUpdated;
-}
+Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() noexcept { return pimpl->variableUpdated; }
 
-void swap(Conf& a, Conf& b)
-noexcept(noexcept(swap(a.pimpl, b.pimpl)))
-{
-    using std::swap;
-    swap(a.pimpl, b.pimpl);
-}
+void swap(Conf& a, Conf& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
 
 } // namespace Config
 } // namespace Melosic

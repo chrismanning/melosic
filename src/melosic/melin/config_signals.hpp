@@ -30,10 +30,10 @@ class Conf;
 namespace Signals {
 
 namespace Config {
-typedef SignalCore<void(const Melosic::Config::KeyType&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef SignalCore<void(boost::synchronized_value<Melosic::Config::Conf>&)> Loaded;
+typedef SignalCore<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
+typedef SignalCore<
+    void(std::reference_wrapper<boost::unique_lock_ptr<Melosic::Config::Conf, std::recursive_timed_mutex>>)> Loaded;
 }
-
 }
 }
 

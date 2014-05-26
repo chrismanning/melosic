@@ -173,25 +173,20 @@ public:
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
-    void loadedSlot(boost::synchronized_value<Config::Conf>& ubase) {
+    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
         TRACE_LOG(logject) << "Plugin conf loaded";
 
-        auto base = ubase.synchronize();
-        auto c = base->getChild("Plugins");
-        if(!c) {
-            base->putChild(conf);
-            c = base->getChild("Plugins");
-        }
-        assert(c);
+        auto c = base->createChild("Plugins", conf);
+
         c->merge(conf);
-        c->addDefaultFunc([=]() -> Config::Conf { return conf; });
-        c->iterateNodes([this] (const std::pair<Config::KeyType, Config::VarType>& pair) {
-            variableUpdateSlot(pair.first, pair.second);
+        c->setDefault(conf);
+        c->iterateNodes([this] (const std::string& key, auto&& var) {
+            variableUpdateSlot(key, var);
         });
-        c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this);
+        m_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
     }
 
-    void variableUpdateSlot(const Config::KeyType& key, const Config::VarType& val) {
+    void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val) {
         using std::get;
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
@@ -200,8 +195,10 @@ public:
                 for(auto& path : get<std::vector<Config::VarType>>(val))
                     searchPaths.emplace_back(get<std::string>(path));
                 if(searchPaths.empty()) {
-                    for(auto& path : get<std::vector<Config::VarType>>(conf.getNode("search paths")->second))
-                        searchPaths.emplace_back(get<std::string>(path));
+                    auto sp = conf.getNode("search paths");
+                    if(sp)
+                        for(auto& path : get<std::vector<Config::VarType>>(*sp))
+                            searchPaths.emplace_back(get<std::string>(path));
                 }
             }
             else if(key == "blacklist") {
@@ -300,6 +297,7 @@ private:
     friend class Manager;
     friend struct RegisterFuncsInserter;
     PluginsLoaded pluginsLoaded;
+    std::vector<Signals::ScopedConnection> m_signal_connections;
 };
 
 Manager::Manager(Config::Manager& confman) : pimpl(new impl(confman)) {}

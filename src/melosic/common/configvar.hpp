@@ -26,7 +26,6 @@
 
 namespace Melosic {
 namespace Config {
-using KeyType = const std::string;
 using VarType = boost::make_recursive_variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double,
                                std::vector<boost::recursive_variant_>>::type;
 }

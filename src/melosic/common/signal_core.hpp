@@ -27,6 +27,7 @@
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
 #include <boost/mpl/bool.hpp>
+#include <boost/implicit_cast.hpp>
 
 #include <melosic/common/traits.hpp>
 #include <melosic/common/signal_fwd.hpp>
@@ -40,6 +41,23 @@ namespace Signals {
 
 namespace {
 namespace mpl = boost::mpl;
+}
+
+namespace detail {
+
+template <typename T>
+struct unwrap {
+    using type = T;
+};
+
+template <typename T>
+struct unwrap<std::reference_wrapper<T>> {
+    using type = T&;
+};
+
+template <typename T>
+using unwrap_t = typename unwrap<T>::type;
+
 }
 
 template <typename Ret, typename ...Args>
@@ -95,12 +113,13 @@ struct SignalCore<Ret (Args...)> {
         return funs.emplace(Connection(*this), slot).first->first;
     }
 
-    template <typename T, typename Obj>
-    Connection connect(Ret (T::* const func)(Args...), Obj&& obj) {
+    template <typename T, typename Obj, typename... As>
+    Connection connect(Ret (T::* const func)(As...), Obj&& obj) {
+        static_assert(sizeof...(As) == sizeof...(Args), "");
         auto bo = bindObj(std::forward<Obj>(obj));
         static_assert(std::is_base_of<T, typename decltype(bo)::object_type>::value,
                       "obj must have member function func");
-        return connect([=] (Args&&... as) mutable { return (bo()->*func)(std::forward<Args>(as)...); });
+        return connect([=] (Args&&... as) mutable { return (bo()->*func)(std::forward<detail::unwrap_t<Args>>(as)...); });
     }
 
     bool disconnect(const Connection& conn) {
