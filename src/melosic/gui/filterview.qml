@@ -17,6 +17,13 @@ DynamicSplitView {
 
     default property alias __panes: panes.data
 
+    handleDelegate: StyleItem {
+        elementType: "splitter"
+        hover: styleData.hovered
+        horizontal: root.orientation == Qt.Horizontal
+        height: 3
+    }
+
     Item {
         id: panes
         visible: false
