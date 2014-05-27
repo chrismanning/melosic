@@ -40,7 +40,6 @@ using boost::format;
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/config.hpp>
 #include <melosic/common/directories.hpp>
-#include <melosic/common/threadsafe_list.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
