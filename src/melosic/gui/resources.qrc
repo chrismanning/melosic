@@ -14,5 +14,6 @@
         <file>selectorview.qml</file>
         <file>DynamicSplitView.qml</file>
         <file>Log.js</file>
+        <file>splitterhandledelegate.qml</file>
     </qresource>
 </RCC>

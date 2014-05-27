@@ -286,8 +286,14 @@ ApplicationWindow {
     }
 
     SplitView {
+        id: splitter
         anchors.fill: parent
         orientation: Qt.Horizontal
+
+        handleDelegate: SplitterHandleDelegate {
+            horizontal: splitter.orientation == Qt.Horizontal
+            hover: styleData.hovered
+        }
 
         FilterView {
             id: filterView
@@ -461,6 +467,7 @@ ApplicationWindow {
             background: pal.base
             manager: playlistManager
             orientation: Qt.Vertical
+            frameVisible: true
         }
 
         ColumnLayout {

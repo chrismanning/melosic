@@ -24,6 +24,7 @@ Rectangle {
     property alias padding: lv.padding
     property PlaylistManager manager
     property alias tabs: lv.tabs
+    property alias frameVisible: scroller.frameVisible
 
     Window {
         id: renameDialog
@@ -100,6 +101,7 @@ Rectangle {
     }
 
     ScrollView {
+        id: scroller
         anchors.fill: parent
     ListView {
         id: lv
