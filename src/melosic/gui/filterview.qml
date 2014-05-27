@@ -88,15 +88,9 @@ DynamicSplitView {
             Layout.alignment: Qt.AlignLeft
             Layout.fillWidth: true
 
-            property var headerText
-            header: Loader {
-                active: headerText
-                sourceComponent: Label {
-                    text: headerText
-                }
-            }
-
             selectionMimeType: "melo/filter.selection"
+
+            property var headerText
 
             styleDelegate: StyleItem {
                 elementType: "itemrow"
@@ -106,6 +100,11 @@ DynamicSplitView {
             focusDelegate: StyleItem {
                 elementType: "focusrect"
                 visible: isCurrent
+            }
+            header: StyleItem {
+                elementType: "header"
+                text: headerText
+                width: selectorView.width
             }
         }
     }

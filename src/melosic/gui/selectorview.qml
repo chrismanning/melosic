@@ -15,7 +15,7 @@ ScrollView {
 
     property var selectionModel
 
-    property alias header: listView.header
+    property Component header
 
     property alias delegate: listView.delegate
     property Component itemDelegate
@@ -28,10 +28,24 @@ ScrollView {
 
     signal activated(var selection)
 
+    Loader {
+        id: headerLoader
+        width: root.width
+        sourceComponent: root.header
+    }
+
+    __viewTopMargin: headerLoader.height
+
     ListView {
         id: listView
+        z: headerLoader.z -1
         focus: true
-        anchors.fill: parent
+        anchors.top: parent.bottom
+        anchors.topMargin: headerLoader.height
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+
         currentIndex: selectionModel ? selectionModel.currentRow : -1
         interactive: Settings.hasTouchScreen
         boundsBehavior: Flickable.StopAtBounds

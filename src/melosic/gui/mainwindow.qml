@@ -303,6 +303,8 @@ ApplicationWindow {
             FilterPane {
                 id: genre
                 objectName: "genrepane"
+                header: "Genres"
+
                 query: new Object
                 paths: { "genre": "metadata[?(@.key == 'genre')].value" }
 
@@ -320,8 +322,6 @@ ApplicationWindow {
                     }
                 }
 
-                header: "Genre"
-
                 delegate: Label {
                     x: 1
                     text: document.genre === undefined ? "Unknown Genre" : document.genre
@@ -332,6 +332,8 @@ ApplicationWindow {
                 id: artist
                 dependsOn: genre
                 objectName: "artistpane"
+                header: "Artists"
+
                 paths: { "artist": "metadata[?(@.key == 'artist')].value" }
 
                 generatorPaths: { "artist": "$.artist" }
@@ -348,8 +350,6 @@ ApplicationWindow {
                     }
                 }
 
-                header: "Artist"
-
                 delegate: Label {
                     x: 1
                     text: document.artist === undefined ? "Unknown Artist" : document.artist
@@ -360,6 +360,8 @@ ApplicationWindow {
                 id: album
                 dependsOn: artist
                 objectName: "albumpane"
+                header: "Albums"
+
                 paths: {
                     "album": "metadata[?(@.key == 'album')].value",
                     "date": "metadata[?(@.key == 'date')].value",
@@ -427,6 +429,8 @@ ApplicationWindow {
                 id: track
                 dependsOn: album
                 objectName: "trackpane"
+                header: "Tracks"
+
                 paths: {
                     "title": "metadata[?(@.key == 'title')].value",
                     "tracknumber": "metadata[?(@.key == 'tracknumber')].value",
