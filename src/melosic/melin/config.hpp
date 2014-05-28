@@ -59,7 +59,7 @@ class MELOSIC_EXPORT Manager {
     void loadConfig();
     void saveConfig();
 
-    boost::unique_lock_ptr<Conf, std::recursive_timed_mutex> getConfigRoot();
+    boost::synchronized_value<Conf>& getConfigRoot();
 
     Signals::Config::Loaded& getLoadedSignal() const;
 

@@ -60,12 +60,12 @@ struct VariableUpdated : Signals::Signal<Signals::Config::VariableUpdated> {
     using Super::Signal;
 };
 
-using mutex = std::recursive_timed_mutex;
+using mutex = std::timed_mutex;
 using lock_guard = std::lock_guard<mutex>;
 using unique_lock = std::unique_lock<mutex>;
 
 struct Manager::impl {
-    impl(fs::path p) : conf(Conf("root")) {
+    impl(fs::path p) : m_conf(Conf("root")) {
         if(p.empty())
             BOOST_THROW_EXCEPTION(Exception());
 
@@ -154,7 +154,7 @@ struct Manager::impl {
             Conf tmp_conf = std::move(ConfFromJson(rootjson, "root"s));
 
             using std::swap;
-            swap(conf, tmp_conf);
+            swap(m_conf, tmp_conf);
         } else
             ERROR_LOG(logject) << "JSON parse error: " << rootjson.GetParseError();
 
@@ -228,7 +228,8 @@ struct Manager::impl {
         lock_guard l(mu);
         assert(!confPath.empty());
 
-        json::Document rootjson(JsonFromConf(conf));
+        auto sync_conf = m_conf.synchronize();
+        json::Document rootjson(JsonFromConf(*sync_conf));
         json::StringBuffer strbuf;
         json::PrettyWriter<json::StringBuffer> writer(strbuf);
         rootjson.Accept(writer);
@@ -240,14 +241,14 @@ struct Manager::impl {
         ofs << stringified << std::endl;
     }
 
-    boost::unique_lock_ptr<Conf, mutex> getConfigRoot() {
-        return {conf, mu};
+    boost::synchronized_value<Conf>& getConfigRoot() {
+        return m_conf;
     }
 
     mutex mu;
     json::Value::AllocatorType poolAlloc;
     fs::path confPath;
-    Conf conf;
+    boost::synchronized_value<Conf> m_conf;
     Loaded loaded;
 };
 
@@ -259,7 +260,7 @@ void Manager::loadConfig() { pimpl->loadConfig(); }
 
 void Manager::saveConfig() { pimpl->saveConfig(); }
 
-boost::unique_lock_ptr<Conf, mutex> Manager::getConfigRoot() { return pimpl->getConfigRoot(); }
+boost::synchronized_value<Conf>& Manager::getConfigRoot() { return pimpl->getConfigRoot(); }
 
 Signals::Config::Loaded& Manager::getLoadedSignal() const { return pimpl->loaded; }
 
@@ -507,7 +508,6 @@ uint32_t Conf::childCount() const noexcept { return pimpl->children.size(); }
 uint32_t Conf::nodeCount() const noexcept { return pimpl->nodes.size(); }
 
 void Conf::iterateChildren(std::function<void(child_const_value_type)> fun) const {
-    using std::get;
     unique_lock l(pimpl->mu);
 
     for(auto val : pimpl->children) {
@@ -530,10 +530,11 @@ void Conf::merge(const Conf& c) {
 
     pimpl->nodes.insert(c.pimpl->nodes.begin(), c.pimpl->nodes.end());
 
-    c.iterateChildren([this](auto&& child) {
+    for(auto child : c.pimpl->children) {
+        assert(child);
         auto tmp = createChild(child->name(), *child);
         tmp->merge(*child);
-    });
+    }
 }
 
 void Conf::setDefault(Conf def) { pimpl->setDefault(std::move(def)); }

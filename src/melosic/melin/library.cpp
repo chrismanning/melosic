@@ -98,7 +98,7 @@ Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
 struct Manager::impl : std::enable_shared_from_this<impl> {
     impl(Config::Manager&, Decoder::Manager&, Thread::Manager&);
 
-    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base);
+    void loadedSlot(boost::synchronized_value<Config::Conf>& base);
     void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val);
 
     void scan();
@@ -191,7 +191,7 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::
     });
 }
 
-void Manager::impl::loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
+void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& base) {
     TRACE_LOG(logject) << "Library conf loaded";
 
     auto c = base->createChild("Library", conf);

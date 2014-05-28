@@ -53,7 +53,7 @@ public:
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
-    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
+    void loadedSlot(boost::synchronized_value<Config::Conf>& base) {
         TRACE_LOG(logject) << "Output conf loaded";
 
         auto c = base->createChild("Output"s, conf);

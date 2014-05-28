@@ -177,7 +177,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     Config::Conf conf{"Player"};
     chrono::milliseconds buffer_time{1000};
 
-    void loadedSlot(boost::unique_lock_ptr<Config::Conf, std::recursive_timed_mutex>& base) {
+    void loadedSlot(boost::synchronized_value<Config::Conf>& base) {
         TRACE_LOG(logject) << "Player conf loaded";
 
         auto player_conf = base->createChild("Player", conf);
