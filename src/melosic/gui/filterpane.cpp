@@ -135,9 +135,9 @@ static QVariant to_qvariant(const std::vector<std::tuple<std::string, std::strin
 struct FilterPane::impl {
     explicit impl(FilterPane* parent);
 
-    bool on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected);
+    void on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected);
 
-    void generate_query(bool unknown = false);
+    void generate_query();
     void refresh();
 
     std::vector<jbson::document> execute_query(const jbson::document&);
@@ -152,8 +152,6 @@ struct FilterPane::impl {
     std::function<jbson::document(decltype(m_selection_values))> m_query_generator;
     QJSValue m_qml_query_generator;
     jbson::document m_generated_query;
-
-    jbson::document m_unknown_query;
 
     jbson::document m_query;
     QVariantMap m_paths;
@@ -199,22 +197,18 @@ FilterPane::impl::impl(FilterPane* parent) : m_parent(parent), m_model(), m_sele
     });
 }
 
-bool FilterPane::impl::on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected) {
+void FilterPane::impl::on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected) {
     TRACE_LOG(logject) << "selection changing; selected size: " << selected.size()
                        << "; deselected size: " << deselected.size();
-    bool unknowns = false;
     for(auto&& range : selected) {
         for(auto&& i : range.indexes()) {
             try {
                 auto str = i.data(JsonDocModel::DocumentStringRole);
                 TRACE_LOG(logject) << "doc at index " << i.row() << ": " << qPrintable(str.toString());
                 auto res = Library::apply_named_paths(to_document(str), m_generator_paths);
-                if(res.empty()) {
-                    TRACE_LOG(logject) << "Result of path expression empty; assuming an \"unknown\" selected.";
-                    unknowns = true;
-                } else
-                    m_selection_values.emplace_back(res);
+                m_selection_values.emplace_back(res);
             } catch(...) {
+                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 assert(false);
                 continue;
             }
@@ -225,30 +219,22 @@ bool FilterPane::impl::on_selection_changed(const QItemSelection& selected, cons
             try {
                 auto res = Library::apply_named_paths(to_document(i.data(JsonDocModel::DocumentStringRole)),
                                                       m_generator_paths);
-
                 m_selection_values.erase(boost::range::remove(m_selection_values, res), m_selection_values.end());
             } catch(...) {
+                ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 assert(false);
                 continue;
             }
         }
     }
     TRACE_LOG(logject) << "selection changed; size: " << m_selection_values.size();
-    return unknowns;
 }
 
-void FilterPane::impl::generate_query(const bool unknown) {
+void FilterPane::impl::generate_query() {
     jbson::document inner;
 
     if(!m_selection_values.empty() && m_query_generator) {
         inner = m_query_generator(m_selection_values);
-    }
-
-    if(unknown && boost::distance(m_unknown_query) > 0) {
-        if(boost::distance(inner) > 0)
-            inner = jbson::document(jbson::builder("$or", jbson::array_builder(std::move(inner))(m_unknown_query)));
-        else
-            inner = m_unknown_query;
     }
 
     if(boost::distance(m_query) > 0) {
@@ -351,24 +337,22 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent), pimpl(new impl(this))
     });
 
     connect(selectionModel(), &SelectionModel::selectionChanged,
-            [this](auto&& s, auto&& d) { pimpl->generate_query(pimpl->on_selection_changed(s, d)); });
+            [this](auto&& s, auto&& d) {
+        pimpl->on_selection_changed(s, d);
+        pimpl->generate_query();
+    });
     connect(this, &FilterPane::generatorPathsChanged, [this](auto&&) {
         pimpl->m_selection_values.clear();
-        if(selectionModel()->hasSelection())
-            pimpl->generate_query(pimpl->on_selection_changed(selectionModel()->selection(), {}));
+        if(selectionModel()->hasSelection()) {
+            pimpl->on_selection_changed(selectionModel()->selection(), {});
+            pimpl->generate_query();
+        }
     });
 }
 
 FilterPane::~FilterPane() {}
 
 QAbstractItemModel* FilterPane::model() const { return &pimpl->m_model; }
-
-QVariant FilterPane::unknownQuery() const { return to_qvariant(pimpl->m_unknown_query); }
-
-void FilterPane::setUnknownQuery(QVariant uq) {
-    pimpl->m_unknown_query = to_document(uq);
-    Q_EMIT unknownQueryChanged(uq);
-}
 
 QJSValue FilterPane::queryGenerator() const { return pimpl->m_qml_query_generator; }
 

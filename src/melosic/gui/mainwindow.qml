@@ -316,16 +316,19 @@ ApplicationWindow {
 
                 generatorPaths: { "genre": "$.genre" }
                 queryGenerator: function() {
-                    return {
-                        metadata: {
-                            $elemMatch: {
-                                key: "genre",
-                                value: {
-                                    $in: Array.prototype.slice.call(arguments).map(function(val) { return val.genre })
-                                }
-                            }
-                        }
+                    var arr = Array.prototype.slice.call(arguments)
+
+                    var obj = {
+                        $or: []
                     }
+
+                    arr.map(function(val) {
+                        if(val.genre)
+                            obj.$or.push({ metadata: { $elemMatch: { key: "genre", value: val.genre } } })
+                        else
+                            obj.$or.push({ metadata: { $not: { $elemMatch: { key: "genre" } } } })
+                    })
+                    return obj
                 }
 
                 delegate: Label {
@@ -344,16 +347,19 @@ ApplicationWindow {
 
                 generatorPaths: { "artist": "$.artist" }
                 queryGenerator: function() {
-                    return {
-                        metadata: {
-                            $elemMatch: {
-                                key: "artist",
-                                value: {
-                                    $in: Array.prototype.slice.call(arguments).map(function(val) { return val.artist })
-                                }
-                            }
-                        }
+                    var arr = Array.prototype.slice.call(arguments)
+
+                    var obj = {
+                        $or: []
                     }
+
+                    arr.map(function(val) {
+                        if(val.artist)
+                            obj.$or.push({ metadata: { $elemMatch: { key: "artist", value: val.artist } } })
+                        else
+                            obj.$or.push({ metadata: { $not: { $elemMatch: { key: "artist" } } } })
+                    })
+                    return obj
                 }
 
                 delegate: Label {
@@ -387,8 +393,12 @@ ApplicationWindow {
                         var and = { $and: [] }
                         if(val.album)
                             and.$and.push({ metadata: { $elemMatch: { key: "album", value: val.album } } })
+                        else
+                            and.$and.push({ metadata: { $not: { $elemMatch: { key: "album" } } } })
                         if(val.date)
                             and.$and.push({ metadata: { $elemMatch: { key: "date", value: val.date } } })
+                        else
+                            and.$and.push({ metadata: { $not: { $elemMatch: { key: "date" } } } })
                         if(val.comment)
                             and.$and.push({ metadata: { $elemMatch: { key: "comment", value: val.comment } } })
                         else

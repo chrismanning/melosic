@@ -45,8 +45,6 @@ class QT_GUI_EXPORT FilterPane : public QObject {
     Q_PROPERTY(QString header MEMBER m_header NOTIFY headerChanged FINAL)
     Q_PROPERTY(QQmlComponent* delegate MEMBER m_delegate NOTIFY delegateChanged FINAL)
 
-    Q_PROPERTY(QVariant unknownQuery READ unknownQuery WRITE setUnknownQuery NOTIFY unknownQueryChanged FINAL)
-
     Q_PROPERTY(QJSValue queryGenerator READ queryGenerator WRITE setQueryGenerator NOTIFY queryGeneratorChanged FINAL)
     Q_PROPERTY(QVariant generatedQuery READ generatedQuery NOTIFY queryGenerated FINAL)
 
@@ -76,9 +74,6 @@ public:
 
     QAbstractItemModel* model() const;
 
-    QVariant unknownQuery() const;
-    void setUnknownQuery(QVariant);
-
     QJSValue queryGenerator() const;
     void setQueryGenerator(QJSValue);
     void setQueryGenerator(std::function<jbson::document(const std::vector<jbson::document_set>&)>);
@@ -103,7 +98,6 @@ public:
     SelectionModel* selectionModel() const;
 
 Q_SIGNALS:
-    void unknownQueryChanged(QVariant);
     void queryGeneratorChanged(QJSValue);
     void generatorPathsChanged(QVariant);
     void queryGenerated(QVariant);

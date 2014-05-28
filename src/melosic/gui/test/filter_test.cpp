@@ -20,6 +20,7 @@
 #include <QVariant>
 
 #include <boost/range/algorithm/transform.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 #include <ejpp/ejdb.hpp>
 #include <jbson/json_reader.hpp>
 #include <jbson/json_writer.hpp>
@@ -52,15 +53,12 @@ to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<
          boost::mpl::quote1<jbson::detail::is_element>>>::value>* = nullptr) {
     std::vector<jbson::element> arr;
     size_t i{0};
-    boost::transform(range, std::back_inserter(arr), [&i](auto&& val) {
-        assert(boost::distance(val) == 1);
-        if(boost::distance(val) == 0)
-            return jbson::element{std::to_string(i++)};
+    boost::transform(range | boost::adaptors::filtered([](auto&& val) { return boost::distance(val) >= 1; }),
+                     std::back_inserter(arr), [&i](auto&& val) {
         jbson::element el{*val.begin()};
         el.name(std::to_string(i++));
         return el;
     });
-    assert(boost::distance(arr) == boost::distance(range));
     return std::move(arr);
 }
 
@@ -155,14 +153,23 @@ private Q_SLOTS:
         pane1->setObjectName(QStringLiteral("pane1"));
         pane1->setPaths(QStringLiteral(R"({"city": "$.city"})"));
         pane1->setQuery(QStringLiteral("{}"));
-        pane1->setUnknownQuery(QStringLiteral(R"({ "city": { "$exists": false } })"));
 
         pane1->setQueryGenerator([](const std::vector<jbson::document_set>& selection) -> jbson::document {
             std::clog << "generating query from pane1 selection of " << selection.size() << " elements\n";
-            auto qry = jbson::builder("city", jbson::element_type::document_element, jbson::builder
-                                      ("$in", jbson::element_type::array_element, to_array(selection))
-                                     );
-            return jbson::document(qry);
+            auto in_arr = to_array(selection);
+
+            jbson::builder qry;
+            qry = jbson::builder("city", jbson::element_type::document_element, jbson::builder
+                                 ("$in", jbson::element_type::array_element, in_arr)
+                                );
+            if(selection.size() != in_arr.size()) {
+                auto unknown = jbson::builder("city", jbson::builder("$exists", false));
+                if(in_arr.empty())
+                    qry = std::move(unknown);
+                else
+                    qry = jbson::builder("$or", jbson::array_builder(qry)(unknown));
+            }
+            return jbson::document(std::move(qry));
         });
         pane1->setGeneratorPaths(QStringLiteral(R"({ "city": "$.city" })"));
 
@@ -172,14 +179,23 @@ private Q_SLOTS:
         pane2->setObjectName(QStringLiteral("pane2"));
         pane2->setPaths(QStringLiteral(R"({"age": "$.age"})"));
         pane2->setDependsOn(pane1.get());
-        pane2->setUnknownQuery(QStringLiteral(R"({ "age": { "$exists": false } })"));
 
         pane2->setQueryGenerator([](const std::vector<jbson::document_set>& selection) -> jbson::document {
-            std::clog << "generating query from pane2 selection of " << selection.size() << " elements\n";
-            auto qry = jbson::builder("age", jbson::element_type::document_element, jbson::builder
-                                      ("$in", jbson::element_type::array_element, to_array(selection))
-                                     );
-            return jbson::document(qry);
+            std::clog << "generating query from pane1 selection of " << selection.size() << " elements\n";
+            auto in_arr = to_array(selection);
+
+            jbson::builder qry;
+            qry = jbson::builder("age", jbson::element_type::document_element, jbson::builder
+                                 ("$in", jbson::element_type::array_element, in_arr)
+                                );
+            if(selection.size() != in_arr.size()) {
+                auto unknown = jbson::builder("age", jbson::builder("$exists", false));
+                if(in_arr.empty())
+                    qry = std::move(unknown);
+                else
+                    qry = jbson::builder("$or", jbson::array_builder(qry)(unknown));
+            }
+            return jbson::document(std::move(qry));
         });
         pane2->setGeneratorPaths(QStringLiteral(R"({ "age": "$.age"})"));
 
