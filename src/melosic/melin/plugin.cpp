@@ -15,17 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <unistd.h>
-#ifdef _POSIX_VERSION
-#include <dlfcn.h>
-#define DLHandle void*
-#define DLOpen(a) dlopen(a, RTLD_NOW)
-#define DLClose dlclose
-#define DLGetSym dlsym
-#define DLError dlerror
-#endif
+#include <boost/config.hpp>
 
-#ifdef _WIN32
+#if defined(BOOST_WINDOWS)
+
 #include <windows.h>
 #define DLHandle HMODULE
 #define DLOpen(a) LoadLibrary(a)
@@ -45,6 +38,16 @@ inline const char * DLError() {
                   NULL);
     return str;
 }
+
+#else // non-windows platforms
+
+#include <dlfcn.h>
+#define DLHandle void*
+#define DLOpen(a) ::dlopen(a, RTLD_NOW)
+#define DLClose ::dlclose
+#define DLGetSym ::dlsym
+#define DLError ::dlerror
+
 #endif
 
 #include <map>
@@ -143,10 +146,9 @@ private:
 #endif
         auto sym = DLGetSym(handle, symbolName.c_str());
         auto err = DLError();
-#ifdef _POSIX_VERSION
+#if defined(_POSIX_VERSION)
         if(err != nullptr) {
-#endif
-#ifdef _WIN32
+#elif defined(_WIN32)
         if(sym == nullptr) {
 #endif
             BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() <<
