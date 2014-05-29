@@ -20,7 +20,7 @@
 
 #include <memory>
 
-#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/optional.hpp>
 
 #include <melosic/common/common.hpp>
 #include <melosic/melin/playlist_signals.hpp>

@@ -31,7 +31,7 @@
 
 #include <melosic/common/common.hpp>
 #include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 

@@ -39,7 +39,6 @@ using lock_guard = std::lock_guard<mutex>;
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/common/signal.hpp>
-#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 namespace Core {

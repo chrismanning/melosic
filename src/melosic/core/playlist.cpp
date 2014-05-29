@@ -35,7 +35,6 @@ using shared_lock = std::shared_lock<mutex>;
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/common/audiospecs.hpp>
-#include <melosic/common/optional.hpp>
 
 #include "playlist.hpp"
 

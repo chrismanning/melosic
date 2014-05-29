@@ -27,7 +27,6 @@ namespace fs = boost::filesystem;
 #include <boost/range/iterator_range.hpp>
 
 #include <melosic/core/audiofile.hpp>
-#include <melosic/common/optional.hpp>
 #include "filecache.hpp"
 
 namespace Melosic {

@@ -25,13 +25,12 @@ using namespace std::literals;
 
 #include <boost/filesystem/path.hpp>
 #include <boost/utility/string_ref_fwd.hpp>
-#include <boost/iterator/iterator_facade.hpp>
 #include <boost/range/detail/any_iterator.hpp>
 
 #include <melosic/common/range.hpp>
 #include <melosic/common/common.hpp>
 #include <melosic/melin/playlist_signals.hpp>
-#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 

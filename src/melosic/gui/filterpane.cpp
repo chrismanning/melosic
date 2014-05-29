@@ -33,31 +33,34 @@ using namespace jbson::literal;
 #include <melosic/melin/library.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/common/optional.hpp>
 
 #include "filterpane.hpp"
 
 namespace Melosic {
 
 template <typename AssocT, typename ValueT> static auto find_optional(AssocT&& rng, ValueT&& val) {
-    boost::optional<typename boost::range_value<std::decay_t<AssocT>>::type> ret;
+    optional<typename boost::range_value<std::decay_t<AssocT>>::type> ret;
     auto it = rng.find(val);
     if(it != std::end(rng))
-        return ret = *it;
-    return ret = boost::none;
+        ret = *it;
+    else
+        ret = nullopt;
+    return ret;
 }
 
 template <typename C1, typename C2>
-static boost::optional<int> vers_cmp_optional(const boost::optional<jbson::basic_element<C1>>& a,
-                                              const boost::optional<jbson::basic_element<C2>>& b) {
+static optional<int> vers_cmp_optional(const optional<jbson::basic_element<C1>>& a,
+                                              const optional<jbson::basic_element<C2>>& b) {
     if((!a || !b) || a->type() != b->type() || a->type() != jbson::element_type::string_element)
-        return boost::none;
+        return nullopt;
     return ::strverscmp(jbson::get<jbson::element_type::string_element>(*a).data(),
                         jbson::get<jbson::element_type::string_element>(*b).data());
 }
 
 template <typename C1, typename C2>
-static bool contains_digit(const boost::optional<jbson::basic_element<C1>>& a,
-                           const boost::optional<jbson::basic_element<C2>>& b) {
+static bool contains_digit(const optional<jbson::basic_element<C1>>& a,
+                           const optional<jbson::basic_element<C2>>& b) {
     if((!a || !b) || a->type() != b->type() || a->type() != jbson::element_type::string_element)
         return false;
     auto str1 = jbson::get<jbson::element_type::string_element>(*a);
@@ -162,8 +165,8 @@ struct FilterPane::impl {
     QVariantList m_depend_selection;
 
     LibraryManager* m_libman;
-    boost::optional<ejdb::db> m_db;
-    boost::optional<ejdb::collection> m_coll;
+    optional<ejdb::db> m_db;
+    optional<ejdb::collection> m_coll;
 
     std::atomic<bool> m_lib_scanning{true};
 

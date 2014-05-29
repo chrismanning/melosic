@@ -22,7 +22,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 namespace Core {

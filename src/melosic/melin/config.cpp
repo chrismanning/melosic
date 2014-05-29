@@ -28,12 +28,6 @@ namespace fs = boost::filesystem;
 namespace {
 namespace mpl = boost::mpl;
 }
-#include <shared_mutex>
-#include <boost/thread/shared_lock_guard.hpp>
-#include <boost/format.hpp>
-namespace {
-using boost::format;
-}
 
 #include <melosic/common/configvar.hpp>
 #include <melosic/common/signal.hpp>
@@ -308,7 +302,7 @@ struct Conf::impl {
     std::map<std::string, Conf::node_mapped_type> nodes;
 
     std::string name;
-    std::experimental::optional<Conf> m_default;
+    optional<Conf> m_default;
 
     mutex mu;
 
@@ -445,7 +439,7 @@ void Conf::removeChild(const child_key_type& key) {
         TRACE_LOG(logject) << "Cannot removing non-existant child: " << key;
 }
 
-auto Conf::getNode(const node_key_type& key) const -> std::experimental::optional<node_mapped_type> {
+auto Conf::getNode(const node_key_type& key) const -> optional<node_mapped_type> {
     TRACE_LOG(logject) << "Getting node: " << key;
     unique_lock l(pimpl->mu);
 

@@ -24,8 +24,7 @@ using std::tuple;
 #include <chrono>
 namespace chrono = std::chrono;
 
-#include <melosic/common/optional_fwd.hpp>
-
+#include <melosic/common/optional.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/core/player_signals.hpp>
 #include <melosic/common/common.hpp>

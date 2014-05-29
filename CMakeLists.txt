@@ -30,7 +30,7 @@ link_directories(${CMAKE_BINARY_DIR}/extern/lib)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer -pthread")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs -Wno-missing-field-initializers")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-deprecated-register")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-redeclared-class-member")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-redeclared-class-member -Wno-ignored-qualifiers")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 if(NOT WIN32)

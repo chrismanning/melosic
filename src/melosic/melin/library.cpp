@@ -23,8 +23,6 @@ namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
 #include <boost/functional/hash/hash.hpp>
 #include <boost/container/flat_map.hpp>
-#include <boost/scope_exit.hpp>
-#include <boost/unordered_set.hpp>
 
 #ifndef NDEBUG
 #include <jbson/json_writer.hpp>
@@ -37,13 +35,11 @@ using namespace jbson::literal;
 #include <melosic/common/directories.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/core/audiofile.hpp>
-#include <melosic/common/optional.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/melin/logging.hpp>
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/input.hpp>
-#include <melosic/common/typeid.hpp>
 #include <melosic/common/thread.hpp>
 #include "library.hpp"
 
@@ -123,7 +119,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     Removed removed;
     Updated updated;
     boost::synchronized_value<Manager::SetType> m_dirs;
-    boost::synchronized_value<boost::unordered::unordered_set<fs::path>> m_extension_blacklist;
+    boost::synchronized_value<std::unordered_set<fs::path, boost::hash<fs::path>>> m_extension_blacklist;
     mutex mu;
     std::atomic<bool> pluginsLoaded{false};
     std::atomic<bool> m_scanning{false};

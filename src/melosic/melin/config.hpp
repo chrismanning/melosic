@@ -19,18 +19,14 @@
 #define MELOSIC_CONFIGURATION_HPP
 
 #include <memory>
-#include <array>
 #include <string>
-#include <experimental/optional>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/range/concepts.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/metafunctions.hpp>
 #include <boost/mpl/contains.hpp>
 #include <boost/thread/synchronized_value.hpp>
-#include <boost/utility/string_ref.hpp>
 #include <boost/smart_ptr/intrusive_ptr.hpp>
 #include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
@@ -38,6 +34,7 @@
 #include <melosic/common/common.hpp>
 #include <melosic/common/configvar.hpp>
 #include <melosic/melin/config_signals.hpp>
+#include <melosic/common/optional.hpp>
 
 namespace Melosic {
 
@@ -120,7 +117,7 @@ class MELOSIC_EXPORT Conf final : boost::partially_ordered<Conf>,
     child_value_type putChild(Conf&& child);
 
     //! Get node which may or may not exist.
-    std::experimental::optional<node_mapped_type> getNode(const node_key_type& key) const;
+    optional<node_mapped_type> getNode(const node_key_type& key) const;
 
     //! Get node which may or may not exist. Create it if it does not.
     node_mapped_type createNode(const node_key_type& key);

@@ -18,12 +18,12 @@
 #ifndef MELOSIC_OPTIONAL_HPP
 #define MELOSIC_OPTIONAL_HPP
 
-#include "optional_fwd.hpp"
-#include <boost/optional.hpp>
-#include <boost/none.hpp>
+#include <experimental/optional>
 
 namespace Melosic {
-const auto nullopt = boost::none;
+using std::experimental::optional;
+constexpr auto nullopt = std::experimental::nullopt;
+constexpr auto in_place = std::experimental::in_place;
 }
 
 #endif // MELOSIC_OPTIONAL_HPP

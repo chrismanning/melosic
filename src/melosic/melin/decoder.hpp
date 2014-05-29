@@ -29,7 +29,6 @@ namespace { namespace mpl = boost::mpl; }
 
 #include <network/uri.hpp>
 
-#include <melosic/common/optional_fwd.hpp>
 #include <melosic/common/traits.hpp>
 #include <melosic/common/audiospecs.hpp>
 

@@ -18,7 +18,7 @@
 #ifndef MELOSIC_PLAYLIST_SIGNALS_HPP
 #define MELOSIC_PLAYLIST_SIGNALS_HPP
 
-#include <melosic/common/optional_fwd.hpp>
+#include <melosic/common/optional.hpp>
 
 #include <melosic/common/signal_fwd.hpp>
 
