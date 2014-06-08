@@ -261,24 +261,24 @@ Signals::Config::Loaded& Manager::getLoadedSignal() const { return pimpl->loaded
 struct ConfCompare {
     using is_transparent = std::true_type;
     bool operator()(const Conf& a, const Conf& b) const { return a < b; }
-    bool operator()(const boost::intrusive_ptr<Conf>& a, const boost::intrusive_ptr<Conf>& b) const {
+    bool operator()(const std::shared_ptr<Conf>& a, const std::shared_ptr<Conf>& b) const {
         assert(a);
         assert(b);
         return (*this)(*a, *b);
     }
-    bool operator()(const boost::intrusive_ptr<Conf>& a, const Conf& b) const {
+    bool operator()(const std::shared_ptr<Conf>& a, const Conf& b) const {
         assert(a);
         return (*this)(*a, b);
     }
-    bool operator()(const Conf& a, const boost::intrusive_ptr<Conf>& b) const {
+    bool operator()(const Conf& a, const std::shared_ptr<Conf>& b) const {
         assert(b);
         return (*this)(a, *b);
     }
-    bool operator()(const Conf::child_key_type& a, const boost::intrusive_ptr<Conf>& b) const {
+    bool operator()(const Conf::child_key_type& a, const std::shared_ptr<Conf>& b) const {
         assert(b);
         return (*this)(a, *b);
     }
-    bool operator()(const boost::intrusive_ptr<Conf>& a, const Conf::child_key_type& b) const {
+    bool operator()(const std::shared_ptr<Conf>& a, const Conf::child_key_type& b) const {
         assert(a);
         return (*this)(*a, b);
     }
@@ -370,7 +370,7 @@ auto Conf::getChild(const child_key_type& key) const -> child_const_value_type {
     auto it = pimpl->children.find(key);
     if(it == pimpl->children.end())
         return {};
-    return boost::const_pointer_cast<const Conf>(*it);
+    return std::const_pointer_cast<const Conf>(*it);
 }
 
 auto Conf::createChild(const child_key_type& key) -> child_value_type {
@@ -397,7 +397,7 @@ auto Conf::createChild(const child_key_type& key, const Conf& def) -> child_valu
 }
 
 auto Conf::createChild(const child_key_type& key, Conf&& def) -> child_value_type {
-    return createChild(key, new Conf{std::move(def)});
+    return createChild(key, std::make_shared<Conf>(std::move(def)));
 }
 
 auto Conf::putChild(const child_value_type& child) -> child_value_type {
@@ -424,7 +424,7 @@ auto Conf::putChild(const Conf& child) -> child_value_type {
 }
 
 auto Conf::putChild(Conf&& child) -> child_value_type {
-    return putChild(new Conf{std::move(child)});
+    return putChild(std::make_shared<Conf>(std::move(child)));
 }
 
 void Conf::removeChild(const child_key_type& key) {

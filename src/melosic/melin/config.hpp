@@ -27,8 +27,6 @@
 #include <boost/range/metafunctions.hpp>
 #include <boost/mpl/contains.hpp>
 #include <boost/thread/synchronized_value.hpp>
-#include <boost/smart_ptr/intrusive_ptr.hpp>
-#include <boost/smart_ptr/intrusive_ref_counter.hpp>
 
 #include <melosic/common/error.hpp>
 #include <melosic/common/common.hpp>
@@ -66,16 +64,15 @@ class MELOSIC_EXPORT Manager {
 };
 
 class MELOSIC_EXPORT Conf final : boost::partially_ordered<Conf>,
-                                  boost::equality_comparable<Conf>,
-                                  public boost::intrusive_ref_counter<Conf, boost::thread_safe_counter> {
+                                  boost::equality_comparable<Conf> {
   public:
     using conf_variable_type = VarType;
     using node_key_type = std::string;
     using node_mapped_type = conf_variable_type;
 
     using child_key_type = std::string;
-    using child_value_type = boost::intrusive_ptr<Conf>;
-    using child_const_value_type = boost::intrusive_ptr<const Conf>;
+    using child_value_type = std::shared_ptr<Conf>;
+    using child_const_value_type = std::shared_ptr<const Conf>;
 
     Conf();
     explicit Conf(std::string name);
