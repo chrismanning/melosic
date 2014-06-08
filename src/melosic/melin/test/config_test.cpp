@@ -87,9 +87,9 @@ TEST_CASE("ConfChild") {
     REQUIRE(child);
     CHECK(name == child->name());
 
-    CHECK(child->use_count() == 2);
+    CHECK(child.use_count() == 2);
     base.removeChild(name);
-    CHECK(child->use_count() == 1);
+    CHECK(child.use_count() == 1);
     CHECK(0u == base.childCount());
 }
 

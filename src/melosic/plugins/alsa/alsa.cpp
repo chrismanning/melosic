@@ -443,6 +443,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
 }
 
 void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
+    TRACE_LOG(logject) << "Config: variable updated: " << key;
     using Melosic::Config::get;
     try {
         if(key == "frames")
@@ -472,18 +473,18 @@ void loadedSlot(Config::Conf& base) {
     c->merge(::conf);
     c->setDefault(::conf);
 
-    g_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(variableUpdateSlot));
-
     c->iterateNodes([&] (const std::string& key, auto&& var) {
         TRACE_LOG(logject) << "Config: variable loaded: " << key;
         variableUpdateSlot(key, var);
     });
+
+    g_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(variableUpdateSlot));
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("frames", ::frames);
     ::conf.putNode("resample", ::resample);
-    auto base = confman->getConfigRoot();
+    auto base = confman->getConfigRoot().synchronize();
     loadedSlot(*base);
 }
 

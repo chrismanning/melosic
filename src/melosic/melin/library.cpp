@@ -240,8 +240,10 @@ void Manager::impl::variableUpdateSlot(const Config::Conf::node_key_type& key, c
 
             std::set_difference(old_dirs.begin(), old_dirs.end(), config_dirs.begin(), config_dirs.end(),
                                 std::back_inserter(missing_dirs));
-            for(auto&& p : missing_dirs)
+            for(auto&& p : missing_dirs) {
                 remove_prefix(p);
+                dirs->erase(p);
+            }
 
             missing_dirs.clear();
             for(auto&& p : config_dirs) {

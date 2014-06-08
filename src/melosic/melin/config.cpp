@@ -124,7 +124,7 @@ struct Manager::impl {
         assert(!confPath.empty());
         if(!fs::exists(confPath)) {
             l.unlock();
-            auto locked_conf = getConfigRoot();
+            decltype(auto) locked_conf = getConfigRoot();
             loaded(std::ref(locked_conf));
             saveConfig();
             return;
@@ -153,7 +153,7 @@ struct Manager::impl {
             ERROR_LOG(logject) << "JSON parse error: " << rootjson.GetParseError();
 
         l.unlock();
-        auto locked_conf = getConfigRoot();
+        decltype(auto) locked_conf = getConfigRoot();
         loaded(std::ref(locked_conf));
         saveConfig();
     }
@@ -246,7 +246,7 @@ struct Manager::impl {
     Loaded loaded;
 };
 
-Manager::Manager(fs::path p) : pimpl(new impl(std::move(p))) {}
+Manager::Manager(fs::path p) : pimpl(std::make_unique<impl>(std::move(p))) {}
 
 Manager::~Manager() {}
 
@@ -289,7 +289,10 @@ struct ConfCompare {
 struct Conf::impl {
     impl(std::string name) : name(std::move(name)) {}
 
-    impl(const impl& b) : children(b.children), nodes(b.nodes), name(b.name), m_default(b.m_default) {}
+    impl(const impl& b) : nodes(b.nodes), name(b.name), m_default(b.m_default) {
+        for(const auto& child : b.children)
+            children.insert(children.end(), std::make_shared<Conf>(*child));
+    }
 
     impl(impl&&) = default;
 
@@ -328,6 +331,7 @@ Conf::Conf(Conf&& b) : pimpl(std::move(b.pimpl)) {}
 Conf::~Conf() {}
 
 Conf::Conf(const Conf& b) {
+    WARN_LOG(logject) << "Copying Conf \"" << b.name() << "\"";
     assert(b.pimpl);
     unique_lock l(b.pimpl->mu);
     pimpl = std::make_unique<impl>(*b.pimpl);
@@ -411,7 +415,7 @@ auto Conf::putChild(child_value_type&& child) -> child_value_type {
     unique_lock l(pimpl->mu);
 
     auto& children = pimpl->children;
-    auto ret = children.insert(std::move(child));
+    auto ret = children.insert(child);
     if(get<1>(ret))
         return *get<0>(ret);
 
@@ -481,13 +485,16 @@ void Conf::putNode(const node_key_type& key, node_mapped_type&& value) {
 
     node_mapped_type node;
 
-    auto ret = pimpl->nodes.emplace(std::make_pair(key, std::move(value)));
-    if(get<1>(ret))
-        node = std::get<0>(ret)->second;
-    else {
+    auto it = pimpl->nodes.find(key);
+    if(it != pimpl->nodes.end()) {
         TRACE_LOG(logject) << "Node \"" << key << "\" already exists; replacing.";
-        node = pimpl->nodes.insert(pimpl->nodes.erase(get<0>(ret)), std::make_pair(key, std::move(value)))->second;
+        node = pimpl->nodes.emplace_hint(pimpl->nodes.erase(it), std::make_pair(key, std::move(value)))->second;
+    } else {
+        auto ret = pimpl->nodes.emplace(std::make_pair(key, std::move(value)));
+        assert(get<1>(ret));
+        node = std::get<0>(ret)->second;
     }
+
     pimpl->variableUpdated(std::cref(key), std::cref(node));
 }
 
