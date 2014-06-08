@@ -25,6 +25,9 @@ SelectionModel::SelectionModel(QAbstractItemModel* model, QObject* parent) : QIt
     connect(this, &SelectionModel::currentChanged, [this] (auto&& cur, auto&&) {
         Q_EMIT currentRowChanged(cur.row());
     });
+    connect(this, &SelectionModel::selectionChanged, [this] (auto&&, auto&&) {
+        Q_EMIT hasSelectionChanged(hasSelection());
+    });
 }
 
 int SelectionModel::currentRow() const {

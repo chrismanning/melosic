@@ -27,6 +27,7 @@ class SelectionModel : public QItemSelectionModel {
     Q_OBJECT
 
     Q_PROPERTY(int currentRow READ currentRow WRITE setCurrentRow NOTIFY currentRowChanged FINAL)
+    Q_PROPERTY(bool hasSelection READ hasSelection NOTIFY hasSelectionChanged FINAL)
 
   public:
     explicit SelectionModel(QAbstractItemModel* model, QObject* parent = nullptr);
@@ -45,6 +46,7 @@ class SelectionModel : public QItemSelectionModel {
 
   Q_SIGNALS:
     void currentRowChanged(int row);
+    void hasSelectionChanged(bool hasSelection);
 
   public Q_SLOTS:
     bool isSelected(int row) const;
