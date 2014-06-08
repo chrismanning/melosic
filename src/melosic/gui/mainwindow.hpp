@@ -32,8 +32,6 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/connection.hpp>
 
-#include "librarymanager.hpp"
-
 class QQmlEngine;
 class QQmlContext;
 class QQmlComponent;

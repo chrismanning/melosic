@@ -1,7 +1,6 @@
 <RCC>
     <qresource prefix="/qml">
         <file>mainwindow.qml</file>
-        <file>configdialog.qml</file>
         <file>qmldir</file>
         <file>categorylistview.qml</file>
         <file>playlistview.qml</file>

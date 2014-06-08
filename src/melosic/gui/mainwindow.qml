@@ -85,7 +85,7 @@ ApplicationWindow {
         shortcut: StandardKey.Preferences
         iconName: "configure"
         onTriggered: {
-            configDialog.visible = !configDialog.visible
+            ConfigManager.openWindow()
         }
     }
     Action {
@@ -230,11 +230,6 @@ ApplicationWindow {
         }
     }
 
-    ConfigDialog {
-        id: configDialog
-        modality: Qt.WindowModal
-    }
-
     SystemPalette {
         id: pal
     }
@@ -272,8 +267,8 @@ ApplicationWindow {
         id: playlistManager
     }
 
-    minimumHeight: 400
-    minimumWidth: 400
+    minimumHeight: 600
+    minimumWidth: 600
 
     Action {
         id: appendToPlaylist

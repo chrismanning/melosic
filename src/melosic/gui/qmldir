@@ -1,4 +1,3 @@
-ConfigDialog 1.0 configdialog.qml
 CategoryListView 1.0 categorylistview.qml
 PlaylistView 1.0 playlistview.qml
 PlaylistChooser 1.0 playlistchooser.qml

@@ -1,6 +1,8 @@
 FIND_PACKAGE(Qt5Qml REQUIRED)
-FIND_PACKAGE(Qt5Quick REQUIRED COMPONENTS Private)
+FIND_PACKAGE(Qt5Quick REQUIRED)
 FIND_PACKAGE(Qt5Widgets REQUIRED)
+
+find_package(KF5WidgetsAddons REQUIRED)
 
 find_package(Boost COMPONENTS log log_setup REQUIRED)
 
@@ -19,8 +21,9 @@ SET(qt_gui_SOURCES ${qt_gui_SOURCES} filterpane.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} jsondocmodel.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} librarymanager.cpp)
 SET(qt_gui_SOURCES ${qt_gui_SOURCES} selectionmodel.cpp)
+SET(qt_gui_SOURCES ${qt_gui_SOURCES} configmanager.cpp)
 
-SET(QT_LIBS Qt5::Widgets Qt5::Qml Qt5::Quick)
+SET(QT_LIBS Qt5::Widgets Qt5::Qml Qt5::Quick KF5::WidgetsAddons)
 
 IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
  SET(qt_gui_SOURCES ${qt_gui_SOURCES} modeltest.cpp)

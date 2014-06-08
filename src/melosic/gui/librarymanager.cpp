@@ -23,7 +23,7 @@
 namespace Melosic {
 
 LibraryManager::LibraryManager() {
-    connect(this, &LibraryManager::libraryManagerChanged, [this](auto&&) {
+    connect(this, &LibraryManager::libraryManagerChanged, [this]() {
         assert(m_libman);
         if(!m_libman)
             return;
@@ -48,7 +48,7 @@ Library::Manager* LibraryManager::getLibraryManager() const { return m_libman; }
 void LibraryManager::setLibraryManager(Library::Manager* libman) {
     m_libman = libman;
     assert(m_libman);
-    Q_EMIT libraryManagerChanged(this);
+    Q_EMIT libraryManagerChanged();
 }
 
 } // namespace Melosic

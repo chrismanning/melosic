@@ -41,7 +41,7 @@ class LibraryManager : public QObject {
 Q_SIGNALS:
     void scanStarted();
     void scanEnded();
-    void libraryManagerChanged(LibraryManager* context);
+    void libraryManagerChanged();
 
   public Q_SLOTS:
 };

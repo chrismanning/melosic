@@ -53,6 +53,8 @@
 #include "quicklogbackend.hpp"
 #include "filterpane.hpp"
 #include "jsondocmodel.hpp"
+#include "configmanager.hpp"
+#include "librarymanager.hpp"
 
 static Melosic::Config::Conf conf{"QML"};
 static bool enable_logging{false};
@@ -101,6 +103,9 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     engine->rootContext()->setContextProperty("playlistManagerModel", playlistManagerModel);
     engine->rootContext()->setContextProperty("PlayerControls", playerControls.get());
     engine->rootContext()->setContextProperty("LibraryManager", LibraryManager::instance());
+
+    ConfigManager::instance()->setConfigManager(&kernel.getConfigManager());
+    engine->rootContext()->setContextProperty("ConfigManager", ConfigManager::instance());
     engine->addImportPath("qrc:/");
     engine->addImportPath("qrc:/qml");
 
@@ -122,6 +127,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
         ERROR_LOG(logject) << "Type: " << topLevel->metaObject()->className();
         BOOST_THROW_EXCEPTION(Exception() << ErrorTag::DecodeErrStr(str));
     }
+    ConfigManager::instance()->setParent(window.get());
 //    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close);
     QObject::connect(engine.get(), SIGNAL(quit()), qApp, SLOT(quit()), Qt::DirectConnection);
     window->show();
