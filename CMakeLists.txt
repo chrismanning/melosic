@@ -20,6 +20,7 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time REQUIRED)
+link_directories(${Boost_LIBRARY_DIR})
 find_package(Asio 1.10.1 REQUIRED)
 
 include_directories(include)
@@ -64,7 +65,7 @@ find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} z)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} z)
 SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp -lnetwork-uri)
 
 if(UNIX)
