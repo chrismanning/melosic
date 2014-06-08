@@ -183,10 +183,14 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : ASIO::AudioOutputServiceBase {
 
         snd_pcm_uframes_t min_frames;
         snd_pcm_hw_params_get_period_size_min(m_params, &min_frames, &dir);
+        if(min_frames == 0)
+            min_frames = 1;
         TRACE_LOG(logject) << "min frames: " << min_frames;
 
         snd_pcm_uframes_t min_buf;
         snd_pcm_hw_params_get_buffer_size_min(m_params, &min_buf);
+        if(min_buf == 0)
+            min_buf = 1;
         TRACE_LOG(logject) << "min buf: " << min_buf;
 
         snd_pcm_uframes_t buf = m_current_specs.time_to_bytes(buf_time_msecs);
