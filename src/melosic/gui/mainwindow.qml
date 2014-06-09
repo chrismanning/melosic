@@ -145,6 +145,7 @@ ApplicationWindow {
         text: "Select All"
         shortcut: StandardKey.SelectAll
         iconName: "edit-select-all"
+        enabled: playlistView.focus
         onTriggered: currentPlaylist.selectAll()
     }
     Action {
@@ -152,6 +153,7 @@ ApplicationWindow {
         text: "Clear Selection"
         shortcut: StandardKey.Deselect
         iconName: "edit-clear"
+        enabled: playlistView.focus
         onTriggered: currentPlaylist.clearSelection()
     }
     Action {
@@ -159,6 +161,7 @@ ApplicationWindow {
         text: "Remove Selected"
         shortcut: StandardKey.Delete
         iconName: "edit-delete"
+        enabled: playlistView.focus
         onTriggered: {
             if(currentPlaylist !== null)
                 currentPlaylist.removeSelected()
@@ -172,6 +175,7 @@ ApplicationWindow {
         text: "Refresh Tags of selected/all"
         shortcut: StandardKey.Refresh
         iconName: "view-refresh"
+        enabled: playlistView.focus
         onTriggered: {
             var pm = playlistManager.currentModel
             if(pm == null)
