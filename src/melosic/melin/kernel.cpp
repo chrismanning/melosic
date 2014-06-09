@@ -15,8 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <csignal>
+
 #include <asio/io_service.hpp>
-#include <asio/signal_set.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
@@ -35,12 +36,15 @@
 namespace Melosic {
 namespace Core {
 
+static void signal_handler(int signo) {
+    std::quick_exit(signo);
+}
+
 struct Kernel::impl {
     impl()
         : confman("melosic.conf"),
           plugman(confman),
           io_service(),
-          signal_set(io_service),
           outman(confman, io_service),
           null_worker(new asio::io_service::work(io_service)),
           tman(&io_service),
@@ -51,24 +55,17 @@ struct Kernel::impl {
           libman(confman, decman, plugman, tman),
           playlistman()
     {
-        signal_set.add(SIGABRT);
-        signal_set.add(SIGINT);
-        signal_set.add(SIGTERM);
-        signal_set.add(SIGQUIT);
-        signal_set.async_wait([this](asio::error_code ec, int signo) {
-            if(ec)
-                return;
-            WARN_LOG(logject) << "SIGNAL RAISED: " << signo;
-            std::quick_exit(signo);
-        });
+        std::signal(SIGABRT, signal_handler);
+        std::signal(SIGINT, signal_handler);
+        std::signal(SIGQUIT, signal_handler);
+        std::signal(SIGTERM, signal_handler);
     }
 
-    ~impl() { signal_set.cancel(); }
+    ~impl() {}
 
     Config::Manager confman;
     Plugin::Manager plugman;
     asio::io_service io_service;
-    asio::signal_set signal_set;
     Output::Manager outman;
     std::unique_ptr<asio::io_service::work> null_worker;
     Thread::Manager tman;
