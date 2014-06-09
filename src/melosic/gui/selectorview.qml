@@ -96,9 +96,7 @@ ScrollView {
                 }
             }
 
-            property var pressModifiers
             onPressed: {
-                pressModifiers = mouse.modifiers
                 root.forceActiveFocus()
 
                 if(!selectionModel)
@@ -107,35 +105,20 @@ ScrollView {
                 var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(newIndex <= -1)
                     selectionModel.clearSelection()
-                else {
+                else if(mouse.modifiers & Qt.ControlModifier) {
                     if(mouse.modifiers & Qt.ShiftModifier)
                         selectionModel.select(selectionModel.currentRow, newIndex, SelectionModel.Select)
-                    else if(mouse.modifiers & Qt.ControlModifier)
-                        selectionModel.select(newIndex, SelectionModel.Toggle)
                     else
-                        selectionModel.select(newIndex, SelectionModel.Select)
+                        selectionModel.select(newIndex, SelectionModel.Toggle)
                 }
-            }
-
-            onPositionChanged: {
-                if(!pressModifiers)
-                    pressModifiers = 1
-            }
-
-            onReleased: {
-                if(!selectionModel)
-                    return
-
-                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
-                if(selectionModel.isSelected(newIndex)) {
-                    if(pressModifiers & Qt.ShiftModifier) {
-                        var flag = SelectionModel.ClearAndSelect
-                        if(pressModifiers & Qt.ControlModifier)
-                            flag = SelectionModel.Select
-                        selectionModel.select(selectionModel.currentRow, newIndex, flag)
-                    }
-                    else if(!(pressModifiers & Qt.ControlModifier))
+                else if(!selectionModel.isSelected(newIndex)) {
+                    if(mouse.modifiers & Qt.ShiftModifier)
+                        selectionModel.select(selectionModel.currentRow, newIndex, SelectionModel.ClearAndSelect)
+                    else
                         selectionModel.select(newIndex, SelectionModel.ClearAndSelect)
+                }
+                else {
+                    selectionModel.select(newIndex, SelectionModel.Select)
                 }
                 selectionModel.currentRow = newIndex
             }
