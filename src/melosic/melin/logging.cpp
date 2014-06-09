@@ -41,7 +41,7 @@ void init() {
 
     auto date_facet = new boost::posix_time::time_facet;
 
-    date_facet->format("%d/%m/%y %H:%M:%S");
+    date_facet->format("%Y-%m-%d %H:%M:%S%F%Q");
     auto loc = std::locale(std::locale(), date_facet);
     auto formatter = [loc](logging::record_view const& rec, logging::formatting_ostream& strm) {
         strm.imbue(loc);
