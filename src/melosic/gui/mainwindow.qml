@@ -42,14 +42,18 @@ ApplicationWindow {
         }
         Menu {
             title: "Playlist"
-            MenuItem { action: selectAllAction }
-            MenuItem { action: clearSelectionAction }
+            MenuItem { action: playlist_selectAllAction }
+            MenuItem { action: playlist_clearSelectionAction }
             MenuSeparator {}
-            MenuItem { action: removeTracksAction }
-            MenuItem { action: refreshTracksAction }
+            MenuItem { action: playlist_removeTracksAction }
+            MenuItem { action: playlist_refreshTracksAction }
             MenuSeparator {}
             MenuItem { action: addPlaylistAction }
             MenuItem { action: removePlaylistAction }
+        }
+        Menu {
+            title: "Library"
+            MenuItem { action: library_selectAllAction }
         }
     }
 
@@ -141,27 +145,27 @@ ApplicationWindow {
     }
 
     Action {
-        id: selectAllAction
+        id: playlist_selectAllAction
         text: "Select All"
         shortcut: StandardKey.SelectAll
         iconName: "edit-select-all"
-        enabled: playlistView.focus
+        enabled: playlistView.activeFocus
         onTriggered: currentPlaylist.selectAll()
     }
     Action {
-        id: clearSelectionAction
+        id: playlist_clearSelectionAction
         text: "Clear Selection"
         shortcut: StandardKey.Deselect
         iconName: "edit-clear"
-        enabled: playlistView.focus
+        enabled: playlistView.activeFocus
         onTriggered: currentPlaylist.clearSelection()
     }
     Action {
-        id: removeTracksAction
+        id: playlist_removeTracksAction
         text: "Remove Selected"
         shortcut: StandardKey.Delete
         iconName: "edit-delete"
-        enabled: playlistView.focus
+        enabled: playlistView.activeFocus
         onTriggered: {
             if(currentPlaylist !== null)
                 currentPlaylist.removeSelected()
@@ -171,11 +175,11 @@ ApplicationWindow {
     }
 
     Action {
-        id: refreshTracksAction
+        id: playlist_refreshTracksAction
         text: "Refresh Tags of selected/all"
         shortcut: StandardKey.Refresh
         iconName: "view-refresh"
-        enabled: playlistView.focus
+        enabled: playlistView.activeFocus
         onTriggered: {
             var pm = playlistManager.currentModel
             if(pm == null)
@@ -206,6 +210,15 @@ ApplicationWindow {
         text: "Remove Current Playlist"
         iconName: "list-remove"
         onTriggered: playlistManagerModel.removeRows(playlistManager.currentIndex,1)
+    }
+
+    Action {
+        id: library_selectAllAction
+        text: "Select All"
+        shortcut: StandardKey.SelectAll
+        iconName: "edit-select-all"
+        enabled: filterView.activeFocus
+        onTriggered: {}
     }
 
     property alias currentPlaylist: playlistManager.currentPlaylist
@@ -274,16 +287,6 @@ ApplicationWindow {
     minimumHeight: 600
     minimumWidth: 600
 
-    Action {
-        id: appendToPlaylist
-        text: "Append to current playlist"
-        onTriggered: {
-            var pm = playlistManager.currentModel
-            if(pm !== null)
-                pm.insertTracks(currentPlaylist.currentIndex, filterView.filterResultPane.model)
-        }
-    }
-
     SplitView {
         id: splitter
         anchors.fill: parent
@@ -298,6 +301,7 @@ ApplicationWindow {
             id: filterView
             Layout.minimumWidth: 100
             Layout.alignment: Qt.AlignLeft
+            width: 220
             onActivated: {
                 console.debug("FilterView.activated")
                 var pm = playlistManager.currentModel
@@ -514,7 +518,7 @@ ApplicationWindow {
 
                 contextMenu: Menu {
                     MenuItem { action: jumpPlayAction }
-                    MenuItem { action: removeTracksAction }
+                    MenuItem { action: playlist_removeTracksAction }
                 }
             }
 
