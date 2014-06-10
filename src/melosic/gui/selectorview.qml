@@ -28,6 +28,30 @@ ScrollView {
 
     signal activated(var selection)
 
+    Keys.onUpPressed: {
+        if(!selectionModel || selectionModel.currentRow <= 0)
+            return
+        if(event.modifiers & Qt.ShiftModifier)
+            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow-1, SelectionModel.Select)
+        else if(event.modifiers & Qt.ControlModifier) {}
+        else
+            selectionModel.select(selectionModel.currentRow-1, SelectionModel.ClearAndSelect)
+        selectionModel.currentRow--
+        event.accepted = true
+    }
+
+    Keys.onDownPressed: {
+        if(!selectionModel || selectionModel.currentRow >= listView.count)
+            return
+        if(event.modifiers & Qt.ShiftModifier)
+            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow+1, SelectionModel.Select)
+        else if(event.modifiers & Qt.ControlModifier) {}
+        else
+            selectionModel.select(selectionModel.currentRow+1, SelectionModel.ClearAndSelect)
+        selectionModel.currentRow++
+        event.accepted = true
+    }
+
     Loader {
         id: headerLoader
         width: root.width
@@ -96,11 +120,14 @@ ScrollView {
                 }
             }
 
+            property int pressModifiers: 0
             onPressed: {
                 root.forceActiveFocus()
 
                 if(!selectionModel)
                     return
+
+                pressModifiers = mouse.modifiers
 
                 var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(newIndex <= -1)
@@ -121,6 +148,19 @@ ScrollView {
                     selectionModel.select(newIndex, SelectionModel.Select)
                 }
                 selectionModel.currentRow = newIndex
+            }
+
+            onReleased: {
+                if(!selectionModel)
+                    return
+
+                var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
+                if(selectionModel.isSelected(newIndex)
+                        && !(pressModifiers & Qt.ControlModifier)
+                        && !(pressModifiers & Qt.ShiftModifier))
+                    selectionModel.select(newIndex, SelectionModel.ClearAndSelect)
+
+                pressModifiers = 0
             }
 
             onDoubleClicked: {
