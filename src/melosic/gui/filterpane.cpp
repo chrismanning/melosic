@@ -273,9 +273,11 @@ void FilterPane::impl::refresh() {
                 named_paths.emplace_back(it.key().toStdString(), it->toString().toStdString());
             }
 
+            TRACE_LOG(logject) << "executing query";
+            auto res = execute_query(m_query);
             // run query and transform using named jsonpaths
             TRACE_LOG(logject) << "transforming query results with named JSONPaths";
-            auto ds = Library::apply_named_paths(execute_query(m_query), named_paths);
+            auto ds = Library::apply_named_paths(res, named_paths);
 
             // prepare sort fields
             std::vector<QByteArray> sort_fields;
