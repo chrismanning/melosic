@@ -338,6 +338,7 @@ ApplicationWindow {
                     x: 1
                     text: document.genre === undefined ? "Unknown Genre" : document.genre
                     color: styleData.textColor
+                    elide: Text.ElideRight
                 }
             }
             FilterPane {
@@ -369,6 +370,7 @@ ApplicationWindow {
                     x: 1
                     text: document.artist === undefined ? "Unknown Artist" : document.artist
                     color: styleData.textColor
+                    elide: Text.ElideRight
                 }
             }
             FilterPane {
@@ -420,7 +422,7 @@ ApplicationWindow {
                     return obj
                 }
 
-                delegate: Row {
+                delegate: RowLayout {
                     x: 1
                     spacing: 5
                     Label {
@@ -430,15 +432,11 @@ ApplicationWindow {
                         color: styleData.textColor
                     }
                     Label {
-                        text: document.album === undefined ? "Unknown Album" : document.album
+                        Layout.fillWidth: true
+                        property string comment: document.comment !== undefined ? " ("+document.comment+")" : ""
+                        text: (document.album === undefined ? "Unknown Album" : document.album) + comment
                         color: styleData.textColor
-                    }
-                    Loader {
-                        active: document.comment !== undefined
-                        sourceComponent: Label {
-                            text: "("+document.comment+")"
-                            color: styleData.textColor
-                        }
+                        elide: Text.ElideRight
                     }
                 }
             }
@@ -456,7 +454,7 @@ ApplicationWindow {
                 }
                 sortFields: ["tracknumber", "title"]
 
-                delegate: Row {
+                delegate: RowLayout {
                     x: 1
                     spacing: 5
                     Label {
@@ -465,8 +463,10 @@ ApplicationWindow {
                         color: styleData.textColor
                     }
                     Label {
+                        Layout.fillWidth: true
                         text: document.title === undefined ? document.location : document.title
                         color: styleData.textColor
+                        elide: Text.ElideRight
                     }
                 }
             }

@@ -233,7 +233,7 @@ ScrollView {
         delegate: Item {
             id: item
             height: styleloader.height
-            width: root.width
+            width: root.viewport.width
 
             readonly property var itemModelData: typeof modelData == "undefined" ? null : modelData
             readonly property var itemModel: model
