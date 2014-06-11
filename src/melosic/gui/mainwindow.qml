@@ -443,7 +443,6 @@ ApplicationWindow {
                 }
             }
 
-            filterResultPane: track
             FilterPane {
                 id: track
                 dependsOn: album

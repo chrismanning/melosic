@@ -16,7 +16,6 @@ FocusScope {
     signal activated(var model)
 
     property alias orientation: splitView.orientation
-    property alias filterResultPane: splitView.filterResultPane
 
     DynamicSplitView {
         id: splitView
@@ -35,8 +34,6 @@ FocusScope {
             visible: false
         }
 
-        property var filterResultPane
-
         Component {
             id: dragComponent
             Item {
@@ -45,10 +42,6 @@ FocusScope {
                 Drag.hotSpot.x: 0
                 Drag.hotSpot.y: 0
                 Drag.dragType: Drag.Automatic
-
-                function getSelectionModel() {
-                    return filterResultPane.selectionModel
-                }
 
                 Drag.onDragStarted: {
                     console.debug("Filter drag started")
@@ -60,7 +53,6 @@ FocusScope {
         }
 
         Component.onCompleted: {
-            console.assert(filterResultPane, "The default result filter should be set.")
             for (var i=0; i<__panes.length; ++i) {
                 if(!__panes[i].hasOwnProperty("selectionModel"))
                     continue
@@ -79,15 +71,9 @@ FocusScope {
 
                 var pane = paneLoader.createObject(splitView, props)
 
-                if(__panes[i] === filterResultPane) {
-                    pane.activated.connect(function(items) {
-                        root.activated(items)
-                    })
-                }
-                else
-                    pane.activated.connect(function(items) {
-                        root.activated(filterResultPane.model)
-                    })
+                pane.activated.connect(function(items) {
+                    root.activated(items)
+                })
 
                 splitView.addItem(pane)
             }
