@@ -17,6 +17,8 @@ ScrollView {
 
     property Component header
 
+    highlightOnFocus: true
+
     property alias delegate: listView.delegate
     property Component itemDelegate
     property Component styleDelegate
@@ -28,28 +30,84 @@ ScrollView {
 
     signal activated(var selection)
 
-    Keys.onUpPressed: {
-        if(!selectionModel || selectionModel.currentRow <= 0)
-            return
-        if(event.modifiers & Qt.ShiftModifier)
-            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow-1, SelectionModel.Select)
-        else if(event.modifiers & Qt.ControlModifier) {}
-        else
-            selectionModel.select(selectionModel.currentRow-1, SelectionModel.ClearAndSelect)
-        selectionModel.currentRow--
-        event.accepted = true
+    Keys.onPressed: {
+        if(event.key === Qt.Key_Up) {
+            up(1, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_Down) {
+            down(1, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_PageUp) {
+            if(!listView.currentItem)
+                return
+            var idx = listView.indexAt(root.width/2, listView.currentItem.y + listView.currentItem.height - listView.height)
+            if(idx === -1)
+                idx = 0
+            up(selectionModel.currentRow - idx, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_PageDown) {
+            if(!listView.currentItem)
+                return
+            var idx = listView.indexAt(root.width/2, listView.currentItem.y + listView.height)
+            if(idx === -1)
+                idx = listView.count-1
+            down(idx - selectionModel.currentRow, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_Home) {
+            up(listView.count, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_End) {
+            down(listView.count, event.modifiers)
+            event.accepted = true
+        }
+        else if(event.matches(StandardKey.SelectAll)) {
+            if(!selectionModel || !listView.count)
+                return
+            selectionModel.select(0, listView.count-1, SelectionModel.Select)
+            event.accepted = true
+        }
+        else if(event.matches(StandardKey.Deselect)) {
+            if(!selectionModel || !listView.count)
+                return
+            selectionModel.select(0, listView.count-1, SelectionModel.Clear)
+            event.accepted = true
+        }
     }
 
-    Keys.onDownPressed: {
+    function up(n, modifiers) {
+        if(!selectionModel || selectionModel.currentRow <= 0)
+            return
+
+        if(selectionModel.currentRow-n < 0)
+            n = selectionModel.currentRow
+
+        if(modifiers & Qt.ShiftModifier)
+            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow-n, SelectionModel.Select)
+        else if(modifiers & Qt.ControlModifier) {}
+        else
+            selectionModel.select(selectionModel.currentRow-n, SelectionModel.ClearAndSelect)
+
+        selectionModel.currentRow -= n
+    }
+
+    function down(n, modifiers) {
         if(!selectionModel || selectionModel.currentRow >= listView.count)
             return
-        if(event.modifiers & Qt.ShiftModifier)
-            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow+1, SelectionModel.Select)
-        else if(event.modifiers & Qt.ControlModifier) {}
+
+        if(selectionModel.currentRow + n >= listView.count)
+            n = listView.count - selectionModel.currentRow - 1
+
+        if(modifiers & Qt.ShiftModifier)
+            selectionModel.select(selectionModel.currentRow, selectionModel.currentRow+n, SelectionModel.Select)
+        else if(modifiers & Qt.ControlModifier) {}
         else
-            selectionModel.select(selectionModel.currentRow+1, SelectionModel.ClearAndSelect)
-        selectionModel.currentRow++
-        event.accepted = true
+            selectionModel.select(selectionModel.currentRow+n, SelectionModel.ClearAndSelect)
+        selectionModel.currentRow += n
     }
 
     Loader {
