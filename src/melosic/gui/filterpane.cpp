@@ -22,6 +22,7 @@
 #include <QJsonDocument>
 #include <QQmlEngine>
 #include <QQmlContext>
+#include <QTimer>
 
 #include <jbson/json_reader.hpp>
 #include <jbson/path.hpp>
@@ -168,6 +169,8 @@ struct FilterPane::impl {
     optional<ejdb::db> m_db;
     optional<ejdb::collection> m_coll;
 
+    QTimer m_selection_timer;
+
     std::atomic<bool> m_lib_scanning{true};
 
     Logger::Logger logject{logging::keywords::channel = "FilterPane"};
@@ -198,6 +201,9 @@ FilterPane::impl::impl(FilterPane* parent) : m_parent(parent), m_model(), m_sele
         else
             logject = Logger::Logger{logging::keywords::channel = ("FilterPane<"s + name.toStdString() + ">")};
     });
+
+    m_selection_timer.setSingleShot(true);
+    m_selection_timer.setInterval(500);
 }
 
 void FilterPane::impl::on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected) {
@@ -341,10 +347,18 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent), pimpl(new impl(this))
         connect(dep, &FilterPane::queryGenerated, [this](const QVariant& qry) { setQuery(qry); });
     });
 
+    // delayed query generation
+    connect(&pimpl->m_selection_timer, &QTimer::timeout, [this]() { pimpl->generate_query(); });
     connect(selectionModel(), &SelectionModel::selectionChanged,
             [this](auto&& s, auto&& d) {
         pimpl->on_selection_changed(s, d);
-        pimpl->generate_query();
+        if(pimpl->m_selection_timer.interval()) {
+            pimpl->m_selection_timer.start();
+            TRACE_LOG(pimpl->logject) << "Selection timer started; times out after "
+                                         << pimpl->m_selection_timer.interval() << "ms\n";
+        }
+        else
+            pimpl->generate_query();
     });
     connect(this, &FilterPane::generatorPathsChanged, [this](auto&&) {
         pimpl->m_selection_values.clear();
@@ -491,5 +505,15 @@ void FilterPane::setDependsOn(FilterPane* d) {
 }
 
 SelectionModel* FilterPane::selectionModel() const { return &pimpl->m_selection_model; }
+
+int FilterPane::selectionDelay() const {
+    return pimpl->m_selection_timer.interval();
+}
+
+void FilterPane::setSelectionDelay(int delay) {
+    pimpl->m_selection_timer.setInterval(delay);
+    Q_EMIT selectionDelayChanged(delay);
+}
+
 
 } // namespace Melosic

@@ -60,6 +60,8 @@ class QT_GUI_EXPORT FilterPane : public QObject {
     Q_PROPERTY(QAbstractItemModel* model READ model CONSTANT FINAL)
     Q_PROPERTY(Melosic::SelectionModel* selectionModel READ selectionModel CONSTANT FINAL)
 
+    Q_PROPERTY(int selectionDelay READ selectionDelay WRITE setSelectionDelay NOTIFY selectionDelayChanged FINAL)
+
     QString m_header;
     QQmlComponent* m_delegate{nullptr};
 
@@ -97,6 +99,9 @@ public:
 
     SelectionModel* selectionModel() const;
 
+    int selectionDelay() const;
+    void setSelectionDelay(int);
+
 Q_SIGNALS:
     void queryGeneratorChanged(QJSValue);
     void generatorPathsChanged(QVariant);
@@ -107,6 +112,7 @@ Q_SIGNALS:
     void sortFieldsChanged(QVariantList);
     void dependsOnChanged(Melosic::FilterPane*);
     void delegateChanged(QQmlComponent*);
+    void selectionDelayChanged(int);
 };
 
 } // namespace Melosic

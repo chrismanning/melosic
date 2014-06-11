@@ -172,6 +172,7 @@ private Q_SLOTS:
             return jbson::document(std::move(qry));
         });
         pane1->setGeneratorPaths(QStringLiteral(R"({ "city": "$.city" })"));
+        pane1->setSelectionDelay(0);
 
         QCOMPARE(pane1->model()->rowCount(), 6);
 
@@ -198,6 +199,7 @@ private Q_SLOTS:
             return jbson::document(std::move(qry));
         });
         pane2->setGeneratorPaths(QStringLiteral(R"({ "age": "$.age"})"));
+        pane2->setSelectionDelay(0);
 
         QCOMPARE(pane2->model()->rowCount(), 7);
 
