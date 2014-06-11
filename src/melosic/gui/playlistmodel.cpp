@@ -253,7 +253,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
 #endif
 
                 auto query = jbson::builder{};
-                auto metadata_query = jbson::builder{};
+                auto and_query = jbson::array_builder{};
 
                 std::vector<jbson::document> track_docs;
                 try {
@@ -266,12 +266,20 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                     else {
                         for(auto i = doc_map.begin(); i != end; ++i) {
                             assert(i.key() != "_id");
+                            if(i.key() == "_id")
+                                continue;
+                            auto metadata_query = jbson::builder{};
+
                             auto str = i.key().toStdString();
                             metadata_query.emplace("key", boost::string_ref(str));
                             str = i.value().toString().toStdString();
                             metadata_query.emplace("value", boost::string_ref(str));
+
+                            and_query.emplace(jbson::builder("metadata", jbson::builder
+                                                             ("$elemMatch", std::move(metadata_query))
+                                                            ));
                         }
-                        query("metadata", jbson::element_type::document_element, metadata_query);
+                        query("$and", jbson::element_type::array_element, and_query);
                     }
                     track_docs = lm.query(std::move(query));
                 }
