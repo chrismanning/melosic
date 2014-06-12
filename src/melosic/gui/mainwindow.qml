@@ -339,6 +339,12 @@ ApplicationWindow {
                     text: document.genre === undefined ? "Unknown Genre" : document.genre
                     color: styleData.textColor
                     elide: Text.ElideRight
+
+                    TooltipArea {
+                        anchors.fill: parent
+                        enabled: parent.truncated
+                        text: parent.text
+                    }
                 }
             }
             FilterPane {
@@ -371,6 +377,12 @@ ApplicationWindow {
                     text: document.artist === undefined ? "Unknown Artist" : document.artist
                     color: styleData.textColor
                     elide: Text.ElideRight
+
+                    TooltipArea {
+                        anchors.fill: parent
+                        enabled: parent.truncated
+                        text: parent.text
+                    }
                 }
             }
             FilterPane {
@@ -437,6 +449,12 @@ ApplicationWindow {
                         text: (document.album === undefined ? "Unknown Album" : document.album) + comment
                         color: styleData.textColor
                         elide: Text.ElideRight
+
+                        TooltipArea {
+                            anchors.fill: parent
+                            enabled: parent.truncated
+                            text: parent.text
+                        }
                     }
                 }
             }
@@ -467,6 +485,12 @@ ApplicationWindow {
                         text: document.title === undefined ? document.location : document.title
                         color: styleData.textColor
                         elide: Text.ElideRight
+
+                        TooltipArea {
+                            anchors.fill: parent
+                            enabled: parent.truncated
+                            text: parent.text
+                        }
                     }
                 }
             }

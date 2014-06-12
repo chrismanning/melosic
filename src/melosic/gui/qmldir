@@ -7,3 +7,4 @@ FilterView 1.0 filterview.qml
 SelectorView 1.0 selectorview.qml
 DynamicSplitView 1.0 DynamicSplitView.qml
 SplitterHandleDelegate 1.0 splitterhandledelegate.qml
+TooltipArea 1.0 tooltiparea.qml
