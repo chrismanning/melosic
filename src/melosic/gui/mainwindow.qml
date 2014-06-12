@@ -53,7 +53,6 @@ ApplicationWindow {
         }
         Menu {
             title: "Library"
-            MenuItem { action: library_selectAllAction }
         }
     }
 
@@ -210,15 +209,6 @@ ApplicationWindow {
         text: "Remove Current Playlist"
         iconName: "list-remove"
         onTriggered: playlistManagerModel.removeRows(playlistManager.currentIndex,1)
-    }
-
-    Action {
-        id: library_selectAllAction
-        text: "Select All"
-        shortcut: StandardKey.SelectAll
-        iconName: "edit-select-all"
-        enabled: filterView.activeFocus
-        onTriggered: {}
     }
 
     property alias currentPlaylist: playlistManager.currentPlaylist
