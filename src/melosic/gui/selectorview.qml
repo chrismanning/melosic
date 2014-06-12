@@ -65,6 +65,17 @@ ScrollView {
             down(listView.count, event.modifiers)
             event.accepted = true
         }
+        else if(event.key === Qt.Key_Space) {
+            if(event.modifiers & Qt.ControlModifier)
+                selectionModel.select(selectionModel.currentRow, SelectionModel.Toggle)
+            else
+                selectionModel.select(selectionModel.currentRow, SelectionModel.Select)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_Enter || event.key === Qt.Key_Return) {
+            activated(selectionModel)
+            event.accepted = true
+        }
         else if(event.matches(StandardKey.SelectAll)) {
             if(!selectionModel || !listView.count)
                 return
