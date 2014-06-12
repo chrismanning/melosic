@@ -20,9 +20,10 @@
 #include <mutex>
 
 #include <shared_mutex>
+#include <boost/thread/locks.hpp>
 using mutex = std::shared_timed_mutex;
 using lock_guard = std::lock_guard<mutex>;
-using unique_lock = std::unique_lock<mutex>;
+using unique_lock = boost::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/container/stable_vector.hpp>
@@ -74,17 +75,17 @@ public:
                                           (const boost::synchronized_value<TagMap>& tags) mutable {
 //            tagsChangedSignal(+std::distance(std::begin(tracks), it), std::cref(tags));
         });
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         trackAddedSignal(i, t);
     }
 
     void trackRemoved(Playlist::size_type i, optional<Core::Track> t, unique_lock& l) {
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         trackRemovedSignal(i, t);
     }
 
     void tagsChanged(Playlist::size_type i, const TagLib::PropertyMap& tags, unique_lock& l) {
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         tagsChangedSignal(i, std::cref(tags));
     }
 
@@ -276,7 +277,7 @@ void Playlist::clear() {
 }
 
 void Playlist::swap(Playlist& b) {
-    unique_lock l{pimpl->mu, std::defer_lock}, l2{b.pimpl->mu, std::defer_lock};
+    unique_lock l{pimpl->mu, boost::defer_lock}, l2{b.pimpl->mu, boost::defer_lock};
     std::lock(l, l2);
     std::swap(pimpl, b.pimpl);
 }

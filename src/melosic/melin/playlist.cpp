@@ -20,9 +20,10 @@
 #include <mutex>
 
 #include <shared_mutex>
+#include <boost/thread/locks.hpp>
 using mutex = std::shared_timed_mutex;
 using lock_guard = std::lock_guard<mutex>;
-using unique_lock = std::unique_lock<mutex>;
+using unique_lock = boost::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
 #include <boost/container/stable_vector.hpp>
 
@@ -120,17 +121,17 @@ public:
     }
 
     void currentPlaylistChanged(optional<Core::Playlist> p, unique_lock& l) {
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         currentPlaylistChangedSignal(p);
     }
 
     void playlistAdded(optional<Core::Playlist> p, unique_lock& l) {
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         playlistAddedSignal(p);
     }
 
     void playlistRemoved(optional<Core::Playlist> p, unique_lock& l) {
-        scope_unlock_exit_lock<unique_lock> s{l};
+        boost::reverse_lock<unique_lock> s{l};
         playlistRemovedSignal(p);
     }
 

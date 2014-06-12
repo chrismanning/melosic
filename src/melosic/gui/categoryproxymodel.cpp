@@ -28,9 +28,9 @@ using mutex = boost::shared_mutex;
 using shared_lock = boost::shared_lock<mutex>;
 using unique_lock = boost::unique_lock<mutex>;
 using upgrade_lock = boost::upgrade_lock<mutex>;
+#include <boost/thread/reverse_lock.hpp>
 
 #include <melosic/melin/logging.hpp>
-#include <melosic/common/scope_unlock_exit_lock.hpp>
 
 #include "categoryproxymodel.hpp"
 #include "category.hpp"
@@ -387,7 +387,7 @@ void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int 
     if(end >= (int)block_index.size())
         end = block_index.size()-1;
 
-    scope_unlock_exit_lock<upgrade_lock> sl(l);
+    boost::reverse_lock<upgrade_lock> sl(l);
     Q_EMIT parent.dataChanged(parent.index(start, 0), parent.index(end, 0));
 }
 
@@ -460,7 +460,7 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
         }
     }
 
-    scope_unlock_exit_lock<upgrade_lock> sl(l);
+    boost::reverse_lock<upgrade_lock> sl(l);
     Q_EMIT parent.blocksNeedUpdating(start, end+n);
 }
 

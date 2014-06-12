@@ -28,13 +28,13 @@
 #include <boost/mpl/logical.hpp>
 #include <boost/mpl/bool.hpp>
 #include <boost/implicit_cast.hpp>
+#include <boost/thread/reverse_lock.hpp>
 
 #include <melosic/common/traits.hpp>
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
 #include <melosic/common/connection.hpp>
-#include <melosic/common/scope_unlock_exit_lock.hpp>
 
 namespace Melosic {
 namespace Signals {
@@ -75,7 +75,7 @@ struct SignalCore<Ret (Args...)> {
 
     using Mutex = std::mutex;
     using lock_guard = std::lock_guard<Mutex>;
-    using unique_lock = std::unique_lock<Mutex>;
+    using unique_lock = boost::unique_lock<Mutex>;
 
     using Slot = std::function<Ret(Args...)>;
     using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
@@ -165,12 +165,12 @@ protected:
                         futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
                     }
                     catch(TaskQueueError& e) {
-                        scope_unlock_exit_lock<unique_lock> s{l};
+                        boost::reverse_lock<unique_lock> s{l};
                         i->second(std::forward<A>(args)...);
                     }
                 }
                 else {
-                    scope_unlock_exit_lock<unique_lock> s{l};
+                    boost::reverse_lock<unique_lock> s{l};
                     i->second(std::forward<A>(args)...);
                 }
                 ++i;
