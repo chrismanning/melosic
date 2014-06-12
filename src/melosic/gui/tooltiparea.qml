@@ -10,6 +10,8 @@ MouseArea {
 
     hoverEnabled: true
 
+    onPressed: mouse.accepted = false
+
     onExited: Tooltip.hideText()
     onCanceled: Tooltip.hideText()
 
