@@ -104,15 +104,20 @@ ListView {
                         ColumnLayout {
                             spacing: clv.padding
 
-                            property string cat_line
-                            TagBinding on cat_line {
-                                formatString: "%{albumartist} - %{album}"
-                            }
                             Label {
-                                text: cat_line
                                 elide: Text.ElideRight
                                 color: textColor
                                 Layout.fillWidth: true
+
+                                TagBinding on text {
+                                    formatString: "%{albumartist} - %{album}"
+                                }
+
+                                TooltipArea {
+                                    anchors.fill: parent
+                                    enabled: parent.truncated
+                                    text: parent.text
+                                }
                             }
 
                             property string cat_line2
@@ -129,7 +134,7 @@ ListView {
                     }
                     Component {
                         id: fileCategoryComponent
-                        Column {
+                        ColumnLayout {
                             spacing: clv.padding
 
                             Label {
@@ -137,14 +142,18 @@ ListView {
                                 text: arr ? arr[0] : "NO RESULT"
                                 elide: Text.ElideRight
                                 color: textColor
-                                Layout.fillWidth: true
                                 property var pat: new RegExp(pathCriteria.pattern)
+
+                                TooltipArea {
+                                    anchors.fill: parent
+                                    enabled: parent.truncated
+                                    text: parent.text
+                                }
                             }
                             Label {
                                 text: !model ? "NO MODEL WTF" : model.extension + " | " + itemCount + " tracks"
                                 elide: Text.ElideRight
                                 color: textColor
-                                Layout.fillWidth: true
                             }
                         }
                     }
@@ -158,30 +167,39 @@ ListView {
                     RowLayout {
                         id: track
                         spacing: clv.padding
-                        Row {
+                        RowLayout {
                             Layout.fillWidth: true
                             spacing: parent.spacing
+
                             Label {
                                 id: trackno
                                 elide: Text.ElideRight
                                 color: textColor
-                                width: 15
+                                Layout.minimumWidth: 15
+                                width: Layout.minimumWidth
                                 TagBinding on text {
                                     formatString: "%{tracknumber}"
                                 }
                             }
+
                             Label {
-                                x: spacing
+                                Layout.fillWidth: true
                                 elide: Text.ElideRight
                                 color: textColor
                                 TagBinding on text {
                                     formatString: "%{title}"
                                 }
+
+                                TooltipArea {
+                                    anchors.fill: parent
+                                    enabled: parent.truncated
+                                    text: parent.text
+                                }
                             }
                         }
                         Label {
                             id: durationLbl
-                            width: contentWidth
+                            Layout.minimumWidth: contentWidth
 
                             color: textColor
                             text: SecsToMins.secsToMins(model ? model.duration : 0)
@@ -197,10 +215,17 @@ ListView {
                             elide: Text.ElideRight
                             color: textColor
                             text: model ? model.file : "NO FILE"
+
+                            TooltipArea {
+                                anchors.fill: parent
+                                enabled: parent.truncated
+                                text: parent.text
+                            }
                         }
 
                         Label {
                             id: durationLbl
+                            Layout.minimumWidth: contentWidth
 
                             color: textColor
                             text: SecsToMins.secsToMins(model ? model.duration : 0)
