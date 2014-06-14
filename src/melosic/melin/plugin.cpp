@@ -58,7 +58,8 @@ inline const char * DLError() {
 #include <regex>
 
 #include <boost/range.hpp>
-#include <boost/range/adaptors.hpp>
+#include <boost/range/adaptor/map.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;

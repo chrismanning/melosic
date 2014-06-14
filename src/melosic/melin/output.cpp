@@ -23,8 +23,6 @@ using unique_lock = std::unique_lock<mutex>;
 using lock_guard = std::lock_guard<mutex>;
 #include <string>
 
-#include <boost/range/adaptors.hpp>
-using namespace boost::adaptors;
 #include <boost/variant.hpp>
 #include <asio/io_service.hpp>
 
