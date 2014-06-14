@@ -20,16 +20,6 @@
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
 
-#include <mutex>
-#include <shared_mutex>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/locks.hpp>
-using mutex = boost::shared_mutex;
-using shared_lock = boost::shared_lock<mutex>;
-using unique_lock = boost::unique_lock<mutex>;
-using upgrade_lock = boost::upgrade_lock<mutex>;
-#include <boost/thread/reverse_lock.hpp>
-
 #include <melosic/melin/logging.hpp>
 
 #include "categoryproxymodel.hpp"
@@ -43,25 +33,24 @@ struct CategoryProxyModel::impl {
     explicit impl(CategoryProxyModel& parent) : parent(parent) {}
 
     std::vector<std::shared_ptr<Block>> block_index;
-    mutex mu;
 
-    void updateBlock(int idx, std::shared_ptr<Block>& block, upgrade_lock&);
+    void updateBlock(int idx, std::shared_ptr<Block>& block);
     QString indexCategory(const QModelIndex& index);
 
     QString indexCategory(int index) {
         return indexCategory(parent.index(index, 0));
     }
 
-    void onRowsInserted(const QModelIndex&, int start, int end, upgrade_lock& l);
-    void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow, upgrade_lock& l);
+    void onRowsInserted(const QModelIndex&, int start, int end);
+    void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow);
     void onRowsAboutToBeMoved(const QModelIndex&, int sourceStart, int sourceEnd,
-                              const QModelIndex&, int destinationRow, upgrade_lock& l);
-    void onRowsRemoved(const QModelIndex&, int start, int end, upgrade_lock& l);
-    void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end, upgrade_lock& l);
+                              const QModelIndex&, int destinationRow);
+    void onRowsRemoved(const QModelIndex&, int start, int end);
+    void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
 
-    void onDataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&, upgrade_lock& l);
+    void onDataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&);
 
-    void checkForConsistency(upgrade_lock&);
+    void checkForConsistency();
 
     Category* m_category = nullptr;
     CategoryProxyModel& parent;
@@ -90,17 +79,14 @@ CategoryProxyModel::CategoryProxyModel(QObject* parent)
 CategoryProxyModel::~CategoryProxyModel() {}
 
 QString CategoryProxyModel::indexCategory(const QModelIndex& index) const {
-    upgrade_lock l(pimpl->mu);
     return pimpl->indexCategory(index);
 }
 
 Category* CategoryProxyModel::category() const {
-    shared_lock l(pimpl->mu);
     return pimpl->m_category;
 }
 
 void CategoryProxyModel::setCategory(Category* c) {
-    unique_lock l(pimpl->mu);
     pimpl->m_category = c;
     if(c == nullptr)
         return;
@@ -108,15 +94,13 @@ void CategoryProxyModel::setCategory(Category* c) {
         c->setModel(this);
     else
         assert(c->model() == this);
-    l.unlock();
     Q_EMIT categoryChanged(c);
 }
 
 void CategoryProxyModel::onRowsInserted(const QModelIndex& p, int start, int end) {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onRowsInserted(p, start, end, l);
+    pimpl->onRowsInserted(p, start, end);
 #ifndef NDEBUG
 //    pimpl->checkForConsistency(l);
 #endif
@@ -128,12 +112,11 @@ void CategoryProxyModel::onRowsMoved(const QModelIndex& sp,
                                      const QModelIndex& dp,
                                      int destinationRow)
 {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onRowsMoved(sp, sourceStart, sourceEnd, dp, destinationRow, l);
+    pimpl->onRowsMoved(sp, sourceStart, sourceEnd, dp, destinationRow);
 #ifndef NDEBUG
-    pimpl->checkForConsistency(l);
+    pimpl->checkForConsistency();
 #endif
 }
 
@@ -143,32 +126,29 @@ void CategoryProxyModel::onRowsAboutToBeMoved(const QModelIndex& sp,
                                               const QModelIndex& dp,
                                               int destinationRow)
 {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onRowsAboutToBeMoved(sp, sourceStart, sourceEnd, dp, destinationRow, l);
+    pimpl->onRowsAboutToBeMoved(sp, sourceStart, sourceEnd, dp, destinationRow);
 #ifndef NDEBUG
-    pimpl->checkForConsistency(l);
+    pimpl->checkForConsistency();
 #endif
 }
 
 void CategoryProxyModel::onRowsRemoved(const QModelIndex& p, int start, int end) {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onRowsRemoved(p, start, end, l);
+    pimpl->onRowsRemoved(p, start, end);
 #ifndef NDEBUG
-    pimpl->checkForConsistency(l);
+    pimpl->checkForConsistency();
 #endif
 }
 
 void CategoryProxyModel::onRowsAboutToBeRemoved(const QModelIndex& p, int start, int end) {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onRowsAboutToBeRemoved(p, start, end, l);
+    pimpl->onRowsAboutToBeRemoved(p, start, end);
 #ifndef NDEBUG
-    pimpl->checkForConsistency(l);
+    pimpl->checkForConsistency();
 #endif
 }
 
@@ -176,17 +156,15 @@ void CategoryProxyModel::onDataChanged(const QModelIndex& topleft,
                                        const QModelIndex& bottomright,
                                        const QVector<int>& roles)
 {
-    upgrade_lock l(pimpl->mu);
     if(!pimpl->m_category)
         return;
-    pimpl->onDataChanged(topleft, bottomright, roles, l);
+    pimpl->onDataChanged(topleft, bottomright, roles);
 #ifndef NDEBUG
-    pimpl->checkForConsistency(l);
+    pimpl->checkForConsistency();
 #endif
 }
 
-void CategoryProxyModel::impl::checkForConsistency(upgrade_lock& l) {
-    assert(l);
+void CategoryProxyModel::impl::checkForConsistency() {
     if(!m_category)
         return;
     assert(block_index.size() == (size_t)parent.rowCount());
@@ -218,7 +196,7 @@ void CategoryProxyModel::impl::checkForConsistency(upgrade_lock& l) {
     }
 }
 
-void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>& block, upgrade_lock& l) {
+void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>& block) {
     if(!m_category)
         return;
     assert(idx >= 0);
@@ -228,13 +206,11 @@ void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>
 
     const auto category = indexCategory(idx);
     if(category.isNull() | category.isEmpty()) {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         block = nullptr;
         return;
     }
 
     if(idx > 0) {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         const auto prev_category = indexCategory(idx-1);
         if(prev_category == category) { // same category => same block
             if(block_index[idx-1] && block_index[idx-1] == block) // same block
@@ -273,7 +249,6 @@ void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>
         }
     }
     else if(idx == 0) {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         if(block) {
             if(block->firstRow() != idx)
                 block->setFirstIndex(parent.index(idx, 0));
@@ -304,13 +279,11 @@ QString CategoryProxyModel::impl::indexCategory(const QModelIndex& index) {
     return cat;
 }
 
-void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int last, upgrade_lock &l) {
+void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int last) {
     if(!m_category)
         return;
-    assert(l);
     int trail_ref{0};
     {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         if(first > 0) {
             auto b = block_index[first-1];
             auto b_end = b->firstRow() + b->count();
@@ -330,7 +303,7 @@ void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int
     }
 
     for(auto i = 1; i <= trail_ref && (i+last) < (int)block_index.size(); ++i)
-        updateBlock(last+i, block_index[last+i], l);
+        updateBlock(last+i, block_index[last+i]);
     if(last+1 < (int)block_index.size() && block_index[last+1])
         assert(block_index[last+1]->firstRow() == last+1);
 
@@ -339,47 +312,40 @@ void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int
 
 void CategoryProxyModel::impl::onRowsMoved(const QModelIndex&, int sourceStart,
                                            int sourceEnd, const QModelIndex&,
-                                           int destinationRow, upgrade_lock& l)
+                                           int destinationRow)
 {
     TRACE_LOG(logject) << boost::format("Rows moved: [%1% .. %2%] -> %3%") % sourceStart % sourceEnd % destinationRow;
     assert(sourceEnd >= sourceStart);
     auto s = sourceEnd - sourceStart;
     auto dest = destinationRow < sourceStart ? destinationRow : destinationRow - (s + 1);
 
-    {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
-        block_index.erase(std::next(block_index.begin(), sourceStart), std::next(block_index.begin(), sourceEnd+1));
-    }
+    block_index.erase(std::next(block_index.begin(), sourceStart), std::next(block_index.begin(), sourceEnd+1));
+
     sourceEnd = sourceStart;
     if(--sourceStart > (int)block_index.size())
         sourceStart = block_index.size()-1;
     if(++sourceEnd >= (int)block_index.size())
         sourceEnd = block_index.size()-1;
 
-    onRowsInserted({}, dest, dest+s, l);
+    onRowsInserted({}, dest, dest+s);
     // update blocks around source rows
-    onDataChanged(parent.index(sourceStart, 0), parent.index(sourceEnd, 0), {}, l);
+    onDataChanged(parent.index(sourceStart, 0), parent.index(sourceEnd, 0), {});
     // update block around destination
-    onDataChanged(parent.index(dest, 0), parent.index(dest+s, 0), {}, l);
+    onDataChanged(parent.index(dest, 0), parent.index(dest+s, 0), {});
 }
 
 void CategoryProxyModel::impl::onRowsAboutToBeMoved(const QModelIndex& parent, int sourceStart, int sourceEnd,
-                                                    const QModelIndex&, int, upgrade_lock& l) {
-    onRowsAboutToBeRemoved(parent, sourceStart, sourceEnd, l);
+                                                    const QModelIndex&, int) {
+    onRowsAboutToBeRemoved(parent, sourceStart, sourceEnd);
 }
 
-void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int end, upgrade_lock& l) {
-    assert(l);
+void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int end) {
     if(!m_category || parent.rowCount() == 0) {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         block_index.clear();
         return;
     }
     TRACE_LOG(logject) << "Rows removed: " << start << " - " << end;
-    {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
-        block_index.erase(std::next(block_index.begin(), start), std::next(block_index.begin(), end+1));
-    }
+    block_index.erase(std::next(block_index.begin(), start), std::next(block_index.begin(), end+1));
 
     end = start;
     if(--start > (int)block_index.size())
@@ -387,13 +353,10 @@ void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int 
     if(end >= (int)block_index.size())
         end = block_index.size()-1;
 
-    boost::reverse_lock<upgrade_lock> sl(l);
     Q_EMIT parent.dataChanged(parent.index(start, 0), parent.index(end, 0));
 }
 
-void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end, upgrade_lock& l) {
-    assert(l);
-    boost::upgrade_to_unique_lock<mutex> ul(l);
+void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int start, int end) {
     if(!m_category || parent.rowCount() == 0) {
         block_index.clear();
         return;
@@ -413,20 +376,17 @@ void CategoryProxyModel::impl::onRowsAboutToBeRemoved(const QModelIndex&, int st
 
 void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
                                              const QModelIndex& iend,
-                                             const QVector<int>&,
-                                             upgrade_lock& l)
+                                             const QVector<int>&)
 {
     if(!istart.isValid() || !iend.isValid())
         return;
-    assert(l);
 
     const auto start = istart.row();
     const auto end = iend.row();
     TRACE_LOG(logject) << "data changed; rows " << start << " - " << end;
 
     for(auto i = start; i <= end; i++) {
-        assert(l);
-        updateBlock(i, block_index[i], l);
+        updateBlock(i, block_index[i]);
     }
 
     // merge forward
@@ -436,7 +396,6 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
     const auto block = block_index[end];
     assert(block);
     {
-        boost::upgrade_to_unique_lock<mutex> ul(l);
         for(++n; end+n < (int)block_index.size(); ++n) {
             const auto next_category = indexCategory(end+n);
             if(category != next_category)
@@ -460,7 +419,6 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
         }
     }
 
-    boost::reverse_lock<upgrade_lock> sl(l);
     Q_EMIT parent.blocksNeedUpdating(start, end+n);
 }
 
@@ -538,10 +496,8 @@ void CategoryProxyModelAttached::internal_update() {
     }));
     modelConns.push_back(connect(m_model, &CategoryProxyModel::blocksNeedUpdating, [this] (int start, int end) {
         if(m_index.row() >= start && m_index.row() <= end) {
-            upgrade_lock l(m_model->pimpl->mu);
             TRACE_LOG(logject) << "updating block; index: " << m_index.row();
             auto b = m_model->pimpl->block_index[m_index.row()];
-            l.unlock();
             setBlock(b);
         }
     }));
@@ -562,10 +518,11 @@ void CategoryProxyModelAttached::internal_update() {
     m_index = m_model->index(i, 0);
     TRACE_LOG(logject) << "index: " << m_index.isValid() << " " << m_index.row();
     assert(m_index.isValid());
-    upgrade_lock l(m_model->pimpl->mu);
+
     if(!m_model->pimpl->m_category)
         return;
-    setBlock(m_model->pimpl->block_index[m_index.row()]);
+    auto new_block = m_model->pimpl->block_index[m_index.row()];
+    setBlock(new_block);
     assert(m_block);
 }
 
