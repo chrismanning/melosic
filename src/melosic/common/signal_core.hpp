@@ -49,18 +49,11 @@ namespace mpl = boost::mpl;
 
 namespace detail {
 
-template <typename T>
-struct unwrap {
-    using type = T;
-};
+template <typename T> struct unwrap { using type = T; };
 
-template <typename T>
-struct unwrap<std::reference_wrapper<T>> {
-    using type = T&;
-};
+template <typename T> struct unwrap<std::reference_wrapper<T>> { using type = T&; };
 
-template <typename T>
-using unwrap_t = typename unwrap<T>::type;
+template <typename T> using unwrap_t = typename unwrap<T>::type;
 
 struct join_for_and_interrupt : boost::interrupt_and_join_if_joinable {
     void operator()(boost::thread& t) {
@@ -70,37 +63,40 @@ struct join_for_and_interrupt : boost::interrupt_and_join_if_joinable {
 };
 
 class SignalImpl {
-    SignalImpl() : m_thread(&boost::loop_executor::loop, &m_loop_executor) {}
+    SignalImpl()
+        : m_thread(&boost::loop_executor::loop, &m_loop_executor),
+          m_maint_thread(&boost::loop_executor::loop, &m_maint_executor) {}
 
     ~SignalImpl() {
         m_loop_executor.close();
+        m_maint_executor.close();
     }
 
     boost::loop_executor m_loop_executor;
     boost::inline_executor m_inline_executor;
     boost::scoped_thread<join_for_and_interrupt> m_thread;
+    boost::loop_executor m_maint_executor;
+    boost::scoped_thread<join_for_and_interrupt> m_maint_thread;
 
-    template <typename ...Args>
-    static auto create_wrapper(const std::function<void(Args...)>& fun, Connection conn) {
+    template <typename... Args> static auto create_wrapper(const std::function<void(Args...)>& fun, Connection conn) {
         return [=](Args... args) mutable {
             try {
                 fun(args...);
                 return true;
-            }
-            catch(...) {
+            } catch(...) {
                 conn.disconnect();
                 return false;
             }
         };
     }
 
-    template <typename Executor, typename ...Args, typename ...CallArgs>
+    template <typename Executor, typename... Args, typename... CallArgs>
     static boost::future<bool> exec_one(Executor& ex, const std::function<void(Args...)>& fun, const Connection& conn,
                                         CallArgs&&... args) {
         return boost::async(ex, create_wrapper(fun, conn), std::forward<CallArgs>(args)...);
     }
 
-    template <typename ...Args, typename ...CallArgs>
+    template <typename... Args, typename... CallArgs>
     static boost::future<bool> exec_one(const std::function<void(Args...)>& fun, const Connection& conn,
                                         CallArgs&&... args) {
         if(boost::this_thread::get_id() == instance().m_thread.get_id())
@@ -109,15 +105,22 @@ class SignalImpl {
             return exec_one(instance().m_loop_executor, fun, conn, std::forward<CallArgs>(args)...);
     }
 
-public:
+    static void wait_for_all(std::vector<boost::future<bool>>&& futures) {
+        for(auto&& f : futures) {
+            if(f.is_ready())
+                continue;
+            f.wait();
+        }
+    }
+
+  public:
     static SignalImpl& instance() {
         static SignalImpl impl;
         return impl;
     }
 
-    template <typename ...Args, typename ...CallArgs>
-    static auto call(std::vector<std::tuple<Connection, std::function<void(Args...)>>> funs,
-                     CallArgs&&... args) {
+    template <typename... Args, typename... CallArgs>
+    static auto call(std::vector<std::tuple<Connection, std::function<void(Args...)>>> funs, CallArgs&&... args) {
         using std::get;
 
         std::vector<boost::future<bool>> futures;
@@ -127,48 +130,49 @@ public:
                                        std::forward<CallArgs>(args)...));
         }
 
-        return boost::when_all(futures.begin(), futures.end());
+        if(boost::this_thread::get_id() == instance().m_thread.get_id())
+            return boost::async(instance().m_inline_executor, &SignalImpl::wait_for_all, std::move(futures));
+        else
+            return boost::async(instance().m_maint_executor, &SignalImpl::wait_for_all, std::move(futures));
     }
 };
 
 } // namespace detail
 
-template <typename Ret, typename ...Args>
-struct SignalCore<Ret (Args...)> {
-    static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                  mpl::not_<MultiArgsTrait<std::is_rvalue_reference<mpl::_1>, Args...>>,
-                  std::true_type>::type::value,
-                  "Signal args cannot be rvalue references as they may be used more than once");
-    static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                  MultiArgsTrait<mpl::or_<std::is_copy_constructible<mpl::_1>,
-                                          std::is_trivially_copyable<mpl::_1>>,
-                                 typename std::decay<Args>::type...>,
-                  std::true_type>::type::value,
-                  "Signal args must be copyable");
-
-    using Mutex = std::mutex;
-    using lock_guard = std::lock_guard<Mutex>;
-    using unique_lock = boost::unique_lock<Mutex>;
+template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
+    static_assert(
+        mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                 mpl::not_<MultiArgsTrait<std::is_rvalue_reference<mpl::_1>, Args...>>, std::true_type>::type::value,
+        "Signal args cannot be rvalue references as they may be used more than once");
+    static_assert(
+        mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                 MultiArgsTrait<mpl::or_<std::is_copy_constructible<mpl::_1>, std::is_trivially_copyable<mpl::_1>>,
+                                typename std::decay<Args>::type...>,
+                 std::true_type>::type::value,
+        "Signal args must be copyable");
 
     using Slot = std::function<Ret(Args...)>;
+
+  private:
+    using mutex = std::mutex;
+    using lock_guard = std::lock_guard<mutex>;
+    using unique_lock = boost::unique_lock<mutex>;
+
     using FunsType = std::vector<std::tuple<Connection, Slot>>;
 
-    SignalCore() noexcept(std::is_nothrow_default_constructible<FunsType>::value
-                          && std::is_nothrow_default_constructible<Mutex>::value) = default;
+  public:
+    SignalCore() noexcept(std::is_nothrow_default_constructible<
+        FunsType>::value&& std::is_nothrow_default_constructible<mutex>::value) = default;
 
     SignalCore(const SignalCore&) = delete;
     SignalCore& operator=(const SignalCore&) = delete;
 
-    SignalCore(SignalCore&& b)
-            noexcept(std::is_nothrow_move_constructible<FunsType>::value
-                     && std::is_nothrow_constructible<Mutex>::value)
-        : funs(std::move(b.funs))
-    {}
+    SignalCore(SignalCore&& b) noexcept(
+        std::is_nothrow_move_constructible<FunsType>::value&& std::is_nothrow_constructible<mutex>::value)
+        : funs(std::move(b.funs)) {}
 
-    SignalCore& operator=(SignalCore b)
-            noexcept(std::is_nothrow_move_constructible<SignalCore>::value
-                     && is_nothrow_swappable<SignalCore>::value)
-    {
+    SignalCore& operator=(SignalCore b) noexcept(
+        std::is_nothrow_move_constructible<SignalCore>::value&& is_nothrow_swappable<SignalCore>::value) {
         using std::swap;
         swap(*this, b);
         return *this;
@@ -189,13 +193,14 @@ struct SignalCore<Ret (Args...)> {
         return get<Connection>(funs.back());
     }
 
-    template <typename T, typename Obj, typename... As>
-    Connection connect(Ret (T::* const func)(As...), Obj&& obj) {
+    template <typename T, typename Obj, typename... As> Connection connect(Ret (T::*const func)(As...), Obj&& obj) {
         static_assert(sizeof...(As) == sizeof...(Args), "");
         auto bo = bindObj(std::forward<Obj>(obj));
         static_assert(std::is_base_of<T, typename decltype(bo)::object_type>::value,
                       "obj must have member function func");
-        return connect([=] (Args&&... as) mutable { return (bo()->*func)(std::forward<detail::unwrap_t<Args>>(as)...); });
+        return connect([=](Args&&... as) mutable {
+            return (bo()->*func)(std::forward<detail::unwrap_t<Args>>(as)...);
+        });
     }
 
     bool disconnect(const Connection& conn) {
@@ -203,20 +208,19 @@ struct SignalCore<Ret (Args...)> {
         return disconnect(conn, nullptr);
     }
 
-private:
+  private:
     bool disconnect(const Connection& conn, void* /*locked*/) {
         auto s = funs.size();
         funs.erase(std::remove_if(funs.begin(), funs.end(), [&conn](auto&& tuple) {
-            using std::get;
-            return get<Connection>(tuple) == conn;
-        }), funs.end());
+                       using std::get;
+                       return get<Connection>(tuple) == conn;
+                   }),
+                   funs.end());
         return funs.size() < s;
     }
 
-public:
-    size_t slotCount() const noexcept {
-        return funs.size();
-    }
+  public:
+    size_t slotCount() const noexcept { return funs.size(); }
 
     void swap(SignalCore& b) noexcept(is_nothrow_swappable<FunsType>::value) {
         unique_lock l{mu, std::defer_lock}, l2{b.mu, std::defer_lock};
@@ -225,24 +229,26 @@ public:
         swap(funs, b.funs);
     }
 
-protected:
-    template <typename ...A>
-    boost::future<void> call(A&& ...args) {
-        detail::SignalImpl::call(funs, std::forward<A>(args)...);
-        return boost::make_ready_future();
+  protected:
+    template <typename... A> boost::future<void> call(A&&... args) {
+        FunsType n_funs;
+        {
+            lock_guard l(mu);
+            n_funs = funs;
+        }
+        return detail::SignalImpl::call(n_funs, std::forward<A>(args)...);
     }
 
-private:
+  private:
     FunsType funs;
 
-    Mutex mu;
+    mutex mu;
 };
 
-template <typename Ret, typename ...Args>
-void swap(SignalCore<Ret (Args...)>& a, SignalCore<Ret (Args...)>& b) noexcept(noexcept(a.swap(b))) {
+template <typename Ret, typename... Args>
+void swap(SignalCore<Ret(Args...)>& a, SignalCore<Ret(Args...)>& b) noexcept(noexcept(a.swap(b))) {
     a.swap(b);
 }
-
 }
 }
 
