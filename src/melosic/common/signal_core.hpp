@@ -78,10 +78,10 @@ class SignalImpl {
     boost::loop_executor m_maint_executor;
     boost::scoped_thread<join_for_and_interrupt> m_maint_thread;
 
-    template <typename... Args> static auto create_wrapper(const std::function<void(Args...)>& fun, Connection conn) {
-        return [=](Args... args) mutable {
+    template <typename... Args> static auto create_wrapper(std::function<void(Args...)> fun, Connection conn) {
+        return [f = std::move(fun), conn](Args... args) mutable {
             try {
-                fun(args...);
+                f(args...);
                 return true;
             } catch(...) {
                 conn.disconnect();
