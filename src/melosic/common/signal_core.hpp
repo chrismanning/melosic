@@ -29,6 +29,10 @@
 #include <boost/mpl/bool.hpp>
 #include <boost/implicit_cast.hpp>
 #include <boost/thread/reverse_lock.hpp>
+#include <boost/thread/scoped_thread.hpp>
+#include <boost/thread/executors/loop_executor.hpp>
+#include <boost/thread/executors/inline_executor.hpp>
+#include <boost/thread/future.hpp>
 
 #include <melosic/common/traits.hpp>
 #include <melosic/common/signal_fwd.hpp>
@@ -58,7 +62,76 @@ struct unwrap<std::reference_wrapper<T>> {
 template <typename T>
 using unwrap_t = typename unwrap<T>::type;
 
-}
+struct join_for_and_interrupt : boost::interrupt_and_join_if_joinable {
+    void operator()(boost::thread& t) {
+        if(t.joinable() && !t.try_join_for(boost::chrono::milliseconds(1000)))
+            boost::interrupt_and_join_if_joinable::operator()(t);
+    }
+};
+
+class SignalImpl {
+    SignalImpl() : m_thread(&boost::loop_executor::loop, &m_loop_executor) {}
+
+    ~SignalImpl() {
+        m_loop_executor.close();
+    }
+
+    boost::loop_executor m_loop_executor;
+    boost::inline_executor m_inline_executor;
+    boost::scoped_thread<join_for_and_interrupt> m_thread;
+
+    template <typename ...Args>
+    static auto create_wrapper(const std::function<void(Args...)>& fun, Connection conn) {
+        return [=](Args... args) mutable {
+            try {
+                fun(args...);
+                return true;
+            }
+            catch(...) {
+                conn.disconnect();
+                return false;
+            }
+        };
+    }
+
+    template <typename Executor, typename ...Args, typename ...CallArgs>
+    static boost::future<bool> exec_one(Executor& ex, const std::function<void(Args...)>& fun, const Connection& conn,
+                                        CallArgs&&... args) {
+        return boost::async(ex, create_wrapper(fun, conn), std::forward<CallArgs>(args)...);
+    }
+
+    template <typename ...Args, typename ...CallArgs>
+    static boost::future<bool> exec_one(const std::function<void(Args...)>& fun, const Connection& conn,
+                                        CallArgs&&... args) {
+        if(boost::this_thread::get_id() == instance().m_thread.get_id())
+            return exec_one(instance().m_inline_executor, fun, conn, std::forward<CallArgs>(args)...);
+        else
+            return exec_one(instance().m_loop_executor, fun, conn, std::forward<CallArgs>(args)...);
+    }
+
+public:
+    static SignalImpl& instance() {
+        static SignalImpl impl;
+        return impl;
+    }
+
+    template <typename ...Args, typename ...CallArgs>
+    static auto call(std::vector<std::tuple<Connection, std::function<void(Args...)>>> funs,
+                     CallArgs&&... args) {
+        using std::get;
+
+        std::vector<boost::future<bool>> futures;
+
+        for(auto&& tuple : funs) {
+            futures.push_back(exec_one(get<std::function<void(Args...)>>(tuple), get<Connection>(tuple),
+                                       std::forward<CallArgs>(args)...));
+        }
+
+        return boost::when_all(futures.begin(), futures.end());
+    }
+};
+
+} // namespace detail
 
 template <typename Ret, typename ...Args>
 struct SignalCore<Ret (Args...)> {
@@ -78,7 +151,7 @@ struct SignalCore<Ret (Args...)> {
     using unique_lock = boost::unique_lock<Mutex>;
 
     using Slot = std::function<Ret(Args...)>;
-    using FunsType = std::unordered_map<Connection, Slot, ConnHash>;
+    using FunsType = std::vector<std::tuple<Connection, Slot>>;
 
     SignalCore() noexcept(std::is_nothrow_default_constructible<FunsType>::value
                           && std::is_nothrow_default_constructible<Mutex>::value) = default;
@@ -102,15 +175,18 @@ struct SignalCore<Ret (Args...)> {
     }
 
     virtual ~SignalCore() {
+        using std::get;
         while(!funs.empty()) {
-            auto c(funs.begin()->first);
+            Connection c{get<Connection>(funs.back())};
             c.disconnect();
         }
     }
 
     Connection connect(Slot slot) {
+        using std::get;
         lock_guard l(mu);
-        return funs.emplace(Connection(*this), slot).first->first;
+        funs.emplace_back(Connection(*this), slot);
+        return get<Connection>(funs.back());
     }
 
     template <typename T, typename Obj, typename... As>
@@ -128,10 +204,13 @@ struct SignalCore<Ret (Args...)> {
     }
 
 private:
-    bool disconnect(const Connection& conn, void* locked) {
+    bool disconnect(const Connection& conn, void* /*locked*/) {
         auto s = funs.size();
-        auto n = funs.erase(conn);
-        return funs.size() == s-n;
+        funs.erase(std::remove_if(funs.begin(), funs.end(), [&conn](auto&& tuple) {
+            using std::get;
+            return get<Connection>(tuple) == conn;
+        }), funs.end());
+        return funs.size() < s;
     }
 
 public:
@@ -148,63 +227,9 @@ public:
 
 protected:
     template <typename ...A>
-    std::future<void> call(A&& ...args) {
-        static Thread::Manager tman{1};
-
-        std::promise<void> promise;
-        auto ret(promise.get_future());
-        std::list<std::pair<std::future<Ret>, Connection>> futures;
-
-        std::exception_ptr eptr;
-
-        unique_lock l(mu);
-        for(auto i(funs.begin()); i != funs.end();) {
-            try {
-                if(!tman.contains(boost::this_thread::get_id())) {
-                    try {
-                        futures.emplace_back(std::move(tman.enqueue(i->second, std::forward<A>(args)...)), i->first);
-                    }
-                    catch(TaskQueueError& e) {
-                        boost::reverse_lock<unique_lock> s{l};
-                        i->second(std::forward<A>(args)...);
-                    }
-                }
-                else {
-                    boost::reverse_lock<unique_lock> s{l};
-                    i->second(std::forward<A>(args)...);
-                }
-                ++i;
-            }
-            catch(std::bad_weak_ptr&) {
-                auto tmp(i->first);
-                ++i;
-                disconnect(tmp, nullptr);
-                if(i != funs.begin())
-                    i = std::next(funs.begin(), std::distance(funs.begin(), i)-1);
-            }
-            catch(...) {
-                eptr = std::current_exception();
-                ++i;
-            }
-        }
-        for(auto&& f : futures) {
-            try {
-                f.first.get();
-            }
-            catch(std::bad_weak_ptr&) {
-                disconnect(f.second, nullptr);
-            }
-            catch(...) {
-                eptr = std::current_exception();
-            }
-        }
-
-        if(eptr)
-            promise.set_exception(eptr);
-        else
-            promise.set_value();
-
-        return std::move(ret);
+    boost::future<void> call(A&& ...args) {
+        detail::SignalImpl::call(funs, std::forward<A>(args)...);
+        return boost::make_ready_future();
     }
 
 private:

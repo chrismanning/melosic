@@ -12,6 +12,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_PATH})
 endif()
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
+add_definitions(-DBOOST_THREAD_PROVIDES_EXECUTORS -DBOOST_THREAD_VERSION=4 -DBOOST_THREAD_USES_DATETIME)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")

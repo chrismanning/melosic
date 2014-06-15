@@ -19,6 +19,7 @@
 #include <cstdlib>
 
 #include <boost/smart_ptr/make_shared.hpp>
+#include <boost/chrono.hpp>
 
 #include <catch.hpp>
 
@@ -28,7 +29,7 @@ typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
 
 TEST_CASE("Signal Test") {
     SignalType sig1;
-    const auto defaultTimeout = 500ms;
+    const auto defaultTimeout = boost::chrono::milliseconds(500);
 
     REQUIRE(0u == sig1.slotCount());
 
@@ -51,7 +52,7 @@ SECTION("SignalCallTest") {
     int scalar{rand()};
     auto f(sig1(scalar));
     auto r(f.wait_for(defaultTimeout));
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK((a_*scalar) == a);
     CHECK((b_*scalar) == b);
 }
@@ -70,7 +71,7 @@ SECTION("SignalBindTest") {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(i == s.m_a);
     c.disconnect();
     CHECK(0u == sig1.slotCount());
@@ -84,7 +85,7 @@ SECTION("SignalSharedBindTest") {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(i == s->m_a);
 
     s.reset();
@@ -92,7 +93,7 @@ SECTION("SignalSharedBindTest") {
     f = sig1(i);
     r = f.wait_for(defaultTimeout);
     CHECK_NOTHROW(f.get());
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(0u == sig1.slotCount());
 }
 
@@ -104,7 +105,7 @@ SECTION("BoostSignalSharedBindTest") {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(i == s->m_a);
 
     s.reset();
@@ -112,7 +113,7 @@ SECTION("BoostSignalSharedBindTest") {
     f = sig1(i);
     r = f.wait_for(defaultTimeout);
     CHECK_NOTHROW(f.get());
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(0u == sig1.slotCount());
 }
 
@@ -123,7 +124,7 @@ SECTION("ObjSignalBindTest") {
     int32_t i{rand()};
     auto f(sig1(i));
     auto r(f.wait_for(defaultTimeout));
-    REQUIRE(std::future_status::ready == r);
+    REQUIRE(boost::future_status::ready == r);
     CHECK(i == s.m_a);
     c.disconnect();
     CHECK(0u == sig1.slotCount());
