@@ -199,7 +199,8 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
         static_assert(std::is_base_of<T, typename decltype(bo)::object_type>::value,
                       "obj must have member function func");
         return connect([=](Args&&... as) mutable {
-            return (bo()->*func)(std::forward<detail::unwrap_t<Args>>(as)...);
+            auto ptr = bo();
+            return (std::addressof(*ptr)->*func)(std::forward<detail::unwrap_t<Args>>(as)...);
         });
     }
 

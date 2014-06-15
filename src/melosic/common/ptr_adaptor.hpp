@@ -49,10 +49,11 @@ struct WeakPtrBind {
     explicit WeakPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value) :
         ptr(std::move(ptr)) {}
 
-    object_type* operator()() const {
-        if(ptr.expired())
+    auto operator()() const {
+        auto locked_ptr = ptr.lock();
+        if(!locked_ptr)
             throw std::bad_weak_ptr();
-        return ptr.lock().get();
+        return locked_ptr;
     }
 
     object_type& operator*() const {
