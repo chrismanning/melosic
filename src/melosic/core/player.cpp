@@ -440,6 +440,7 @@ void Player::impl::read_handler(std::error_code ec, std::size_t n) {
                     auto* ptr = ::operator new(s);
                     std::memmove(ptr, ASIO::buffer_cast<uint8_t*>(tmp) + n, s);
 
+                    unique_lock l(self->mu);
                     self->in_buf.emplace_front(ptr, s);
                 }
                 ::operator delete(ASIO::buffer_cast<void*>(tmp));
