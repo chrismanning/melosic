@@ -44,6 +44,16 @@ SECTION("SignalConnectTest") {
     CHECK(0u == sig1.slotCount());
 }
 
+SECTION("SignalDisconnectTest") {
+    Melosic::Signals::Connection c;
+    {
+        SignalType sig2;
+        c = sig2.connect([] (int32_t) {});
+        CHECK(1u == sig2.slotCount());
+    }
+    CHECK(!c.isConnected());
+}
+
 SECTION("SignalCallTest") {
     int64_t a{rand()}, b{rand()};
     const int64_t a_{a}, b_{b};
@@ -145,6 +155,25 @@ SECTION("NestedSignalTest") {
     REQUIRE(boost::future_status::ready == r);
 
     CHECK(res == i+1);
+    c1.disconnect();
+    c2.disconnect();
+    CHECK(0u == sig1.slotCount());
+    CHECK(0u == sig2.slotCount());
+}
+
+SECTION("NestedSignalDisconnectTest") {
+    NestedSignalType sig2;
+    int32_t i{rand()};
+    auto c1 = sig1.connect([&](int32_t a) { sig2(a).wait(); });
+    auto c2 = sig2.connect([&](int32_t) { throw 0; });
+    CHECK(1u == sig1.slotCount());
+    CHECK(1u == sig2.slotCount());
+
+    auto f(sig1(i));
+    auto r(f.wait_for(defaultTimeout));
+    REQUIRE(boost::future_status::ready == r);
+    CHECK(0u == sig2.slotCount());
+
     c1.disconnect();
     c2.disconnect();
     CHECK(0u == sig1.slotCount());

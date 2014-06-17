@@ -46,15 +46,14 @@ private:
 public:
     void disconnect(Connection& conn) override {
         if(connected.load())
-            connected.exchange(!sig.disconnect(conn));
+            connected.store(!sig.disconnect(conn));
+        assert(!connected.load());
     }
 
     bool isConnected() const noexcept override {
         return connected.load();
     }
 };
-
-struct ConnHash;
 
 struct Connection {
     Connection() noexcept = default;
@@ -86,21 +85,11 @@ public:
         using std::swap;
         swap(pimpl, b.pimpl);
     }
-
-private:
-    friend struct ConnHash;
 };
 
 inline void swap(Connection& a, Connection& b) noexcept(noexcept(a.swap(b))) {
     a.swap(b);
 }
-
-struct ConnHash {
-    ConnHash() noexcept = default;
-    size_t operator()(const Connection& conn) const noexcept {
-        return std::hash<std::shared_ptr<ConnErasure>>()(conn.pimpl);
-    }
-};
 
 struct ScopedConnection : Connection {
     ScopedConnection() noexcept = default;
