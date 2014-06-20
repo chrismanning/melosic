@@ -22,6 +22,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time REQUIRED)
 link_directories(${Boost_LIBRARY_DIR})
+include_directories(${Boost_INCLUDE_DIR})
+
 find_package(Asio 1.10.1 REQUIRED)
 
 include_directories(include)
