@@ -26,6 +26,7 @@
 #include <melosic/common/signal.hpp>
 
 typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
+auto use_future = Melosic::Signals::use_future;
 
 TEST_CASE("Signal Test") {
     SignalType sig1;
@@ -60,7 +61,7 @@ SECTION("SignalCallTest") {
     sig1.connect([&] (int32_t s) { a *= s; });
     sig1.connect([&] (int32_t s) { b *= s; });
     int scalar{rand()};
-    auto f(sig1(scalar));
+    auto f(sig1(use_future, scalar));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK((a_*scalar) == a);
@@ -79,7 +80,7 @@ SECTION("SignalBindTest") {
     auto c = sig1.connect(&S::fun, &s);
     CHECK(1u == sig1.slotCount());
     int32_t i{rand()};
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK(i == s.m_a);
@@ -93,14 +94,14 @@ SECTION("SignalSharedBindTest") {
     auto c = sig1.connect(&S::fun, s);
 
     int32_t i{rand()};
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK(i == s->m_a);
 
     s.reset();
     i = rand();
-    f = sig1(i);
+    f = sig1(use_future, i);
     r = f.wait_for(defaultTimeout);
     CHECK_NOTHROW(f.get());
     REQUIRE(boost::future_status::ready == r);
@@ -113,14 +114,14 @@ SECTION("BoostSignalSharedBindTest") {
     auto c = sig1.connect(&S::fun, s);
 
     int32_t i{rand()};
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK(i == s->m_a);
 
     s.reset();
     i = rand();
-    f = sig1(i);
+    f = sig1(use_future, i);
     r = f.wait_for(defaultTimeout);
     CHECK_NOTHROW(f.get());
     REQUIRE(boost::future_status::ready == r);
@@ -132,7 +133,7 @@ SECTION("ObjSignalBindTest") {
     auto c = sig1.connect(&S::fun, s);
     CHECK(1u == sig1.slotCount());
     int32_t i{rand()};
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK(i == s.m_a);
@@ -145,12 +146,12 @@ SECTION("NestedSignalTest") {
     NestedSignalType sig2;
     int32_t i{rand()};
     int32_t res;
-    auto c1 = sig1.connect([&](int32_t a) { sig2(a).wait(); });
+    auto c1 = sig1.connect([&](int32_t a) { sig2(use_future, a).wait(); });
     auto c2 = sig2.connect([&](int32_t a) { res = a+1; });
     CHECK(1u == sig1.slotCount());
     CHECK(1u == sig2.slotCount());
 
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
 
@@ -164,12 +165,12 @@ SECTION("NestedSignalTest") {
 SECTION("NestedSignalDisconnectTest") {
     NestedSignalType sig2;
     int32_t i{rand()};
-    auto c1 = sig1.connect([&](int32_t a) { sig2(a).wait(); });
+    auto c1 = sig1.connect([&](int32_t a) { sig2(use_future, a).wait(); });
     auto c2 = sig2.connect([&](int32_t) { throw 0; });
     CHECK(1u == sig1.slotCount());
     CHECK(1u == sig2.slotCount());
 
-    auto f(sig1(i));
+    auto f(sig1(use_future, i));
     auto r(f.wait_for(defaultTimeout));
     REQUIRE(boost::future_status::ready == r);
     CHECK(0u == sig2.slotCount());

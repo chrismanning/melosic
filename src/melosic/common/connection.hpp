@@ -32,26 +32,26 @@ struct Connection;
 struct ConnErasure {
     virtual ~ConnErasure() {}
     virtual void disconnect(Connection&) = 0;
-    virtual bool isConnected() const noexcept = 0;
+    virtual bool isConnected(const Connection&) const noexcept = 0;
 };
 
-template <typename SigType>
+template <typename... Args>
 struct ConnImpl : ConnErasure {
-    explicit ConnImpl(SigType& sig) noexcept : sig(sig), connected(true) {}
+    explicit ConnImpl(std::weak_ptr<detail::SignalImpl<Args...>> sig) noexcept : sig(sig) {}
 
 private:
-    SigType& sig;
-    std::atomic_bool connected;
+    std::weak_ptr<detail::SignalImpl<Args...>> sig;
 
 public:
     void disconnect(Connection& conn) override {
-        if(connected.load())
-            connected.store(!sig.disconnect(conn));
-        assert(!connected.load());
+        if(auto ptr = sig.lock())
+            ptr->disconnect(conn);
     }
 
-    bool isConnected() const noexcept override {
-        return connected.load();
+    bool isConnected(const Connection& conn) const noexcept override {
+        if(auto ptr = sig.lock())
+            return ptr->connected(conn);
+        return false;
     }
 };
 
@@ -65,11 +65,14 @@ struct Connection {
 private:
     std::shared_ptr<ConnErasure> pimpl;
 
-public:
-    template <typename R, typename ...Args>
-    Connection(SignalCore<R(Args...)>& sig) :
-        pimpl(new ConnImpl<SignalCore<R(Args...)>>(sig)) {}
+    template <typename...>
+    friend class detail::SignalImpl;
 
+    template <typename ...Args>
+    Connection(std::shared_ptr<detail::SignalImpl<Args...>> sig) :
+        pimpl(std::make_shared<ConnImpl<Args...>>(sig)) {}
+
+public:
     void disconnect() {
         if(auto nimpl = pimpl)
             nimpl->disconnect(*this);
@@ -77,7 +80,7 @@ public:
 
     bool isConnected() const noexcept {
         if(auto nimpl = pimpl)
-            return nimpl->isConnected();
+            return nimpl->isConnected(*this);
         return false;
     }
 

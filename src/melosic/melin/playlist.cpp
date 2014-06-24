@@ -26,6 +26,7 @@ using lock_guard = std::lock_guard<mutex>;
 using unique_lock = boost::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
 #include <boost/container/stable_vector.hpp>
+#include <boost/thread/reverse_lock.hpp>
 
 #include <melosic/core/playlist.hpp>
 #include <melosic/common/signal.hpp>

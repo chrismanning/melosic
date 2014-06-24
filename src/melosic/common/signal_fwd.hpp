@@ -26,6 +26,14 @@ struct Signal;
 template <typename Ret, typename ...Args>
 struct SignalCore;
 
+namespace detail {
+template <typename ...Args>
+class SignalImpl;
+}
+
+struct use_future_t {};
+constexpr use_future_t use_future = use_future_t{};
+
 } // namespace Signals
 } // namespace Melosic
 

@@ -27,6 +27,7 @@ using unique_lock = boost::unique_lock<mutex>;
 using shared_lock = std::shared_lock<mutex>;
 #include <boost/range/adaptor/sliced.hpp>
 #include <boost/container/stable_vector.hpp>
+#include <boost/thread/reverse_lock.hpp>
 
 #include <taglib/tpropertymap.h>
 
