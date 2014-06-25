@@ -55,6 +55,12 @@ template <typename T> struct unwrap<std::reference_wrapper<T>> { using type = T&
 
 template <typename T> using unwrap_t = typename unwrap<T>::type;
 
+template <typename T> struct rewrap { using type = T; };
+
+template <typename T> struct rewrap<T&> { using type = std::reference_wrapper<T>; };
+
+template <typename T> using rewrap_t = typename rewrap<T>::type;
+
 class SignalEnv {
     SignalEnv()
         : m_thread(&boost::loop_executor::loop, &m_loop_executor),
@@ -272,9 +278,9 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
         auto bo = bindObj(std::forward<Obj>(obj));
         static_assert(std::is_base_of<T, typename decltype(bo)::object_type>::value,
                       "obj must have member function func");
-        return connect([=](Args&&... as) mutable {
+        return connect([=](As&&... as) mutable {
             auto ptr = bo();
-            (std::addressof(*ptr)->*func)(std::forward<detail::unwrap_t<Args>>(as)...);
+            (std::addressof(*ptr)->*func)(std::forward<Args>(as)...);
         });
     }
 
@@ -290,10 +296,10 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
     }
 
   protected:
-    template <typename... A> void call(A&&... args) { pimpl->call(std::forward<A>(args)...); }
+    void call(Args... args) { pimpl->call(std::forward<detail::rewrap_t<Args>>(args)...); }
 
-    template <typename... A> boost::future<void> future_call(A&&... args) {
-        return pimpl->future_call(std::forward<A>(args)...);
+    boost::future<void> future_call(Args... args) {
+        return pimpl->future_call(std::forward<detail::rewrap_t<Args>>(args)...);
     }
 };
 

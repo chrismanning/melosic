@@ -72,6 +72,72 @@ SECTION("SignalCallTest") {
     CHECK((b_*scalar) == b);
 }
 
+typedef Melosic::Signals::Signal<void(int32_t&)> IntRefSignalType;
+SECTION("SignalWrappedReferenceTest") {
+    IntRefSignalType ref_sig;
+
+    int32_t a{rand()};
+    const int32_t a_{a};
+    ref_sig.connect([&a](int32_t& s) {
+        s++;
+        CHECK(&a == &s);
+    });
+
+    auto f(ref_sig(use_future, std::ref(a)));
+    auto r(f.wait_for(defaultTimeout));
+    REQUIRE(boost::future_status::ready == r);
+    CHECK((a_+1) == a);
+}
+
+SECTION("SignalReferenceTest") {
+    IntRefSignalType ref_sig;
+
+    int32_t a{rand()};
+    const int32_t a_{a};
+    ref_sig.connect([&a](int32_t& s) {
+        s++;
+        CHECK(&a == &s);
+    });
+
+    auto f(ref_sig(use_future, a));
+    auto r(f.wait_for(defaultTimeout));
+    REQUIRE(boost::future_status::ready == r);
+    CHECK((a_+1) == a);
+}
+
+struct Abc {
+    Abc() = default;
+    Abc(const Abc&) {
+        std::cout << "COPYING\n";
+    }
+    Abc(Abc&&) {
+        std::cout << "MOVING\n";
+    }
+};
+
+typedef Melosic::Signals::Signal<void(Abc&)> AbcRefSignalType;
+SECTION("SignalWrappedStructReferenceTest") {
+    AbcRefSignalType ref_sig;
+
+    Abc a;
+    ref_sig.connect([&a](Abc& s) { CHECK(&s == &a); });
+
+    auto f(ref_sig(use_future, std::ref(a)));
+    auto r(f.wait_for(defaultTimeout));
+    REQUIRE(boost::future_status::ready == r);
+}
+
+SECTION("SignalStructReferenceTest") {
+    AbcRefSignalType ref_sig;
+
+    Abc a;
+    ref_sig.connect([&a](Abc& s) { CHECK(&s == &a); });
+
+    auto f(ref_sig(use_future, a));
+    auto r(f.wait_for(defaultTimeout));
+    REQUIRE(boost::future_status::ready == r);
+}
+
 struct S {
     void fun(int32_t a) {
         m_a = a;
