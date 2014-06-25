@@ -28,6 +28,10 @@
 typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
 auto use_future = Melosic::Signals::use_future;
 
+static void sleep_slot(int32_t) {
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+}
+
 TEST_CASE("Signal Test") {
     SignalType sig1;
     const auto defaultTimeout = boost::chrono::milliseconds(500);
@@ -179,6 +183,16 @@ SECTION("NestedSignalDisconnectTest") {
     c2.disconnect();
     CHECK(0u == sig1.slotCount());
     CHECK(0u == sig2.slotCount());
+}
+
+SECTION("BlockingSignalTest") {
+    sig1.connect(sleep_slot);
+    sig1(0);
+}
+
+SECTION("BlockingFutureSignalTest") {
+    sig1.connect(sleep_slot);
+    sig1(use_future, 0);
 }
 
 }

@@ -79,9 +79,12 @@ class SignalEnv {
         }
     }
 
-    template <typename... Args> static auto wrap_slot(std::tuple<Connection, std::function<void(Args...)>>& tuple) {
+    template <typename... Args>
+    static auto wrap_slot(std::shared_ptr<SignalImpl<Args...>> sig_impl,
+                          std::tuple<Connection, std::function<void(Args...)>>& tuple) {
         using std::get;
-        return [ f = get<std::function<void(Args...)>>(tuple), conn = get<Connection>(tuple) ](Args... args) mutable {
+        return [ sig_impl, f = get<std::function<void(Args...)>>(tuple), conn = get<Connection>(tuple) ](
+            Args... args) mutable {
             try {
                 f(args...);
                 return true;
@@ -94,13 +97,13 @@ class SignalEnv {
 
     template <typename Executor, typename... Args, typename... CallArgs>
     static auto future_call(
-        Executor& ex,
+        Executor& ex, std::shared_ptr<SignalImpl<Args...>> sig_impl,
         boost::strict_lock_ptr<std::vector<std::tuple<Connection, std::function<void(Args...)>>>, std::mutex>& funs,
         CallArgs&&... args) {
         std::vector<boost::future<bool>> futures;
 
         for(auto&& tuple : *funs)
-            futures.push_back(boost::async(ex, wrap_slot(tuple), std::forward<CallArgs>(args)...));
+            futures.push_back(boost::async(ex, wrap_slot(sig_impl, tuple), std::forward<CallArgs>(args)...));
 
         if(boost::this_thread::get_id() == instance().m_thread.get_id())
             return boost::async(instance().m_inline_executor, &SignalEnv::wait_for_all, std::move(futures));
@@ -110,11 +113,11 @@ class SignalEnv {
 
     template <typename Executor, typename... Args, typename... CallArgs>
     static void
-    call(Executor& ex,
+    call(Executor& ex, std::shared_ptr<SignalImpl<Args...>> sig_impl,
          boost::strict_lock_ptr<std::vector<std::tuple<Connection, std::function<void(Args...)>>>, std::mutex>& funs,
          CallArgs&&... args) {
         for(auto&& tuple : *funs)
-            ex.submit([ f = wrap_slot(tuple), args... ]() mutable { f(std::forward<CallArgs>(args)...); });
+            ex.submit([ f = wrap_slot(sig_impl, tuple), args... ]() mutable { f(std::forward<CallArgs>(args)...); });
     }
 
   public:
@@ -125,22 +128,24 @@ class SignalEnv {
 
     template <typename... Args, typename... CallArgs>
     static auto future_call(
+        std::shared_ptr<SignalImpl<Args...>> sig_impl,
         boost::strict_lock_ptr<std::vector<std::tuple<Connection, std::function<void(Args...)>>>, std::mutex> funs,
         CallArgs&&... args) {
         if(boost::this_thread::get_id() == instance().m_thread.get_id())
-            return future_call(instance().m_inline_executor, funs, std::forward<CallArgs>(args)...);
+            return future_call(instance().m_inline_executor, sig_impl, funs, std::forward<CallArgs>(args)...);
         else
-            return future_call(instance().m_loop_executor, funs, std::forward<CallArgs>(args)...);
+            return future_call(instance().m_loop_executor, sig_impl, funs, std::forward<CallArgs>(args)...);
     }
 
     template <typename... Args, typename... CallArgs>
     static void
-    call(boost::strict_lock_ptr<std::vector<std::tuple<Connection, std::function<void(Args...)>>>, std::mutex> funs,
+    call(std::shared_ptr<SignalImpl<Args...>> sig_impl,
+         boost::strict_lock_ptr<std::vector<std::tuple<Connection, std::function<void(Args...)>>>, std::mutex> funs,
          CallArgs&&... args) {
         if(boost::this_thread::get_id() == instance().m_thread.get_id())
-            call(instance().m_inline_executor, funs, std::forward<CallArgs>(args)...);
+            call(instance().m_inline_executor, sig_impl, funs, std::forward<CallArgs>(args)...);
         else
-            call(instance().m_loop_executor, funs, std::forward<CallArgs>(args)...);
+            call(instance().m_loop_executor, sig_impl, funs, std::forward<CallArgs>(args)...);
     }
 };
 
@@ -183,11 +188,13 @@ template <typename... Args> class SignalImpl final : public std::enable_shared_f
     }
 
     template <typename... CallArgs> void call(CallArgs&&... args) {
-        SignalEnv::call(synchronized_slot_container{m_slots, mu}, std::forward<CallArgs>(args)...);
+        SignalEnv::call(this->shared_from_this(), synchronized_slot_container{m_slots, mu},
+                        std::forward<CallArgs>(args)...);
     }
 
     template <typename... CallArgs> boost::future<void> future_call(CallArgs&&... args) {
-        return SignalEnv::future_call(synchronized_slot_container{m_slots, mu}, std::forward<CallArgs>(args)...);
+        return SignalEnv::future_call(this->shared_from_this(), synchronized_slot_container{m_slots, mu},
+                                      std::forward<CallArgs>(args)...);
     }
 
     // locked
