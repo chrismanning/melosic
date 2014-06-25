@@ -56,10 +56,10 @@ inline const char * DLError() {
 #include <list>
 #include <functional>
 #include <regex>
+#include <mutex>
 
-#include <boost/range.hpp>
+#include <boost/range/algorithm/transform.hpp>
 #include <boost/range/adaptor/map.hpp>
-#include <boost/range/adaptor/transformed.hpp>
 using namespace boost::adaptors;
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
@@ -168,10 +168,14 @@ private:
     Info info;
 };
 
-class Manager::impl {
-public:
+struct Manager::impl {
+    using mutex = std::mutex;
+    using lock_guard = std::lock_guard<mutex>;
+    using unique_lock = std::unique_lock<mutex>;
+    using strict_lock = boost::strict_lock<mutex>;
+
     impl(Config::Manager& confman) : confman(confman) {
-        addSearchPath(fs::current_path().parent_path()/"lib");
+        searchPaths.push_back(fs::current_path().parent_path()/"lib");
         conf.putNode("search paths", searchPaths);
         confman.getLoadedSignal().connect(&impl::loadedSlot, this);
     }
@@ -194,6 +198,7 @@ public:
         TRACE_LOG(logject) << "Config: variable updated: " << key;
         try {
             if(key == "search paths") {
+                strict_lock l(mu);
                 searchPaths.clear();
                 for(auto& path : get<std::vector<Config::VarType>>(val))
                     searchPaths.emplace_back(get<std::string>(path));
@@ -205,6 +210,7 @@ public:
                 }
             }
             else if(key == "blacklist") {
+                strict_lock l(mu);
                 blackList.clear();
                 for(auto& path : get<std::vector<Config::VarType>>(val))
                     blackList.push_back(get<std::string>(path));
@@ -217,14 +223,7 @@ public:
         }
     }
 
-    void addSearchPath(const fs::path& pluginpath) {
-        if(fs::exists(pluginpath) && fs::is_directory(pluginpath) && pluginpath.is_absolute())
-            searchPaths.push_back(pluginpath);
-        else
-            ERROR_LOG(logject) << pluginpath << " not a directory";
-    }
-
-    void loadPlugin(fs::path filepath, Core::Kernel& kernel) {
+    void loadPlugin(fs::path filepath, Core::Kernel& kernel, strict_lock&) {
         if(!filepath.is_absolute()) {
             TRACE_LOG(logject) << "plugin path relative";
             for(const fs::path& searchpath : searchPaths) {
@@ -248,10 +247,16 @@ public:
         LOG(logject) << "Plugin loaded: " << info;
     }
 
+    void loadPlugin(fs::path filepath, Core::Kernel& kernel) {
+        strict_lock l(mu);
+        loadPlugin(std::move(filepath), kernel, l);
+    }
+
     void loadPlugins(Core::Kernel& kernel) {
         BOOST_SCOPE_EXIT_ALL(&) {
             pluginsLoaded(getPlugins());
         };
+        strict_lock l(mu);
 
         TRACE_LOG(logject) << "Loading plugins...";
         std::regex filter{boost::algorithm::join(blackList, "|")};
@@ -267,7 +272,7 @@ public:
                         continue;
                     }
                     if(fs::is_regular_file(file) && file.extension() == ".melin")
-                        loadPlugin(file, kernel);
+                        loadPlugin(file, kernel, l);
                 }
                 catch(...) {
                     ERROR_LOG(logject) << "Plugin " << file << " not loaded";
@@ -278,9 +283,11 @@ public:
         initialise();
     }
 
-    ForwardRange<const Info> getPlugins() {
-        std::function<Info(Plugin&)> fun([](Plugin& p) {return p.getInfo();});
-        return loadedPlugins | map_values | transformed(fun);
+    std::vector<Info> getPlugins() {
+        strict_lock l(mu);
+        std::vector<Info> vec;
+        boost::transform(loadedPlugins | map_values, std::back_inserter(vec), [](Plugin& p) {return p.getInfo();});
+        return vec;
     }
 
     void initialise() {
@@ -290,7 +297,6 @@ public:
         }
     }
 
-private:
     Config::Manager& confman;
     Config::Conf conf{"Plugins"};
     std::map<std::string, Plugin> loadedPlugins;
@@ -301,6 +307,8 @@ private:
     friend struct RegisterFuncsInserter;
     PluginsLoaded pluginsLoaded;
     std::vector<Signals::ScopedConnection> m_signal_connections;
+
+    mutex mu;
 };
 
 Manager::Manager(Config::Manager& confman) : pimpl(new impl(confman)) {}
@@ -311,7 +319,7 @@ void Manager::loadPlugins(Core::Kernel& kernel) {
     pimpl->loadPlugins(kernel);
 }
 
-ForwardRange<const Info> Manager::getPlugins() const {
+std::vector<Info> Manager::getPlugins() const {
     return pimpl->getPlugins();
 }
 

@@ -50,13 +50,13 @@ public:
 
     MELOSIC_EXPORT void loadPlugins(Core::Kernel& kernel);
 
-    ForwardRange<const Info> getPlugins() const;
+    std::vector<Info> getPlugins() const;
     Signals::Plugin::PluginsLoaded& getPluginsLoadedSignal() const;
 
 private:
     explicit Manager(Config::Manager& confman);
     friend class Core::Kernel;
-    class impl;
+    struct impl;
     std::unique_ptr<impl> pimpl;
 };
 
