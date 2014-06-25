@@ -218,6 +218,12 @@ template <typename... Args> class SignalImpl final : public std::enable_shared_f
         return m_slots.end() != std::find_if(m_slots.begin(), m_slots.end(),
                                              [&conn](auto&& tuple) { return get<Connection>(tuple) == conn; });
     }
+
+public:
+    ~SignalImpl() {
+        auto s_slots = synchronized_slot_container{m_slots, mu};
+        s_slots->clear();
+    }
 };
 
 } // namespace detail
