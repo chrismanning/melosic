@@ -18,7 +18,7 @@
 #include <memory>
 
 #include <boost/log/sinks.hpp>
-#include <boost/utility/empty_deleter.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/support/date_time.hpp>
@@ -34,7 +34,7 @@ namespace Logger {
 void init() {
     auto con_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_ostream_backend>>();
 
-    boost::shared_ptr<std::ostream> stream(&std::clog, boost::empty_deleter());
+    boost::shared_ptr<std::ostream> stream(&std::clog, boost::null_deleter());
     con_sink->locked_backend()->add_stream(stream);
 
     logging::core::get()->add_sink(con_sink);
