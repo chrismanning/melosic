@@ -120,6 +120,14 @@ function(cxx_test test_name)
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()
 
+function(cxx_header_test test_name)
+  add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
+  add_dependencies(${test_name} catch_${PROJECT_NAME})
+  target_link_libraries(${test_name} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES})
+  set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
+  add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+endfunction()
+
 add_subdirectory(src/melosic)
 
 add_subdirectory(test)
