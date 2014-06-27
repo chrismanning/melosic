@@ -28,8 +28,6 @@
 #include <boost/mpl/logical.hpp>
 #include <boost/mpl/bool.hpp>
 #include <boost/thread/scoped_thread.hpp>
-#include <boost/thread/executors/loop_executor.hpp>
-#include <boost/thread/executors/inline_executor.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/thread/strict_lock.hpp>
 #include <boost/thread/synchronized_value.hpp>
@@ -39,6 +37,8 @@
 #include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
 #include <melosic/common/connection.hpp>
+#include <melosic/executors/loop_executor.hpp>
+#include <melosic/executors/inline_executor.hpp>
 
 namespace Melosic {
 namespace Signals {
@@ -63,18 +63,18 @@ template <typename T> using rewrap_t = typename rewrap<T>::type;
 
 class SignalEnv {
     SignalEnv()
-        : m_thread(&boost::loop_executor::loop, &m_loop_executor),
-          m_maint_thread(&boost::loop_executor::loop, &m_maint_executor) {}
+        : m_thread(&executors::loop_executor::loop, &m_loop_executor),
+          m_maint_thread(&executors::loop_executor::loop, &m_maint_executor) {}
 
     ~SignalEnv() {
-        m_loop_executor.close();
-        m_maint_executor.close();
+        m_loop_executor.submit([ex = &m_loop_executor]() { ex->make_loop_exit(); });
+        m_maint_executor.submit([ex = &m_maint_executor]() { ex->make_loop_exit(); });
     }
 
-    boost::loop_executor m_loop_executor;
-    boost::inline_executor m_inline_executor;
+    executors::loop_executor m_loop_executor;
+    executors::inline_executor m_inline_executor;
     boost::scoped_thread<> m_thread;
-    boost::loop_executor m_maint_executor;
+    executors::loop_executor m_maint_executor;
     boost::scoped_thread<> m_maint_thread;
 
     static void wait_for_all(std::vector<boost::future<bool>>&& futures) {
