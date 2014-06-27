@@ -1,6 +1,8 @@
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5Qml REQUIRED)
 
+add_subdirectory(executors)
+
 add_subdirectory(asio)
 set(CORE_SRC_LIST)
 add_subdirectory(core)

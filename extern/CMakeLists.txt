@@ -20,8 +20,7 @@ set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/inc
 
 FILE(GLOB_RECURSE rapidjson_headers ${CMAKE_CURRENT_SOURCE_DIR}/rapidjson/include/*.h)
 
-add_library(rapidjson_headers_lib STATIC ${rapidjson_headers})
-set_target_properties(rapidjson_headers_lib PROPERTIES LINKER_LANGUAGE CXX)
+add_custom_target(rapidjson_headers_lib ALL SOURCES ${rapidjson_headers})
 
 #jbson
 ExternalProject_Add(jbson
