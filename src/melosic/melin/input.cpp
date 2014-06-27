@@ -16,7 +16,6 @@
 **************************************************************************/
 
 #include <boost/utility/string_ref.hpp>
-using namespace boost::literals;
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
@@ -44,10 +43,10 @@ std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
     try {
         if(!uri.scheme())
             return nullptr;
-        if(uri.scheme() == "file"_s_ref) {
+        if(uri.scheme() == boost::string_ref("file")) {
             return std::make_unique<fs::ifstream>(uri_to_path(uri));
         }
-        else if(uri.scheme() == "http"_s_ref) {
+        else if(uri.scheme() == boost::string_ref("http")) {
         }
     }
     catch(...) {

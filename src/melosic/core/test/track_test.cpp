@@ -21,7 +21,6 @@
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/utility/string_ref.hpp>
-using namespace boost::literals;
 
 #include <jbson/json_reader.hpp>
 using namespace jbson;
