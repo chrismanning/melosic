@@ -19,7 +19,7 @@
 #include <numeric>
 #include <type_traits>
 
-#include <boost/utility/empty_deleter.hpp>
+#include <boost/core/null_deleter.hpp>
 #include <boost/algorithm/clamp.hpp>
 
 #include <QDialog>
@@ -486,7 +486,7 @@ struct ConfItem {
         m_configurable = cw;
     }
 
-    explicit ConfItem(Config::Conf* c, ConfItem* parent = nullptr) : ConfItem({c, boost::empty_deleter{}}, parent) {}
+    explicit ConfItem(Config::Conf* c, ConfItem* parent = nullptr) : ConfItem({c, boost::null_deleter{}}, parent) {}
 
     ConfItem(ConfItem&& b) noexcept { b.swap(*this); }
     ConfItem& operator=(ConfItem&&) = default;
