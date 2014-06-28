@@ -2,8 +2,10 @@ project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8.11)
 
 option(MELOSIC_ENABLE_TESTING "Enable testing" ON)
+option(MELOSIC_SANITIZE_THREAD "Use -fsanitize=thread where available" OFF)
 option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
 option(MELOSIC_DETECT_LEAKS "Use -fsanitize=leak where available" OFF)
+option(MELOSIC_DETECT_UNDEFINED "Use -fsanitize=undefined where available" OFF)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
@@ -31,29 +33,37 @@ add_subdirectory(extern)
 include_directories(${EXTERN_INCLUDES})
 link_directories(${CMAKE_BINARY_DIR}/extern/lib)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer -pthread")
+if(NOT WIN32)
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -pthread")
+
+ if(MELOSIC_DETECT_UNDEFINED)
+  message(STATUS "Undefined behaviour detection enabled")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined")
+ endif(MELOSIC_DETECT_UNDEFINED)
+
+ if(MELOSIC_SANITIZE_ADDRESS)
+  message(STATUS "Address sanitizer enabled")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
+ elseif(MELOSIC_SANITIZE_THREAD)
+  message(STATUS "Thread sanitizer enabled")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+ elseif(MELOSIC_DETECT_LEAKS)
+  message(STATUS "Leak detection enabled")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=leak")
+ endif()
+
+endif(NOT WIN32)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs -Wno-missing-field-initializers")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-deprecated-register")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-redeclared-class-member -Wno-ignored-qualifiers")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-if(NOT WIN32)
- set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++1y")
 
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O1")
-
-if(MELOSIC_SANITIZE_ADDRESS AND NOT WIN32)
- message(STATUS "Address sanitizer enabled")
- set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address")
-endif()
-
-if(MELOSIC_DETECT_LEAKS AND NOT WIN32)
- message(STATUS "Leak detection enabled")
- set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=leak")
-endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS}")
 
@@ -122,8 +132,8 @@ endfunction()
 
 function(cxx_header_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
-  add_dependencies(${test_name} catch_${PROJECT_NAME})
-  target_link_libraries(${test_name} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES})
+  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
+  target_link_libraries(${test_name} ${LINK_LIBS})
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
 endfunction()
