@@ -31,41 +31,38 @@ enum class loop_options {
     wait_sleep
 };
 
-enum class shutdown_options {
-    exhaust,
-    abandon
-};
-
-template <loop_options LoopMethod, shutdown_options ShutdownMethod>
+template <loop_options LoopMethod>
 struct basic_loop_executor {
     static_assert(LoopMethod == loop_options::try_yield || LoopMethod == loop_options::wait_sleep,
                   "Invalid LoopMethod");
-    static_assert(ShutdownMethod == shutdown_options::exhaust || ShutdownMethod == shutdown_options::abandon,
-                  "Invalid ShutdownMethod");
 
     using work_type = boost::executors::work;
 
     basic_loop_executor() = default;
 
+    ~basic_loop_executor() {
+        m_destruct.store(true);
+        m_work_queue.close();
+        while(m_in_loop.test_and_set(std::memory_order_acquire))
+            ;
+        m_in_loop.clear(std::memory_order_release);
+    }
+
     basic_loop_executor(const basic_loop_executor&) = delete;
     basic_loop_executor(basic_loop_executor&&) = delete;
 
-    ~basic_loop_executor() {
-        m_work_queue.close();
-    }
-
 private:
     boost::sync_queue<work_type> m_work_queue;
-    std::atomic_bool m_exit{false};
+    std::atomic_bool m_exit_loop{false};
+    std::atomic_flag m_in_loop{ATOMIC_FLAG_INIT};
+    std::atomic_bool m_destruct{false};
 
     void try_loop() {
         work_type work;
-        while(!m_exit.load() && !m_work_queue.closed()) {
+        while(!m_destruct.load() && !m_exit_loop.load(std::memory_order_relaxed) && !m_work_queue.closed()) {
             try {
-                if(m_work_queue.try_pull_front(work) == boost::queue_op_status::success) {
-//                    assert(work);
+                if(m_work_queue.try_pull_front(work) == boost::queue_op_status::success)
                     work();
-                }
                 else
                     boost::this_thread::yield();
             }
@@ -80,11 +77,10 @@ private:
 
     void wait_loop() {
         work_type work;
-        while(!m_exit.load() && !m_work_queue.closed()) {
+        while(!m_destruct.load() && !m_exit_loop.load(std::memory_order_relaxed) && !m_work_queue.closed()) {
             try {
                 if(m_work_queue.wait_pull_front(work) == boost::queue_op_status::closed)
                     break;
-//                assert(work);
                 work();
             }
             catch(boost::thread_interrupted&) {
@@ -99,35 +95,49 @@ public:
     void submit(WorkT&& work) {
         m_work_queue.push_back(work_type(std::forward<WorkT>(work)));
     }
-//    void submit(work_type work) {
-//        m_work_queue.push_back(std::move(work));
-//    }
+
+    size_t uninitiated_task_count() const {
+        return m_work_queue.size();
+    }
 
     void loop() {
-        m_exit.store(false);
-        if(LoopMethod == loop_options::try_yield)
-            try_loop();
-        else
-            wait_loop();
-        if(ShutdownMethod == shutdown_options::exhaust)
-            run_queued_closures();
+        while(m_in_loop.test_and_set(std::memory_order_acquire))
+            ;
+
+        m_exit_loop.store(false, std::memory_order_relaxed);
+        try {
+            if(LoopMethod == loop_options::try_yield)
+                try_loop();
+            else
+                wait_loop();
+        }
+        catch(boost::thread_interrupted&) {
+            m_in_loop.clear(std::memory_order_release);
+            throw;
+        }
+        m_in_loop.clear(std::memory_order_release);
     }
 
     void run_queued_closures() {
-        m_exit.store(false);
+        while(m_in_loop.test_and_set(std::memory_order_acquire))
+            ;
+
+        m_exit_loop.store(false, std::memory_order_relaxed);
+
         auto closures = m_work_queue.underlying_queue();
         for(auto&& work : closures) {
-            if(m_exit.load())
+            if(m_exit_loop.load())
                 return;
             try {
-//                assert(work);
                 work();
             }
             catch(boost::thread_interrupted&) {
+                m_in_loop.clear(std::memory_order_release);
                 throw;
             }
             catch(...) {}
         }
+        m_in_loop.clear(std::memory_order_release);
     }
 
     bool try_run_one_closure() {
@@ -135,7 +145,6 @@ public:
             work_type work;
             if(m_work_queue.try_pull_front(work) != boost::queue_op_status::success)
                 return false;
-//            assert(work);
             work();
             return true;
         }
@@ -148,11 +157,11 @@ public:
     }
 
     void make_loop_exit() {
-        m_exit.store(true);
+        m_exit_loop.store(true, std::memory_order_relaxed);
     }
 };
 
-using loop_executor = basic_loop_executor<loop_options::wait_sleep, shutdown_options::exhaust>;
+using loop_executor = basic_loop_executor<loop_options::wait_sleep>;
 
 } // namespace executors
 } // namespace Melosic
