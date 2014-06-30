@@ -62,20 +62,16 @@ template <typename T> struct rewrap<T&> { using type = std::reference_wrapper<T>
 template <typename T> using rewrap_t = typename rewrap<T>::type;
 
 class SignalEnv {
-    SignalEnv()
-        : m_thread(&executors::loop_executor::loop, &m_loop_executor),
-          m_maint_thread(&executors::loop_executor::loop, &m_maint_executor) {}
-
-    ~SignalEnv() {
-        m_loop_executor.submit([ex = &m_loop_executor]() { ex->make_loop_exit(); });
-        m_maint_executor.submit([ex = &m_maint_executor]() { ex->make_loop_exit(); });
+    SignalEnv() {
+        m_thread = boost::scoped_thread<>(&executors::loop_executor::loop, &m_loop_executor);
+        m_maint_thread = boost::scoped_thread<>(&executors::loop_executor::loop, &m_maint_executor);
     }
 
+    boost::scoped_thread<> m_thread;
     executors::loop_executor m_loop_executor;
     executors::inline_executor m_inline_executor;
-    boost::scoped_thread<> m_thread;
-    executors::loop_executor m_maint_executor;
     boost::scoped_thread<> m_maint_thread;
+    executors::loop_executor m_maint_executor;
 
     static void wait_for_all(std::vector<boost::future<bool>>&& futures) {
         for(auto&& f : futures) {
