@@ -1,1 +1,2 @@
 cxx_header_test(loop_executor_test)
+cxx_header_test(thread_pool_test)

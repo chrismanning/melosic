@@ -20,13 +20,15 @@
 
 #include <functional>
 
+#include <boost/thread/scoped_thread.hpp>
 #include <boost/thread/sync_queue.hpp>
+#include <boost/thread/executors/work.hpp>
 
 namespace Melosic {
 namespace executors {
 
 struct thread_pool {
-    using work_type = std::function<void()>;
+    using work_type = boost::executors::work;
 
     explicit thread_pool(unsigned thread_count = boost::thread::hardware_concurrency()) {
         if(thread_count == 0)
@@ -38,7 +40,6 @@ struct thread_pool {
                     try {
                         if(m_work_queue.wait_pull_front(work) == boost::queue_op_status::closed)
                             break;
-                        assert(work);
                         work();
                     }
                     catch(boost::thread_interrupted&) {
@@ -50,7 +51,6 @@ struct thread_pool {
                     try {
                         if(m_work_queue.try_pull_front(work) != boost::queue_op_status::success)
                             break;
-                        assert(work);
                         work();
                     }
                     catch(boost::thread_interrupted&) {
@@ -61,14 +61,18 @@ struct thread_pool {
             });
     }
 
+    ~thread_pool() {
+        m_work_queue.close();
+    }
+
     template <typename WorkT>
     void submit(WorkT&& work) {
-        m_work_queue.push_back(std::forward<WorkT>(work));
+        m_work_queue.push_back(work_type(std::forward<WorkT>(work)));
     }
 
 private:
-    std::vector<boost::scoped_thread<boost::interrupt_and_join_if_joinable>> m_threads;
     boost::sync_queue<work_type> m_work_queue;
+    std::vector<boost::scoped_thread<boost::interrupt_and_join_if_joinable>> m_threads;
 };
 
 } // namespace executors
