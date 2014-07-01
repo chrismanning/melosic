@@ -70,6 +70,10 @@ struct thread_pool {
         m_work_queue.push_back(work_type(std::forward<WorkT>(work)));
     }
 
+    size_t uninitiated_task_count() const {
+        return m_work_queue.size();
+    }
+
 private:
     boost::sync_queue<work_type> m_work_queue;
     std::vector<boost::scoped_thread<boost::interrupt_and_join_if_joinable>> m_threads;
