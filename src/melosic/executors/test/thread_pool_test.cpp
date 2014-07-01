@@ -26,8 +26,8 @@
 using namespace Melosic::executors;
 
 TEST_CASE("Thread pool executor") {
-    thread_pool executor;
     boost::barrier barrier{2};
+    thread_pool executor;
     auto defaultTimeout = boost::chrono::milliseconds(250);
 
     SECTION("Basic thread execution") {
