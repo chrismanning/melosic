@@ -29,12 +29,12 @@ typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
 auto use_future = Melosic::Signals::use_future;
 
 static void sleep_slot(int32_t) {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
 }
 
 TEST_CASE("Signal Test") {
     SignalType sig1;
-    const auto defaultTimeout = boost::chrono::milliseconds(500);
+    const auto defaultTimeout = boost::chrono::milliseconds(100);
 
     REQUIRE(0u == sig1.slotCount());
 
