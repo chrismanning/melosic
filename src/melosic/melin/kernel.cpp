@@ -26,7 +26,6 @@
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/output.hpp>
 #include <melosic/melin/encoder.hpp>
-#include <melosic/common/thread.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/directories.hpp>
 #include <melosic/core/track.hpp>
@@ -47,12 +46,10 @@ struct Kernel::impl {
           io_service(),
           outman(confman, io_service),
           null_worker(new asio::io_service::work(io_service)),
-          tman(&io_service),
-          null_worker_(std::move(null_worker)),
           inman(),
-          decman(inman, tman),
+          decman(inman),
           encman(),
-          libman(confman, decman, plugman, tman),
+          libman(confman, decman, plugman),
           playlistman()
     {
         std::signal(SIGABRT, signal_handler);
@@ -68,8 +65,6 @@ struct Kernel::impl {
     asio::io_service io_service;
     Output::Manager outman;
     std::unique_ptr<asio::io_service::work> null_worker;
-    Thread::Manager tman;
-    std::unique_ptr<asio::io_service::work> null_worker_;
     Input::Manager inman;
     Decoder::Manager decman;
     Encoder::Manager encman;
@@ -99,8 +94,6 @@ Output::Manager& Kernel::getOutputManager() { return pimpl->outman; }
 Encoder::Manager& Kernel::getEncoderManager() { return pimpl->encman; }
 
 Plugin::Manager& Kernel::getPluginManager() { return pimpl->plugman; }
-
-Thread::Manager& Kernel::getThreadManager() { return pimpl->tman; }
 
 Melosic::Playlist::Manager& Kernel::getPlaylistManager() { return pimpl->playlistman; }
 

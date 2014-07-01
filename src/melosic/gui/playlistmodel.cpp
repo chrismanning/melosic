@@ -32,11 +32,11 @@
 #include <melosic/core/playlist.hpp>
 #include <melosic/melin/playlist.hpp>
 #include <melosic/common/signal_core.hpp>
-#include <melosic/common/thread.hpp>
 #include <melosic/common/optional.hpp>
 #include <melosic/melin/library.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/input.hpp>
+#include <melosic/executors/default_executor.hpp>
 
 #include "jsondocmodel.hpp"
 
@@ -157,10 +157,9 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
 }
 
 struct Refresher {
-    Refresher(Core::Playlist p, Thread::Manager& tman, int start, int end, int stride = 1) noexcept
+    Refresher(Core::Playlist p, int start, int end, int stride = 1) noexcept
         :
           p(p),
-          tman(tman),
           start(start),
           end(end),
           stride(stride)
@@ -174,11 +173,10 @@ struct Refresher {
         p.refreshTracks(start, start+stride);
         start += stride;
         if(start < end)
-            tman.enqueue(Refresher(p, tman, start, end, stride));
+            executors::default_executor()->submit(Refresher(p, start, end, stride));
     }
 
     mutable Core::Playlist p;
-    Thread::Manager& tman;
     mutable int start;
     mutable int end;
     mutable int stride;

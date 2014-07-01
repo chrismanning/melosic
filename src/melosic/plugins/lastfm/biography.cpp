@@ -15,8 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/common/thread.hpp>
-
 #include "biography.hpp"
 #include "service.hpp"
 #include "track.hpp"

@@ -24,7 +24,6 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/connection.hpp>
-#include <melosic/common/thread.hpp>
 using namespace Melosic;
 
 #include "lastfm.hpp"
@@ -44,7 +43,6 @@ static constexpr Plugin::Info lastFmInfo("LastFM",
 static std::shared_ptr<Service> lastserv;
 static std::shared_ptr<Scrobbler> scrobbler;
 static Config::Manager* confman = nullptr;
-static Thread::Manager* tman = nullptr;
 static std::string sk;
 
 void refreshConfig(const std::string& key, const Config::VarType& value) {
@@ -83,11 +81,10 @@ static Signals::ScopedConnection varConnection;
 
 extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
-    funs << registerConfig << registerTasks;
+    funs << registerConfig;
 
     lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
-                               "64a3811653376876431daad679ce5b67",
-                               tman));
+                               "64a3811653376876431daad679ce5b67"));
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
@@ -96,10 +93,6 @@ extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::conf.putNode("username", std::string(""));
     ::conf.putNode("session key", std::string(""));
     ::conf.putNode("enable scrobbling", false);
-}
-
-extern "C" BOOST_SYMBOL_EXPORT void registerTasks(Melosic::Thread::Manager* tman) {
-    ::tman = tman;
 }
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));

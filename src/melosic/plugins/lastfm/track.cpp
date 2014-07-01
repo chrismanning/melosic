@@ -35,7 +35,8 @@ using shared_lock = boost::shared_lock_guard<Mutex>;
 
 #include <melosic/core/track.hpp>
 #include <melosic/melin/logging.hpp>
-#include <melosic/common/thread.hpp>
+#include <melosic/executors/default_executor.hpp>
+namespace executors = Melosic::executors;
 
 #include "track.hpp"
 #include "service.hpp"
@@ -47,7 +48,7 @@ static Melosic::Logger::Logger logject(logging::keywords::channel = "LastFM::Tra
 
 namespace LastFM {
 
-struct Track::impl {
+struct Track::impl : std::enable_shared_from_this<impl> {
     impl(std::weak_ptr<Service> lastserv,
          const std::string& name,
          const std::string& artist,
@@ -135,7 +136,13 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::getInfo_impl, this, lastserv, autocorrect);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv, autocorrect]() {
+            return self->getInfo_impl(lastserv, autocorrect);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
 private:
@@ -176,7 +183,13 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::scrobble_impl, this, lastserv);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+            return self->scrobble_impl(lastserv);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
 private:
@@ -216,7 +229,13 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::updateNowPlaying_impl, this, lastserv);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+            return self->updateNowPlaying_impl(lastserv);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
     ForwardRange<Tag> topTags() {
@@ -266,7 +285,7 @@ Track::Track(std::weak_ptr<Service> lastserv,
              const std::string& url)
     : pimpl(new impl(std::move(lastserv), name, artist, url)) {}
 Track::Track(std::weak_ptr<Service> lastserv, const Melosic::Core::Track& track)
-    : pimpl(new impl(lastserv, track)) {}
+    : pimpl(std::make_shared<impl>(lastserv, track)) {}
 
 Track::~Track() {}
 

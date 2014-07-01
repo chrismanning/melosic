@@ -39,9 +39,5 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T&
     l.push_back(std::bind(fun, &k.getConfigManager()));
     return *this;
 }
-RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerTasks_T& fun) {
-    l.push_back(std::bind(fun, &k.getThreadManager()));
-    return *this;
-}
 
 }

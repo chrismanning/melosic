@@ -48,7 +48,6 @@ class PlaylistModel;
 class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
     Playlist::Manager& playman;
-    Thread::Manager& tman;
     boost::bimaps::bimap<boost::bimaps::unordered_set_of<Core::Playlist>,
                          boost::bimaps::unordered_set_of<PlaylistModel*>> playlists;
     std::list<Signals::ScopedConnection> conns;

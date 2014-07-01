@@ -32,6 +32,7 @@ using namespace boost::adaptors;
 namespace fs = boost::filesystem;
 #include <boost/filesystem/fstream.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/exception/diagnostic_information.hpp>
 
 #include <asio/error.hpp>
 
@@ -44,7 +45,6 @@ namespace fs = boost::filesystem;
 #include <melosic/core/track.hpp>
 #include <melosic/core/filecache.hpp>
 #include <melosic/core/audiofile.hpp>
-#include <melosic/common/thread.hpp>
 #include <melosic/melin/input.hpp>
 
 #include "decoder.hpp"
@@ -57,9 +57,8 @@ using namespace TagLib;
 Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
 
 struct Manager::impl : std::enable_shared_from_this<impl> {
-    impl(Input::Manager& inman, Thread::Manager& tman) : inman(inman), tman(tman) {}
+    impl(Input::Manager& inman) : inman(inman) {}
     Input::Manager& inman;
-    Thread::Manager& tman;
     mutex mu;
     std::unordered_map<std::string, Factory> inputFactories;
     Core::FileCache m_file_cache;
@@ -67,7 +66,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     std::unique_ptr<PCMSource> open(const network::uri&);
 };
 
-Manager::Manager(Input::Manager& inman, Thread::Manager& tman) : pimpl(std::make_shared<impl>(inman, tman)) {}
+Manager::Manager(Input::Manager& inman) : pimpl(std::make_shared<impl>(inman)) {}
 
 Manager::~Manager() {}
 

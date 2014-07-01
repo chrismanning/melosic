@@ -1,5 +1,4 @@
 cxx_header_test(ptr_adaptor_test)
-cxx_header_test(thread_test)
 cxx_header_test(signal_test)
 cxx_header_test(string_test)
 cxx_header_test(audiospecs_test)

@@ -52,11 +52,9 @@ struct Track;
 
 class Service : public std::enable_shared_from_this<Service> {
 public:
-    Service(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*&);
+    Service(const std::string& apiKey, const std::string& sharedSecret);
 
     ~Service();
-
-    Melosic::Thread::Manager* getThreadManager();
 
 //    Scrobbler scrobbler();
     User& getUser();

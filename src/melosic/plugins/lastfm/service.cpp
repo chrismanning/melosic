@@ -43,7 +43,6 @@ using boost::algorithm::hex;
 #include <melosic/core/playlist.hpp>
 #include <melosic/core/track.hpp>
 #include <melosic/common/error.hpp>
-#include <melosic/common/thread.hpp>
 
 #include "service.hpp"
 #include "track.hpp"
@@ -55,10 +54,9 @@ namespace LastFM {
 
 class Service::impl {
 public:
-    impl(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*& tman)
+    impl(const std::string& apiKey, const std::string& sharedSecret)
         : apiKey(apiKey),
-          sharedSecret(sharedSecret),
-          tman(tman)
+          sharedSecret(sharedSecret)
     {}
 
     Method prepareMethodCall(const std::string& methodName) {
@@ -135,7 +133,6 @@ private:
     network::http::v2::request request;
     const std::string apiKey;
     const std::string sharedSecret;
-    Melosic::Thread::Manager*& tman;
     User user;
     std::shared_ptr<Track> currentTrack_;
     typedef shared_mutex Mutex;
@@ -143,14 +140,10 @@ private:
     friend class Service;
 };
 
-Service::Service(const std::string& apiKey, const std::string& sharedSecret, Melosic::Thread::Manager*& tman)
-    : pimpl(new impl(apiKey, sharedSecret, tman)) {}
+Service::Service(const std::string& apiKey, const std::string& sharedSecret)
+    : pimpl(new impl(apiKey, sharedSecret)) {}
 
 Service::~Service() {}
-
-Melosic::Thread::Manager* Service::getThreadManager() {
-    return pimpl->tman;
-}
 
 const std::string& Service::apiKey() {
     return pimpl->apiKey;

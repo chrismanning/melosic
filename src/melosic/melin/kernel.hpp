@@ -46,9 +46,6 @@ class Manager;
 namespace Config {
 class Manager;
 }
-namespace Thread {
-class Manager;
-}
 namespace Playlist {
 class Manager;
 }
@@ -75,7 +72,6 @@ class MELOSIC_EXPORT Kernel final {
     Decoder::Manager& getDecoderManager();
     Output::Manager& getOutputManager();
     Encoder::Manager& getEncoderManager();
-    Thread::Manager& getThreadManager();
     Melosic::Playlist::Manager& getPlaylistManager();
     Library::Manager& getLibraryManager();
 

@@ -51,6 +51,8 @@ namespace io = boost::iostreams;
 #include <melosic/common/optional.hpp>
 #include <melosic/melin/decoder.hpp>
 
+#include <melosic/executors/default_executor.hpp>
+
 #include "player.hpp"
 
 namespace Melosic {
@@ -429,7 +431,7 @@ void Player::impl::read_handler(std::error_code ec, std::size_t n) {
     assert(ASIO::buffer_cast<void*>(in_buf.front()) != nullptr);
     in_buf.pop_front();
     assert(asioOutput);
-    kernel.getThreadManager().enqueue([self=shared_from_this(),tmp]() mutable {
+    executors::default_executor()->submit([self=shared_from_this(),tmp]() mutable {
         unique_lock l(self->mu);
         ASIO::async_write(*self->asioOutput, ASIO::buffer(tmp),
             [tmp, self] (std::error_code ec, std::size_t n) {

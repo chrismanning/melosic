@@ -37,9 +37,6 @@ namespace Melosic {
 namespace Input {
 class Manager;
 }
-namespace Thread {
-class Manager;
-}
 
 namespace Core {
 class Track;
@@ -54,7 +51,7 @@ typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)>
 
 class Manager final {
 public:
-    explicit Manager(Input::Manager&, Thread::Manager&);
+    explicit Manager(Input::Manager&);
     ~Manager();
 
     Manager(const Manager&) = default;

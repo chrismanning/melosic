@@ -38,7 +38,6 @@ namespace Melosic {
 PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
     : QAbstractListModel(parent),
       playman(k.getPlaylistManager()),
-      tman(k.getThreadManager()),
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {
     conns.emplace_back(playman.getPlaylistAddedSignal().connect([this, &k] (optional<Core::Playlist> p) {

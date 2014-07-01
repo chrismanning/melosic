@@ -49,9 +49,6 @@ class Manager;
 namespace Plugin {
 class Manager;
 }
-namespace Thread {
-class Manager;
-}
 
 namespace Core {
 class Track;
@@ -75,7 +72,7 @@ struct PathEquivalence;
 
 class Manager final {
     using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
-    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&, Thread::Manager&);
+    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&);
     friend class Core::Kernel;
 
   public:

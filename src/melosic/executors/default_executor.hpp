@@ -22,12 +22,24 @@
 
 #include "./thread_pool.hpp"
 
+#include <boost/config.hpp>
+
+namespace Melosic {
+using namespace std::literals;
+}
+
+#ifdef EXECUTORS_EXPORTS
+#   define EXECUTORS_EXPORT BOOST_SYMBOL_EXPORT
+#else
+#   define EXECUTORS_EXPORT BOOST_SYMBOL_IMPORT
+#endif
+
 namespace Melosic {
 namespace executors {
 
 using default_executor_t = thread_pool;
 
-std::shared_ptr<default_executor_t> default_executor();
+EXECUTORS_EXPORT std::shared_ptr<default_executor_t> default_executor();
 
 } // namespace executors
 } // namespace Melosic

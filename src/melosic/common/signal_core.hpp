@@ -34,7 +34,6 @@
 
 #include <melosic/common/traits.hpp>
 #include <melosic/common/signal_fwd.hpp>
-#include <melosic/common/thread.hpp>
 #include <melosic/common/ptr_adaptor.hpp>
 #include <melosic/common/connection.hpp>
 #include <melosic/executors/loop_executor.hpp>

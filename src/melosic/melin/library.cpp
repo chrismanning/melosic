@@ -40,8 +40,9 @@ using namespace jbson::literal;
 #include <melosic/melin/plugin.hpp>
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/input.hpp>
-#include <melosic/common/thread.hpp>
 #include "library.hpp"
+
+#include <melosic/executors/default_executor.hpp>
 
 namespace std {
 
@@ -92,7 +93,7 @@ struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, 
 Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
 
 struct Manager::impl : std::enable_shared_from_this<impl> {
-    impl(Config::Manager&, Decoder::Manager&, Thread::Manager&);
+    impl(Config::Manager&, Decoder::Manager&);
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& base);
     void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val);
@@ -110,7 +111,6 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     std::vector<jbson::document> query(const jbson::document& qdoc);
 
     Decoder::Manager decman;
-    Thread::Manager& tman;
     Config::Conf conf{"Library"};
     ejdb::db m_db;
     ScanStarted scanStarted;
@@ -137,8 +137,8 @@ void run_on_quick_exit() {
         TRACE_LOG(logject) << "could not close db on abrupt exit: " << ec.message();
 }
 
-Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman, Thread::Manager& tman)
-    : decman(decman), tman(tman) {
+Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman)
+    : decman(decman) {
     // cleanup db on (quick_)exit()
     k_quick_db.store(&m_db);
     std::at_quick_exit(&run_on_quick_exit);
@@ -254,7 +254,7 @@ void Manager::impl::variableUpdateSlot(const Config::Conf::node_key_type& key, c
                     missing_dirs.push_back(p);
             }
 
-            tman.enqueue([
+            executors::default_executor()->submit([
                 this,
                 missing_dirs,
                 self = shared_from_this()
@@ -590,12 +590,12 @@ std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
     return ret;
 }
 
-Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman, Thread::Manager& tman)
-    : pimpl(std::make_shared<impl>(confman, decman, tman)) {
+Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman)
+    : pimpl(std::make_shared<impl>(confman, decman)) {
     plugman.getPluginsLoadedSignal().connect([this](auto&&) {
         TRACE_LOG(logject) << "Plugins loaded. Scanning all...";
         pimpl->pluginsLoaded.store(true);
-        pimpl->tman.enqueue([pimpl = this->pimpl]() { pimpl->scan(); });
+        executors::default_executor()->submit([pimpl = this->pimpl]() { pimpl->scan(); });
     });
 }
 

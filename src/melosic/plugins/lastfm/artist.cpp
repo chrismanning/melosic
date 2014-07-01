@@ -29,7 +29,8 @@ using shared_mutex = std::shared_timed_mutex;
 template <typename Mutex>
 using shared_lock = boost::shared_lock_guard<Mutex>;
 
-#include <melosic/common/thread.hpp>
+#include <melosic/executors/default_executor.hpp>
+namespace executors = Melosic::executors;
 
 #include "artist.hpp"
 #include "service.hpp"
@@ -37,7 +38,7 @@ using shared_lock = boost::shared_lock_guard<Mutex>;
 
 namespace LastFM {
 
-struct Artist::impl {
+struct Artist::impl : std::enable_shared_from_this<impl> {
     impl(std::weak_ptr<Service> lastserv) : lastserv(lastserv) {}
     impl(std::weak_ptr<Service> lastserv, const std::string& name)
         : lastserv(lastserv),
@@ -45,7 +46,7 @@ struct Artist::impl {
     {}
 
 private:
-    bool getInfo_impl(std::shared_ptr<Service> lastserv, bool autocorrect) {
+    bool getInfo_impl(const std::shared_ptr<Service>& lastserv, bool autocorrect) {
         if(!lastserv)
             return false;
         Method method = lastserv->prepareMethodCall("artist.getInfo");
@@ -94,7 +95,13 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::getInfo_impl, this, lastserv, autocorrect);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv, autocorrect]() {
+            return self->getInfo_impl(lastserv, autocorrect);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
 public:

@@ -30,15 +30,16 @@ using namespace boost::property_tree::xml_parser;
 
 #include <network/uri.hpp>
 
-#include <melosic/common/thread.hpp>
 #include <melosic/melin/logging.hpp>
+#include <melosic/executors/default_executor.hpp>
+namespace executors = Melosic::executors;
 
 #include "user.hpp"
 #include "service.hpp"
 
 namespace LastFM {
 
-struct User::impl {
+struct User::impl : std::enable_shared_from_this<impl> {
     impl(std::weak_ptr<Service> lastserv) : impl(lastserv, "", "") {}
     impl(std::weak_ptr<Service> lastserv, const std::string& username) : impl(lastserv, username, "") {}
     impl(std::weak_ptr<Service> lastserv, const std::string& username, const std::string& sessionKey)
@@ -49,7 +50,7 @@ struct User::impl {
     {}
 
 private:
-    bool getInfo_impl(std::shared_ptr<Service> lastserv) {
+    bool getInfo_impl(const std::shared_ptr<Service>& lastserv) {
         if(!lastserv)
             return false;
         TRACE_LOG(logject) << "In getInfo";
@@ -89,11 +90,17 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::getInfo_impl, this, lastserv);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+            return self->getInfo_impl(lastserv);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
 private:
-    bool authenticate_impl(std::shared_ptr<Service> lastserv) {
+    bool authenticate_impl(const std::shared_ptr<Service>& lastserv) {
         return static_cast<bool>(lastserv);
     }
 
@@ -105,7 +112,13 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        return lastserv->getThreadManager()->enqueue(&impl::authenticate_impl, this, lastserv);
+        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+            return self->authenticate_impl(lastserv);
+        });
+        auto fut = task.get_future();
+        executors::default_executor()->submit(std::move(task));
+
+        return fut;
     }
 
     const std::string& getSessionKey() {
@@ -135,7 +148,8 @@ private:
 
 User::User() : pimpl(nullptr) {}
 
-User::User(std::weak_ptr<Service> lastserv, const std::string& username) : pimpl(new impl(lastserv, username)) {}
+User::User(std::weak_ptr<Service> lastserv, const std::string& username)
+    : pimpl(std::make_shared<impl>(lastserv, username)) {}
 
 User::~User() {}
 

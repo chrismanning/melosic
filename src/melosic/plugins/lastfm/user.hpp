@@ -49,7 +49,7 @@ public:
 
 private:
     struct impl;
-    std::unique_ptr<impl> pimpl;
+    std::shared_ptr<impl> pimpl;
 };
 
 }//namespace LastFM
