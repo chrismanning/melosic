@@ -99,7 +99,7 @@ class Track::impl {
   private:
     friend class Track;
     network::uri m_uri;
-    chrono::milliseconds start, end;
+    chrono::milliseconds start{0}, end{0};
     boost::synchronized_value<TagMap> m_tags;
     AudioSpecs as;
     TagsChanged tagsChanged;
@@ -190,8 +190,6 @@ Track::Track(const jbson::document& track_doc)
 
     if(pimpl->m_uri.empty())
         BOOST_THROW_EXCEPTION(std::runtime_error("track must have a location"));
-    if(pimpl->end == 0ms)
-        BOOST_THROW_EXCEPTION(std::runtime_error("track should have an end"));
 }
 
 Track::~Track() {}
