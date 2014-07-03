@@ -71,6 +71,8 @@ FocusScope {
 
                 var pane = paneLoader.createObject(splitView, props)
 
+                pane.contextMenu = menuComponent.createObject(pane, { filterPane: pane })
+
                 pane.activated.connect(function(items) {
                     root.activated(items)
                 })
@@ -105,6 +107,36 @@ FocusScope {
                     text: headerText
                     width: selectorView.width
                 }
+            }
+        }
+    }
+
+    Component {
+        id: menuComponent
+        Item {
+            function popup() {
+                context_menu.popup()
+            }
+
+            property var filterPane
+            onFilterPaneChanged: {
+                if(!filterPane)
+                    return
+                selectionModel = filterPane.selectionModel
+            }
+            property var selectionModel
+
+            Menu {
+                id: context_menu
+                title: "Filter Context Menu"
+                MenuItem { action: activateAction }
+                MenuItem { text: "Properties" }
+            }
+
+            Action {
+                id: activateAction
+                text: "Activate"
+                onTriggered: filterPane.activated(selectionModel)
             }
         }
     }

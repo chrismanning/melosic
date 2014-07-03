@@ -17,6 +17,8 @@ ScrollView {
 
     property Component header
 
+    property var contextMenu
+
     highlightOnFocus: true
 
     property alias delegate: listView.delegate
@@ -86,6 +88,11 @@ ScrollView {
             if(!selectionModel || !listView.count)
                 return
             selectionModel.select(0, listView.count-1, SelectionModel.Clear)
+            event.accepted = true
+        }
+        else if(event.key === Qt.Key_Menu) {
+            if(contextMenu)
+                contextMenu.popup()
             event.accepted = true
         }
     }
@@ -183,10 +190,8 @@ ScrollView {
 
             onClicked: {
                 var clickIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
-                if(clickIndex > -1) {
-                    if(root.activateItemOnSingleClick)
-                        root.activated(selectionModel)
-                }
+                if(clickIndex >= 0 && root.activateItemOnSingleClick)
+                    root.activated(selectionModel)
             }
 
             property int pressModifiers: 0
@@ -217,6 +222,9 @@ ScrollView {
                     selectionModel.select(newIndex, SelectionModel.Select)
                 }
                 selectionModel.currentRow = newIndex
+
+                if(mouse.button == Qt.RightButton && contextMenu)
+                    contextMenu.popup()
             }
 
             onReleased: {
@@ -226,18 +234,19 @@ ScrollView {
                 var newIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
                 if(selectionModel.isSelected(newIndex)
                         && !(pressModifiers & Qt.ControlModifier)
-                        && !(pressModifiers & Qt.ShiftModifier))
+                        && !(pressModifiers & Qt.ShiftModifier)
+                        && mouse.button != Qt.RightButton)
                     selectionModel.select(newIndex, SelectionModel.ClearAndSelect)
 
                 pressModifiers = 0
             }
 
             onDoubleClicked: {
+                if(mouse.button == Qt.RightButton)
+                    return
                 var clickIndex = listView.indexAt(0, mouse.y + listView.contentY + anchors.topMargin)
-                if(clickIndex > -1) {
-                    if(!root.activateItemOnSingleClick)
-                        root.activated(selectionModel)
-                }
+                if(clickIndex > -1 && !root.activateItemOnSingleClick)
+                    root.activated(selectionModel)
             }
         }
 
