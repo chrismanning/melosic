@@ -64,18 +64,17 @@ namespace Melosic {
 using namespace jbson::literal;
 
 MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
-    libman(kernel.getLibraryManager()),
     logject(logging::keywords::channel = "MainWindow"),
     engine(new QQmlEngine),
     component(new QQmlComponent(engine.get())),
-    playlistManagerModel(new PlaylistManagerModel(kernel))
+    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getDecoderManager(), kernel.getLibraryManager()))
 {
     ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
-    playerControls.reset(new PlayerControls(kernel, player));
+    playerControls.reset(new PlayerControls(player, kernel.getPlaylistManager()));
 
-    LibraryManager::instance()->setLibraryManager(&libman);
+    LibraryManager::instance()->setLibraryManager(kernel.getLibraryManager());
 
     //register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
@@ -104,7 +103,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
     engine->rootContext()->setContextProperty("PlayerControls", playerControls.get());
     engine->rootContext()->setContextProperty("LibraryManager", LibraryManager::instance());
 
-    ConfigManager::instance()->setConfigManager(&kernel.getConfigManager());
+    ConfigManager::instance()->setConfigManager(kernel.getConfigManager());
     engine->rootContext()->setContextProperty("ConfigManager", ConfigManager::instance());
     engine->addImportPath("qrc:/");
     engine->addImportPath("qrc:/qml");

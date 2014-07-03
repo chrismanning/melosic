@@ -29,14 +29,14 @@ class Manager;
 class LibraryManager : public QObject {
     Q_OBJECT
 
-    Library::Manager* m_libman{nullptr};
+    std::shared_ptr<Library::Manager> m_libman{nullptr};
     LibraryManager();
 
   public:
     static LibraryManager* instance();
 
-    Library::Manager* getLibraryManager() const;
-    void setLibraryManager(Library::Manager*);
+    const std::shared_ptr<Library::Manager>& getLibraryManager() const;
+    void setLibraryManager(const std::shared_ptr<Library::Manager>&);
 
 Q_SIGNALS:
     void scanStarted();

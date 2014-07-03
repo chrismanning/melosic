@@ -174,10 +174,10 @@ struct Manager::impl {
     using unique_lock = std::unique_lock<mutex>;
     using strict_lock = boost::strict_lock<mutex>;
 
-    impl(Config::Manager& confman) : confman(confman) {
+    impl(const std::shared_ptr<Config::Manager>& confman) : confman(confman) {
         searchPaths.push_back(fs::current_path().parent_path()/"lib");
         conf.putNode("search paths", searchPaths);
-        confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+        confman->getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& base) {
@@ -297,7 +297,7 @@ struct Manager::impl {
         }
     }
 
-    Config::Manager& confman;
+    std::shared_ptr<Config::Manager> confman;
     Config::Conf conf{"Plugins"};
     std::map<std::string, Plugin> loadedPlugins;
     Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
@@ -311,7 +311,7 @@ struct Manager::impl {
     mutex mu;
 };
 
-Manager::Manager(Config::Manager& confman) : pimpl(new impl(confman)) {}
+Manager::Manager(const std::shared_ptr<Config::Manager>& confman) : pimpl(new impl(confman)) {}
 
 Manager::~Manager() {}
 

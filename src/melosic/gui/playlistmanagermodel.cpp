@@ -35,16 +35,20 @@ using unique_lock = std::unique_lock<mutex>;
 
 namespace Melosic {
 
-PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
+PlaylistManagerModel::PlaylistManagerModel(const std::shared_ptr<Playlist::Manager>& _playman,
+                                           const std::shared_ptr<Decoder::Manager>& _decman,
+                                           const std::shared_ptr<Library::Manager>& _libman, QObject* parent)
     : QAbstractListModel(parent),
-      playman(k.getPlaylistManager()),
+      playman(_playman),
+      decman(_decman),
+      libman(_libman),
       logject(logging::keywords::channel = "PlaylistManagerModel")
 {
-    conns.emplace_back(playman.getPlaylistAddedSignal().connect([this, &k] (optional<Core::Playlist> p) {
+    conns.emplace_back(playman->getPlaylistAddedSignal().connect([this] (optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p) {
-           auto pm = new PlaylistModel(*p, k);
+           auto pm = new PlaylistModel(*p, decman, libman);
 #if 0&& !defined(NDEBUG)
            auto mt = new ModelTest(pm);
            mt->moveToThread(this->thread());
@@ -53,7 +57,7 @@ PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
            playlists.insert({*p, pm});
         }
     }));
-    conns.emplace_back(playman.getPlaylistRemovedSignal().connect([this] (optional<Core::Playlist> p) {
+    conns.emplace_back(playman->getPlaylistRemovedSignal().connect([this] (optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist removed: " << !!p;
         if(!p)
@@ -62,7 +66,7 @@ PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
         if(it != playlists.left.end())
             playlists.left.erase(it);
     }));
-    conns.emplace_back(playman.getCurrentPlaylistChangedSignal().connect([this] (optional<Core::Playlist> p) {
+    conns.emplace_back(playman->getCurrentPlaylistChangedSignal().connect([this] (optional<Core::Playlist> p) {
         if(!p) return;
         lock_guard l(mu);
         auto it = playlists.left.find(*p);
@@ -70,7 +74,7 @@ PlaylistManagerModel::PlaylistManagerModel(Core::Kernel& k, QObject* parent)
             setCurrentPlaylistModel(it->second);
     }));
 
-    playman.insert(0, "Default");
+    playman->insert(0, "Default");
 }
 
 Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
@@ -83,20 +87,20 @@ Qt::ItemFlags PlaylistManagerModel::flags(const QModelIndex& index) const {
 
 QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
     lock_guard l(mu);
-    assert(playman.size() == static_cast<Playlist::Manager::size_type>(playlists.size()));
-    if(!index.isValid() || index.row() >= playman.size())
+    assert(playman->size() == static_cast<Playlist::Manager::size_type>(playlists.size()));
+    if(!index.isValid() || index.row() >= playman->size())
         return QVariant();
 
-    assert(!playman.empty());
+    assert(!playman->empty());
     switch(role) {
         case Qt::DisplayRole:
         case Qt::EditRole: {
-            auto v = playman.getPlaylist(index.row());
+            auto v = playman->getPlaylist(index.row());
             assert(v);
             return QString::fromUtf8(v->name().data(), v->name().size());
         }
         case PlaylistModelRole: {
-            auto v = playman.getPlaylist(index.row());
+            auto v = playman->getPlaylist(index.row());
             assert(v);
             auto it = playlists.left.find(*v);
             assert(playlists.left.end() != it);
@@ -104,7 +108,7 @@ QVariant PlaylistManagerModel::data(const QModelIndex& index, int role) const {
             return QVariant::fromValue(it->second);
         }
         case PlaylistIsCurrent: {
-            auto v = playman.getPlaylist(index.row());
+            auto v = playman->getPlaylist(index.row());
             assert(v);
             auto it = playlists.left.find(*v);
             assert(playlists.left.end() != it);
@@ -133,19 +137,19 @@ int PlaylistManagerModel::rowCount(const QModelIndex& /*parent*/) const {
 }
 
 bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {
-    if(row > playman.size())
+    if(row > playman->size())
         return false;
 
     TRACE_LOG(logject) << "row: " << row << "; count: " << count;
     beginInsertRows(QModelIndex(), row, row+count-1);
-    playman.insert(row, count);
+    playman->insert(row, count);
     endInsertRows();
     return true;
 }
 
 bool PlaylistManagerModel::removeRows(int row, int count, const QModelIndex&) {
     beginRemoveRows(QModelIndex(), row, row + count - 1);
-    playman.erase(row, row + count);
+    playman->erase(row, row + count);
     endRemoveRows();
     return true;
 }
@@ -167,7 +171,7 @@ void PlaylistManagerModel::setCurrentPlaylistModel(PlaylistModel* pm) {
     auto it = playlists.right.find(m_current);
     if(it == playlists.right.end())
         return;
-    playman.setCurrent(it->second);
+    playman->setCurrent(it->second);
     Q_EMIT currentPlaylistModelChanged(pm);
 }
 

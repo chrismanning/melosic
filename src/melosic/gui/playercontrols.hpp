@@ -28,8 +28,10 @@ namespace chrono = std::chrono;
 namespace Melosic {
 
 namespace Core {
-class Kernel;
 class Player;
+}
+namespace Playlist {
+class Manager;
 }
 
 class PlaylistModel;
@@ -44,7 +46,7 @@ class PlayerControls : public QObject {
     Q_PROPERTY(QString stateStr READ stateStr NOTIFY stateStrChanged)
 
 public:
-    explicit PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent = 0);
+    explicit PlayerControls(Core::Player& player, const std::shared_ptr<Playlist::Manager>&, QObject* parent = 0);
 
     enum DeviceState {
         Error,

@@ -93,7 +93,7 @@ struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, 
 Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
 
 struct Manager::impl : std::enable_shared_from_this<impl> {
-    impl(Config::Manager&, Decoder::Manager&);
+    impl(const std::shared_ptr<Config::Manager>& confman, const std::shared_ptr<Decoder::Manager>& decman);
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& base);
     void variableUpdateSlot(const Config::Conf::node_key_type& key, const Config::VarType& val);
@@ -110,7 +110,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     void update(const network::uri& uri);
     std::vector<jbson::document> query(const jbson::document& qdoc);
 
-    Decoder::Manager decman;
+    std::shared_ptr<Decoder::Manager> decman;
     Config::Conf conf{"Library"};
     ejdb::db m_db;
     ScanStarted scanStarted;
@@ -137,7 +137,7 @@ void run_on_quick_exit() {
         TRACE_LOG(logject) << "could not close db on abrupt exit: " << ec.message();
 }
 
-Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman)
+Manager::impl::impl(const std::shared_ptr<Config::Manager>& confman, const std::shared_ptr<Decoder::Manager>& decman)
     : decman(decman) {
     // cleanup db on (quick_)exit()
     k_quick_db.store(&m_db);
@@ -152,7 +152,7 @@ Manager::impl::impl(Config::Manager& confman, Decoder::Manager& decman)
 
     m_db.create_collection("tracks");
 
-    confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+    confman->getLoadedSignal().connect(&impl::loadedSlot, this);
 
     added.connect([this](network::uri uri) { LOG(logject) << "Media added to library: " << uri; });
     removed.connect([this](network::uri uri) { LOG(logject) << "Media removed from library: " << uri; });
@@ -509,7 +509,7 @@ void Manager::impl::add(const boost::filesystem::path& file) {
 
 void Manager::impl::add(const network::uri& uri) {
     boost::this_thread::interruption_point();
-    auto tracks = decman.tracks(uri);
+    auto tracks = decman->tracks(uri);
     if(tracks.empty()) {
         ERROR_LOG(logject) << "Could not get tracks from media at " << uri;
         return;
@@ -590,12 +590,13 @@ std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
     return ret;
 }
 
-Manager::Manager(Config::Manager& confman, Decoder::Manager& decman, Plugin::Manager& plugman)
+Manager::Manager(const std::shared_ptr<Config::Manager>& confman, const std::shared_ptr<Decoder::Manager>& decman,
+                 const std::shared_ptr<Plugin::Manager>& plugman)
     : pimpl(std::make_shared<impl>(confman, decman)) {
-    plugman.getPluginsLoadedSignal().connect([this](auto&&) {
+    plugman->getPluginsLoadedSignal().connect([pimpl=pimpl](auto&&) {
         TRACE_LOG(logject) << "Plugins loaded. Scanning all...";
         pimpl->pluginsLoaded.store(true);
-        executors::default_executor()->submit([pimpl = this->pimpl]() { pimpl->scan(); });
+        executors::default_executor()->submit([=]() { pimpl->scan(); });
     });
 }
 

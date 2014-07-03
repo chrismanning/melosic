@@ -41,13 +41,17 @@ class Manager;
 namespace ASIO {
 struct AudioOutputBase;
 }
+namespace Core {
+class Kernel;
+}
 
 namespace Output {
 typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(asio::io_service&, DeviceName)> ASIOFactory;
 
 class Manager final {
+    explicit Manager(const std::shared_ptr<Config::Manager>&, asio::io_service&);
+    friend class Core::Kernel;
 public:
-    explicit Manager(Config::Manager&, asio::io_service&);
     ~Manager();
 
     Manager(Manager&&) = delete;

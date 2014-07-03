@@ -32,14 +32,13 @@
 
 namespace Melosic {
 
-namespace Core {
-class Kernel;
-}
-
 namespace Playlist {
 class Manager;
 }
-namespace Thread {
+namespace Decoder {
+class Manager;
+}
+namespace Library {
 class Manager;
 }
 
@@ -47,7 +46,9 @@ class PlaylistModel;
 
 class PlaylistManagerModel : public QAbstractListModel {
     Q_OBJECT
-    Playlist::Manager& playman;
+    std::shared_ptr<Playlist::Manager> playman;
+    std::shared_ptr<Decoder::Manager> decman;
+    std::shared_ptr<Library::Manager> libman;
     boost::bimaps::bimap<boost::bimaps::unordered_set_of<Core::Playlist>,
                          boost::bimaps::unordered_set_of<PlaylistModel*>> playlists;
     std::list<Signals::ScopedConnection> conns;
@@ -60,7 +61,8 @@ class PlaylistManagerModel : public QAbstractListModel {
     PlaylistModel* m_current{nullptr};
 
 public:
-    explicit PlaylistManagerModel(Core::Kernel&, QObject* parent = nullptr);
+    explicit PlaylistManagerModel(const std::shared_ptr<Playlist::Manager>&, const std::shared_ptr<Decoder::Manager>&,
+                                  const std::shared_ptr<Library::Manager>&, QObject* parent = nullptr);
 
     enum {
         PlaylistModelRole = Qt::UserRole * 12,

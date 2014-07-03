@@ -42,8 +42,8 @@ class ConfigManager : public QObject {
   public:
     static ConfigManager* instance();
 
-    Config::Manager* getConfigManager() const;
-    void setConfigManager(Config::Manager* confman);
+    const std::shared_ptr<Config::Manager>& getConfigManager() const;
+    void setConfigManager(const std::shared_ptr<Config::Manager>& confman);
 
     Q_INVOKABLE void openWindow();
 

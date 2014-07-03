@@ -44,27 +44,27 @@ namespace chrono = std::chrono;
 namespace Melosic {
 
 struct TrackRoles {
-    enum {
-        FileName = Qt::UserRole + 1,
-        FilePath,
-        FileExtension,
-        TagsReadable,
-        Current,
-        Duration
-    };
+    enum { FileName = Qt::UserRole + 1, FilePath, FileExtension, TagsReadable, Current, Duration };
 };
 
 namespace Core {
 class Playlist;
 }
-namespace Core {
-class Kernel;
+namespace Playlist {
+class Manager;
+}
+namespace Decoder {
+class Manager;
+}
+namespace Library {
+class Manager;
 }
 
 class PlaylistModel : public QAbstractListModel {
     Q_OBJECT
     Core::Playlist m_playlist;
-    Core::Kernel& m_kernel;
+    std::shared_ptr<Decoder::Manager> decman;
+    std::shared_ptr<Library::Manager> libman;
     static Logger::Logger logject;
     long m_duration{0};
 
@@ -74,8 +74,10 @@ class PlaylistModel : public QAbstractListModel {
     friend class CategoryTag;
     friend class TagBinding;
 
-public:
-    explicit PlaylistModel(Core::Playlist m_playlist, Core::Kernel&, QObject* parent = nullptr);
+  public:
+    explicit PlaylistModel(Core::Playlist m_playlist,
+                           const std::shared_ptr<Decoder::Manager>&, const std::shared_ptr<Library::Manager>&,
+                           QObject* parent = nullptr);
 
     QString name() const;
     void setName(QString name);
@@ -85,9 +87,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     QStringList mimeTypes() const override;
     QMimeData* mimeData(const QModelIndexList& indexes) const override;
-    bool dropMimeData(const QMimeData* data,
-                      Qt::DropAction action,
-                      int row, int column,
+    bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column,
                       const QModelIndex& parent) override;
     QHash<int, QByteArray> roleNames() const override;
 
@@ -96,8 +96,8 @@ public:
 
     Q_INVOKABLE void refreshTags(int start, int end = -1);
 
-    Q_INVOKABLE bool moveRows(const QModelIndex&, int sourceRow, int count,
-                              const QModelIndex&, int destinationChild) override;
+    Q_INVOKABLE bool moveRows(const QModelIndex&, int sourceRow, int count, const QModelIndex&,
+                              int destinationChild) override;
     Q_INVOKABLE bool moveRows(int sourceRow, int count, int destinationChild);
     Q_INVOKABLE bool removeRows(int row, int count, const QModelIndex& parent = QModelIndex()) override;
 
@@ -117,7 +117,7 @@ class TagBinding : public QObject, public QQmlPropertyValueSource {
     Signals::Connection conn;
     QQmlProperty m_target_property;
 
-public:
+  public:
     explicit TagBinding(QObject* parent = nullptr);
     virtual ~TagBinding();
 

@@ -37,10 +37,14 @@ namespace Melosic {
 namespace Input {
 class Manager;
 }
+namespace Plugin {
+class Manager;
+}
 
 namespace Core {
 class Track;
 struct AudioFile;
+class Kernel;
 }
 
 struct PCMBuffer;
@@ -50,14 +54,15 @@ class PCMSource;
 typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)> Factory;
 
 class Manager final {
+    explicit Manager(const std::shared_ptr<Input::Manager>&, const std::shared_ptr<Plugin::Manager>&);
+    friend class Core::Kernel;
 public:
-    explicit Manager(Input::Manager&);
     ~Manager();
 
-    Manager(const Manager&) = default;
-
-    Manager(Manager&&) = delete;
+    Manager(const Manager&) = delete;
     Manager& operator=(const Manager&) = delete;
+    Manager(Manager&&) = delete;
+    Manager& operator=(Manager&&) = delete;
 
     MELOSIC_EXPORT void addAudioFormat(Factory fact, boost::string_ref mime_type);
 

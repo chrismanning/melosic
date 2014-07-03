@@ -62,7 +62,6 @@ public:
     void scanEndedSlot();
 
 private:
-    Library::Manager& libman;
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     std::unique_ptr<PlayerControls> playerControls;

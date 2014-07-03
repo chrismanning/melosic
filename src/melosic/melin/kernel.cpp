@@ -41,16 +41,16 @@ static void signal_handler(int signo) {
 
 struct Kernel::impl {
     impl()
-        : confman("melosic.conf"),
-          plugman(confman),
+        : confman(new Config::Manager{"melosic.conf"}),
+          plugman(new Plugin::Manager{confman}),
           io_service(),
-          outman(confman, io_service),
+          outman(new Output::Manager{confman, io_service}),
           null_worker(new asio::io_service::work(io_service)),
-          inman(),
-          decman(inman),
-          encman(),
-          libman(confman, decman, plugman),
-          playlistman()
+          inman(new Input::Manager{}),
+          decman(new Decoder::Manager{inman, plugman}),
+          encman(new Encoder::Manager{}),
+          libman(new Library::Manager{confman, decman, plugman}),
+          playlistman(new Melosic::Playlist::Manager{})
     {
         std::signal(SIGABRT, signal_handler);
         std::signal(SIGINT, signal_handler);
@@ -60,16 +60,16 @@ struct Kernel::impl {
 
     ~impl() {}
 
-    Config::Manager confman;
-    Plugin::Manager plugman;
+    std::shared_ptr<Config::Manager> confman;
+    std::shared_ptr<Plugin::Manager> plugman;
     asio::io_service io_service;
-    Output::Manager outman;
+    std::shared_ptr<Output::Manager> outman;
     std::unique_ptr<asio::io_service::work> null_worker;
-    Input::Manager inman;
-    Decoder::Manager decman;
-    Encoder::Manager encman;
-    Library::Manager libman;
-    Melosic::Playlist::Manager playlistman;
+    std::shared_ptr<Input::Manager> inman;
+    std::shared_ptr<Decoder::Manager> decman;
+    std::shared_ptr<Encoder::Manager> encman;
+    std::shared_ptr<Library::Manager> libman;
+    std::shared_ptr<Melosic::Playlist::Manager> playlistman;
     Logger::Logger logject{logging::keywords::channel = "Kernel"};
 };
 
@@ -77,27 +77,27 @@ Kernel::Kernel() : pimpl(new impl) {}
 
 Kernel::~Kernel() {
     try {
-        getConfigManager().saveConfig();
+        pimpl->confman->saveConfig();
     } catch(...) {
         std::clog << boost::current_exception_diagnostic_information() << std::endl;
     }
 }
 
-Config::Manager& Kernel::getConfigManager() { return pimpl->confman; }
+std::shared_ptr<Config::Manager> Kernel::getConfigManager() { return pimpl->confman; }
 
-Input::Manager& Kernel::getInputManager() { return pimpl->inman; }
+std::shared_ptr<Input::Manager> Kernel::getInputManager() { return pimpl->inman; }
 
-Decoder::Manager& Kernel::getDecoderManager() { return pimpl->decman; }
+std::shared_ptr<Decoder::Manager> Kernel::getDecoderManager() { return pimpl->decman; }
 
-Output::Manager& Kernel::getOutputManager() { return pimpl->outman; }
+std::shared_ptr<Output::Manager> Kernel::getOutputManager() { return pimpl->outman; }
 
-Encoder::Manager& Kernel::getEncoderManager() { return pimpl->encman; }
+std::shared_ptr<Encoder::Manager> Kernel::getEncoderManager() { return pimpl->encman; }
 
-Plugin::Manager& Kernel::getPluginManager() { return pimpl->plugman; }
+std::shared_ptr<Plugin::Manager> Kernel::getPluginManager() { return pimpl->plugman; }
 
-Melosic::Playlist::Manager& Kernel::getPlaylistManager() { return pimpl->playlistman; }
+std::shared_ptr<Melosic::Playlist::Manager> Kernel::getPlaylistManager() { return pimpl->playlistman; }
 
-Library::Manager& Kernel::getLibraryManager() { return pimpl->libman; }
+std::shared_ptr<Library::Manager> Kernel::getLibraryManager() { return pimpl->libman; }
 
 asio::io_service& Kernel::getIOService() { return pimpl->io_service; }
 

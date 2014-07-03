@@ -72,7 +72,8 @@ struct PathEquivalence;
 
 class Manager final {
     using SetType = std::unordered_set<boost::filesystem::path, boost::hash<boost::filesystem::path>, PathEquivalence>;
-    Manager(Config::Manager&, Decoder::Manager&, Plugin::Manager&);
+    Manager(const std::shared_ptr<Config::Manager>&, const std::shared_ptr<Decoder::Manager>&,
+            const std::shared_ptr<Plugin::Manager>&);
     friend class Core::Kernel;
 
   public:

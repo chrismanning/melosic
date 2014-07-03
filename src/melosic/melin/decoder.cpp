@@ -57,8 +57,10 @@ using namespace TagLib;
 Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
 
 struct Manager::impl : std::enable_shared_from_this<impl> {
-    impl(Input::Manager& inman) : inman(inman) {}
-    Input::Manager& inman;
+    impl(const std::shared_ptr<Input::Manager>& inman, const std::shared_ptr<Plugin::Manager>& plugman)
+        : inman(inman), plugman(plugman) {}
+    std::shared_ptr<Input::Manager> inman;
+    std::shared_ptr<Plugin::Manager> plugman;
     mutex mu;
     std::unordered_map<std::string, Factory> inputFactories;
     Core::FileCache m_file_cache;
@@ -66,7 +68,8 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     std::unique_ptr<PCMSource> open(const network::uri&);
 };
 
-Manager::Manager(Input::Manager& inman) : pimpl(std::make_shared<impl>(inman)) {}
+Manager::Manager(const std::shared_ptr<Input::Manager>& inman, const std::shared_ptr<Plugin::Manager>& plugman)
+    : pimpl(std::make_shared<impl>(inman, plugman)) {}
 
 Manager::~Manager() {}
 
@@ -253,7 +256,7 @@ std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
     std::string mime_type = detect_mime_type(uri);
     if(mime_type.empty())
         return nullptr;
-    auto is = inman.open(uri);
+    auto is = inman->open(uri);
     if(!is)
         return nullptr;
 

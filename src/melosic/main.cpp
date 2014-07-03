@@ -50,13 +50,12 @@ int main(int argc, char* argv[]) {
         QApplication app(argc, argv);
 
         Core::Kernel kernel;
-        Plugin::Manager& plugman = kernel.getPluginManager();
 
         Core::Player player(kernel);
 
-        kernel.getConfigManager().loadConfig();
+        kernel.getConfigManager()->loadConfig();
 
-        plugman.loadPlugins(kernel);
+        kernel.getPluginManager()->loadPlugins(kernel);
 
 //        QQmlDebuggingEnabler enabler;
 

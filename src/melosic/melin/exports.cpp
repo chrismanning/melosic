@@ -25,18 +25,18 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerInput_T& 
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerDecoder_T& fun) {
-    l.push_back(std::bind(fun, &k.getDecoderManager()));
+    l.push_back(std::bind(fun, k.getDecoderManager().get()));
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerOutput_T& fun) {
-    l.push_back(std::bind(fun, &k.getOutputManager()));
+    l.push_back(std::bind(fun, k.getOutputManager().get()));
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerEncoder_T& /*fun*/) {
     return *this;
 }
 RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T& fun) {
-    l.push_back(std::bind(fun, &k.getConfigManager()));
+    l.push_back(std::bind(fun, k.getConfigManager().get()));
     return *this;
 }
 

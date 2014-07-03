@@ -45,10 +45,10 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 
 class Manager::impl {
 public:
-    impl(Config::Manager& confman, ASIO::io_service& io_service) : io_service(io_service) {
+    impl(const std::shared_ptr<Config::Manager>& confman, ASIO::io_service& io_service) : io_service(io_service) {
         conf.putNode("output device", "default"s);
         conf.putNode("buffer time", 1000);
-        confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+        confman->getLoadedSignal().connect(&impl::loadedSlot, this);
     }
 
     void loadedSlot(boost::synchronized_value<Config::Conf>& base) {
@@ -133,7 +133,7 @@ private:
     friend class Manager;
 };
 
-Manager::Manager(Config::Manager& confman, asio::io_service& io_service)
+Manager::Manager(const std::shared_ptr<Config::Manager>& confman, asio::io_service& io_service)
     : pimpl(new impl(confman, io_service)) {}
 
 Manager::~Manager() {}

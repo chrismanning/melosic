@@ -138,9 +138,10 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     void sinkChangeSlot();
 
     Core::Kernel& kernel;
-    Melosic::Playlist::Manager& playman;
-    Output::Manager& outman;
-    Config::Manager& confman;
+    std::shared_ptr<Melosic::Playlist::Manager> playman;
+    std::shared_ptr<Output::Manager> outman;
+    std::shared_ptr<Config::Manager> confman;
+    std::shared_ptr<Decoder::Manager> decman;
 
     mutex mu;
 
@@ -284,7 +285,7 @@ public:
     virtual void sinkChange() {}
 
     static Player::impl* stateMachine;
-    static Melosic::Playlist::Manager* playman;
+    static std::shared_ptr<Melosic::Playlist::Manager> playman;
 
     StateChanged& stateChanged;
 };
@@ -303,7 +304,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
             if(nt != m_current_playlist->end() && !m_next_source) {
                 assert(nt != m_current_iterator);
                 TRACE_LOG(logject) << "Pre-loading next track in list";
-                m_next_source = kernel.getDecoderManager().open(*nt);
+                m_next_source = decman->open(*nt);
                 assert(m_next_source);
             }
         }
@@ -330,7 +331,7 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
             if(m_next_source) // get pre-loaded source if available
                 m_current_source = std::move(m_next_source);
             else // otherwise open new source from playlist item. throws on error
-                m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
+                m_current_source = decman->open(*m_current_iterator);
         }
         const auto as = m_current_source->getAudioSpecs();
 
@@ -476,8 +477,7 @@ struct Stopped : State {
             if(!stateMachine->asioOutput)
                 BOOST_THROW_EXCEPTION(std::exception());
 
-            stateMachine->m_current_source = stateMachine->kernel.getDecoderManager()
-                                                                 .open(*stateMachine->m_current_iterator);
+            stateMachine->m_current_source = stateMachine->decman->open(*stateMachine->m_current_iterator);
 
             if(!stateMachine->m_current_source)
                 return;
@@ -619,17 +619,18 @@ Player::impl::impl(Kernel& kernel) :
     playman(kernel.getPlaylistManager()),
     outman(kernel.getOutputManager()),
     confman(kernel.getConfigManager()),
+    decman(kernel.getDecoderManager()),
     mu(),
     stateChanged(),
     m_current_state((State::stateMachine = this, //init statics before first construction
-                   State::playman = &playman, //dirty comma operator usage
+                   State::playman = playman, //dirty comma operator usage
                    std::make_shared<Stopped>(stateChanged))),
     logject(logging::keywords::channel = "StateMachine")
 {
     conf.putNode("gapless preload time", static_cast<int64_t>(m_gapless_preload.count()));
-    playman.getCurrentPlaylistChangedSignal().connect(&impl::currentPlaylistChangedSlot, this);
-    outman.getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
-    confman.getLoadedSignal().connect(&impl::loadedSlot, this);
+    playman->getCurrentPlaylistChangedSignal().connect(&impl::currentPlaylistChangedSlot, this);
+    outman->getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
+    confman->getLoadedSignal().connect(&impl::loadedSlot, this);
     notifyPlayPosition.connect([this] (chrono::milliseconds pos, chrono::milliseconds dur) {
         TRACE_LOG(logject) << "pos: " << pos.count() << "; dur: " << dur.count();
     });
@@ -689,7 +690,7 @@ void Player::impl::next_impl() {
         if(m_next_source)
             m_current_source = std::move(m_next_source);
         else if(m_current_iterator != m_current_playlist->end())
-            m_current_source = kernel.getDecoderManager().open(*m_current_iterator);
+            m_current_source = decman->open(*m_current_iterator);
     }
     if(m_current_iterator == m_current_playlist->end())
         m_current_iterator = m_current_playlist->end();
@@ -750,7 +751,7 @@ void Player::impl::changeDevice() {
         asioOutput->cancel();
         asioOutput->stop();
     }
-    asioOutput = std::move(outman.createASIOSink());
+    asioOutput = std::move(outman->createASIOSink());
 }
 
 void Player::impl::sinkChangeSlot() {

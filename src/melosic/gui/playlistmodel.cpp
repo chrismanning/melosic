@@ -51,10 +51,13 @@ namespace fs = boost::filesystem;
 
 Logger::Logger PlaylistModel::logject(logging::keywords::channel = "PlaylistModel");
 
-PlaylistModel::PlaylistModel(Core::Playlist playlist, Core::Kernel& k, QObject* parent)
+PlaylistModel::PlaylistModel(Core::Playlist playlist,
+                             const std::shared_ptr<Decoder::Manager>& _decman,
+                             const std::shared_ptr<Library::Manager>& _libman, QObject* parent)
     : QAbstractListModel(parent),
       m_playlist(playlist),
-      m_kernel(k)
+      decman(_decman),
+      libman(_libman)
 {
     this->m_playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
         Q_EMIT dataChanged(index(start), index(end-1));
@@ -234,7 +237,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
         if(var.canConvert<QUrl>()) {
             auto uri = to_uri(var.toUrl());
 
-            for(auto&& t : m_kernel.getDecoderManager().tracks(uri))
+            for(auto&& t : decman->tracks(uri))
                 tracks.push_back(std::move(t));
         }
         else if(var.canConvert<QModelIndex>()) {
@@ -242,7 +245,6 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
             auto obj = idx.model();
             if(qobject_cast<const JsonDocModel*>(obj) != nullptr) {
                 auto doc_var = idx.data(JsonDocModel::DocumentRole);
-                auto& lm = m_kernel.getLibraryManager();
                 const auto doc_map = doc_var.value<QVariantMap>();
                 const auto end = doc_map.end();
 #ifndef NDEBUG
@@ -279,7 +281,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                         }
                         query("$and", jbson::element_type::array_element, and_query);
                     }
-                    track_docs = lm.query(std::move(query));
+                    track_docs = libman->query(std::move(query));
                 }
                 catch(...) {
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();

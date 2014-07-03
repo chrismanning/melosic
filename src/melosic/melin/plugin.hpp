@@ -54,7 +54,7 @@ public:
     Signals::Plugin::PluginsLoaded& getPluginsLoadedSignal() const;
 
 private:
-    explicit Manager(Config::Manager& confman);
+    explicit Manager(const std::shared_ptr<Config::Manager>& confman);
     friend class Core::Kernel;
     struct impl;
     std::unique_ptr<impl> pimpl;

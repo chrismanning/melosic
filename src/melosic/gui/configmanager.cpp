@@ -723,7 +723,7 @@ struct ConfigManager::impl {
             m_window->setMinimumWidth(buttons->width());
     }
 
-    Config::Manager* m_confman{nullptr};
+    std::shared_ptr<Config::Manager> m_confman{nullptr};
     QDialog* m_window{nullptr};
     QWindow* m_parent{nullptr};
 };
@@ -739,9 +739,9 @@ ConfigManager* ConfigManager::instance() {
     return &confman;
 }
 
-Config::Manager* Melosic::ConfigManager::getConfigManager() const { return pimpl->m_confman; }
+const std::shared_ptr<Config::Manager>& Melosic::ConfigManager::getConfigManager() const { return pimpl->m_confman; }
 
-void ConfigManager::setConfigManager(Config::Manager* confman) {
+void ConfigManager::setConfigManager(const std::shared_ptr<Config::Manager>& confman) {
     pimpl->m_confman = confman;
     Q_EMIT configManagerChanged();
 }

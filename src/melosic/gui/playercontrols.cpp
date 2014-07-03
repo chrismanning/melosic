@@ -33,19 +33,18 @@
 namespace Melosic {
 
 struct PlayerControls::impl {
-    Core::Kernel& kernel;
     Core::Player& player;
     Signals::ScopedConnection stateChangedConn;
 
-    impl(Core::Kernel& kernel, Core::Player& player)
-        : kernel(kernel), player(player)
+    impl(Core::Player& player, std::shared_ptr<Playlist::Manager> playman)
+        : player(player)
     {
         state = (PlayerControls::DeviceState) player.state();
-        kernel.getPlaylistManager().getCurrentPlaylistChangedSignal().
+        playman->getCurrentPlaylistChangedSignal().
                 connect([this] (optional<Core::Playlist> cp) {
             currentPlaylist = cp;
         });
-        currentPlaylist = kernel.getPlaylistManager().currentPlaylist();
+        currentPlaylist = playman->currentPlaylist();
     }
 
     PlayerControls::DeviceState state;
@@ -53,8 +52,8 @@ struct PlayerControls::impl {
     optional<Core::Playlist> currentPlaylist;
 };
 
-PlayerControls::PlayerControls(Core::Kernel& kernel, Core::Player& player, QObject* parent) :
-    QObject(parent), pimpl(new impl(kernel, player))
+PlayerControls::PlayerControls(Core::Player& player, const std::shared_ptr<Playlist::Manager>& playman, QObject* parent) :
+    QObject(parent), pimpl(new impl(player, playman))
 {
     qRegisterMetaType<DeviceState>("DeviceState");
     pimpl->stateChangedConn = pimpl->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
