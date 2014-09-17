@@ -16,6 +16,7 @@
 **************************************************************************/
 
 #include <csignal>
+#include <thread>
 
 #include <asio/io_service.hpp>
 
@@ -39,6 +40,15 @@ static void signal_handler(int signo) {
     std::quick_exit(signo);
 }
 
+static void io_thread_runner(asio::io_service& io) {
+    try {
+        io.run();
+    }
+    catch(...) {
+        std::clog << boost::current_exception_diagnostic_information() << std::endl;
+    }
+}
+
 struct Kernel::impl {
     impl()
         : confman(new Config::Manager{"melosic.conf"}),
@@ -46,6 +56,7 @@ struct Kernel::impl {
           io_service(),
           outman(new Output::Manager{confman, io_service}),
           null_worker(new asio::io_service::work(io_service)),
+          io_thread(io_thread_runner, std::ref(io_service)),
           inman(new Input::Manager{}),
           decman(new Decoder::Manager{inman, plugman}),
           encman(new Encoder::Manager{}),
@@ -58,13 +69,17 @@ struct Kernel::impl {
         std::signal(SIGTERM, signal_handler);
     }
 
-    ~impl() {}
+    ~impl() {
+        null_worker.reset();
+        io_thread.join();
+    }
 
     std::shared_ptr<Config::Manager> confman;
     std::shared_ptr<Plugin::Manager> plugman;
     asio::io_service io_service;
     std::shared_ptr<Output::Manager> outman;
     std::unique_ptr<asio::io_service::work> null_worker;
+    std::thread io_thread;
     std::shared_ptr<Input::Manager> inman;
     std::shared_ptr<Decoder::Manager> decman;
     std::shared_ptr<Encoder::Manager> encman;
