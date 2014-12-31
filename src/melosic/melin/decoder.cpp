@@ -93,8 +93,15 @@ void Manager::addAudioFormat(Factory fact, boost::string_ref mime_type) {
 }
 
 std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
-    if(uri.scheme() == boost::string_ref("file"))
-        return tracks(Input::uri_to_path(uri));
+    try {
+        if(uri.scheme() == boost::string_ref("file"))
+            return tracks(Input::uri_to_path(uri));
+    }
+    catch(network::percent_decoding_error e) {
+        ERROR_LOG(logject) << "Error decoding uri: " << e.what();
+        DEBUG_LOG(logject) << boost::diagnostic_information(e);
+    }
+
     return {};
 }
 
