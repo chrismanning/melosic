@@ -464,6 +464,8 @@ void FilterPane::setGeneratorPaths(QVariant p) {
         else
             setGeneratorPaths(doc.toVariant());
     }
+    else if(p.userType() == qMetaTypeId<QJSValue>())
+        setGeneratorPaths(p.value<QJSValue>().toVariant());
 }
 
 QVariant FilterPane::generatedQuery() const { return to_qvariant(pimpl->m_generated_query); }
@@ -486,6 +488,8 @@ void FilterPane::setPaths(QVariant p) {
         return;
     } else if(p.type() == QVariant::String)
         setPaths(QJsonDocument::fromJson(p.toString().toUtf8()).toVariant());
+    else if(p.userType() == qMetaTypeId<QJSValue>())
+        setPaths(p.value<QJSValue>().toVariant());
 }
 
 QVariantList FilterPane::sortFields() const { return pimpl->m_sort_fields; }
