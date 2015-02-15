@@ -68,7 +68,7 @@ class QT_GUI_EXPORT FilterPane : public QObject {
     struct impl;
     std::unique_ptr<impl> pimpl;
 
-public:
+  public:
     explicit FilterPane(ejdb::db, ejdb::collection, QObject* parent = nullptr);
     explicit FilterPane(QObject* parent = nullptr);
 

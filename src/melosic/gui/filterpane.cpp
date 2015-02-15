@@ -52,7 +52,7 @@ template <typename AssocT, typename ValueT> static auto find_optional(AssocT&& r
 
 template <typename C1, typename C2>
 static optional<int> vers_cmp_optional(const optional<jbson::basic_element<C1>>& a,
-                                              const optional<jbson::basic_element<C2>>& b) {
+                                       const optional<jbson::basic_element<C2>>& b) {
     if((!a || !b) || a->type() != b->type() || a->type() != jbson::element_type::string_element)
         return nullopt;
     return ::strverscmp(jbson::get<jbson::element_type::string_element>(*a).data(),
@@ -60,8 +60,7 @@ static optional<int> vers_cmp_optional(const optional<jbson::basic_element<C1>>&
 }
 
 template <typename C1, typename C2>
-static bool contains_digit(const optional<jbson::basic_element<C1>>& a,
-                           const optional<jbson::basic_element<C2>>& b) {
+static bool contains_digit(const optional<jbson::basic_element<C1>>& a, const optional<jbson::basic_element<C2>>& b) {
     if((!a || !b) || a->type() != b->type() || a->type() != jbson::element_type::string_element)
         return false;
     auto str1 = jbson::get<jbson::element_type::string_element>(*a);
@@ -180,18 +179,15 @@ FilterPane::impl::impl(FilterPane* parent) : m_parent(parent), m_model(), m_sele
     m_libman = LibraryManager::instance();
     assert(m_libman);
     bool r = QObject::connect(m_libman, &LibraryManager::scanStarted, m_parent, [this]() {
-                                                                                    TRACE_LOG(logject)
-                                                                                        << "Scan started";
-                                                                                    m_lib_scanning.store(true);
-                                                                                },
-                              Qt::QueuedConnection);
+        TRACE_LOG(logject) << "Scan started";
+        m_lib_scanning.store(true);
+    }, Qt::QueuedConnection);
     assert(r);
     r = QObject::connect(m_libman, &LibraryManager::scanEnded, m_parent, [this]() {
-                                                                             TRACE_LOG(logject) << "Scan ended";
-                                                                             m_lib_scanning.store(false);
-                                                                             refresh();
-                                                                         },
-                         Qt::QueuedConnection);
+        TRACE_LOG(logject) << "Scan ended";
+        m_lib_scanning.store(false);
+        refresh();
+    }, Qt::QueuedConnection);
     assert(r);
     m_lib_scanning.store(m_libman->getLibraryManager() && m_libman->getLibraryManager()->scanning());
 
@@ -203,7 +199,7 @@ FilterPane::impl::impl(FilterPane* parent) : m_parent(parent), m_model(), m_sele
     });
 
     m_selection_timer.setSingleShot(true);
-    m_selection_timer.setInterval(500);
+    m_selection_timer.setInterval(0);
 }
 
 void FilterPane::impl::on_selection_changed(const QItemSelection& selected, const QItemSelection& deselected) {
@@ -349,15 +345,13 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent), pimpl(new impl(this))
 
     // delayed query generation
     connect(&pimpl->m_selection_timer, &QTimer::timeout, [this]() { pimpl->generate_query(); });
-    connect(selectionModel(), &SelectionModel::selectionChanged,
-            [this](auto&& s, auto&& d) {
+    connect(selectionModel(), &SelectionModel::selectionChanged, [this](auto&& s, auto&& d) {
         pimpl->on_selection_changed(s, d);
         if(pimpl->m_selection_timer.interval()) {
             pimpl->m_selection_timer.start();
             TRACE_LOG(pimpl->logject) << "Selection timer started; times out after "
-                                         << pimpl->m_selection_timer.interval() << "ms\n";
-        }
-        else
+                                      << pimpl->m_selection_timer.interval() << "ms\n";
+        } else
             pimpl->generate_query();
     });
     connect(this, &FilterPane::generatorPathsChanged, [this](auto&&) {
@@ -379,23 +373,13 @@ struct toJSValue {
     QJSValue operator()(boost::string_ref, jbson::element_type, boost::string_ref str) const {
         return QJSValue{QString::fromLocal8Bit(str.data(), str.size())};
     }
-    QJSValue operator()(boost::string_ref, jbson::element_type, bool val) const {
-        return QJSValue{val};
-    }
-    QJSValue operator()(boost::string_ref, jbson::element_type, int32_t val) const {
-        return QJSValue{val};
-    }
-    QJSValue operator()(boost::string_ref, jbson::element_type, double val) const {
-        return QJSValue{val};
-    }
+    QJSValue operator()(boost::string_ref, jbson::element_type, bool val) const { return QJSValue{val}; }
+    QJSValue operator()(boost::string_ref, jbson::element_type, int32_t val) const { return QJSValue{val}; }
+    QJSValue operator()(boost::string_ref, jbson::element_type, double val) const { return QJSValue{val}; }
 
-    template <typename T> QJSValue operator()(boost::string_ref, jbson::element_type, T&&) const {
-        return QJSValue{};
-    }
+    template <typename T> QJSValue operator()(boost::string_ref, jbson::element_type, T&&) const { return QJSValue{}; }
 
-    QJSValue operator()(boost::string_ref, jbson::element_type) const {
-        return QJSValue{};
-    }
+    QJSValue operator()(boost::string_ref, jbson::element_type) const { return QJSValue{}; }
 };
 
 template <typename SelectionT>
@@ -429,7 +413,7 @@ static jbson::document qml_generator(SelectionT&& selection, QJSValue fun, QJSEn
 
 void FilterPane::setQueryGenerator(QJSValue val) {
     pimpl->m_qml_query_generator = val;
-    pimpl->m_query_generator = [this, &fun = pimpl->m_qml_query_generator](const auto&& selection) {
+    pimpl->m_query_generator = [ this, & fun = pimpl->m_qml_query_generator ](const auto&& selection) {
         return qml_generator(selection, fun, qmlEngine(this));
     };
     Q_EMIT queryGeneratorChanged(val);
@@ -463,8 +447,7 @@ void FilterPane::setGeneratorPaths(QVariant p) {
             ERROR_LOG(pimpl->logject) << "setGeneratorPaths(); invalid JSON string";
         else
             setGeneratorPaths(doc.toVariant());
-    }
-    else if(p.userType() == qMetaTypeId<QJSValue>())
+    } else if(p.userType() == qMetaTypeId<QJSValue>())
         setGeneratorPaths(p.value<QJSValue>().toVariant());
 }
 
@@ -510,14 +493,11 @@ void FilterPane::setDependsOn(FilterPane* d) {
 
 SelectionModel* FilterPane::selectionModel() const { return &pimpl->m_selection_model; }
 
-int FilterPane::selectionDelay() const {
-    return pimpl->m_selection_timer.interval();
-}
+int FilterPane::selectionDelay() const { return pimpl->m_selection_timer.interval(); }
 
 void FilterPane::setSelectionDelay(int delay) {
     pimpl->m_selection_timer.setInterval(delay);
     Q_EMIT selectionDelayChanged(delay);
 }
-
 
 } // namespace Melosic
