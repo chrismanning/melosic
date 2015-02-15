@@ -37,27 +37,27 @@ namespace executors = Melosic::executors;
 #include "user.hpp"
 #include "service.hpp"
 
-namespace LastFM {
+namespace lastfm {
 
-struct User::impl : std::enable_shared_from_this<impl> {
-    impl(std::weak_ptr<Service> lastserv) : impl(lastserv, "", "") {}
-    impl(std::weak_ptr<Service> lastserv, const std::string& username) : impl(lastserv, username, "") {}
-    impl(std::weak_ptr<Service> lastserv, const std::string& username, const std::string& sessionKey)
+struct user::impl : std::enable_shared_from_this<impl> {
+    impl(std::weak_ptr<service> lastserv) : impl(lastserv, "", "") {}
+    impl(std::weak_ptr<service> lastserv, const std::string& username) : impl(lastserv, username, "") {}
+    impl(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey)
         : lastserv(lastserv),
           username(username),
           sessionKey(sessionKey),
-          logject(logging::keywords::channel = "LastFM::User")
+          logject(logging::keywords::channel = "lastfm::user")
     {}
 
 private:
-    bool getInfo_impl(const std::shared_ptr<Service>& lastserv) {
+    bool getInfo_impl(const std::shared_ptr<service>& lastserv) {
         if(!lastserv)
             return false;
         TRACE_LOG(logject) << "In getInfo";
         Method method = lastserv->prepareMethodCall("user.getInfo");
         method.addParameter()
                 .addMember("user", username)
-                .addMember("api_key", lastserv->apiKey());
+                .addMember("api_key", lastserv->api_key());
         std::string reply(std::move(lastserv->postMethod(method)));
         if(reply.empty())
             return false;
@@ -84,7 +84,7 @@ private:
 
 public:
     std::future<bool> getInfo() {
-        std::shared_ptr<Service> lastserv = this->lastserv.lock();
+        std::shared_ptr<service> lastserv = this->lastserv.lock();
         if(!lastserv) {
             std::promise<bool> p;
             p.set_value(false);
@@ -100,13 +100,13 @@ public:
     }
 
 private:
-    bool authenticate_impl(const std::shared_ptr<Service>& lastserv) {
+    bool authenticate_impl(const std::shared_ptr<service>& lastserv) {
         return static_cast<bool>(lastserv);
     }
 
 public:
     std::future<bool> authenticate() {
-        std::shared_ptr<Service> lastserv = this->lastserv.lock();
+        std::shared_ptr<service> lastserv = this->lastserv.lock();
         if(!lastserv) {
             std::promise<bool> p;
             p.set_value(false);
@@ -132,7 +132,7 @@ public:
     }
 
 private:
-    std::weak_ptr<Service> lastserv;
+    std::weak_ptr<service> lastserv;
     std::string username;
     std::string sessionKey;
     Melosic::Logger::Logger logject;
@@ -146,38 +146,38 @@ private:
     Mutex mu;
 };
 
-User::User() : pimpl(nullptr) {}
+user::user() : pimpl(nullptr) {}
 
-User::User(std::weak_ptr<Service> lastserv, const std::string& username)
+user::user(std::weak_ptr<service> lastserv, const std::string& username)
     : pimpl(std::make_shared<impl>(lastserv, username)) {}
 
-User::~User() {}
+user::~user() {}
 
-std::future<bool> User::getInfo() {
+std::future<bool> user::getInfo() {
     return pimpl->getInfo();
 }
 
-User::User(std::weak_ptr<Service> lastserv, const std::string& username, const std::string& sessionKey)
+user::user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey)
     : pimpl(new impl(lastserv, username, sessionKey))
 {}
 
-User::User(User&& b) : pimpl(std::move(b.pimpl)) {}
+user::user(user&& b) : pimpl(std::move(b.pimpl)) {}
 
-User& User::operator=(User&& b) {
+user& user::operator=(user&& b) {
     pimpl = std::move(b.pimpl);
     return *this;
 }
 
-const std::string& User::getSessionKey() const {
+const std::string& user::getSessionKey() const {
     return pimpl->getSessionKey();
 }
 
-void User::setSessionKey(const std::string& sk) {
+void user::setSessionKey(const std::string& sk) {
     pimpl->setSessionKey(sk);
 }
 
-User::operator bool() {
+user::operator bool() {
     return static_cast<bool>(pimpl);
 }
 
-}//namespace LastFM
+}//namespace lastfm

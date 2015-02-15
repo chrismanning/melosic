@@ -35,24 +35,24 @@ class Track;
 }
 }
 
-namespace LastFM {
-class Service;
-struct Artist;
-struct Album;
+namespace lastfm {
+class service;
+struct artist;
+struct album;
 
-struct Track {
-    Track(std::weak_ptr<Service>,
+struct track {
+    track(std::weak_ptr<service>,
           const std::string& name,
           const std::string& artist,
           const std::string& url);
-    Track(std::weak_ptr<Service>, const Melosic::Core::Track&);
+    track(std::weak_ptr<service>, const Melosic::Core::Track&);
 
-    ~Track();
+    ~track();
 
     //field accessors
-    ForwardRange<Tag> topTags() const;
+    ForwardRange<tag> topTags() const;
     const std::string& getName() const;
-    const Artist& getArtist() const;
+    const artist& getArtist() const;
     const network::uri& getUrl() const;
     const std::string& getWiki() const;
 
@@ -69,7 +69,7 @@ private:
 
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>&
-operator<<(std::basic_ostream<CharT, TraitsT>& out, const LastFM::Track& track) {
+operator<<(std::basic_ostream<CharT, TraitsT>& out, const lastfm::track& track) {
     return out << track.getArtist() << " - " << track.getName() << " : " << track.getUrl();
 }
 

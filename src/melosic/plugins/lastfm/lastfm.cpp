@@ -30,18 +30,19 @@ using namespace Melosic;
 #include "scrobbler.hpp"
 #include "service.hpp"
 #include "user.hpp"
-using namespace LastFM;
+using namespace lastfm;
 
-static Logger::Logger logject(logging::keywords::channel = "LastFM");
-Config::Conf conf{"LastFM"};
+static Logger::Logger logject(logging::keywords::channel = "lastfm");
+Config::Conf conf{"lastfm"};
 
-static constexpr Plugin::Info lastFmInfo("LastFM",
+static constexpr Plugin::Info lastFmInfo("lastfm",
                                          Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
                                          Plugin::Version(1,0,0)
                                         );
 
-static std::shared_ptr<Service> lastserv;
-static std::shared_ptr<Scrobbler> scrobbler;
+static const std::shared_ptr<service> lastserv = std::make_shared<service>("47ee6adfdb3c68daeea2786add5e242d",
+                                                                           "64a3811653376876431daad679ce5b67");
+static std::shared_ptr<scrobbler> g_scrobbler;
 static Config::Manager* confman = nullptr;
 static std::string sk;
 
@@ -50,16 +51,16 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
         if(key == "username") {
             if(lastserv->getUser() && !lastserv->getUser().getSessionKey().empty())
                 sk = lastserv->getUser().getSessionKey();
-            lastserv->setUser(User(lastserv, boost::get<std::string>(value), sk));
+            lastserv->setUser(user(lastserv, boost::get<std::string>(value), sk));
         }
         else if(key == "enable scrobbling") {
             if(boost::get<bool>(value)) {
 //                if(slotman == nullptr)
 //                    return;
-                scrobbler.reset(new Scrobbler(lastserv));
+                g_scrobbler.reset(new scrobbler(lastserv));
             }
             else {
-                scrobbler.reset();
+                g_scrobbler.reset();
             }
         }
         else if(key == "session key") {
@@ -82,9 +83,6 @@ static Signals::ScopedConnection varConnection;
 extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
     *info = ::lastFmInfo;
     funs << registerConfig;
-
-    lastserv.reset(new Service("47ee6adfdb3c68daeea2786add5e242d",
-                               "64a3811653376876431daad679ce5b67"));
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {

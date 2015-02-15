@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,32 +15,13 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_BIOGRAPHY_HPP
-#define LASTFM_BIOGRAPHY_HPP
+#include "album.hpp"
 
-//#include <QWidget>
-//#include <QLabel>
-//#include <QVBoxLayout>
+namespace lastfm {
 
-#include <memory>
-
-namespace LastFM {
-
-class Service;
-
-//class BiographyWidget : public QWidget {
-//    Q_OBJECT
-//public:
-//    BiographyWidget(std::weak_ptr<Service> lastserv, QWidget *parent = 0);
-
-//    void refresh();
-
-//private:
-//    std::weak_ptr<Service> lastserv;
-//    QLabel* text;
-//    QVBoxLayout* layout;
-//};
+album::album()
+{
 
 }
 
-#endif // LASTFM_BIOGRAPHY_HPP
+} // namespace lastfm

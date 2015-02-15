@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,43 +15,23 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
-
-#include <memory>
-#include <string>
-
-#include <network/uri.hpp>
+#include "wiki.hpp"
 
 namespace lastfm {
-class service;
 
-struct user {
-public:
-    user();
-    user(std::weak_ptr<service> lastserv, const std::string& username);
-    user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey);
+wiki::wiki(std::string_view summary, std::string_view content, date_t published)
+    : m_summary(summary), m_content(content.to_string()), m_published(published) {}
 
-    user(const user&) = delete;
-    user& operator=(const user&) = delete;
-    user(user&&);
-    user& operator=(user&&);
+std::string_view wiki::summary() const { return m_summary; }
 
-    ~user();
+void wiki::summary(std::string_view summary) { m_summary = summary.to_string(); }
 
-    std::future<bool> getInfo();
+std::string_view wiki::content() const { return m_content; }
 
-    void authenticate();
-    const std::string& getSessionKey() const;
-    void setSessionKey(const std::string&);
+void wiki::content(std::string_view content) { m_content = content.to_string(); }
 
-    explicit operator bool();
+date_t wiki::published() const { return m_published; }
 
-private:
-    struct impl;
-    std::shared_ptr<impl> pimpl;
-};
+void wiki::published(date_t published) { m_published = published; }
 
-}//namespace lastfm
-
-#endif // USER_HPP
+} // namespace lastfm

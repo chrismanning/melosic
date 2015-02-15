@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,43 +15,22 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#ifndef LASTFM_EXPORTS_HPP
+#define LASTFM_EXPORTS_HPP
 
-#include <memory>
-#include <string>
+#include <boost/config.hpp>
 
-#include <network/uri.hpp>
+#ifdef LASTFM_EXPORTS
+#   define LASTFM_EXPORT BOOST_SYMBOL_EXPORT
+#else
+#   define LASTFM_EXPORT BOOST_SYMBOL_IMPORT
+#endif
 
-namespace lastfm {
-class service;
+#ifndef _WIN32
+#define LASTFM_LOCAL [[gnu::visibility("hidden")]]
+#else
+#define LASTFM_LOCAL
+#endif
 
-struct user {
-public:
-    user();
-    user(std::weak_ptr<service> lastserv, const std::string& username);
-    user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey);
+#endif // LASTFM_EXPORTS_HPP
 
-    user(const user&) = delete;
-    user& operator=(const user&) = delete;
-    user(user&&);
-    user& operator=(user&&);
-
-    ~user();
-
-    std::future<bool> getInfo();
-
-    void authenticate();
-    const std::string& getSessionKey() const;
-    void setSessionKey(const std::string&);
-
-    explicit operator bool();
-
-private:
-    struct impl;
-    std::shared_ptr<impl> pimpl;
-};
-
-}//namespace lastfm
-
-#endif // USER_HPP

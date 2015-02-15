@@ -25,11 +25,11 @@ using Melosic::Output::DeviceState;
 #include "scrobbler.hpp"
 #include "service.hpp"
 
-namespace LastFM {
+namespace lastfm {
 
-Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
+scrobbler::scrobbler(std::shared_ptr<service> lastserv) :
     lastserv(lastserv),
-    logject(logging::keywords::channel = "LastFM::Scrobbler")
+    logject(logging::keywords::channel = "lastfm::scrobbler")
 {
     TRACE_LOG(logject) << "Scrobbling enabled";
 //    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
@@ -46,8 +46,8 @@ Scrobbler::Scrobbler(std::shared_ptr<Service> lastserv) :
     TRACE_LOG(logject) << "Connected track changed slot";
 }
 
-void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
-    static std::weak_ptr<Track> prev;
+void scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
+    static std::weak_ptr<track> prev;
     std::unique_lock<Mutex> l(mu);
     if(total > chrono::seconds(15) && current > (total / 2)
             && static_cast<bool>(currentTrack_)
@@ -60,7 +60,7 @@ void Scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds to
     }
 }
 
-void Scrobbler::stateChangedSlot(DeviceState newstate) {
+void scrobbler::stateChangedSlot(DeviceState newstate) {
     unique_lock<Mutex> l(mu);
     state = newstate;
     if(newstate == DeviceState::Stopped) {
@@ -75,23 +75,23 @@ void Scrobbler::stateChangedSlot(DeviceState newstate) {
     }
 }
 
-void Scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
+void scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
 //    if(playlist && *playlist)
 //        trackChangedSlot(*playlist->currentTrack());
 }
 
-void Scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {
+void scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {
     TRACE_LOG(logject) << "Track changed";
     submitCache();
     std::unique_lock<Mutex> l(mu);
-    currentTrack_ = std::make_shared<Track>(lastserv, newTrack);
+    currentTrack_ = std::make_shared<track>(lastserv, newTrack);
     if(state == DeviceState::Playing) {
         l.unlock();
         updateNowPlaying(currentTrack_);
     }
 }
 
-void Scrobbler::submitCache() {
+void scrobbler::submitCache() {
     TRACE_LOG(logject) << "Submitting cache";
     std::unique_lock<Mutex> l(mu);
     auto i = cache.begin();
@@ -109,13 +109,13 @@ void Scrobbler::submitCache() {
     }
 }
 
-void Scrobbler::cacheTrack(std::shared_ptr<Track> track) {
+void scrobbler::cacheTrack(std::shared_ptr<track> track) {
     TRACE_LOG(logject) << "Caching track for submission";
     std::lock_guard<Mutex> l(mu);
     cache.push_back(track);
 }
 
-void Scrobbler::updateNowPlaying(std::shared_ptr<Track> track) {
+void scrobbler::updateNowPlaying(std::shared_ptr<track> track) {
     if(track)
         track->updateNowPlaying();
 }

@@ -24,7 +24,7 @@
 #include <functional>
 namespace ph = std::placeholders;
 
-namespace LastFM {
+namespace lastfm {
 
 struct NoAttributes {
     bool operator()(const boost::property_tree::ptree::value_type& val) const {
@@ -32,6 +32,6 @@ struct NoAttributes {
     }
 };
 
-}//namespace LastFM
+}//namespace lastfm
 
 #endif // LASTFM_UTILITIES_HPP

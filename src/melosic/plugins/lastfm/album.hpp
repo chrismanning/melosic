@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,43 +15,32 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef USER_HPP
-#define USER_HPP
+#ifndef LASTFM_ALBUM_HPP
+#define LASTFM_ALBUM_HPP
 
-#include <memory>
 #include <string>
+#include <vector>
 
 #include <network/uri.hpp>
 
+#include "artist.hpp"
+#include "tag.hpp"
+#include "track.hpp"
+
 namespace lastfm {
-class service;
 
-struct user {
-public:
-    user();
-    user(std::weak_ptr<service> lastserv, const std::string& username);
-    user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey);
-
-    user(const user&) = delete;
-    user& operator=(const user&) = delete;
-    user(user&&);
-    user& operator=(user&&);
-
-    ~user();
-
-    std::future<bool> getInfo();
-
-    void authenticate();
-    const std::string& getSessionKey() const;
-    void setSessionKey(const std::string&);
-
-    explicit operator bool();
+struct album {
 
 private:
-    struct impl;
-    std::shared_ptr<impl> pimpl;
+    std::string m_album_name;
+    artist m_artist;
+    network::uri m_url;
+    std::vector<track> m_tracks;
+    std::vector<tag> m_top_tags;
+    int m_listeners;
+    int m_play_count;
 };
 
-}//namespace lastfm
+} // namespace lastfm
 
-#endif // USER_HPP
+#endif // LASTFM_ALBUM_HPP

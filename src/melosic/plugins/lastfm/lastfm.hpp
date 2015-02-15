@@ -18,4 +18,44 @@
 #ifndef LASTFM_HPP
 #define LASTFM_HPP
 
+#include <chrono>
+#include <experimental/string_view>
+
+#include <network/uri.hpp>
+
+#include <jbson/element.hpp>
+
+#include "exports.hpp"
+
+namespace std {
+namespace experimental {}
+using namespace experimental;
+}
+
+namespace lastfm {
+
+using date_t = std::chrono::system_clock::time_point;
+
+} // namespace lastfm
+
+namespace std {
+namespace experimental {
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& elem, string_view& var) {
+    auto str = jbson::get<jbson::element_type::string_element>(elem);
+    var = string_view{str.data(), str.size()};
+}
+
+} // namespace std
+} // namespace experimental
+
+namespace network {
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& elem, uri& var) {
+    auto str = jbson::get<jbson::element_type::string_element>(elem);
+    var = uri{std::begin(str), std::end(str)};
+}
+
+} // namespace network
+
 #endif // LASTFM_HPP

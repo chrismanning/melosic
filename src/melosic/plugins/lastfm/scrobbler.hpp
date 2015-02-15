@@ -40,18 +40,18 @@ class Playlist;
 
 }
 
-namespace LastFM {
+namespace lastfm {
 
-class Service;
+class service;
 struct Method;
 
-class Scrobbler : public std::enable_shared_from_this<Scrobbler> {
+class scrobbler : public std::enable_shared_from_this<scrobbler> {
 public:
-    explicit Scrobbler(std::shared_ptr<Service> lastserv);
+    explicit scrobbler(std::shared_ptr<service> lastserv);
 
-    std::shared_ptr<Track> currentTrack();
-    void updateNowPlaying(std::shared_ptr<Track> track);
-    void cacheTrack(std::shared_ptr<Track> track);
+    std::shared_ptr<track> currentTrack();
+    void updateNowPlaying(std::shared_ptr<track> track);
+    void cacheTrack(std::shared_ptr<track> track);
     void submitCache();
     void notifySlot(chrono::milliseconds current, chrono::milliseconds total);
     void stateChangedSlot(Melosic::Output::DeviceState);
@@ -59,10 +59,10 @@ public:
     void trackChangedSlot(const Melosic::Core::Track& newTrack);
 
 private:
-    std::shared_ptr<Service> lastserv;
+    std::shared_ptr<service> lastserv;
     Melosic::Logger::Logger logject;
-    std::shared_ptr<Track> currentTrack_;
-    std::list<std::shared_ptr<Track>> cache;
+    std::shared_ptr<track> currentTrack_;
+    std::list<std::shared_ptr<track>> cache;
     Melosic::Signals::ScopedConnection playlistConn;
     std::list<Melosic::Signals::ScopedConnection> connections;
     Melosic::Output::DeviceState state = DeviceState::Stopped;

@@ -19,25 +19,94 @@
 #define LASTFM_TAG_HPP
 
 #include <string>
+#include <experimental/string_view>
+#include <experimental/type_traits>
+#include <future>
+#include <chrono>
+
+#include <boost/thread/future.hpp>
 
 #include <network/uri.hpp>
 
-namespace LastFM {
+#include <jbson/element.hpp>
 
-class Service;
+#include "lastfm.hpp"
+#include "wiki.hpp"
 
-struct Tag {
-    Tag(const std::string& tag, const std::string& url) : name(tag), url(url) {}
-    Tag& operator=(const std::string& tag);
+namespace lastfm {
 
-    std::string name;
-    network::uri url;
-    int reach = 0;
-    int taggings = 0;
-    bool streamable = false;
-    std::string wiki;
+class service;
+struct album;
+struct artist;
+struct track;
+
+using wiki_t = wiki;
+
+struct LASTFM_EXPORT tag {
+    explicit tag(std::string_view tag_name = {}, const network::uri& url = {}, int reach = 0, int taggings = 0,
+                 bool streamable = false, wiki_t wiki = wiki_t{});
+
+    std::string_view name() const;
+    void name(std::string_view);
+
+    const network::uri& url() const;
+    void url(const network::uri&);
+
+    int reach() const;
+    void reach(int);
+
+    int taggings() const;
+    void taggings(int);
+
+    bool streamable() const;
+    void streamable(bool);
+
+    wiki_t wiki() const;
+    void wiki(wiki_t);
+
+    // api methods
+
+    std::future<std::vector<tag>> get_similar(service&) const;
+    boost::future<std::vector<album>> get_top_albums(service&, int limit = 50, int page = 1) const;
+    boost::future<std::vector<artist>> get_top_artists(service&, int limit = 50, int page = 1) const;
+    boost::future<std::vector<tag>> get_top_tags(service&) const;
+    boost::future<std::vector<track>> get_top_tracks(service&, int limit = 50, int page = 1) const;
+    boost::future<std::vector<artist>> get_weekly_artist_chart(service&, date_t from = {}, date_t to = {},
+                                                               int limit = 50) const;
+    boost::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;
+    boost::future<std::vector<tag>> search(service&, int limit = 50, int page = 1) const;
+
+  private:
+    std::string m_name;
+    network::uri m_url;
+    int m_reach = 0;
+    int m_taggings = 0;
+    bool m_streamable = false;
+    wiki_t m_wiki;
 };
 
-}//namespace LastFM
+template <typename Container> void value_get(const jbson::basic_element<Container>& tag_elem, tag& var) {
+    auto doc = jbson::get<jbson::element_type::document_element>(tag_elem);
+    for(auto&& elem : doc) {
+        if(elem.name() == "name") {
+            auto str = jbson::get<jbson::element_type::string_element>(elem);
+            var.name({str.data(), str.size()});
+        } else if(elem.name() == "url") {
+            var.url(jbson::get<network::uri>(elem));
+        } else if(elem.name() == "reach") {
+            auto str = jbson::get<jbson::element_type::string_element>(elem);
+            var.reach(std::strtol(str.data(), nullptr, 10));
+        } else if(elem.name() == "taggings") {
+            auto str = jbson::get<jbson::element_type::string_element>(elem);
+            var.taggings(std::strtol(str.data(), nullptr, 10));
+        } else if(elem.name() == "streamable") {
+            var.streamable(jbson::get<jbson::element_type::string_element>(elem) == "1");
+        } else if(elem.name() == "wiki") {
+            var.wiki(jbson::get<wiki>(elem));
+        }
+    }
+}
+
+} // namespace lastfm
 
 #endif // LASTFM_TAG_HPP

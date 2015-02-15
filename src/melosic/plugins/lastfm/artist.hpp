@@ -23,16 +23,16 @@
 
 #include <network/uri.hpp>
 
-namespace LastFM {
-class Service;
+namespace lastfm {
+class service;
 
-struct Artist {
-    Artist(std::weak_ptr<Service> lastserv);
-    Artist(std::weak_ptr<Service> lastserv, const std::string& artist);
+struct artist {
+    artist(std::weak_ptr<service> lastserv);
+    artist(std::weak_ptr<service> lastserv, const std::string& artist);
 
-    Artist(Artist&&) = default;
-    Artist& operator=(Artist&&);
-    Artist& operator=(const std::string& artist);
+    artist(artist&&) = default;
+    artist& operator=(artist&&);
+    artist& operator=(const std::string& artist);
 
     explicit operator bool();
 
@@ -48,6 +48,6 @@ private:
     std::shared_ptr<impl> pimpl;
 };
 
-}//namespace LastFM
+}//namespace lastfm
 
 #endif // LASTFM_ARTIST_HPP
