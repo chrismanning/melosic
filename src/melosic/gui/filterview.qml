@@ -17,7 +17,7 @@ FocusScope {
 
     property alias orientation: splitView.orientation
 
-    DynamicSplitView {
+    SplitView {
         id: splitView
         orientation: Qt.Vertical
         anchors.fill: parent
