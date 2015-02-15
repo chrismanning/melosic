@@ -184,18 +184,20 @@ private:
     magic_t m_handle;
 };
 
-static std::string detect_mime_type(const network::uri& uri) {
+static std::string detect_mime_type(std::istream& stream) {
     thread_local libmagic_handle cookie(MAGIC_SYMLINK|MAGIC_MIME_TYPE|MAGIC_ERROR);
 
-    if(uri.scheme() == boost::string_ref("file")) {
-        auto p = Input::uri_to_path(uri);
-        TRACE_LOG(logject) << "Detecting MIME for file " << p;
-        if(auto str = magic_file(cookie, p.c_str())) {
-            TRACE_LOG(logject) << "Detected MIME " << str << " for file " << p;
-            return {str};
-        }
+    std::array<char, 80> buf;
+    auto cur = stream.tellg();
+    stream.read(buf.data(), buf.size());
+    stream.seekg(cur);
+
+    if(auto mime = magic_buffer(cookie, buf.data(), buf.size())) {
+        TRACE_LOG(logject) << "Detected MIME " << mime << " for stream";
+        return {mime};
     }
-    TRACE_LOG(logject) << "Could not detect MIME for " << uri;
+
+    TRACE_LOG(logject) << "Could not detect MIME for stream";
     return {};
 }
 
@@ -260,19 +262,22 @@ struct TrackSource : PCMSource {
 
 std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
     unique_lock l(mu);
-    std::string mime_type = detect_mime_type(uri);
-    if(mime_type.empty())
-        return nullptr;
     auto is = inman->open(uri);
     if(!is)
         return nullptr;
 
-    TRACE_LOG(logject) << "Trying to open file with MIME " << mime_type;
+    std::string mime_type = detect_mime_type(*is);
+    if(mime_type.empty())
+        return nullptr;
+
+    TRACE_LOG(logject) << "Attempting to decode stream with MIME " << mime_type;
     auto fact = inputFactories.find(mime_type);
 
     std::unique_ptr<PCMSource> ret;
     if(fact != inputFactories.end())
         ret = fact->second(std::move(is));
+    else
+        ERROR_LOG(logject) << "No decoders could open stream with MIME " << mime_type;
     return ret;
 }
 
