@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,38 +15,21 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_PCMBUFFER_HPP
-#define MELOSIC_PCMBUFFER_HPP
+#ifndef WAVPACK_MELIN_EXPORTS_HPP
+#define WAVPACK_MELIN_EXPORTS_HPP
 
-#include <asio/buffer.hpp>
+#include <boost/config.hpp>
 
-#include <melosic/common/audiospecs.hpp>
+#ifdef WAVPACK_MELIN_EXPORTS
+#   define WAVPACK_MELIN_API BOOST_SYMBOL_EXPORT
+#else
+#   define WAVPACK_MELIN_API BOOST_SYMBOL_IMPORT
+#endif
 
-namespace Melosic {
+#ifndef _WIN32
+#define WAVPACK_MELIN_LOCAL [[gnu::visibility("hidden")]]
+#else
+#define WAVPACK_MELIN_LOCAL
+#endif
 
-struct PCMBuffer : asio::mutable_buffer {
-    using asio::mutable_buffer::mutable_buffer;
-
-    AudioSpecs audio_specs;
-};
-
-struct ConstPCMBuffer : asio::const_buffer {
-    using asio::const_buffer::const_buffer;
-
-    AudioSpecs audio_specs;
-};
-
-} //end namespace Melosic
-
-namespace asio {
-
-inline size_t buffer_size(const Melosic::PCMBuffer& b) {
-    return buffer_size(mutable_buffer(b));
-}
-inline size_t buffer_size(const Melosic::ConstPCMBuffer& b) {
-    return buffer_size(const_buffer(b));
-}
-
-}
-
-#endif // MELOSIC_PCMBUFFER_HPP
+#endif // WAVPACK_MELIN_EXPORTS_HPP

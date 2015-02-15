@@ -98,7 +98,7 @@ std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
             return tracks(Input::uri_to_path(uri));
     }
     catch(network::percent_decoding_error e) {
-        ERROR_LOG(logject) << "Error decoding uri: " << e.what();
+        ERROR_LOG(logject) << "Error decoding uri (" << uri << "): " << e.what();
         DEBUG_LOG(logject) << boost::diagnostic_information(e);
     }
 

@@ -28,6 +28,10 @@ target_link_libraries(${PROJECT_NAME} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} 
 add_library(${PROJECT_NAME}_test_main OBJECT test_main.cpp)
 set_property(TARGET ${PROJECT_NAME}_test_main APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
 
+add_library(${PROJECT_NAME}_test_main_no_link OBJECT test_main.cpp)
+set_property(TARGET ${PROJECT_NAME}_test_main_no_link APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
+set_property(TARGET ${PROJECT_NAME}_test_main_no_link APPEND PROPERTY COMPILE_DEFINITIONS MELOSIC_TEST_NO_LINK)
+
 add_dependencies(${PROJECT_NAME}_test_main catch_${PROJECT_NAME})
 
 qt5_use_modules(${PROJECT_NAME} Widgets Qml)

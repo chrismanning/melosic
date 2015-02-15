@@ -21,9 +21,17 @@
 #define CATCH_CONFIG_RUNNER
 #include "catch.hpp"
 
+#ifndef MELOSIC_TEST_NO_LINK
+#include <melosic/melin/logging.hpp>
+#endif //MELOSIC_TEST_NO_LINK
+
 int main(int argc, char** argv) {
     boost::locale::generator gen;
     std::locale::global(gen("en_GB.UTF-8"));
+
+#ifndef MELOSIC_TEST_NO_LINK
+    Melosic::Logger::init(&Melosic::Logger::null_stream);
+#endif //MELOSIC_TEST_NO_LINK
 
     return Catch::Session().run(argc, argv);
 }

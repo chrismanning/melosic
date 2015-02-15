@@ -1,6 +1,10 @@
 project(melosic CXX C)
 cmake_minimum_required(VERSION 2.8.11)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED 14)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
+
 option(MELOSIC_ENABLE_TESTING "Enable testing" ON)
 option(MELOSIC_SANITIZE_THREAD "Use -fsanitize=thread where available" OFF)
 option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
@@ -15,6 +19,8 @@ endif()
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_THREAD_PROVIDES_EXECUTORS -DBOOST_THREAD_VERSION=4 -DBOOST_THREAD_USES_DATETIME)
+add_definitions(-DOPENSSL_NO_SSL2)
+add_definitions(-DASIO_ENABLE_HANDLER_TRACKING)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
@@ -22,7 +28,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
-find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time REQUIRED)
+find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time regex REQUIRED)
 link_directories(${Boost_LIBRARY_DIR})
 include_directories(${Boost_INCLUDE_DIR})
 
@@ -61,14 +67,11 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-redeclared-class-member -Wno-ignored-qu
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++1y")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -std=c++1y")
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS} -g -O1")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O1")
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS}")
-
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
@@ -128,14 +131,18 @@ function(cxx_test test_name)
   target_link_libraries(${test_name} ${LINK_LIBS} ${PROJECT_NAME}lib)
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+  set_property(TARGET ${test_name} APPEND PROPERTY COMPILE_DEFINITIONS
+    MELOSIC_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/test" MELOSIC_DISABLE_LOGGING)
 endfunction()
 
 function(cxx_header_test test_name)
-  add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
+  add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main_no_link>)
   add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
   target_link_libraries(${test_name} ${LINK_LIBS})
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
+  set_property(TARGET ${test_name} APPEND PROPERTY COMPILE_DEFINITIONS
+    MELOSIC_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/test" MELOSIC_DISABLE_LOGGING)
 endfunction()
 
 add_subdirectory(src/melosic)

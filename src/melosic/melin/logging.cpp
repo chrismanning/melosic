@@ -31,10 +31,10 @@
 namespace Melosic {
 namespace Logger {
 
-void init() {
+void init(std::ostream* str) {
     auto con_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_ostream_backend>>();
 
-    boost::shared_ptr<std::ostream> stream(&std::clog, boost::null_deleter());
+    boost::shared_ptr<std::ostream> stream(str ? str : &std::clog, boost::null_deleter());
     con_sink->locked_backend()->add_stream(stream);
 
     logging::core::get()->add_sink(con_sink);
@@ -66,6 +66,10 @@ void init() {
 
     logging::add_common_attributes();
 }
+
+null_buffer buf;
+
+std::ostream null_stream{&buf};
 
 } // namespace Logger
 } // namespace Melosic

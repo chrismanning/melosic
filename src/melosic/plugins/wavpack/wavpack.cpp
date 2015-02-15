@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,7 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <FLAC++/decoder.h>
+#include <wavpack/wavpack.h>
+
+#include <deque>
+#include <algorithm>
+#include <cmath>
+#include <fstream>
 
 #include <boost/config.hpp>
 
@@ -23,18 +28,19 @@
 #include <melosic/melin/decoder.hpp>
 using namespace Melosic;
 
-#include "./flacdecoder.hpp"
+#include "./exports.hpp"
+#include "./wavpackdecoder.hpp"
 
-constexpr Plugin::Info flacInfo{"FLAC", Plugin::Type::decode, {1, 0, 0}};
+constexpr Plugin::Info wavpackInfo{"Wavpack", Plugin::Type::decode, {1, 0, 0}};
 
 extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
-    *info = ::flacInfo;
+    *info = ::wavpackInfo;
     funs << registerDecoder;
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
-    decman->addAudioFormat([](auto input) { return std::make_unique<FlacDecoder>(std::move(input)); },
-                           boost::string_ref("audio/flac"), boost::string_ref("audio/x-flac"));
+    decman->addAudioFormat([](auto input) { return std::make_unique<WavpackDecoder>(std::move(input)); },
+                           boost::string_ref("audio/x-wavpack"));
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}

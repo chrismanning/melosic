@@ -70,10 +70,18 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
     return strm;
 }
 
-MELOSIC_EXPORT void init();
+MELOSIC_EXPORT void init(std::ostream* = nullptr);
+
+struct null_buffer : std::streambuf {
+    int overflow(int c) override { return c; }
+};
+
+MELOSIC_EXPORT extern std::ostream null_stream;
 
 }//end namespace Logger
 }//end namespace Melosic
+
+#ifndef MELOSIC_DISABLE_LOGGING
 
 #define LOG(lg) BOOST_LOG(lg)
 #define ERROR_LOG(lg) BOOST_LOG_SEV(lg, ::Melosic::Logger::Severity::error)
@@ -85,5 +93,20 @@ MELOSIC_EXPORT void init();
 #define CHAN_WARN_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::warning)
 #define CHAN_DEBUG_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::debug)
 #define CHAN_TRACE_LOG(lg, chan) BOOST_LOG_CHANNEL_SEV(lg, chan, ::Melosic::Logger::Severity::trace)
+
+#else
+
+#define LOG(lg) ::Melosic::Logger::null_stream
+#define ERROR_LOG(lg) ::Melosic::Logger::null_stream
+#define WARN_LOG(lg) ::Melosic::Logger::null_stream
+#define DEBUG_LOG(lg) ::Melosic::Logger::null_stream
+#define TRACE_LOG(lg) ::Melosic::Logger::null_stream
+#define CHAN_LOG(lg, chan) ::Melosic::Logger::null_stream
+#define CHAN_ERROR_LOG(lg, chan) ::Melosic::Logger::null_stream
+#define CHAN_WARN_LOG(lg, chan) ::Melosic::Logger::null_stream
+#define CHAN_DEBUG_LOG(lg, chan) ::Melosic::Logger::null_stream
+#define CHAN_TRACE_LOG(lg, chan) ::Melosic::Logger::null_stream
+
+#endif // MELOSIC_DISABLE_LOGGING
 
 #endif // MELOSIC_LOGGING_HPP

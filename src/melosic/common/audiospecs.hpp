@@ -58,12 +58,12 @@ struct AudioSpecs final {
 
     template <typename Duration>
     constexpr size_t time_to_bytes(Duration time) const noexcept {
-        return time_to_samples(time) * (bps/8);
+        return samples_to_bytes(time_to_samples(time));
     }
 
     template <typename Duration>
     constexpr Duration bytes_to_time(size_t bytes) const noexcept {
-        return samples_to_time<Duration>(bytes / (bps/8));
+        return samples_to_time<Duration>(bytes_to_samples(bytes));
     }
 
     uint8_t channels = 0;

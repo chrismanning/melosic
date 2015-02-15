@@ -1,0 +1,2 @@
+cxx_test(flac_decoder_test)
+target_link_libraries(flac_decoder_test flac)
