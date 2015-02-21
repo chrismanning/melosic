@@ -10,6 +10,7 @@ option(MELOSIC_SANITIZE_THREAD "Use -fsanitize=thread where available" OFF)
 option(MELOSIC_SANITIZE_ADDRESS "Use -fsanitize=address where available" OFF)
 option(MELOSIC_DETECT_LEAKS "Use -fsanitize=leak where available" OFF)
 option(MELOSIC_DETECT_UNDEFINED "Use -fsanitize=undefined where available" OFF)
+option(MELOSIC_ASIO_HANDLER_TRACKING "Enable asio handler tracking" OFF)
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/lib)
@@ -20,7 +21,10 @@ endif()
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_THREAD_PROVIDES_EXECUTORS -DBOOST_THREAD_VERSION=4 -DBOOST_THREAD_USES_DATETIME)
 add_definitions(-DOPENSSL_NO_SSL2)
+
+if(MELOSIC_ASIO_HANDLER_TRACKING)
 add_definitions(-DASIO_ENABLE_HANDLER_TRACKING)
+endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
@@ -119,7 +123,7 @@ ExternalProject_Add(
     LOG_DOWNLOAD ON
    )
 ExternalProject_Get_Property(catch_${PROJECT_NAME} source_dir)
-set(CATCH_INCLUDE_DIR ${source_dir}/include CACHE INTERNAL "Path to include folder for Catch")
+set(CATCH_INCLUDE_DIR ${source_dir}/single_include CACHE INTERNAL "Path to include folder for Catch")
 
 if(${MELOSIC_ENABLE_TESTING})
 enable_testing()

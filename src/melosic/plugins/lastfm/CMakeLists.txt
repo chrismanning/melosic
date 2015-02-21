@@ -1,8 +1,5 @@
 set(LASTFM lastfm)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-
 SET(SRC lastfm.cpp)
 SET(SRC ${SRC} scrobbler.cpp)
 SET(SRC ${SRC} service.cpp)
