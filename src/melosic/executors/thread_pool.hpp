@@ -21,7 +21,7 @@
 #include <functional>
 
 #include <boost/thread/scoped_thread.hpp>
-#include <boost/thread/sync_queue.hpp>
+#include <boost/thread/concurrent_queues/sync_queue.hpp>
 #include <boost/thread/executors/work.hpp>
 
 namespace Melosic {
@@ -38,7 +38,7 @@ struct thread_pool {
                 work_type work;
                 while(!m_work_queue.closed()) {
                     try {
-                        if(m_work_queue.wait_pull_front(work) == boost::queue_op_status::closed)
+                        if(m_work_queue.wait_pull(work) == boost::queue_op_status::closed)
                             break;
                         work();
                     }
@@ -49,7 +49,7 @@ struct thread_pool {
                 }
                 while(true) {
                     try {
-                        if(m_work_queue.try_pull_front(work) != boost::queue_op_status::success)
+                        if(m_work_queue.try_pull(work) != boost::queue_op_status::success)
                             break;
                         work();
                     }
@@ -67,7 +67,7 @@ struct thread_pool {
 
     template <typename WorkT>
     void submit(WorkT&& work) {
-        m_work_queue.push_back(work_type(std::forward<WorkT>(work)));
+        m_work_queue.push(work_type(std::forward<WorkT>(work)));
     }
 
     size_t uninitiated_task_count() const {

@@ -73,31 +73,31 @@ std::future<std::vector<tag>> tag::get_similar(service& serv) const {
 }
 
 boost::future<std::vector<album>> tag::get_top_albums(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<album>>({});
+    return boost::make_ready_future<std::vector<album>>();
 }
 
 boost::future<std::vector<artist>> tag::get_top_artists(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<artist>>({});
+    return boost::make_ready_future<std::vector<artist>>();
 }
 
 boost::future<std::vector<tag>> tag::get_top_tags(service&) const {
-    return boost::make_ready_future<std::vector<tag>>({});
+    return boost::make_ready_future<std::vector<tag>>();
 }
 
 boost::future<std::vector<track>> tag::get_top_tracks(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<track>>({});
+    return boost::make_ready_future<std::vector<track>>();
 }
 
 boost::future<std::vector<artist>> tag::get_weekly_artist_chart(service&, date_t from, date_t to, int limit) const {
-    return boost::make_ready_future<std::vector<artist>>({});
+    return boost::make_ready_future<std::vector<artist>>();
 }
 
 boost::future<std::vector<std::tuple<date_t, date_t>>> tag::get_weekly_chart_list(service&) const {
-    return boost::make_ready_future<std::vector<std::tuple<date_t, date_t>>>({});
+    return boost::make_ready_future<std::vector<std::tuple<date_t, date_t>>>();
 }
 
 boost::future<std::vector<tag>> tag::search(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<tag>>({});
+    return boost::make_ready_future<std::vector<tag>>();
 }
 
 } // namespace lastfm
