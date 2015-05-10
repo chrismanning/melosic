@@ -20,18 +20,31 @@
 namespace lastfm {
 
 wiki::wiki(std::string_view summary, std::string_view content, date_t published)
-    : m_summary(summary), m_content(content.to_string()), m_published(published) {}
+    : m_summary(summary), m_content(content.to_string()), m_published(published) {
+}
 
-std::string_view wiki::summary() const { return m_summary; }
+std::string_view wiki::summary() const {
+    return m_summary;
+}
 
-void wiki::summary(std::string_view summary) { m_summary = summary.to_string(); }
+void wiki::summary(std::string_view summary) {
+    m_summary = summary.to_string();
+}
 
-std::string_view wiki::content() const { return m_content; }
+std::string_view wiki::content() const {
+    return m_content;
+}
 
-void wiki::content(std::string_view content) { m_content = content.to_string(); }
+void wiki::content(std::string_view content) {
+    m_content = content.to_string();
+}
 
-date_t wiki::published() const { return m_published; }
+date_t wiki::published() const {
+    return m_published;
+}
 
-void wiki::published(date_t published) { m_published = published; }
+void wiki::published(date_t published) {
+    m_published = published;
+}
 
 } // namespace lastfm

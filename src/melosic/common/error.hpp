@@ -28,15 +28,15 @@
 
 namespace Melosic {
 
-//base exception type
+// base exception type
 struct Exception : virtual boost::exception, virtual std::exception {};
-//IO related exceptions
+// IO related exceptions
 struct IOException : virtual Exception {};
 struct ReadException : virtual IOException {};
 struct WriteException : virtual IOException {};
 struct ReadOnlyException : virtual WriteException {};
 struct SeekException : virtual IOException {};
-//file exceptions
+// file exceptions
 struct FileException : virtual IOException {};
 struct FileOpenException : virtual FileException {};
 struct FileNotFoundException : virtual FileOpenException {};
@@ -49,7 +49,7 @@ typedef boost::error_info<struct tagFilePath, boost::filesystem::path> FilePath;
 typedef boost::error_info<struct tagFileExtension, std::string> FileExtension;
 }
 
-//device exceptions
+// device exceptions
 struct DeviceException : virtual IOException {};
 struct DeviceOpenException : virtual DeviceException {};
 struct DeviceNotFoundException : virtual DeviceOpenException {};
@@ -70,7 +70,7 @@ typedef boost::error_info<struct tagChannels, uint8_t> Channels;
 typedef boost::error_info<struct tagSampleRate, uint8_t> SampleRate;
 }
 
-//decoder exceptions
+// decoder exceptions
 struct DecoderException : virtual Exception {};
 struct DecoderInitException : virtual DecoderException {};
 struct UnsupportedTypeException : virtual DecoderException {};
@@ -81,14 +81,14 @@ namespace ErrorTag {
 typedef boost::error_info<struct tagDecoderStr, std::string> DecodeErrStr;
 typedef boost::error_info<struct tagDeviceName, std::string> DeviceName;
 }
-//metadata exceptions
+// metadata exceptions
 struct MetadataException : virtual Exception, virtual FileException {};
 struct MetadataNotFoundException : virtual MetadataException {};
 struct MetadataUnsupportedException : virtual MetadataException {};
 struct MetadataInvalidException : virtual MetadataException {};
-//player exceptions
+// player exceptions
 
-//plugin exceptions
+// plugin exceptions
 struct PluginException : virtual Exception {};
 struct PluginInvalidException : virtual PluginException {};
 struct PluginSymbolNotFoundException : virtual PluginException {};
@@ -103,9 +103,9 @@ typedef boost::error_info<struct tagPluginMsg, std::string> Msg;
 typedef boost::error_info<struct tagPluginInfo, Melosic::Plugin::Info> Info;
 }
 }
-//playlist exceptions
+// playlist exceptions
 
-//config exceptions
+// config exceptions
 struct ConfigException : virtual Exception {};
 struct KeyNotFoundException : virtual ConfigException {};
 struct ChildNotFoundException : virtual ConfigException {};
@@ -114,7 +114,7 @@ typedef boost::error_info<struct tagConfigKey, std::string> ConfigKey;
 typedef boost::error_info<struct tagConfigChild, std::string> ConfigChild;
 }
 
-//network exceptions
+// network exceptions
 struct NetworkException : virtual Exception {};
 struct HttpException : virtual NetworkException {};
 struct ServiceNotAvailableException : virtual NetworkException {};
@@ -126,7 +126,7 @@ struct _HttpStatus {
 typedef boost::error_info<struct tagHttpStatus, _HttpStatus> HttpStatus;
 }
 
-//thread exceptions
+// thread exceptions
 struct ThreadException : virtual Exception {};
 struct TaskQueueError : virtual ThreadException {};
 namespace ErrorTag {

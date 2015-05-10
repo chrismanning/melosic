@@ -49,8 +49,8 @@ using TagsChanged = SignalCore<void(const boost::synchronized_value<Core::TagMap
 using DurationChanged = SignalCore<void(std::chrono::milliseconds)>;
 using AudioSpecsChanged = SignalCore<void(AudioSpecs)>;
 
-}// Track
-}// Signals
+} // Track
+} // Signals
 
 namespace Decoder {
 class Manager;
@@ -59,17 +59,15 @@ class Manager;
 namespace Core {
 
 class MELOSIC_EXPORT Track final {
-private:
+  private:
     friend class Decoder::Manager;
     void audioSpecs(AudioSpecs);
     void start(chrono::milliseconds start);
     void end(chrono::milliseconds end);
 
-    explicit Track(const network::uri& location,
-                   chrono::milliseconds end = 0ms,
-                   chrono::milliseconds start = 0ms);
+    explicit Track(const network::uri& location, chrono::milliseconds end = 0ms, chrono::milliseconds start = 0ms);
 
-public:
+  public:
     explicit Track(const jbson::document&);
     ~Track();
 
@@ -94,10 +92,10 @@ public:
     Signals::Track::TagsChanged& getTagsChangedSignal() const noexcept;
     jbson::document bson() const;
 
-private:
+  private:
     class impl;
     std::shared_ptr<impl> pimpl;
-    friend size_t hash_value(const Track &b);
+    friend size_t hash_value(const Track& b);
 };
 
 bool operator<(const Track&, const Track&);

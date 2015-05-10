@@ -36,18 +36,18 @@ struct artist {
 
     explicit operator bool();
 
-    //field accessors
+    // field accessors
     const std::string& getName() const;
     const network::uri& getUrl() const;
 
-    //network accessors
+    // network accessors
     std::future<bool> fetchInfo(bool autocorrect = false);
 
-private:
+  private:
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
 
-}//namespace lastfm
+} // namespace lastfm
 
 #endif // LASTFM_ARTIST_HPP

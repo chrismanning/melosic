@@ -285,8 +285,8 @@ void FilterPane::impl::refresh() {
                 sort_fields.emplace_back(sf.toString().toUtf8());
             // sort using fields with varying priorities
             TRACE_LOG(logject) << "sorting query results";
-            sort_by_criteria(ds, boost::adaptors::transform(
-                                     sort_fields, [](auto&& bs) { return std::string_view(bs, bs.size()); }));
+            sort_by_criteria(
+                ds, boost::adaptors::transform(sort_fields, [](auto&& bs) { return std::string_view(bs, bs.size()); }));
             // put all unique docs in a vector
             std::transform(ds.begin(), std::unique(ds.begin(), ds.end()), std::back_inserter(docs),
                            [](auto&& d) { return jbson::document{d}; });
@@ -361,23 +361,38 @@ FilterPane::FilterPane(QObject* parent) : QObject(parent), pimpl(new impl(this))
     });
 }
 
-FilterPane::~FilterPane() {}
+FilterPane::~FilterPane() {
+}
 
-QAbstractItemModel* FilterPane::model() const { return &pimpl->m_model; }
+QAbstractItemModel* FilterPane::model() const {
+    return &pimpl->m_model;
+}
 
-QJSValue FilterPane::queryGenerator() const { return pimpl->m_qml_query_generator; }
+QJSValue FilterPane::queryGenerator() const {
+    return pimpl->m_qml_query_generator;
+}
 
 struct toJSValue {
     QJSValue operator()(std::string_view, jbson::element_type, std::string_view str) const {
         return QJSValue{QString::fromLocal8Bit(str.data(), str.size())};
     }
-    QJSValue operator()(std::string_view, jbson::element_type, bool val) const { return QJSValue{val}; }
-    QJSValue operator()(std::string_view, jbson::element_type, int32_t val) const { return QJSValue{val}; }
-    QJSValue operator()(std::string_view, jbson::element_type, double val) const { return QJSValue{val}; }
+    QJSValue operator()(std::string_view, jbson::element_type, bool val) const {
+        return QJSValue{val};
+    }
+    QJSValue operator()(std::string_view, jbson::element_type, int32_t val) const {
+        return QJSValue{val};
+    }
+    QJSValue operator()(std::string_view, jbson::element_type, double val) const {
+        return QJSValue{val};
+    }
 
-    template <typename T> QJSValue operator()(std::string_view, jbson::element_type, T&&) const { return QJSValue{}; }
+    template <typename T> QJSValue operator()(std::string_view, jbson::element_type, T&&) const {
+        return QJSValue{};
+    }
 
-    QJSValue operator()(std::string_view, jbson::element_type) const { return QJSValue{}; }
+    QJSValue operator()(std::string_view, jbson::element_type) const {
+        return QJSValue{};
+    }
 };
 
 template <typename SelectionT>
@@ -423,7 +438,9 @@ void FilterPane::setQueryGenerator(std::function<jbson::document(const std::vect
     pimpl->generate_query();
 }
 
-QVariant FilterPane::generatorPaths() const { return to_qvariant(pimpl->m_generator_paths); }
+QVariant FilterPane::generatorPaths() const {
+    return to_qvariant(pimpl->m_generator_paths);
+}
 
 void FilterPane::setGeneratorPaths(QVariant p) {
     if(p.type() == QVariant::Map) {
@@ -449,16 +466,22 @@ void FilterPane::setGeneratorPaths(QVariant p) {
         setGeneratorPaths(p.value<QJSValue>().toVariant());
 }
 
-QVariant FilterPane::generatedQuery() const { return to_qvariant(pimpl->m_generated_query); }
+QVariant FilterPane::generatedQuery() const {
+    return to_qvariant(pimpl->m_generated_query);
+}
 
-QVariant FilterPane::query() const { return to_qvariant(pimpl->m_query); }
+QVariant FilterPane::query() const {
+    return to_qvariant(pimpl->m_query);
+}
 
 void FilterPane::setQuery(QVariant q) {
     pimpl->m_query = to_document(q);
     Q_EMIT queryChanged(q);
 }
 
-QVariant FilterPane::paths() const { return pimpl->m_paths; }
+QVariant FilterPane::paths() const {
+    return pimpl->m_paths;
+}
 
 void FilterPane::setPaths(QVariant p) {
     if(p == pimpl->m_paths)
@@ -473,14 +496,18 @@ void FilterPane::setPaths(QVariant p) {
         setPaths(p.value<QJSValue>().toVariant());
 }
 
-QVariantList FilterPane::sortFields() const { return pimpl->m_sort_fields; }
+QVariantList FilterPane::sortFields() const {
+    return pimpl->m_sort_fields;
+}
 
 void FilterPane::setSortFields(QVariantList list) {
     pimpl->m_sort_fields = list;
     Q_EMIT sortFieldsChanged(list);
 }
 
-FilterPane* FilterPane::dependsOn() const { return pimpl->m_depends; }
+FilterPane* FilterPane::dependsOn() const {
+    return pimpl->m_depends;
+}
 
 void FilterPane::setDependsOn(FilterPane* d) {
     if(d == pimpl->m_depends)
@@ -489,9 +516,13 @@ void FilterPane::setDependsOn(FilterPane* d) {
     Q_EMIT dependsOnChanged(d);
 }
 
-SelectionModel* FilterPane::selectionModel() const { return &pimpl->m_selection_model; }
+SelectionModel* FilterPane::selectionModel() const {
+    return &pimpl->m_selection_model;
+}
 
-int FilterPane::selectionDelay() const { return pimpl->m_selection_timer.interval(); }
+int FilterPane::selectionDelay() const {
+    return pimpl->m_selection_timer.interval();
+}
 
 void FilterPane::setSelectionDelay(int delay) {
     pimpl->m_selection_timer.setInterval(delay);

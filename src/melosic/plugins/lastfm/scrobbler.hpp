@@ -23,7 +23,9 @@
 namespace chrono = std::chrono;
 #include <list>
 #include <thread>
-using std::mutex; using std::lock_guard; using std::unique_lock;
+using std::mutex;
+using std::lock_guard;
+using std::unique_lock;
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/connection.hpp>
@@ -37,7 +39,6 @@ namespace Core {
 class Track;
 class Playlist;
 }
-
 }
 
 namespace lastfm {
@@ -46,7 +47,7 @@ class service;
 struct Method;
 
 class scrobbler : public std::enable_shared_from_this<scrobbler> {
-public:
+  public:
     explicit scrobbler(std::shared_ptr<service> lastserv);
 
     std::shared_ptr<track> currentTrack();
@@ -58,7 +59,7 @@ public:
     void playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist);
     void trackChangedSlot(const Melosic::Core::Track& newTrack);
 
-private:
+  private:
     std::shared_ptr<service> lastserv;
     Melosic::Logger::Logger logject;
     std::shared_ptr<track> currentTrack_;
@@ -70,7 +71,6 @@ private:
     typedef mutex Mutex;
     Mutex mu;
 };
-
 }
 
 #endif // LASTFM_SCROBBLER_HPP

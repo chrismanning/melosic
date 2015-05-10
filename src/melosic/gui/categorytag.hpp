@@ -35,7 +35,7 @@ class CategoryTag : public Criterion {
 
     PlaylistModel* m_playlist_model{nullptr};
 
-public:
+  public:
     explicit CategoryTag(QObject* parent = nullptr);
 
     QString result(const QModelIndex&) const override;
@@ -44,7 +44,7 @@ Q_SIGNALS:
     void fieldChanged(QString);
 };
 
-}// Melosic
+} // Melosic
 
 QML_DECLARE_TYPE(Melosic::CategoryTag)
 

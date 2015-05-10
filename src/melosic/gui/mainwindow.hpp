@@ -55,13 +55,13 @@ class Manager;
 class PlaylistManagerModel;
 
 class QT_GUI_EXPORT MainWindow {
-public:
+  public:
     explicit MainWindow(Core::Kernel& kernel, Core::Player& player);
     ~MainWindow();
     void onStateChangeSlot(Output::DeviceState state);
     void scanEndedSlot();
 
-private:
+  private:
     Logger::Logger logject;
     std::list<Signals::ScopedConnection> scopedSigConns;
     std::unique_ptr<PlayerControls> playerControls;

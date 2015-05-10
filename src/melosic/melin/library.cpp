@@ -89,7 +89,9 @@ struct Updated : Signals::Signal<Signals::Library::Updated> {};
 static const fs::path DataDir{Directories::dataHome() / "melosic"};
 
 struct PathEquivalence : std::binary_function<const fs::path&, const fs::path&, bool> {
-    bool operator()(const fs::path& a, const fs::path& b) const { return fs::equivalent(a, b); }
+    bool operator()(const fs::path& a, const fs::path& b) const {
+        return fs::equivalent(a, b);
+    }
 };
 
 Logger::Logger logject{logging::keywords::channel = "Library::Manager"};
@@ -599,9 +601,12 @@ Manager::Manager(const std::shared_ptr<Config::Manager>& confman, const std::sha
     });
 }
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
-const boost::synchronized_value<Manager::SetType>& Manager::getDirectories() const { return pimpl->m_dirs; }
+const boost::synchronized_value<Manager::SetType>& Manager::getDirectories() const {
+    return pimpl->m_dirs;
+}
 
 std::vector<jbson::document> Manager::query(const jbson::document& qdoc) const {
     try {
@@ -629,11 +634,17 @@ Manager::query(const jbson::document& q, std::initializer_list<std::tuple<std::s
     return apply_named_paths(query(q), paths);
 }
 
-bool Manager::scanning() const noexcept { return pimpl->m_scanning.load(); }
+bool Manager::scanning() const noexcept {
+    return pimpl->m_scanning.load();
+}
 
-Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return pimpl->scanStarted; }
+Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept {
+    return pimpl->scanStarted;
+}
 
-Signals::Library::ScanEnded& Manager::getScanEndedSignal() noexcept { return pimpl->scanEnded; }
+Signals::Library::ScanEnded& Manager::getScanEndedSignal() noexcept {
+    return pimpl->scanEnded;
+}
 
 std::vector<jbson::element> apply_path(const std::vector<jbson::document>& docs, std::string_view path) {
     std::vector<jbson::element> vec;

@@ -52,7 +52,7 @@ struct PlaylistRemoved : Signals::Signal<Signals::Playlist::PlaylistRemoved> {
 };
 
 class Manager::impl {
-public:
+  public:
     impl() = default;
 
     optional<Core::Playlist> insert(size_type pos, const std::string& name, unique_lock& l) {
@@ -136,7 +136,7 @@ public:
         playlistRemovedSignal(p);
     }
 
-private:
+  private:
     mutex mu;
     Logger::Logger logject{logging::keywords::channel = "Playlist::Manager"};
 
@@ -149,9 +149,11 @@ private:
     friend class Manager;
 };
 
-Manager::Manager() : pimpl(std::make_unique<impl>()) {}
+Manager::Manager() : pimpl(std::make_unique<impl>()) {
+}
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 optional<Core::Playlist> Manager::insert(size_type pos, std::string name) {
     unique_lock l(pimpl->mu);

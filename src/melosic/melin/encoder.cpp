@@ -20,14 +20,13 @@
 namespace Melosic {
 namespace Encoder {
 
-class Manager::impl {
-
-};
+class Manager::impl {};
 
 Manager::Manager() : pimpl(new impl) {
 }
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 } // namespace Encoder
 } // namespace Melosic

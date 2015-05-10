@@ -25,17 +25,15 @@
 namespace Melosic {
 namespace AudioIO {
 
-template <typename AudioServiceImpl>
-struct MELOSIC_EXPORT AudioOutputService : asio::io_service::service {
+template <typename AudioServiceImpl> struct MELOSIC_EXPORT AudioOutputService : asio::io_service::service {
     static_assert(std::is_base_of<AudioOutputServiceBase, AudioServiceImpl>::value, "");
 
     static asio::io_service::id id;
 
     typedef std::shared_ptr<AudioOutputServiceBase> implementation_type;
 
-    explicit AudioOutputService(asio::io_service& io_service) :
-        asio::io_service::service(io_service)
-    {}
+    explicit AudioOutputService(asio::io_service& io_service) : asio::io_service::service(io_service) {
+    }
 
     void construct(implementation_type& impl) {
         impl.reset(new AudioServiceImpl(get_io_service()));
@@ -109,12 +107,11 @@ struct MELOSIC_EXPORT AudioOutputService : asio::io_service::service {
         impl->async_write_some(buf, std::forward<WriteHandler>(handler));
     }
 
-private:
-    void shutdown_service() override {}
+  private:
+    void shutdown_service() override {
+    }
 };
-template <typename AudioServiceImpl>
-asio::io_service::id AudioOutputService<AudioServiceImpl>::id;
-
+template <typename AudioServiceImpl> asio::io_service::id AudioOutputService<AudioServiceImpl>::id;
 }
 }
 

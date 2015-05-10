@@ -30,7 +30,7 @@ struct AudioSpecs;
 namespace Input {
 
 class MELOSIC_EXPORT Manager {
-public:
+  public:
     Manager();
     ~Manager();
 
@@ -40,7 +40,7 @@ public:
 
     MELOSIC_EXPORT std::unique_ptr<std::istream> open(const network::uri& uri) const;
 
-private:
+  private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };

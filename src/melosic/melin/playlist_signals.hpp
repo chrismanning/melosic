@@ -47,8 +47,8 @@ typedef SignalCore<void(int, optional<Core::Track>)> CurrentTrackChanged;
 typedef SignalCore<void(int, const TagLib::PropertyMap&)> TagsChanged;
 typedef SignalCore<void(int, int)> MultiTagsChanged;
 
-}//Playlist
-}//Signals
-}//Melosic
+} // Playlist
+} // Signals
+} // Melosic
 
 #endif // MELOSIC_PLAYLIST_SIGNALS_HPP

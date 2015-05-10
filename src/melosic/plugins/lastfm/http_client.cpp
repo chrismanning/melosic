@@ -9,9 +9,11 @@ namespace network {
 namespace http {
 namespace v0 {
 
-client::client(asio::io_service& io_service, client_options options) : io_service(io_service), m_options(options) {}
+client::client(asio::io_service& io_service, client_options options) : io_service(io_service), m_options(options) {
+}
 
-client::~client() {}
+client::~client() {
+}
 
 std::istream& getline_with_newline(std::istream& is, std::string& line) {
     line.clear();

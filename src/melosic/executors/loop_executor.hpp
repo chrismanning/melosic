@@ -26,13 +26,9 @@
 namespace Melosic {
 namespace executors {
 
-enum class loop_options {
-    try_yield,
-    wait_sleep
-};
+enum class loop_options { try_yield, wait_sleep };
 
-template <loop_options LoopMethod>
-struct basic_loop_executor {
+template <loop_options LoopMethod> struct basic_loop_executor {
     static_assert(LoopMethod == loop_options::try_yield || LoopMethod == loop_options::wait_sleep,
                   "Invalid LoopMethod");
 
@@ -51,7 +47,7 @@ struct basic_loop_executor {
     basic_loop_executor(const basic_loop_executor&) = delete;
     basic_loop_executor(basic_loop_executor&&) = delete;
 
-private:
+  private:
     boost::sync_queue<work_type, std::deque<work_type>> m_work_queue;
     std::atomic_bool m_exit_loop{false};
     std::atomic_flag m_in_loop{ATOMIC_FLAG_INIT};
@@ -65,11 +61,9 @@ private:
                     work();
                 else
                     boost::this_thread::yield();
-            }
-            catch(boost::thread_interrupted&) {
+            } catch(boost::thread_interrupted&) {
                 throw;
-            }
-            catch(...) {
+            } catch(...) {
                 boost::this_thread::yield();
             }
         }
@@ -82,17 +76,15 @@ private:
                 if(m_work_queue.wait_pull(work) == boost::queue_op_status::closed)
                     break;
                 work();
-            }
-            catch(boost::thread_interrupted&) {
+            } catch(boost::thread_interrupted&) {
                 throw;
+            } catch(...) {
             }
-            catch(...) {}
         }
     }
 
-public:
-    template <typename WorkT>
-    void submit(WorkT&& work) {
+  public:
+    template <typename WorkT> void submit(WorkT&& work) {
         m_work_queue.push(work_type(std::forward<WorkT>(work)));
     }
 
@@ -110,8 +102,7 @@ public:
                 try_loop();
             else
                 wait_loop();
-        }
-        catch(boost::thread_interrupted&) {
+        } catch(boost::thread_interrupted&) {
             m_in_loop.clear(std::memory_order_release);
             throw;
         }
@@ -130,12 +121,11 @@ public:
                 return;
             try {
                 work();
-            }
-            catch(boost::thread_interrupted&) {
+            } catch(boost::thread_interrupted&) {
                 m_in_loop.clear(std::memory_order_release);
                 throw;
+            } catch(...) {
             }
-            catch(...) {}
         }
         m_in_loop.clear(std::memory_order_release);
     }
@@ -147,11 +137,9 @@ public:
                 return false;
             work();
             return true;
-        }
-        catch(boost::thread_interrupted&) {
+        } catch(boost::thread_interrupted&) {
             throw;
-        }
-        catch(...) {
+        } catch(...) {
             return false;
         }
     }

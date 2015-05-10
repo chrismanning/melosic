@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2013 Christian Manning
+**  Copyright (C) 2014 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,20 +15,13 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef MELOSIC_CONFIGVAR_HPP
-#define MELOSIC_CONFIGVAR_HPP
+#include <catch.hpp>
 
-#include <cstdint>
-#include <string>
-#include <vector>
+#include <boost/exception/diagnostic_information.hpp>
+#include <boost/filesystem.hpp>
+namespace fs = boost::filesystem;
+#include <chrono>
+using namespace std::literals;
 
-#include <boost/variant/recursive_variant.hpp>
-
-namespace Melosic {
-namespace Config {
-using VarType = boost::make_recursive_variant<std::string, bool, int32_t, uint32_t, int64_t, uint64_t, double,
-                                              std::vector<boost::recursive_variant_>>::type;
-}
-}
-
-#endif // MELOSIC_CONFIGVAR_HPP
+#include <melosic/melin/library.hpp>
+using namespace Melosic::Library;

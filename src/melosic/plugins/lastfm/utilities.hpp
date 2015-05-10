@@ -32,6 +32,6 @@ struct NoAttributes {
     }
 };
 
-}//namespace lastfm
+} // namespace lastfm
 
 #endif // LASTFM_UTILITIES_HPP

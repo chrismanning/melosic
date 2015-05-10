@@ -30,19 +30,20 @@ namespace Signals {
 struct Connection;
 
 struct ConnErasure {
-    virtual ~ConnErasure() {}
+    virtual ~ConnErasure() {
+    }
     virtual void disconnect(Connection&) = 0;
     virtual bool isConnected(const Connection&) const noexcept = 0;
 };
 
-template <typename... Args>
-struct ConnImpl : ConnErasure {
-    explicit ConnImpl(std::weak_ptr<detail::SignalImpl<Args...>> sig) noexcept : sig(sig) {}
+template <typename... Args> struct ConnImpl : ConnErasure {
+    explicit ConnImpl(std::weak_ptr<detail::SignalImpl<Args...>> sig) noexcept : sig(sig) {
+    }
 
-private:
+  private:
     std::weak_ptr<detail::SignalImpl<Args...>> sig;
 
-public:
+  public:
     void disconnect(Connection& conn) override {
         if(auto ptr = sig.lock())
             ptr->disconnect(conn);
@@ -62,17 +63,17 @@ struct Connection {
         return pimpl == b.pimpl;
     }
 
-private:
+  private:
     std::shared_ptr<ConnErasure> pimpl;
 
-    template <typename...>
-    friend class detail::SignalImpl;
+    template <typename...> friend class detail::SignalImpl;
 
-    template <typename ...Args>
-    Connection(std::shared_ptr<detail::SignalImpl<Args...>> sig) :
-        pimpl(std::make_shared<ConnImpl<Args...>>(sig)) {}
+    template <typename... Args>
+    Connection(std::shared_ptr<detail::SignalImpl<Args...>> sig)
+        : pimpl(std::make_shared<ConnImpl<Args...>>(sig)) {
+    }
 
-public:
+  public:
     void disconnect() {
         if(auto nimpl = pimpl)
             nimpl->disconnect(*this);
@@ -104,11 +105,13 @@ struct ScopedConnection : Connection {
         return *this;
     }
 
-    ScopedConnection(const Connection& conn) noexcept : Connection(conn) {}
+    ScopedConnection(const Connection& conn) noexcept : Connection(conn) {
+    }
 
-    ScopedConnection(Connection&& conn) noexcept : Connection(std::move(conn)) {}
+    ScopedConnection(Connection&& conn) noexcept : Connection(std::move(conn)) {
+    }
     ScopedConnection& operator=(Connection conn) & {
-        return *this = ScopedConnection(std::move(conn));
+        return * this = ScopedConnection(std::move(conn));
     }
 
     ScopedConnection(const ScopedConnection&) noexcept = delete;
@@ -119,7 +122,6 @@ struct ScopedConnection : Connection {
         assert(!isConnected());
     }
 };
-
 }
 }
 

@@ -27,9 +27,11 @@ struct JsonDocModel::impl {
     std::vector<jbson::document> m_docs;
 };
 
-JsonDocModel::JsonDocModel(QObject* parent) : QAbstractListModel(parent), pimpl(new impl) {}
+JsonDocModel::JsonDocModel(QObject* parent) : QAbstractListModel(parent), pimpl(new impl) {
+}
 
-JsonDocModel::~JsonDocModel() {}
+JsonDocModel::~JsonDocModel() {
+}
 
 void JsonDocModel::setDocs(std::vector<jbson::document>&& docs) {
     Q_EMIT beginResetModel();
@@ -43,7 +45,9 @@ void JsonDocModel::setDocs(const std::vector<jbson::document>& docs) {
     Q_EMIT endResetModel();
 }
 
-Qt::ItemFlags JsonDocModel::flags(const QModelIndex& index) const { return QAbstractItemModel::flags(index); }
+Qt::ItemFlags JsonDocModel::flags(const QModelIndex& index) const {
+    return QAbstractItemModel::flags(index);
+}
 
 int JsonDocModel::rowCount(const QModelIndex&) const {
     if(pimpl->m_docs.size() > std::numeric_limits<int>::max())
@@ -57,10 +61,12 @@ static QString toQString(std::string_view str) {
 
 struct QVariantVisitor {
     QVariantMap& m_map;
-    explicit QVariantVisitor(QVariantMap& map) : m_map(map) {}
+    explicit QVariantVisitor(QVariantMap& map) : m_map(map) {
+    }
 
     template <typename T>
-    void operator()(std::string_view name, jbson::element_type e, T v, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
+    void operator()(std::string_view name, jbson::element_type e, T v,
+                    std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
         m_map.insert(toQString(name), QVariant::fromValue(v));
     }
 
@@ -72,8 +78,7 @@ struct QVariantVisitor {
         m_map.insert(toQString(name), toQString(str));
     }
 
-    template <typename T>
-    void operator()(std::string_view name, jbson::element_type, jbson::basic_document<T>&& doc) {
+    template <typename T> void operator()(std::string_view name, jbson::element_type, jbson::basic_document<T>&& doc) {
         QVariantMap map{};
         QVariantVisitor v{map};
         for(auto&& e : doc)
@@ -81,8 +86,7 @@ struct QVariantVisitor {
         m_map.insert(toQString(name), map);
     }
 
-    template <typename T>
-    void operator()(std::string_view name, jbson::element_type, jbson::basic_array<T>&& doc) {
+    template <typename T> void operator()(std::string_view name, jbson::element_type, jbson::basic_array<T>&& doc) {
         QVariantMap map{};
         QVariantVisitor v{map};
         for(auto&& e : doc)
@@ -92,10 +96,10 @@ struct QVariantVisitor {
 
     template <typename T>
     void operator()(std::string_view, jbson::element_type, T&&, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
-//        assert(false);
+        //        assert(false);
     }
     void operator()(std::string_view, jbson::element_type) {
-//        assert(false);
+        //        assert(false);
     }
 };
 

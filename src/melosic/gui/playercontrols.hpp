@@ -45,7 +45,7 @@ class PlayerControls : public QObject {
     Q_PROPERTY(DeviceState state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString stateStr READ stateStr NOTIFY stateStrChanged)
 
-public:
+  public:
     explicit PlayerControls(Core::Player& player, const std::shared_ptr<Playlist::Manager>&, QObject* parent = 0);
 
     enum DeviceState {

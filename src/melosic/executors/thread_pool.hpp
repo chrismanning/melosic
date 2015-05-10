@@ -41,22 +41,20 @@ struct thread_pool {
                         if(m_work_queue.wait_pull(work) == boost::queue_op_status::closed)
                             break;
                         work();
-                    }
-                    catch(boost::thread_interrupted&) {
+                    } catch(boost::thread_interrupted&) {
                         throw;
+                    } catch(...) {
                     }
-                    catch(...) {}
                 }
                 while(true) {
                     try {
                         if(m_work_queue.try_pull(work) != boost::queue_op_status::success)
                             break;
                         work();
-                    }
-                    catch(boost::thread_interrupted&) {
+                    } catch(boost::thread_interrupted&) {
                         throw;
+                    } catch(...) {
                     }
-                    catch(...) {}
                 }
             });
     }
@@ -65,8 +63,7 @@ struct thread_pool {
         m_work_queue.close();
     }
 
-    template <typename WorkT>
-    void submit(WorkT&& work) {
+    template <typename WorkT> void submit(WorkT&& work) {
         m_work_queue.push(work_type(std::forward<WorkT>(work)));
     }
 
@@ -74,7 +71,7 @@ struct thread_pool {
         return m_work_queue.size();
     }
 
-private:
+  private:
     boost::sync_queue<work_type> m_work_queue;
     std::vector<boost::scoped_thread<boost::interrupt_and_join_if_joinable>> m_threads;
 };

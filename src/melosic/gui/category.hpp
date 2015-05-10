@@ -45,7 +45,7 @@ class Category : public QObject {
 
     Q_CLASSINFO("DefaultProperty", "categoryCriterion")
 
-public:
+  public:
     explicit Category(QObject* parent = nullptr);
 
     QQmlListProperty<Criterion> categoryCriterion();
@@ -67,14 +67,15 @@ class Criterion : public QObject {
     QString m_pattern;
     friend class Category;
 
-protected:
+  protected:
     CategoryProxyModel* m_category_model = nullptr;
     Q_PROPERTY(Melosic::CategoryProxyModel* model READ model WRITE setModel NOTIFY modelChanged)
     QRegularExpression m_regex;
 
-public:
+  public:
     explicit Criterion(QObject* parent = nullptr);
-    virtual ~Criterion() {}
+    virtual ~Criterion() {
+    }
 
     QString pattern() const;
     void setPattern(QString p);
@@ -94,7 +95,7 @@ class Role : public Criterion {
     Q_PROPERTY(QString role READ role WRITE setRole NOTIFY roleChanged FINAL)
     QString m_role;
 
-public:
+  public:
     explicit Role(QObject* parent = nullptr);
 
     QString role() const;

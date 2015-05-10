@@ -25,19 +25,13 @@
 
 namespace Melosic {
 template <typename T>
-using ForwardRange = boost::any_range<T,
-                                      boost::forward_traversal_tag,
-                                      typename std::add_lvalue_reference<T>::type,
-                                      std::ptrdiff_t>;
+using ForwardRange =
+    boost::any_range<T, boost::forward_traversal_tag, typename std::add_lvalue_reference<T>::type, std::ptrdiff_t>;
 template <typename T>
-using BidirRange = boost::any_range<T,
-                                    boost::bidirectional_traversal_tag,
-                                    typename std::add_lvalue_reference<T>::type,
+using BidirRange = boost::any_range<T, boost::bidirectional_traversal_tag, typename std::add_lvalue_reference<T>::type,
                                     std::ptrdiff_t>;
 template <typename T>
-using RandomRange = boost::any_range<T,
-                                     boost::random_access_traversal_tag,
-                                     typename std::add_lvalue_reference<T>::type,
+using RandomRange = boost::any_range<T, boost::random_access_traversal_tag, typename std::add_lvalue_reference<T>::type,
                                      std::ptrdiff_t>;
 
 template <typename CharT, typename TraitsT, typename T>

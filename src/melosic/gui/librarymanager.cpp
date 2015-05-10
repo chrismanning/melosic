@@ -43,7 +43,9 @@ LibraryManager* LibraryManager::instance() {
     return &libman;
 }
 
-const std::shared_ptr<Library::Manager>& LibraryManager::getLibraryManager() const { return m_libman; }
+const std::shared_ptr<Library::Manager>& LibraryManager::getLibraryManager() const {
+    return m_libman;
+}
 
 void LibraryManager::setLibraryManager(const std::shared_ptr<Library::Manager>& libman) {
     m_libman = libman;

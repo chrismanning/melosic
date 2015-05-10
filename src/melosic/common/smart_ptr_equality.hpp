@@ -21,15 +21,15 @@
 #include <type_traits>
 #include <memory>
 
-template <template<typename...> class Ptr, typename T2, typename ...PtrArgs>
+template <template <typename...> class Ptr, typename T2, typename... PtrArgs>
 bool operator==(Ptr<PtrArgs...>& ptr, T2* raw) {
     static_assert(sizeof...(PtrArgs) >= 1, "template Ptr should have at least 1 template parameter");
     static_assert(std::is_pointer<decltype(ptr.get())>::value, "Ptr must be smart pointer");
     typedef typename std::tuple_element<0, std::tuple<PtrArgs...>>::type T;
-    static_assert(std::is_base_of<T,T2>::value || std::is_base_of<T2,T>::value, "pointer types must be comparable");
+    static_assert(std::is_base_of<T, T2>::value || std::is_base_of<T2, T>::value, "pointer types must be comparable");
     return ptr.get() == raw;
 }
-template <template<typename...> class Ptr, typename T2, typename ...PtrArgs>
+template <template <typename...> class Ptr, typename T2, typename... PtrArgs>
 bool operator==(T2* raw, Ptr<PtrArgs...>& ptr) {
     return ptr == raw;
 }

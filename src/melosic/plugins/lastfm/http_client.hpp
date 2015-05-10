@@ -60,7 +60,8 @@ class client_options {
   public:
     client_options()
         : m_follow_redirects(false), m_cache_resolved(false), m_use_proxy(false), m_always_verify_peer(false),
-          m_user_agent(std::string("cpp-netlib/") + NETLIB_VERSION), m_timeout(30000) {}
+          m_user_agent(std::string("cpp-netlib/") + NETLIB_VERSION), m_timeout(30000) {
+    }
 
     client_options(const client_options& other) = default;
 
@@ -89,49 +90,65 @@ class client_options {
         m_follow_redirects = follow_redirects;
         return *this;
     }
-    bool follow_redirects() const { return m_follow_redirects; }
+    bool follow_redirects() const {
+        return m_follow_redirects;
+    }
 
     client_options& cache_resolved(bool cache_resolved) {
         m_cache_resolved = cache_resolved;
         return *this;
     }
-    bool cache_resolved() const { return m_cache_resolved; }
+    bool cache_resolved() const {
+        return m_cache_resolved;
+    }
 
     client_options& use_proxy(bool use_proxy) {
         m_use_proxy = use_proxy;
         return *this;
     }
-    bool use_proxy() const { return m_use_proxy; }
+    bool use_proxy() const {
+        return m_use_proxy;
+    }
 
     client_options& timeout(std::chrono::milliseconds timeout) {
         m_timeout = timeout;
         return *this;
     }
-    std::chrono::milliseconds timeout() const { return m_timeout; }
+    std::chrono::milliseconds timeout() const {
+        return m_timeout;
+    }
 
     client_options& openssl_certificate_path(std::string path) {
         m_openssl_certificate_paths.emplace_back(std::move(path));
         return *this;
     }
-    std::vector<std::string> openssl_certificate_paths() const { return m_openssl_certificate_paths; }
+    std::vector<std::string> openssl_certificate_paths() const {
+        return m_openssl_certificate_paths;
+    }
 
     client_options& openssl_verify_path(std::string path) {
         m_openssl_verify_paths.emplace_back(std::move(path));
         return *this;
     }
-    std::vector<std::string> openssl_verify_paths() const { return m_openssl_verify_paths; }
+    std::vector<std::string> openssl_verify_paths() const {
+        return m_openssl_verify_paths;
+    }
 
     client_options& always_verify_peer(bool always_verify_peer) {
         m_always_verify_peer = always_verify_peer;
         return *this;
     }
-    bool always_verify_peer() const { return m_always_verify_peer; }
+    bool always_verify_peer() const {
+        return m_always_verify_peer;
+    }
 
     client_options& user_agent(const std::string& user_agent) {
         m_user_agent = user_agent;
         return *this;
     }
-    std::string user_agent() const { return m_user_agent; }
+    std::string user_agent() const {
+        return m_user_agent;
+    }
 
   private:
     bool m_follow_redirects;
@@ -144,14 +161,18 @@ class client_options {
     std::vector<std::string> m_openssl_verify_paths;
 };
 
-inline void swap(client_options& lhs, client_options& rhs) noexcept { lhs.swap(rhs); }
+inline void swap(client_options& lhs, client_options& rhs) noexcept {
+    lhs.swap(rhs);
+}
 
 typedef v2::client_message::request_options request_options;
 typedef v2::client_message::request request;
 typedef v2::client_message::response response;
 
 struct identity_t {
-    template <typename T> auto operator()(T&& in) const { return std::forward<T>(in); }
+    template <typename T> auto operator()(T&& in) const {
+        return std::forward<T>(in);
+    }
 };
 
 class LASTFM_EXPORT client {
@@ -194,7 +215,8 @@ class LASTFM_EXPORT client {
 using asio::ip::tcp;
 
 struct async_connection {
-    explicit async_connection(asio::io_service& io_service) : io_service(io_service) {}
+    explicit async_connection(asio::io_service& io_service) : io_service(io_service) {
+    }
 
     template <typename Handler> void async_connect(const tcp::resolver::iterator& endpoint_it, Handler&& handler) {
         socket = std::make_unique<tcp::socket>(io_service);
@@ -224,7 +246,9 @@ struct async_connection {
         }
     }
 
-    void cancel() { socket->cancel(); }
+    void cancel() {
+        socket->cancel();
+    }
 
   private:
     asio::io_service& io_service;
@@ -246,10 +270,15 @@ class client::impl : public boost::intrusive_ref_counter<impl<CallbackT>, boost:
                   T&& callback)
         : io_service(io_service), m_client_options(client_opts), m_resolver(io_service), m_timedout(false),
           m_timer(io_service), m_connection(std::make_shared<async_connection>(io_service)), m_request(req),
-          m_request_options(request_opts), callback(std::forward<T>(callback)) {}
+          m_request_options(request_opts), callback(std::forward<T>(callback)) {
+    }
 
-    auto shared_from_this() { return boost::intrusive_ptr<self_t>{this}; }
-    auto shared_from_this() const { return boost::intrusive_ptr<const self_t>{this}; }
+    auto shared_from_this() {
+        return boost::intrusive_ptr<self_t>{this};
+    }
+    auto shared_from_this() const {
+        return boost::intrusive_ptr<const self_t>{this};
+    }
 
     void set_error(const asio::error_code& ec) {
         callback(ec, response{});

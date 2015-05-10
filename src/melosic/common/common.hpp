@@ -36,9 +36,9 @@ using namespace std::literals;
 }
 
 #ifdef MELOSIC_EXPORTS
-#   define MELOSIC_EXPORT BOOST_SYMBOL_EXPORT
+#define MELOSIC_EXPORT BOOST_SYMBOL_EXPORT
 #else
-#   define MELOSIC_EXPORT BOOST_SYMBOL_IMPORT
+#define MELOSIC_EXPORT BOOST_SYMBOL_IMPORT
 #endif
 
 #ifndef _WIN32

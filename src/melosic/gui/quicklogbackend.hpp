@@ -30,14 +30,13 @@ namespace sinks = logging::sinks;
 
 namespace Melosic {
 
-class QuickLogBackend : public QObject,
-        public sinks::basic_formatted_sink_backend<char, sinks::synchronized_feeding>
-{
+class QuickLogBackend : public QObject, public sinks::basic_formatted_sink_backend<char, sinks::synchronized_feeding> {
     Q_OBJECT
     Q_PROPERTY(QObject* textEdit READ textEdit WRITE setTextEdit NOTIFY textEditChanged)
     QQuickTextEdit* m_text_edit{nullptr};
-public:
-    explicit QuickLogBackend(QObject *parent = nullptr);
+
+  public:
+    explicit QuickLogBackend(QObject* parent = nullptr);
 
     void consume(const logging::record_view& rec, const string_type& str);
     QObject* textEdit() const;

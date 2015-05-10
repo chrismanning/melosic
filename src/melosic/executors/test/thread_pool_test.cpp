@@ -63,9 +63,8 @@ TEST_CASE("Thread pool executor") {
 
     SECTION("Async loop execution") {
         int32_t i{rand()}, scalar{rand()};
-        auto fut = boost::async(executor, [=] () -> int64_t {
-            return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
-        });
+        auto fut =
+            boost::async(executor, [=]() -> int64_t { return static_cast<int64_t>(i) * static_cast<int64_t>(scalar); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);
@@ -75,9 +74,7 @@ TEST_CASE("Thread pool executor") {
     }
 
     SECTION("Async loop exception") {
-        auto fut = boost::async(executor, [] () {
-            throw std::exception();
-        });
+        auto fut = boost::async(executor, []() { throw std::exception(); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);
@@ -86,14 +83,12 @@ TEST_CASE("Thread pool executor") {
 
     SECTION("Packaged task execution") {
         auto i = rand();
-        std::packaged_task<bool()> task([i]() {
-            return i % 2;
-        });
+        std::packaged_task<bool()> task([i]() { return i % 2; });
         auto fut = task.get_future();
         executor.submit(std::move(task));
 
         auto r(fut.wait_for(std::chrono::milliseconds(250)));
         REQUIRE(std::future_status::ready == r);
-        REQUIRE_NOTHROW(CHECK((i%2) == fut.get()));
+        REQUIRE_NOTHROW(CHECK((i % 2) == fut.get()));
     }
 }

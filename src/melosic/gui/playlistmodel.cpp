@@ -53,19 +53,13 @@ namespace fs = boost::filesystem;
 
 Logger::Logger PlaylistModel::logject(logging::keywords::channel = "PlaylistModel");
 
-PlaylistModel::PlaylistModel(Core::Playlist playlist,
-                             const std::shared_ptr<Decoder::Manager>& _decman,
+PlaylistModel::PlaylistModel(Core::Playlist playlist, const std::shared_ptr<Decoder::Manager>& _decman,
                              const std::shared_ptr<Library::Manager>& _libman, QObject* parent)
-    : QAbstractListModel(parent),
-      m_playlist(playlist),
-      decman(_decman),
-      libman(_libman)
-{
-    this->m_playlist.getMutlipleTagsChangedSignal().connect([this] (int start, int end) {
-        Q_EMIT dataChanged(index(start), index(end-1));
-    });
+    : QAbstractListModel(parent), m_playlist(playlist), decman(_decman), libman(_libman) {
+    this->m_playlist.getMutlipleTagsChangedSignal().connect(
+        [this](int start, int end) { Q_EMIT dataChanged(index(start), index(end - 1)); });
 
-    connect(this, &PlaylistModel::dataChanged, [this] (const QModelIndex&, const QModelIndex&, const QVector<int>&) {
+    connect(this, &PlaylistModel::dataChanged, [this](const QModelIndex&, const QModelIndex&, const QVector<int>&) {
         m_duration = chrono::duration_cast<chrono::seconds>(this->m_playlist.duration()).count();
         Q_EMIT durationChanged(m_duration);
     });
@@ -112,8 +106,7 @@ QVariant PlaylistModel::data(const QModelIndex& index, int role) const {
             default:
                 return {};
         }
-    }
-    catch(...) {
+    } catch(...) {
         return {};
     }
 }
@@ -162,20 +155,17 @@ QHash<int, QByteArray> PlaylistModel::roleNames() const {
 }
 
 struct Refresher {
-    Refresher(Core::Playlist p, int start, int end, int stride = 1) noexcept
-        :
-          p(p),
-          start(start),
-          end(end),
-          stride(stride)
-    {
+    Refresher(Core::Playlist p, int start, int end, int stride = 1) noexcept : p(p),
+                                                                               start(start),
+                                                                               end(end),
+                                                                               stride(stride) {
         assert(stride > 0);
     }
 
     void operator()() const {
-        while(start+stride > end)
+        while(start + stride > end)
             --stride;
-        p.refreshTracks(start, start+stride);
+        p.refreshTracks(start, start + stride);
         start += stride;
         if(start < end)
             asio::post(Refresher(p, start, end, stride));
@@ -205,16 +195,14 @@ bool PlaylistModel::insertTracks(int row, QVariant var) {
     if(var.canConvert<QVariantList>()) {
         TRACE_LOG(logject) << "var is list";
         return insertTracks(row, var.value<QSequentialIterable>());
-    }
-    else if(static_cast<QMetaType::Type>(var.type()) == QMetaType::QObjectStar) {
+    } else if(static_cast<QMetaType::Type>(var.type()) == QMetaType::QObjectStar) {
         TRACE_LOG(logject) << "var is QObject*";
         auto obj = var.value<QObject*>();
         assert(obj != nullptr);
         if(auto qobj = qobject_cast<QItemSelectionModel*>(obj)) {
             TRACE_LOG(logject) << "qobj is QItemSelectionModel*";
             return insertTracks(row, QVariant::fromValue(qobj->selectedIndexes()));
-        }
-        else if(auto qobj = qobject_cast<JsonDocModel*>(obj)) {
+        } else if(auto qobj = qobject_cast<JsonDocModel*>(obj)) {
             TRACE_LOG(logject) << "qobj is JsonDocModel*";
             QModelIndexList items;
             for(auto i = 0; i < qobj->rowCount(); i++)
@@ -241,8 +229,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
 
             for(auto&& t : decman->tracks(uri))
                 tracks.push_back(std::move(t));
-        }
-        else if(var.canConvert<QModelIndex>()) {
+        } else if(var.canConvert<QModelIndex>()) {
             auto idx = var.value<QModelIndex>();
             auto obj = idx.model();
             if(qobject_cast<const JsonDocModel*>(obj) != nullptr) {
@@ -264,8 +251,7 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                     if(it != doc_map.end()) {
                         query(it.key().toStdString(), jbson::element_type::string_element,
                               it.value().toString().toStdString());
-                    }
-                    else {
+                    } else {
                         for(auto i = doc_map.begin(); i != end; ++i) {
                             assert(i.key() != "_id");
                             if(i.key() == "_id")
@@ -277,29 +263,25 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                             str = i.value().toString().toStdString();
                             metadata_query.emplace("value", std::string_view(str));
 
-                            and_query.emplace(jbson::builder("metadata", jbson::builder
-                                                             ("$elemMatch", std::move(metadata_query))
-                                                            ));
+                            and_query.emplace(
+                                jbson::builder("metadata", jbson::builder("$elemMatch", std::move(metadata_query))));
                         }
                         query("$and", jbson::element_type::array_element, and_query);
                     }
                     track_docs = libman->query(std::move(query));
-                }
-                catch(...) {
+                } catch(...) {
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 }
 
                 for(auto&& track_doc : track_docs) {
                     try {
                         tracks.emplace_back(track_doc);
-                    }
-                    catch(...) {
+                    } catch(...) {
                         ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                     }
                 }
             }
-        }
-        else {
+        } else {
             TRACE_LOG(logject) << "Unsupported file type: " << var.typeName();
         }
     }
@@ -310,12 +292,13 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
     }
 
     TRACE_LOG(logject) << "Inserting " << tracks.size() << " tracks";
-    beginInsertRows(QModelIndex(), row, row + tracks.size() -1);
+    beginInsertRows(QModelIndex(), row, row + tracks.size() - 1);
     m_playlist.insert(row, tracks);
     endInsertRows();
 
-    Q_EMIT dataChanged(index(row), index(row + tracks.size()-1));
-//    m_kernel.getThreadManager().enqueue(Refresher(m_playlist, m_kernel.getThreadManager(), row, row+tracks.size(), 1));
+    Q_EMIT dataChanged(index(row), index(row + tracks.size() - 1));
+    //    m_kernel.getThreadManager().enqueue(Refresher(m_playlist, m_kernel.getThreadManager(), row, row+tracks.size(),
+    //    1));
 
     return rowCount() > old_rowcount;
 }
@@ -323,20 +306,19 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
 void PlaylistModel::refreshTags(int start, int end) {
     assert(start >= 0);
     TRACE_LOG(logject) << "refreshing tags of tracks " << start << " - " << end;
-    end = end < start ? m_playlist.size() : end+1;
-//    for(auto& t : m_playlist.getTracks(start, end)) {
-//        try {
-//            t.reOpen();
-//            t.close();
-//        }
-//        catch(...) {}
-//    }
-    Q_EMIT dataChanged(index(start), index(end-1));
+    end = end < start ? m_playlist.size() : end + 1;
+    //    for(auto& t : m_playlist.getTracks(start, end)) {
+    //        try {
+    //            t.reOpen();
+    //            t.close();
+    //        }
+    //        catch(...) {}
+    //    }
+    Q_EMIT dataChanged(index(start), index(end - 1));
 }
 
-bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
-                                 int row, int column, const QModelIndex& parent)
-{
+bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column,
+                                 const QModelIndex& parent) {
     assert(false);
     if(action == Qt::IgnoreAction)
         return true;
@@ -364,9 +346,7 @@ bool PlaylistModel::dropMimeData(const QMimeData* data, Qt::DropAction action,
     return insertTracks(row, QVariant::fromValue(filenames));
 }
 
-bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count,
-                             const QModelIndex&, int destinationChild)
-{
+bool PlaylistModel::moveRows(const QModelIndex&, int sourceRow, int count, const QModelIndex&, int destinationChild) {
     if(sourceRow == destinationChild)
         return false;
     assert(destinationChild >= 0);
@@ -391,7 +371,7 @@ bool PlaylistModel::moveRows(int sourceRow, int count, int destinationChild) {
 bool PlaylistModel::removeRows(int row, int count, const QModelIndex&) {
     if(row < 0 && (count + row) > rowCount())
         return false;
-    TRACE_LOG(logject) << "removing tracks " << row << " - " << row+count;
+    TRACE_LOG(logject) << "removing tracks " << row << " - " << row + count;
 
     const auto s = m_playlist.size();
     beginRemoveRows(QModelIndex(), row, row + count - 1);
@@ -409,9 +389,8 @@ long PlaylistModel::duration() const {
     return m_duration;
 }
 
-TagBinding::TagBinding(QObject* parent) :
-    QObject(parent)
-{}
+TagBinding::TagBinding(QObject* parent) : QObject(parent) {
+}
 
 TagBinding::~TagBinding() {
     conn.disconnect();
@@ -436,10 +415,10 @@ void TagBinding::setTarget(const QQmlProperty& property) {
     m_target_property = property;
     auto t = track->format_string(m_format_string.toStdString());
     m_target_property.write(QString::fromStdString(t ? *t : "?"));
-//    conn = track->getTagsChangedSignal().connect([this, track] (const TagLib::PropertyMap&) {
-//        auto t = track->format_string(m_format_string.toStdString());
-//        m_target_property.write(QString::fromStdString(t ? *t : "?"));
-//    });
+    //    conn = track->getTagsChangedSignal().connect([this, track] (const TagLib::PropertyMap&) {
+    //        auto t = track->format_string(m_format_string.toStdString());
+    //        m_target_property.write(QString::fromStdString(t ? *t : "?"));
+    //    });
 }
 
 } // namespace Melosic

@@ -39,5 +39,4 @@ RegisterFuncsInserter& RegisterFuncsInserter::operator<<(const registerConfig_T&
     l.push_back(std::bind(fun, k.getConfigManager().get()));
     return *this;
 }
-
 }

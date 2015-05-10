@@ -57,13 +57,12 @@ int main(int argc, char* argv[]) {
 
         kernel.getPluginManager()->loadPlugins(kernel);
 
-//        QQmlDebuggingEnabler enabler;
+        //        QQmlDebuggingEnabler enabler;
 
         MainWindow win(kernel, player);
 
         return app.exec();
-    }
-    catch(...) {
+    } catch(...) {
         ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
     }
     return -1;

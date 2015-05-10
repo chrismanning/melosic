@@ -21,14 +21,11 @@
 namespace Melosic {
 namespace Signals {
 
-template <typename Ret, typename ...Args>
-struct Signal;
-template <typename Ret, typename ...Args>
-struct SignalCore;
+template <typename Ret, typename... Args> struct Signal;
+template <typename Ret, typename... Args> struct SignalCore;
 
 namespace detail {
-template <typename ...Args>
-class SignalImpl;
+template <typename... Args> class SignalImpl;
 }
 
 struct use_future_t {};

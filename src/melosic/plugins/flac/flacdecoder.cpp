@@ -76,7 +76,9 @@ FlacDecoder::FlacDecoderImpl::FlacDecoderImpl(std::unique_ptr<std::istream> inpu
     buf.clear();
 }
 
-FlacDecoder::FlacDecoderImpl::~FlacDecoderImpl() { finish(); }
+FlacDecoder::FlacDecoderImpl::~FlacDecoderImpl() {
+    finish();
+}
 
 bool FlacDecoder::FlacDecoderImpl::end() const {
     ::FLAC__StreamDecoderState state = get_state();
@@ -183,12 +185,16 @@ FLAC__StreamDecoderLengthStatus FlacDecoder::FlacDecoderImpl::length_callback(FL
     return FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
 }
 
-bool FlacDecoder::FlacDecoderImpl::eof_callback() { return m_input->eof(); }
+bool FlacDecoder::FlacDecoderImpl::eof_callback() {
+    return m_input->eof();
+}
 
 FlacDecoder::FlacDecoder(std::unique_ptr<std::istream> input)
-    : as(), buf(), m_decoder(std::make_unique<FlacDecoderImpl>(std::move(input), as, buf)) {}
+    : as(), buf(), m_decoder(std::make_unique<FlacDecoderImpl>(std::move(input), as, buf)) {
+}
 
-FlacDecoder::~FlacDecoder() {}
+FlacDecoder::~FlacDecoder() {
+}
 
 size_t FlacDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     pcm_buf.audio_specs = as;
@@ -234,6 +240,10 @@ void FlacDecoder::reset() {
     buf.clear();
 }
 
-AudioSpecs FlacDecoder::getAudioSpecs() const { return as; }
+AudioSpecs FlacDecoder::getAudioSpecs() const {
+    return as;
+}
 
-bool FlacDecoder::valid() const { return !(m_decoder->end() && buf.empty()); }
+bool FlacDecoder::valid() const {
+    return !(m_decoder->end() && buf.empty());
+}

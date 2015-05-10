@@ -31,11 +31,9 @@ namespace Config {
 
 namespace {
 
-template <typename T>
-using TypeIndex = typename boost::mpl::index_of<VarType::types, T>::type;
+template <typename T> using TypeIndex = typename boost::mpl::index_of<VarType::types, T>::type;
 
-template <typename U>
-U get_impl(const VarType& operand) {
+template <typename U> U get_impl(const VarType& operand) {
     switch(operand.which()) {
         case TypeIndex<int32_t>::value:
             return static_cast<U>(boost::get<int32_t>(operand));
@@ -49,20 +47,19 @@ U get_impl(const VarType& operand) {
             BOOST_THROW_EXCEPTION(boost::bad_get());
     }
 }
-
 }
 
-template<typename U, class = typename std::enable_if<std::is_integral<U>::value && !std::is_same<U, bool>::value>::type>
+template <typename U,
+          class = typename std::enable_if<std::is_integral<U>::value && !std::is_same<U, bool>::value>::type>
 U get(VarType& operand) {
     return get_impl<U>(const_cast<const VarType&>(operand));
 }
 
-template<typename U, class = typename std::enable_if<std::is_integral<U>::value && !std::is_same<U, bool>::value>::type>
+template <typename U,
+          class = typename std::enable_if<std::is_integral<U>::value && !std::is_same<U, bool>::value>::type>
 U get(const VarType& operand) {
     return get_impl<U>(operand);
 }
-
-
 }
 }
 

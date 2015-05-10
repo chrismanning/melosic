@@ -43,4 +43,5 @@ extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
                            std::string_view("audio/x-wavpack"));
 }
 
-extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
+}

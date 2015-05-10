@@ -54,20 +54,16 @@ class PlaylistManagerModel : public QAbstractListModel {
     std::list<Signals::ScopedConnection> conns;
     Logger::Logger logject;
     mutable std::mutex mu;
-    Q_PROPERTY(Melosic::PlaylistModel* currentPlaylistModel
-               READ currentPlaylistModel WRITE setCurrentPlaylistModel
-               NOTIFY currentPlaylistModelChanged)
+    Q_PROPERTY(Melosic::PlaylistModel* currentPlaylistModel READ currentPlaylistModel WRITE setCurrentPlaylistModel
+                   NOTIFY currentPlaylistModelChanged)
 
     PlaylistModel* m_current{nullptr};
 
-public:
+  public:
     explicit PlaylistManagerModel(const std::shared_ptr<Playlist::Manager>&, const std::shared_ptr<Decoder::Manager>&,
                                   const std::shared_ptr<Library::Manager>&, QObject* parent = nullptr);
 
-    enum {
-        PlaylistModelRole = Qt::UserRole * 12,
-        PlaylistIsCurrent
-    };
+    enum { PlaylistModelRole = Qt::UserRole * 12, PlaylistIsCurrent };
 
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     QVariant data(const QModelIndex& index, int role) const override;

@@ -89,7 +89,9 @@ uint32_t get_length_impl(void* input) {
     return stream_length;
 }
 
-int can_seek_impl(void* input) { return true; }
+int can_seek_impl(void* input) {
+    return true;
+}
 
 WavpackDecoder::WavpackDecoder(std::unique_ptr<std::istream> input)
     : m_input(std::move(input)), m_stream_reader({.read_bytes = read_bytes_impl,
@@ -113,9 +115,12 @@ WavpackDecoder::WavpackDecoder(std::unique_ptr<std::istream> input)
     as.channels = WavpackGetNumChannels(m_wavpack.get());
 }
 
-WavpackDecoder::~WavpackDecoder() {}
+WavpackDecoder::~WavpackDecoder() {
+}
 
-void WavpackDecoder::seek(chrono::milliseconds dur) { WavpackSeekSample(m_wavpack.get(), as.time_to_samples(dur)); }
+void WavpackDecoder::seek(chrono::milliseconds dur) {
+    WavpackSeekSample(m_wavpack.get(), as.time_to_samples(dur));
+}
 
 chrono::milliseconds WavpackDecoder::tell() const {
     return as.samples_to_time<chrono::milliseconds>(WavpackGetSampleIndex(m_wavpack.get()));
@@ -125,7 +130,9 @@ chrono::milliseconds WavpackDecoder::duration() const {
     return as.samples_to_time<chrono::milliseconds>(WavpackGetNumSamples(m_wavpack.get()));
 }
 
-AudioSpecs WavpackDecoder::getAudioSpecs() const { return as; }
+AudioSpecs WavpackDecoder::getAudioSpecs() const {
+    return as;
+}
 
 size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     pcm_buf.audio_specs = as;
@@ -165,6 +172,9 @@ size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     return bytes_returned;
 }
 
-bool WavpackDecoder::valid() const { return static_cast<bool>(m_input); }
+bool WavpackDecoder::valid() const {
+    return static_cast<bool>(m_input);
+}
 
-void WavpackDecoder::reset() {}
+void WavpackDecoder::reset() {
+}

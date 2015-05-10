@@ -35,13 +35,11 @@ using namespace lastfm;
 static Logger::Logger logject(logging::keywords::channel = "lastfm");
 Config::Conf conf{"lastfm"};
 
-static constexpr Plugin::Info lastFmInfo("lastfm",
-                                         Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
-                                         Plugin::Version(1,0,0)
-                                        );
+static constexpr Plugin::Info lastFmInfo("lastfm", Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
+                                         Plugin::Version(1, 0, 0));
 
-static const std::shared_ptr<service> lastserv = std::make_shared<service>("47ee6adfdb3c68daeea2786add5e242d",
-                                                                           "64a3811653376876431daad679ce5b67");
+static const std::shared_ptr<service> lastserv =
+    std::make_shared<service>("47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67");
 static std::shared_ptr<scrobbler> g_scrobbler;
 static Config::Manager* confman = nullptr;
 static std::string sk;
@@ -52,28 +50,23 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
             if(lastserv->getUser() && !lastserv->getUser().getSessionKey().empty())
                 sk = lastserv->getUser().getSessionKey();
             lastserv->setUser(user(lastserv, boost::get<std::string>(value), sk));
-        }
-        else if(key == "enable scrobbling") {
+        } else if(key == "enable scrobbling") {
             if(boost::get<bool>(value)) {
-//                if(slotman == nullptr)
-//                    return;
+                //                if(slotman == nullptr)
+                //                    return;
                 g_scrobbler.reset(new scrobbler(lastserv));
-            }
-            else {
+            } else {
                 g_scrobbler.reset();
             }
-        }
-        else if(key == "session key") {
+        } else if(key == "session key") {
             if(lastserv->getUser())
                 lastserv->getUser().setSessionKey(boost::get<std::string>(value));
             else
                 sk = boost::get<std::string>(value);
-        }
-        else
+        } else
             assert(false);
         TRACE_LOG(logject) << "Config: Updated variable: " << key;
-    }
-    catch(boost::bad_get&) {
+    } catch(boost::bad_get&) {
         ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
     }
 }
@@ -95,4 +88,5 @@ extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
 
-extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
+}

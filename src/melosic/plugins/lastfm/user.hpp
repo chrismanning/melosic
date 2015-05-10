@@ -27,7 +27,7 @@ namespace lastfm {
 class service;
 
 struct user {
-public:
+  public:
     user();
     user(std::weak_ptr<service> lastserv, const std::string& username);
     user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey);
@@ -47,11 +47,11 @@ public:
 
     explicit operator bool();
 
-private:
+  private:
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
 
-}//namespace lastfm
+} // namespace lastfm
 
 #endif // USER_HPP

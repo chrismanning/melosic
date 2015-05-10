@@ -246,21 +246,33 @@ struct Manager::impl {
     Loaded loaded;
 };
 
-Manager::Manager(fs::path p) : pimpl(std::make_unique<impl>(std::move(p))) {}
+Manager::Manager(fs::path p) : pimpl(std::make_unique<impl>(std::move(p))) {
+}
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
-void Manager::loadConfig() { pimpl->loadConfig(); }
+void Manager::loadConfig() {
+    pimpl->loadConfig();
+}
 
-void Manager::saveConfig() { pimpl->saveConfig(); }
+void Manager::saveConfig() {
+    pimpl->saveConfig();
+}
 
-boost::synchronized_value<Conf>& Manager::getConfigRoot() { return pimpl->getConfigRoot(); }
+boost::synchronized_value<Conf>& Manager::getConfigRoot() {
+    return pimpl->getConfigRoot();
+}
 
-Signals::Config::Loaded& Manager::getLoadedSignal() const { return pimpl->loaded; }
+Signals::Config::Loaded& Manager::getLoadedSignal() const {
+    return pimpl->loaded;
+}
 
 struct ConfCompare {
     using is_transparent = std::true_type;
-    bool operator()(const Conf& a, const Conf& b) const { return a < b; }
+    bool operator()(const Conf& a, const Conf& b) const {
+        return a < b;
+    }
     bool operator()(const std::shared_ptr<Conf>& a, const std::shared_ptr<Conf>& b) const {
         assert(a);
         assert(b);
@@ -282,12 +294,17 @@ struct ConfCompare {
         assert(a);
         return (*this)(*a, b);
     }
-    bool operator()(const Conf::child_key_type& a, const Conf& b) const { return a < b.name(); }
-    bool operator()(const Conf& a, const Conf::child_key_type& b) const { return a.name() < b; }
+    bool operator()(const Conf::child_key_type& a, const Conf& b) const {
+        return a < b.name();
+    }
+    bool operator()(const Conf& a, const Conf::child_key_type& b) const {
+        return a.name() < b;
+    }
 };
 
 struct Conf::impl {
-    impl(std::string name) : name(std::move(name)) {}
+    impl(std::string name) : name(std::move(name)) {
+    }
 
     impl(const impl& b) : nodes(b.nodes), name(b.name), m_default(b.m_default) {
         for(const auto& child : b.children)
@@ -314,7 +331,9 @@ struct Conf::impl {
     } variableUpdated;
 };
 
-void Conf::impl::setDefault(Conf def) { m_default = def; }
+void Conf::impl::setDefault(Conf def) {
+    m_default = def;
+}
 
 Conf Conf::impl::resetToDefault() {
     if(!m_default)
@@ -322,13 +341,17 @@ Conf Conf::impl::resetToDefault() {
     return *m_default;
 }
 
-Conf::Conf() : Conf(""s) {}
+Conf::Conf() : Conf(""s) {
+}
 
-Conf::Conf(std::string name) : pimpl(std::make_unique<impl>(std::move(name))) {}
+Conf::Conf(std::string name) : pimpl(std::make_unique<impl>(std::move(name))) {
+}
 
-Conf::Conf(Conf&& b) : pimpl(std::move(b.pimpl)) {}
+Conf::Conf(Conf&& b) : pimpl(std::move(b.pimpl)) {
+}
 
-Conf::~Conf() {}
+Conf::~Conf() {
+}
 
 Conf::Conf(const Conf& b) {
     WARN_LOG(logject) << "Copying Conf \"" << b.name() << "\"";
@@ -347,15 +370,21 @@ Conf& Conf::operator=(const Conf& b) & {
     return *this;
 }
 
-bool Conf::operator<(const Conf& b) const { return pimpl->name < b.pimpl->name; }
+bool Conf::operator<(const Conf& b) const {
+    return pimpl->name < b.pimpl->name;
+}
 
 bool Conf::operator==(const Conf& b) const {
     return pimpl->name == b.pimpl->name && pimpl->children == b.pimpl->children && pimpl->nodes == b.pimpl->nodes;
 }
 
-void Conf::swap(Conf& b) noexcept(noexcept(pimpl.swap(b.pimpl))) { pimpl.swap(b.pimpl); }
+void Conf::swap(Conf& b) noexcept(noexcept(pimpl.swap(b.pimpl))) {
+    pimpl.swap(b.pimpl);
+}
 
-const std::string& Conf::name() const { return pimpl->name; }
+const std::string& Conf::name() const {
+    return pimpl->name;
+}
 
 auto Conf::getChild(const child_key_type& key) -> child_value_type {
     TRACE_LOG(logject) << "Getting child: " << key;
@@ -505,8 +534,12 @@ void Conf::removeNode(const node_key_type& key) {
     pimpl->nodes.erase(key);
 }
 
-uint32_t Conf::childCount() const noexcept { return pimpl->children.size(); }
-uint32_t Conf::nodeCount() const noexcept { return pimpl->nodes.size(); }
+uint32_t Conf::childCount() const noexcept {
+    return pimpl->children.size();
+}
+uint32_t Conf::nodeCount() const noexcept {
+    return pimpl->nodes.size();
+}
 
 void Conf::iterateChildren(std::function<void(child_const_value_type)> fun) const {
     unique_lock l(pimpl->mu);
@@ -538,12 +571,20 @@ void Conf::merge(const Conf& c) {
     }
 }
 
-void Conf::setDefault(Conf def) { pimpl->setDefault(std::move(def)); }
-void Conf::resetToDefault() { *this = pimpl->resetToDefault(); }
+void Conf::setDefault(Conf def) {
+    pimpl->setDefault(std::move(def));
+}
+void Conf::resetToDefault() {
+    *this = pimpl->resetToDefault();
+}
 
-Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() noexcept { return pimpl->variableUpdated; }
+Signals::Config::VariableUpdated& Conf::getVariableUpdatedSignal() noexcept {
+    return pimpl->variableUpdated;
+}
 
-void swap(Conf& a, Conf& b) noexcept(noexcept(a.swap(b))) { a.swap(b); }
+void swap(Conf& a, Conf& b) noexcept(noexcept(a.swap(b))) {
+    a.swap(b);
+}
 
 } // namespace Config
 } // namespace Melosic

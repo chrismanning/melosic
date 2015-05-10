@@ -45,6 +45,6 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
     return strm;
 }
 
-} //std
+} // std
 
 #endif // MELOSIC_TYPEID_HPP

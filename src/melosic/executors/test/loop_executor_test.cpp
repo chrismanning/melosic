@@ -53,7 +53,7 @@ TEST_CASE("Waiting loop Executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
         executor.submit([&]() { executor.make_loop_exit(); });
@@ -76,7 +76,7 @@ TEST_CASE("Waiting loop Executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
 
@@ -99,7 +99,7 @@ TEST_CASE("Waiting loop Executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
         executor.submit([&]() { executor.make_loop_exit(); });
@@ -112,9 +112,8 @@ TEST_CASE("Waiting loop Executor") {
 
     SECTION("Async loop execution") {
         int32_t i{rand()}, scalar{rand()};
-        auto fut = boost::async(executor, [=] () -> int64_t {
-            return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
-        });
+        auto fut =
+            boost::async(executor, [=]() -> int64_t { return static_cast<int64_t>(i) * static_cast<int64_t>(scalar); });
 
         REQUIRE(executor.uninitiated_task_count() == 1);
         REQUIRE(executor.try_run_one_closure());
@@ -126,9 +125,7 @@ TEST_CASE("Waiting loop Executor") {
     }
 
     SECTION("Async loop exception") {
-        auto fut = boost::async(executor, [] () {
-            throw std::exception();
-        });
+        auto fut = boost::async(executor, []() { throw std::exception(); });
 
         REQUIRE(executor.uninitiated_task_count() == 1);
         REQUIRE(executor.try_run_one_closure());
@@ -179,9 +176,8 @@ TEST_CASE("Threaded waiting loop executor") {
 
     SECTION("Async loop execution") {
         int32_t i{rand()}, scalar{rand()};
-        auto fut = boost::async(executor, [=] () -> int64_t {
-            return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
-        });
+        auto fut =
+            boost::async(executor, [=]() -> int64_t { return static_cast<int64_t>(i) * static_cast<int64_t>(scalar); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);
@@ -191,9 +187,7 @@ TEST_CASE("Threaded waiting loop executor") {
     }
 
     SECTION("Async loop exception") {
-        auto fut = boost::async(executor, [] () {
-            throw std::exception();
-        });
+        auto fut = boost::async(executor, []() { throw std::exception(); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);
@@ -227,7 +221,7 @@ TEST_CASE("Trying loop executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
         executor.submit([&]() { executor.make_loop_exit(); });
@@ -250,7 +244,7 @@ TEST_CASE("Trying loop executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
 
@@ -273,7 +267,7 @@ TEST_CASE("Trying loop executor") {
         i = 0;
 
         CHECK(!executor.try_run_one_closure());
-        //repeat
+        // repeat
         executor.submit([&]() { i = 65; });
         executor.submit([&]() { i++; });
         executor.submit([&]() { executor.make_loop_exit(); });
@@ -286,9 +280,8 @@ TEST_CASE("Trying loop executor") {
 
     SECTION("Async loop execution") {
         int32_t i{rand()}, scalar{rand()};
-        auto fut = boost::async(executor, [=] () -> int64_t {
-            return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
-        });
+        auto fut =
+            boost::async(executor, [=]() -> int64_t { return static_cast<int64_t>(i) * static_cast<int64_t>(scalar); });
 
         REQUIRE(executor.uninitiated_task_count() == 1);
         REQUIRE(executor.try_run_one_closure());
@@ -300,9 +293,7 @@ TEST_CASE("Trying loop executor") {
     }
 
     SECTION("Async loop exception") {
-        auto fut = boost::async(executor, [] () {
-            throw std::exception();
-        });
+        auto fut = boost::async(executor, []() { throw std::exception(); });
 
         REQUIRE(executor.uninitiated_task_count() == 1);
         REQUIRE(executor.try_run_one_closure());
@@ -353,9 +344,8 @@ TEST_CASE("Threaded trying loop executor") {
 
     SECTION("Async loop execution") {
         int32_t i{rand()}, scalar{rand()};
-        auto fut = boost::async(executor, [=] () -> int64_t {
-            return static_cast<int64_t>(i) * static_cast<int64_t>(scalar);
-        });
+        auto fut =
+            boost::async(executor, [=]() -> int64_t { return static_cast<int64_t>(i) * static_cast<int64_t>(scalar); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);
@@ -365,9 +355,7 @@ TEST_CASE("Threaded trying loop executor") {
     }
 
     SECTION("Async loop exception") {
-        auto fut = boost::async(executor, [] () {
-            throw std::exception();
-        });
+        auto fut = boost::async(executor, []() { throw std::exception(); });
 
         auto r(fut.wait_for(defaultTimeout));
         REQUIRE(boost::future_status::ready == r);

@@ -200,7 +200,9 @@ template <typename... Args> class SignalImpl final : public std::enable_shared_f
 
     // locked
 
-    Connection connect(const slot_type& slot, strict_lock& l) { return connect(slot_type(slot), l); }
+    Connection connect(const slot_type& slot, strict_lock& l) {
+        return connect(slot_type(slot), l);
+    }
     Connection connect(slot_type&& slot, strict_lock&) {
         using std::get;
         m_slots.emplace_back(Connection(this->shared_from_this()), std::move(slot));
@@ -209,9 +211,9 @@ template <typename... Args> class SignalImpl final : public std::enable_shared_f
 
     void disconnect(const Connection& conn, strict_lock&) {
         using std::get;
-        m_slots.erase(std::remove_if(m_slots.begin(), m_slots.end(),
-                                     [&conn](auto&& tuple) { return get<Connection>(tuple) == conn; }),
-                      m_slots.end());
+        m_slots.erase(std::remove_if(m_slots.begin(), m_slots.end(), [&conn](auto&& tuple) {
+            return get<Connection>(tuple) == conn;
+        }), m_slots.end());
     }
 
     bool connected(const Connection& conn, strict_lock&) {
@@ -220,7 +222,7 @@ template <typename... Args> class SignalImpl final : public std::enable_shared_f
                                              [&conn](auto&& tuple) { return get<Connection>(tuple) == conn; });
     }
 
-public:
+  public:
     ~SignalImpl() {
         auto s_slots = synchronized_slot_container{m_slots, mu};
         s_slots->clear();
@@ -248,13 +250,15 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
     std::shared_ptr<detail::SignalImpl<Args...>> pimpl;
 
   protected:
-    SignalCore() : pimpl(std::make_shared<detail::SignalImpl<Args...>>()) {}
+    SignalCore() : pimpl(std::make_shared<detail::SignalImpl<Args...>>()) {
+    }
 
     SignalCore(const SignalCore&) = delete;
     SignalCore& operator=(const SignalCore&) = delete;
 
     SignalCore(SignalCore&& b) noexcept(std::is_nothrow_move_constructible<decltype(pimpl)>::value)
-        : pimpl(std::move(b.pimpl)) {}
+        : pimpl(std::move(b.pimpl)) {
+    }
 
     SignalCore& operator=(SignalCore b) noexcept(
         std::is_nothrow_move_constructible<SignalCore>::value&& is_nothrow_swappable<SignalCore>::value) {
@@ -262,10 +266,13 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
         return *this;
     }
 
-    ~SignalCore() {}
+    ~SignalCore() {
+    }
 
   public:
-    Connection connect(slot_type slot) { return pimpl->connect(std::move(slot)); }
+    Connection connect(slot_type slot) {
+        return pimpl->connect(std::move(slot));
+    }
 
     template <typename MemRet, typename T, typename Obj, typename... As>
     Connection connect(MemRet (T::*const func)(As...), Obj&& obj) {
@@ -279,11 +286,17 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
         });
     }
 
-    void disconnect(const Connection& conn) { pimpl->disconnect(conn); }
+    void disconnect(const Connection& conn) {
+        pimpl->disconnect(conn);
+    }
 
-    bool connected(const Connection& conn) const { return pimpl->connected(conn); }
+    bool connected(const Connection& conn) const {
+        return pimpl->connected(conn);
+    }
 
-    size_t slotCount() const noexcept { return pimpl->slotCount(); }
+    size_t slotCount() const noexcept {
+        return pimpl->slotCount();
+    }
 
     void swap(SignalCore& b) noexcept(is_nothrow_swappable<decltype(pimpl)>::value) {
         using std::swap;
@@ -291,7 +304,9 @@ template <typename Ret, typename... Args> struct SignalCore<Ret(Args...)> {
     }
 
   protected:
-    void call(Args... args) { pimpl->call(std::forward<detail::rewrap_t<Args>>(args)...); }
+    void call(Args... args) {
+        pimpl->call(std::forward<detail::rewrap_t<Args>>(args)...);
+    }
 
     boost::future<void> future_call(Args... args) {
         return pimpl->future_call(std::forward<detail::rewrap_t<Args>>(args)...);

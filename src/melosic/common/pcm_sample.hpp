@@ -27,7 +27,9 @@ template <int bits> struct pcm_sample {
     static_assert(bits > 0 && bits <= 32, "");
     using int_t = typename boost::int_t<bits>::least;
 
-    constexpr pcm_sample(int_t sample) noexcept { *this = sample; }
+    constexpr pcm_sample(int_t sample) noexcept {
+        *this = sample;
+    }
 
     constexpr pcm_sample& operator=(int_t sample) noexcept {
         for(auto i = 0u; i < arr.size(); ++i) {
@@ -60,13 +62,13 @@ template <int bits> struct pcm_sample {
         return os;
     }
 
-    static constexpr uint32_t mask(unsigned byte) noexcept { return 0xff << (byte * 8); }
+    static constexpr uint32_t mask(unsigned byte) noexcept {
+        return 0xff << (byte * 8);
+    }
 
     std::array<char, bits / 8> arr;
 };
 
-
 } // namespace Melosic
 
 #endif // MELOSIC_PCM_SAMPLE
-

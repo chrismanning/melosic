@@ -63,7 +63,8 @@ class Configurator : public QObject {
 
   public:
     using QObject::QObject;
-    virtual ~Configurator() {}
+    virtual ~Configurator() {
+    }
 
   public Q_SLOTS:
     virtual bool modified() const = 0;

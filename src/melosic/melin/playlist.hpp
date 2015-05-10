@@ -34,7 +34,7 @@ class Playlist;
 namespace Playlist {
 
 class Manager final {
-public:
+  public:
     typedef int size_type;
 
     Manager();
@@ -62,7 +62,7 @@ public:
     MELOSIC_EXPORT Signals::Playlist::PlaylistAdded& getPlaylistAddedSignal() const;
     MELOSIC_EXPORT Signals::Playlist::PlaylistRemoved& getPlaylistRemovedSignal() const;
 
-private:
+  private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };

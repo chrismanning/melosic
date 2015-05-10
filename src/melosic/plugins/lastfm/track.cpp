@@ -50,7 +50,8 @@ namespace lastfm {
 
 struct track::impl : std::enable_shared_from_this<impl> {
     impl(std::weak_ptr<service> lastserv, const std::string& name, const std::string& artist, const std::string& url)
-        : lastserv(lastserv), name(name), m_artist(lastserv, artist), url(url) {}
+        : lastserv(lastserv), name(name), m_artist(lastserv, artist), url(url) {
+    }
 
     impl(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track) : lastserv(lastserv), m_artist(lastserv) {
         {
@@ -279,17 +280,26 @@ struct track::impl : std::enable_shared_from_this<impl> {
 
 track::track(std::weak_ptr<service> lastserv, const std::string& name, const std::string& artist,
              const std::string& url)
-    : pimpl(new impl(std::move(lastserv), name, artist, url)) {}
+    : pimpl(new impl(std::move(lastserv), name, artist, url)) {
+}
 track::track(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track)
-    : pimpl(std::make_shared<impl>(lastserv, track)) {}
+    : pimpl(std::make_shared<impl>(lastserv, track)) {
+}
 
-track::~track() {}
+track::~track() {
+}
 
-std::future<bool> track::fetchInfo(bool autocorrect) { return pimpl->getInfo(autocorrect); }
+std::future<bool> track::fetchInfo(bool autocorrect) {
+    return pimpl->getInfo(autocorrect);
+}
 
-std::future<bool> track::scrobble() { return pimpl->scrobble(); }
+std::future<bool> track::scrobble() {
+    return pimpl->scrobble();
+}
 
-std::future<bool> track::updateNowPlaying() { return pimpl->updateNowPlaying(); }
+std::future<bool> track::updateNowPlaying() {
+    return pimpl->updateNowPlaying();
+}
 
 void print(const boost::property_tree::ptree& pt) {
     using boost::property_tree::ptree;
@@ -299,13 +309,23 @@ void print(const boost::property_tree::ptree& pt) {
     }
 }
 
-ForwardRange<tag> track::topTags() const { return pimpl->topTags(); }
+ForwardRange<tag> track::topTags() const {
+    return pimpl->topTags();
+}
 
-const std::string& track::getName() const { return pimpl->getName(); }
+const std::string& track::getName() const {
+    return pimpl->getName();
+}
 
-const artist& track::getArtist() const { return pimpl->getArtist(); }
+const artist& track::getArtist() const {
+    return pimpl->getArtist();
+}
 
-const network::uri& track::getUrl() const { return pimpl->getUrl(); }
+const network::uri& track::getUrl() const {
+    return pimpl->getUrl();
+}
 
-const std::string& track::getWiki() const { return pimpl->getWiki(); }
+const std::string& track::getWiki() const {
+    return pimpl->getWiki();
+}
 }

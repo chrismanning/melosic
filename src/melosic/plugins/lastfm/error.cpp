@@ -28,7 +28,9 @@ class error_category : public std::error_category {
     constexpr error_category() noexcept = default;
 
     //! Returns name of category (`"EJDB"`).
-    const char* name() const noexcept override { return "EJDB"; }
+    const char* name() const noexcept override {
+        return "EJDB";
+    }
 
     //! Returns message associated with \p ecode.
     std::string message(int ecode) const noexcept override {
@@ -97,6 +99,7 @@ std::error_code make_error_code(api_error err) {
     return std::error_code(static_cast<int>(err), category);
 }
 
-api_exception::api_exception(api_error err) : std::system_error(make_error_code(err)) {}
+api_exception::api_exception(api_error err) : std::system_error(make_error_code(err)) {
+}
 
 } // namespace lastfm

@@ -80,7 +80,7 @@ extern "C" MELOSIC_EXPORT void destroyPlugin();
 typedef decltype(destroyPlugin) destroyPlugin_F;
 typedef std::function<destroyPlugin_F> destroyPlugin_T;
 
-#define MELOSIC_PLUGIN_API_VERSION 1,0,0
+#define MELOSIC_PLUGIN_API_VERSION 1, 0, 0
 
 namespace {
 constexpr long timeWhenCompiled();
@@ -100,12 +100,20 @@ enum Type {
 };
 
 struct Version {
-    Version() : vers(0) {}
-    constexpr Version(uint8_t major, uint8_t minor, uint8_t patch) : vers((major << 16) | (minor << 8) | patch) {}
-    constexpr Version(uint32_t vers) : vers(vers) {}
-    constexpr bool operator==(const Version& b) const { return vers == b.vers; }
-    constexpr bool operator!=(const Version& b) const { return vers != b.vers; }
-private:
+    Version() : vers(0) {
+    }
+    constexpr Version(uint8_t major, uint8_t minor, uint8_t patch) : vers((major << 16) | (minor << 8) | patch) {
+    }
+    constexpr Version(uint32_t vers) : vers(vers) {
+    }
+    constexpr bool operator==(const Version& b) const {
+        return vers == b.vers;
+    }
+    constexpr bool operator!=(const Version& b) const {
+        return vers != b.vers;
+    }
+
+  private:
     uint32_t vers;
     template <typename CharT, typename TraitsT>
     friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&, const Version&);
@@ -113,7 +121,7 @@ private:
 
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const Version& v) {
-    return out << ((v.vers >> 16)&0xFF) << "." << ((v.vers >> 8)&0xFF) << "." << (v.vers&0xFF);
+    return out << ((v.vers >> 16) & 0xFF) << "." << ((v.vers >> 8) & 0xFF) << "." << (v.vers & 0xFF);
 }
 
 extern constexpr Version expectedAPIVersion() {
@@ -123,12 +131,8 @@ extern constexpr Version expectedAPIVersion() {
 struct Info {
     Info() = default;
     constexpr Info(const char* name, uint32_t type, Version vers)
-        : name(name),
-          type(type),
-          version(vers),
-          APIVersion(MELOSIC_PLUGIN_API_VERSION),
-          built(timeWhenCompiled())
-    {}
+        : name(name), type(type), version(vers), APIVersion(MELOSIC_PLUGIN_API_VERSION), built(timeWhenCompiled()) {
+    }
     const char* name;
     uint32_t type;
     Version version;
@@ -140,10 +144,7 @@ template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const Info& info) {
     char str[40];
     std::strftime(str, sizeof str, "%x %X %Z", std::localtime(&info.built));
-    return out << info.name
-               << " " << info.version
-               << " compiled for Melosic API " << info.APIVersion
-               << " on " << str;
+    return out << info.name << " " << info.version << " compiled for Melosic API " << info.APIVersion << " on " << str;
 }
 
 } // namespace Plugin
@@ -153,14 +154,16 @@ class Kernel;
 }
 
 struct MELOSIC_EXPORT RegisterFuncsInserter {
-    RegisterFuncsInserter(Core::Kernel& k, std::list<std::function<void()>>& l) : k(k), l(l) {}
+    RegisterFuncsInserter(Core::Kernel& k, std::list<std::function<void()>>& l) : k(k), l(l) {
+    }
 
     RegisterFuncsInserter& operator<<(const registerInput_T&);
     RegisterFuncsInserter& operator<<(const registerDecoder_T&);
     RegisterFuncsInserter& operator<<(const registerOutput_T&);
     RegisterFuncsInserter& operator<<(const registerEncoder_T&);
     RegisterFuncsInserter& operator<<(const registerConfig_T&);
-private:
+
+  private:
     Core::Kernel& k;
     std::list<std::function<void()>>& l;
 };
@@ -182,56 +185,61 @@ constexpr uint8_t day_(const char* d) {
 }
 
 constexpr uint8_t month_(const char* m) {
-    return startsWith(m, "Jan") ? 0 :
-           startsWith(m, "Feb") ? 1 :
-           startsWith(m, "Mar") ? 2 :
-           startsWith(m, "Apr") ? 3 :
-           startsWith(m, "May") ? 4 :
-           startsWith(m, "Jun") ? 5 :
-           startsWith(m, "Jul") ? 6 :
-           startsWith(m, "Aug") ? 7 :
-           startsWith(m, "Sep") ? 8 :
-           startsWith(m, "Oct") ? 9 :
-           startsWith(m, "Nov") ? 10 :
-           startsWith(m, "Dec") ? 11 : 20;
+    return startsWith(m, "Jan") ? 0 : startsWith(m, "Feb")
+                                          ? 1
+                                          : startsWith(m, "Mar")
+                                                ? 2
+                                                : startsWith(m, "Apr")
+                                                      ? 3
+                                                      : startsWith(m, "May")
+                                                            ? 4
+                                                            : startsWith(m, "Jun")
+                                                                  ? 5
+                                                                  : startsWith(m, "Jul")
+                                                                        ? 6
+                                                                        : startsWith(m, "Aug")
+                                                                              ? 7
+                                                                              : startsWith(m, "Sep")
+                                                                                    ? 8
+                                                                                    : startsWith(m, "Oct")
+                                                                                          ? 9
+                                                                                          : startsWith(m, "Nov")
+                                                                                                ? 10
+                                                                                                : startsWith(m, "Dec")
+                                                                                                      ? 11
+                                                                                                      : 20;
 }
 
 constexpr uint16_t year_(const char* y) {
-    return (y[0] - '0') * 1000 +  (y[1] - '0') * 100 + (y[2] - '0') * 10 + y[3] - '0';
+    return (y[0] - '0') * 1000 + (y[1] - '0') * 100 + (y[2] - '0') * 10 + y[3] - '0';
 }
 
 constexpr bool isLeapYear(uint16_t y) {
     return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
 }
 
-static constexpr uint8_t ndays[] = {
-    31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-};
+static constexpr uint8_t ndays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 constexpr uint16_t cyears(uint16_t y, uint16_t i) {
-    return i >= y ? 0 : (isLeapYear(i) ? 366 : 365) + cyears(y, i+1);
+    return i >= y ? 0 : (isLeapYear(i) ? 366 : 365) + cyears(y, i + 1);
 }
 
 constexpr uint8_t cmonths(uint8_t m, uint8_t i) {
-    return i >= m ? 0 : ndays[i] + cmonths(m, i+1);
+    return i >= m ? 0 : ndays[i] + cmonths(m, i + 1);
 }
 
 constexpr long totime_t(uint8_t secs, uint8_t mins, uint8_t hrs, uint8_t day, uint8_t mon, uint16_t yr) {
-    return (((cyears(yr, 1970)
-              + cmonths(mon, 0)
-              + (mon > 1 && isLeapYear(yr) ? 1 : 0)
-              + day - 1) * 24 + hrs) * 60 + mins) * 60 + secs;
+    return (((cyears(yr, 1970) + cmonths(mon, 0) + (mon > 1 && isLeapYear(yr) ? 1 : 0) + day - 1) * 24 + hrs) * 60 +
+            mins) *
+               60 +
+           secs;
 }
 
 constexpr long timeWhenCompiled() {
-    return ::totime_t(clock_(__TIME__+6),
-                      clock_(__TIME__+3),
-                      clock_(__TIME__),
-                      ::day_(__DATE__+4),
-                      ::month_(__DATE__),
-                      ::year_(__DATE__+7));
+    return ::totime_t(clock_(__TIME__ + 6), clock_(__TIME__ + 3), clock_(__TIME__), ::day_(__DATE__ + 4),
+                      ::month_(__DATE__), ::year_(__DATE__ + 7));
 }
 
-}// namespace {}
+} // namespace {}
 
 #endif // MELOSIC_EXPORTS_HPP

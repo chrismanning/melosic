@@ -29,31 +29,56 @@ namespace lastfm {
 
 tag::tag(std::string_view tag_name, const network::uri& url, int reach, int taggings, bool streamable, wiki_t wiki)
     : m_name(tag_name), m_url(url), m_reach(reach), m_taggings(taggings), m_streamable(streamable),
-      m_wiki(std::move(wiki)) {}
+      m_wiki(std::move(wiki)) {
+}
 
-std::string_view tag::name() const { return m_name; }
+std::string_view tag::name() const {
+    return m_name;
+}
 
-void tag::name(std::string_view name) { m_name = name.to_string(); }
+void tag::name(std::string_view name) {
+    m_name = name.to_string();
+}
 
-const network::uri& tag::url() const { return m_url; }
+const network::uri& tag::url() const {
+    return m_url;
+}
 
-void tag::url(const network::uri& url) { m_url = url; }
+void tag::url(const network::uri& url) {
+    m_url = url;
+}
 
-int tag::reach() const { return m_reach; }
+int tag::reach() const {
+    return m_reach;
+}
 
-void tag::reach(int reach) { m_reach = reach; }
+void tag::reach(int reach) {
+    m_reach = reach;
+}
 
-int tag::taggings() const { return m_taggings; }
+int tag::taggings() const {
+    return m_taggings;
+}
 
-void tag::taggings(int taggings) { m_taggings = taggings; }
+void tag::taggings(int taggings) {
+    m_taggings = taggings;
+}
 
-bool tag::streamable() const { return m_streamable; }
+bool tag::streamable() const {
+    return m_streamable;
+}
 
-void tag::streamable(bool streamable) { m_streamable = streamable; }
+void tag::streamable(bool streamable) {
+    m_streamable = streamable;
+}
 
-wiki_t tag::wiki() const { return m_wiki; }
+wiki_t tag::wiki() const {
+    return m_wiki;
+}
 
-void tag::wiki(wiki_t wiki) { m_wiki = wiki; }
+void tag::wiki(wiki_t wiki) {
+    m_wiki = wiki;
+}
 
 std::future<std::vector<tag>> tag::get_similar(service& serv) const {
     return serv.get("tag.getsimilar", {{"tag", m_name}}, use_future, [](auto&& response) {

@@ -154,8 +154,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
     Logger::Logger logject{logging::keywords::channel = "Player"};
     friend class Player;
 
-    template <typename S>
-    auto changeState() -> decltype(m_current_state) {
+    template <typename S> auto changeState() -> decltype(m_current_state) {
         static_assert(std::is_base_of<State, S>::value, "Template parameter must be State derived");
 
         TRACE_LOG(logject) << "changeState(): changing state to " << typeid(S);
@@ -187,20 +186,19 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
 
         player_conf->merge(conf);
         player_conf->setDefault(conf);
-        player_conf->iterateNodes([&] (const std::string& key, const Config::Conf::node_mapped_type& var) {
+        player_conf->iterateNodes([&](const std::string& key, const Config::Conf::node_mapped_type& var) {
             TRACE_LOG(logject) << "Config: variable loaded: " << key;
             variableUpdateSlot(key, var);
         });
-        m_signal_connections.emplace_back(player_conf
-                                          ->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
+        m_signal_connections.emplace_back(
+            player_conf->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
 
         auto output_conf = base->createChild("Output");
 
-        output_conf->iterateNodes([&] (const std::string& key, const Config::Conf::node_mapped_type& var) {
-            variableUpdateSlot(key, var);
-        });
-        m_signal_connections.emplace_back(output_conf
-                                          ->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
+        output_conf->iterateNodes(
+            [&](const std::string& key, const Config::Conf::node_mapped_type& var) { variableUpdateSlot(key, var); });
+        m_signal_connections.emplace_back(
+            output_conf->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
     }
 
     void variableUpdateSlot(const std::string& key, const Config::VarType& val) {
@@ -212,8 +210,7 @@ struct Player::impl : std::enable_shared_from_this<Player::impl> {
                 buffer_time = chrono::milliseconds(get<int64_t>(val));
             else if(key == "gapless preload time")
                 m_gapless_preload = chrono::milliseconds(get<int64_t>(val));
-        }
-        catch(boost::bad_get&) {
+        } catch(boost::bad_get&) {
             ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
         }
     }
@@ -233,12 +230,12 @@ static PCMBuffer widen(PCMBuffer in, const size_t n, const uint8_t bps_to) noexc
     assert(!(in.audio_specs.bps % 8));
     assert(in.audio_specs.bps != bps_to);
 
-    auto from = in.audio_specs.bps/8;
-    auto to = bps_to/8;
+    auto from = in.audio_specs.bps / 8;
+    auto to = bps_to / 8;
     assert(!(n % from));
 
-    PCMBuffer out{::operator new((n/from)*to), (n/from)*to};
-    assert(asio::buffer_size(out) == (n/from)*to);
+    PCMBuffer out{::operator new((n / from) * to), (n / from) * to};
+    assert(asio::buffer_size(out) == (n / from) * to);
 
     auto out_ptr = asio::buffer_cast<char*>(out);
 
@@ -250,31 +247,35 @@ static PCMBuffer widen(PCMBuffer in, const size_t n, const uint8_t bps_to) noexc
             out_ptr = std::copy_n(std::next(in_ptr, i), from, out_ptr);
             assert(std::distance(old_ptr, out_ptr) == to);
         }
-        assert(std::distance(asio::buffer_cast<char*>(out), out_ptr) == static_cast<ptrdiff_t>((n/from)*to));
-    }
-    else if(to < from) {
+        assert(std::distance(asio::buffer_cast<char*>(out), out_ptr) == static_cast<ptrdiff_t>((n / from) * to));
+    } else if(to < from) {
         assert(false);
         std::abort();
         for(auto i = 0u; i < n; i += from) {
             out_ptr = std::copy(in_ptr + i, in_ptr + i + to, out_ptr);
         }
-    }
-    else assert(false);
+    } else
+        assert(false);
 
     return out;
 }
 
 struct State {
-protected:
-    explicit State(StateChanged& stateChanged) : stateChanged(stateChanged) {}
+  protected:
+    explicit State(StateChanged& stateChanged) : stateChanged(stateChanged) {
+    }
 
-public:
-    virtual ~State() {}
+  public:
+    virtual ~State() {
+    }
 
-    //default actions (do nothing)
-    virtual void play() {}
-    virtual void pause() {}
-    virtual void stop() {}
+    // default actions (do nothing)
+    virtual void play() {
+    }
+    virtual void pause() {
+    }
+    virtual void stop() {
+    }
 
     virtual chrono::milliseconds tell() const {
         return 0ms;
@@ -282,7 +283,8 @@ public:
 
     virtual Output::DeviceState state() const = 0;
 
-    virtual void sinkChange() {}
+    virtual void sinkChange() {
+    }
 
     static Player::impl* stateMachine;
     static std::shared_ptr<Melosic::Playlist::Manager> playman;
@@ -325,80 +327,76 @@ void Player::impl::write_handler(std::error_code ec, std::size_t n) {
         TRACE_LOG(logject) << "no current track; stopping";
         ec = asio::error::make_error_code(asio::error::eof);
         n = 0;
-    }
-    else try {
-        if(!m_current_source) {
-            if(m_next_source) // get pre-loaded source if available
-                m_current_source = std::move(m_next_source);
-            else // otherwise open new source from playlist item. throws on error
-                m_current_source = decman->open(*m_current_iterator);
-        }
-        const auto as = m_current_source->getAudioSpecs();
-
-        while(!in_buf.empty()) {
-            if(asio::buffer_size(asio::mutable_buffer(in_buf.front())) <= 0)
-                in_buf.pop_front();
-            else {
-                read_handler(ec, asio::buffer_size(asio::mutable_buffer(in_buf.front())));
-                return;
+    } else
+        try {
+            if(!m_current_source) {
+                if(m_next_source) // get pre-loaded source if available
+                    m_current_source = std::move(m_next_source);
+                else // otherwise open new source from playlist item. throws on error
+                    m_current_source = decman->open(*m_current_iterator);
             }
-        }
+            const auto as = m_current_source->getAudioSpecs();
 
-        n = as.time_to_bytes(buffer_time);
-        PCMBuffer tmp{::operator new(n), n};
-        tmp.audio_specs = as;
+            while(!in_buf.empty()) {
+                if(asio::buffer_size(asio::mutable_buffer(in_buf.front())) <= 0)
+                    in_buf.pop_front();
+                else {
+                    read_handler(ec, asio::buffer_size(asio::mutable_buffer(in_buf.front())));
+                    return;
+                }
+            }
 
-        auto n_decoded = m_current_source->decode(tmp, ec);
-        TRACE_LOG(logject) << "decoded to " << n_decoded << " bytes of PCM; " << tmp.audio_specs;
+            n = as.time_to_bytes(buffer_time);
+            PCMBuffer tmp{::operator new(n), n};
+            tmp.audio_specs = as;
 
-        if(n_decoded < n && !m_current_source->valid()) {
-            TRACE_LOG(logject) << "track ended, starting next, if any";
+            auto n_decoded = m_current_source->decode(tmp, ec);
+            TRACE_LOG(logject) << "decoded to " << n_decoded << " bytes of PCM; " << tmp.audio_specs;
+
+            if(n_decoded < n && !m_current_source->valid()) {
+                TRACE_LOG(logject) << "track ended, starting next, if any";
+                next_impl();
+            }
+            if(n_decoded == 0) {
+                TRACE_LOG(logject) << "end of track";
+                ::operator delete(asio::buffer_cast<void*>(tmp));
+            } else if(as != asioOutput->current_specs()) {
+                auto new_as = as;
+                new_as.bps = asioOutput->current_specs().bps;
+                if(new_as != asioOutput->current_specs()) {
+                    // stop + play to force device to re-prepare
+                    TRACE_LOG(logject) << "AudioSpecs mismatch";
+                    ::operator delete(asio::buffer_cast<void*>(tmp));
+                    n_decoded = 0;
+                    m_current_state->stop();
+                    m_current_state->play();
+                    l.unlock();
+                    write_handler(ec, 0);
+                    return;
+                } else {
+                    // pad with zeroes or trim the fat
+                    TRACE_LOG(logject) << "bps mismatch; widening from " << static_cast<int>(as.bps) << " to "
+                                       << static_cast<int>(asioOutput->current_specs().bps);
+                    auto buf = widen(tmp, n_decoded, asioOutput->current_specs().bps);
+                    buf.audio_specs = tmp.audio_specs;
+                    buf.audio_specs.bps = asioOutput->current_specs().bps;
+                    n_decoded = asio::buffer_size(buf);
+                    in_buf.emplace_back(buf);
+
+                    ::operator delete(asio::buffer_cast<void*>(tmp));
+                }
+            } else
+                in_buf.emplace_back(tmp);
+            assert(!in_buf.empty());
+            assert(in_buf.back().audio_specs == asioOutput->current_specs());
+            n = n_decoded;
+        } catch(...) {
+            ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
+            stop_impl();
             next_impl();
+            if(m_current_iterator != m_current_playlist->end())
+                play_impl();
         }
-        if(n_decoded == 0) {
-            TRACE_LOG(logject) << "end of track";
-            ::operator delete(asio::buffer_cast<void*>(tmp));
-        }
-        else if(as != asioOutput->current_specs()) {
-            auto new_as = as;
-            new_as.bps = asioOutput->current_specs().bps;
-            if(new_as != asioOutput->current_specs()) {
-                // stop + play to force device to re-prepare
-                TRACE_LOG(logject) << "AudioSpecs mismatch";
-                ::operator delete(asio::buffer_cast<void*>(tmp));
-                n_decoded = 0;
-                m_current_state->stop();
-                m_current_state->play();
-                l.unlock();
-                write_handler(ec, 0);
-                return;
-            }
-            else {
-                // pad with zeroes or trim the fat
-                TRACE_LOG(logject) << "bps mismatch; widening from " << static_cast<int>(as.bps)
-                                   << " to " << static_cast<int>(asioOutput->current_specs().bps);
-                auto buf = widen(tmp, n_decoded, asioOutput->current_specs().bps);
-                buf.audio_specs = tmp.audio_specs;
-                buf.audio_specs.bps = asioOutput->current_specs().bps;
-                n_decoded = asio::buffer_size(buf);
-                in_buf.emplace_back(buf);
-
-                ::operator delete(asio::buffer_cast<void*>(tmp));
-            }
-        }
-        else
-            in_buf.emplace_back(tmp);
-        assert(!in_buf.empty());
-        assert(in_buf.back().audio_specs == asioOutput->current_specs());
-        n = n_decoded;
-    }
-    catch(...) {
-        ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
-        stop_impl();
-        next_impl();
-        if(m_current_iterator != m_current_playlist->end())
-            play_impl();
-    }
     read_handler(ec, n);
 }
 
@@ -432,24 +430,23 @@ void Player::impl::read_handler(std::error_code ec, std::size_t n) {
     assert(asio::buffer_cast<void*>(in_buf.front()) != nullptr);
     in_buf.pop_front();
     assert(asioOutput);
-    asio::post([self=shared_from_this(),tmp]() mutable {
+    asio::post([ self = shared_from_this(), tmp ]() mutable {
         unique_lock l(self->mu);
-        asio::async_write(*self->asioOutput, asio::buffer(tmp),
-            [tmp, self] (std::error_code ec, std::size_t n) {
-                assert(asio::buffer_cast<void*>(tmp) != nullptr);
-                if(n < asio::buffer_size(asio::mutable_buffer(tmp))) {
-                    const auto s = asio::buffer_size(asio::mutable_buffer(tmp)) - n;
-                    assert(s > 0);
-                    auto* ptr = ::operator new(s);
-                    std::memmove(ptr, asio::buffer_cast<uint8_t*>(tmp) + n, s);
+        asio::async_write(*self->asioOutput, asio::buffer(tmp), [tmp, self](std::error_code ec, std::size_t n) {
+            assert(asio::buffer_cast<void*>(tmp) != nullptr);
+            if(n < asio::buffer_size(asio::mutable_buffer(tmp))) {
+                const auto s = asio::buffer_size(asio::mutable_buffer(tmp)) - n;
+                assert(s > 0);
+                auto* ptr = ::operator new(s);
+                std::memmove(ptr, asio::buffer_cast<uint8_t*>(tmp) + n, s);
 
-                    unique_lock l(self->mu);
-                    self->in_buf.emplace_front(ptr, s);
-                }
-                ::operator delete(asio::buffer_cast<void*>(tmp));
+                unique_lock l(self->mu);
+                self->in_buf.emplace_front(ptr, s);
+            }
+            ::operator delete(asio::buffer_cast<void*>(tmp));
 
-                self->write_handler(ec, n);
-            });
+            self->write_handler(ec, n);
+        });
     });
 }
 
@@ -488,8 +485,7 @@ struct Stopped : State {
             stateMachine->asioOutput->play();
             auto ptr = stateMachine->changeState<Playing>();
             assert(ptr == this);
-        }
-        catch(...) {
+        } catch(...) {
             ERROR_LOG(stateMachine->logject) << boost::current_exception_diagnostic_information();
             stateMachine->changeState<Error>();
         }
@@ -535,15 +531,15 @@ struct Error : State {
                 assert(ptr == this);
                 assert(stateMachine->state_impl() == Output::DeviceState::Stopped);
             }
-        }
-        catch(...) {
+        } catch(...) {
             ERROR_LOG(stateMachine->logject) << boost::current_exception_diagnostic_information();
         }
     }
 };
 
 struct Stop : virtual State {
-    explicit Stop(StateChanged& sc) : State(sc) {}
+    explicit Stop(StateChanged& sc) : State(sc) {
+    }
     virtual void stop() override {
         stateMachine->asioOutput->stop();
         auto ptr = stateMachine->changeState<Stopped>();
@@ -552,7 +548,8 @@ struct Stop : virtual State {
 };
 
 struct Tell : virtual State {
-    explicit Tell(StateChanged& sc) : State(sc) {}
+    explicit Tell(StateChanged& sc) : State(sc) {
+    }
     virtual chrono::milliseconds tell() const override {
         if(!stateMachine->m_current_source)
             return 0ms;
@@ -614,24 +611,18 @@ struct Paused : virtual State, Stop, Tell {
     }
 };
 
-Player::impl::impl(Kernel& kernel) :
-    kernel(kernel),
-    playman(kernel.getPlaylistManager()),
-    outman(kernel.getOutputManager()),
-    confman(kernel.getConfigManager()),
-    decman(kernel.getDecoderManager()),
-    mu(),
-    stateChanged(),
-    m_current_state((State::stateMachine = this, //init statics before first construction
-                   State::playman = playman, //dirty comma operator usage
-                   std::make_shared<Stopped>(stateChanged))),
-    logject(logging::keywords::channel = "StateMachine")
-{
+Player::impl::impl(Kernel& kernel)
+    : kernel(kernel), playman(kernel.getPlaylistManager()), outman(kernel.getOutputManager()),
+      confman(kernel.getConfigManager()), decman(kernel.getDecoderManager()), mu(), stateChanged(),
+      m_current_state((State::stateMachine = this, // init statics before first construction
+                       State::playman = playman, // dirty comma operator usage
+                       std::make_shared<Stopped>(stateChanged))),
+      logject(logging::keywords::channel = "StateMachine") {
     conf.putNode("gapless preload time", static_cast<int64_t>(m_gapless_preload.count()));
     playman->getCurrentPlaylistChangedSignal().connect(&impl::currentPlaylistChangedSlot, this);
     outman->getPlayerSinkChangedSignal().connect(&impl::sinkChangeSlot, this);
     confman->getLoadedSignal().connect(&impl::loadedSlot, this);
-    notifyPlayPosition.connect([this] (chrono::milliseconds pos, chrono::milliseconds dur) {
+    notifyPlayPosition.connect([this](chrono::milliseconds pos, chrono::milliseconds dur) {
         TRACE_LOG(logject) << "pos: " << pos.count() << "; dur: " << dur.count();
     });
 }
@@ -710,8 +701,7 @@ void Player::impl::previous_impl() {
             m_current_source.reset();
         }
         --m_current_iterator;
-    }
-    else if(m_current_source)
+    } else if(m_current_source)
         m_current_source->reset();
 }
 
@@ -740,8 +730,8 @@ void Player::impl::currentPlaylistChangedSlot(optional<Playlist> p) {
 }
 
 void Player::impl::trackChangeSlot(int, optional<Track> t) {
-//    if(!m_current_track)
-//        m_current_track = t;
+    //    if(!m_current_track)
+    //        m_current_track = t;
     assert(false);
 }
 
@@ -759,8 +749,7 @@ void Player::impl::sinkChangeSlot() {
     unique_lock l(mu);
     try {
         m_current_state->sinkChange();
-    }
-    catch(...) {
+    } catch(...) {
         ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
 
         stop_impl();
@@ -768,9 +757,8 @@ void Player::impl::sinkChangeSlot() {
     }
 }
 
-Player::Player(Kernel& kernel) :
-    pimpl(new impl(kernel))
-{}
+Player::Player(Kernel& kernel) : pimpl(new impl(kernel)) {
+}
 
 Player::~Player() {
     pimpl->stop();
@@ -808,7 +796,7 @@ optional<Playlist> Player::currentPlaylist() const {
 optional<Track> Player::currentTrack() const {
     lock_guard l(pimpl->mu);
     return nullopt;
-//    return pimpl->m_current_track;
+    //    return pimpl->m_current_track;
 }
 
 void Player::next() {
@@ -823,7 +811,7 @@ void Player::jumpTo(int p) {
     pimpl->jumpTo(p);
 }
 
-tuple<optional<Playlist>, optional<Track> > Player::current() const {
+tuple<optional<Playlist>, optional<Track>> Player::current() const {
     lock_guard l(pimpl->mu);
     return std::make_tuple(pimpl->m_current_playlist, nullopt);
 }
@@ -834,4 +822,3 @@ Signals::Player::StateChanged& Player::stateChangedSignal() const {
 
 } // namespace Core
 } // namespace Melosic
-

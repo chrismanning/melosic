@@ -51,10 +51,18 @@ namespace Melosic {
 template <typename T> static constexpr int TypeIndex = boost::mpl::index_of<Config::VarType::types, T>::type::value;
 
 template <typename Derived> struct ConfigWrapper {
-    bool modified() const { return static_cast<const Derived*>(this)->modified(); }
-    bool apply() { return static_cast<Derived*>(this)->apply(); }
-    bool reset() { return static_cast<Derived*>(this)->reset(); }
-    bool restore() { return static_cast<Derived*>(this)->restore(); }
+    bool modified() const {
+        return static_cast<const Derived*>(this)->modified();
+    }
+    bool apply() {
+        return static_cast<Derived*>(this)->apply();
+    }
+    bool reset() {
+        return static_cast<Derived*>(this)->reset();
+    }
+    bool restore() {
+        return static_cast<Derived*>(this)->restore();
+    }
 };
 
 template <typename FunT, typename ThisT>
@@ -68,7 +76,9 @@ static auto to_function(FunT&& fun, std::enable_if_t<!std::is_member_function_po
 }
 
 template <typename WidgetT> struct ConfigWidget : Configurator {
-    explicit ConfigWidget(WidgetT* widget) : Configurator(widget), m_widget(widget) { assert(m_widget); }
+    explicit ConfigWidget(WidgetT* widget) : Configurator(widget), m_widget(widget) {
+        assert(m_widget);
+    }
 
     template <typename ModifiedSignalT>
     explicit ConfigWidget(WidgetT* widget, ModifiedSignalT&& sig)
@@ -76,16 +86,25 @@ template <typename WidgetT> struct ConfigWidget : Configurator {
         QObject::connect(widget, sig, [this](auto&&...) { Q_EMIT modifiedChanged(m_widget->modified()); });
     }
 
-    bool modified() const override { return m_widget->modified(); }
-    bool apply() override { return m_widget->apply(); }
-    bool reset() override { return m_widget->reset(); }
-    bool restore() override { return m_widget->restore(); }
+    bool modified() const override {
+        return m_widget->modified();
+    }
+    bool apply() override {
+        return m_widget->apply();
+    }
+    bool reset() override {
+        return m_widget->reset();
+    }
+    bool restore() override {
+        return m_widget->restore();
+    }
 
     WidgetT* m_widget;
 };
 
 struct GeneratorConfWidget : QWidget, Configurator {
-    virtual ~GeneratorConfWidget() {}
+    virtual ~GeneratorConfWidget() {
+    }
 
     bool modified() const override {
         for(auto&& child : QWidget::children()) {
@@ -139,7 +158,9 @@ struct ConfigLineEdit : QLineEdit, Configurable {
         });
     }
 
-    bool modified() const { return QLineEdit::isModified(); }
+    bool modified() const {
+        return QLineEdit::isModified();
+    }
 
     bool apply() {
         if(!modified())
@@ -163,9 +184,13 @@ struct ConfigLineEdit : QLineEdit, Configurable {
         return true;
     }
 
-    bool restore() { return false; }
+    bool restore() {
+        return false;
+    }
 
-    Configurator* configure() const override { return m_configurator; }
+    Configurator* configure() const override {
+        return m_configurator;
+    }
 
     const std::shared_ptr<Config::Conf> m_conf;
     const std::string m_name;
@@ -181,7 +206,9 @@ struct ConfigCheckBox : QCheckBox, Configurable {
         setChecked(val);
     }
 
-    bool modified() const { return isChecked() != m_reset_value; }
+    bool modified() const {
+        return isChecked() != m_reset_value;
+    }
 
     bool apply() {
         if(!modified())
@@ -199,9 +226,13 @@ struct ConfigCheckBox : QCheckBox, Configurable {
         return true;
     }
 
-    bool restore() { return false; }
+    bool restore() {
+        return false;
+    }
 
-    Configurator* configure() const override { return m_configurator; }
+    Configurator* configure() const override {
+        return m_configurator;
+    }
 
     const std::shared_ptr<Config::Conf> m_conf;
     const std::string m_name;
@@ -224,7 +255,9 @@ struct ConfigSpinBox : QSpinBox, Configurable {
         });
     }
 
-    bool modified() const { return value() != m_reset_value; }
+    bool modified() const {
+        return value() != m_reset_value;
+    }
 
     bool apply() {
         if(!modified())
@@ -242,9 +275,13 @@ struct ConfigSpinBox : QSpinBox, Configurable {
         return true;
     }
 
-    bool restore() { return false; }
+    bool restore() {
+        return false;
+    }
 
-    Configurator* configure() const override { return m_configurator; }
+    Configurator* configure() const override {
+        return m_configurator;
+    }
 
     const std::shared_ptr<Config::Conf> m_conf;
     const std::string m_name;
@@ -268,7 +305,9 @@ struct ConfigDoubleSpinBox : QDoubleSpinBox, Configurable {
         });
     }
 
-    bool modified() const { return value() != m_reset_value; }
+    bool modified() const {
+        return value() != m_reset_value;
+    }
 
     bool apply() {
         if(!modified())
@@ -286,9 +325,13 @@ struct ConfigDoubleSpinBox : QDoubleSpinBox, Configurable {
         return true;
     }
 
-    bool restore() { return false; }
+    bool restore() {
+        return false;
+    }
 
-    Configurator* configure() const override { return m_configurator; }
+    Configurator* configure() const override {
+        return m_configurator;
+    }
 
     const std::shared_ptr<Config::Conf> m_conf;
     const std::string m_name;
@@ -327,7 +370,9 @@ struct ConfigEditList : KEditListWidget, Configurable {
         setItems(q_items);
     }
 
-    bool modified() const { return m_modified; }
+    bool modified() const {
+        return m_modified;
+    }
 
     bool apply() {
         if(!modified())
@@ -351,9 +396,13 @@ struct ConfigEditList : KEditListWidget, Configurable {
         return true;
     }
 
-    bool restore() { return false; }
+    bool restore() {
+        return false;
+    }
 
-    Configurator* configure() const override { return m_configurator; }
+    Configurator* configure() const override {
+        return m_configurator;
+    }
 
     const std::shared_ptr<Config::Conf> m_conf;
     const std::string m_name;
@@ -487,19 +536,28 @@ struct ConfItem {
         m_configurable = cw;
     }
 
-    explicit ConfItem(Config::Conf* c, ConfItem* parent = nullptr) : ConfItem({c, boost::null_deleter{}}, parent) {}
+    explicit ConfItem(Config::Conf* c, ConfItem* parent = nullptr) : ConfItem({c, boost::null_deleter{}}, parent) {
+    }
 
-    ConfItem(ConfItem&& b) noexcept { b.swap(*this); }
+    ConfItem(ConfItem&& b) noexcept {
+        b.swap(*this);
+    }
     ConfItem& operator=(ConfItem&&) = default;
 
     ConfItem(const ConfItem&) = delete;
     ConfItem& operator=(const ConfItem&) = delete;
 
-    ~ConfItem() { delete m_widget; }
+    ~ConfItem() {
+        delete m_widget;
+    }
 
-    QWidget* widget() const { return m_widget; }
+    QWidget* widget() const {
+        return m_widget;
+    }
 
-    Configurator* configure() const { return m_configurable; }
+    Configurator* configure() const {
+        return m_configurable;
+    }
 
     void swap(ConfItem& b) noexcept {
         using std::swap;
@@ -533,9 +591,12 @@ template <typename FunT> static void traverse_post_order(ConfItem& root, FunT&& 
     fun(root);
 }
 
-ChildConfigurator::ChildConfigurator(ConfItem& c) : m_root(c) {}
+ChildConfigurator::ChildConfigurator(ConfItem& c) : m_root(c) {
+}
 
-bool ChildConfigurator::modified() const { return false; }
+bool ChildConfigurator::modified() const {
+    return false;
+}
 
 bool ChildConfigurator::apply() {
     traverse_pre_order(m_root, [this](auto&& child) {
@@ -641,7 +702,9 @@ struct ConfTreeModel : KPageModel {
         return {};
     }
 
-    int columnCount(const QModelIndex& = QModelIndex()) const override { return 1; }
+    int columnCount(const QModelIndex& = QModelIndex()) const override {
+        return 1;
+    }
 
     ConfItem* getItem(const QModelIndex& index) const {
         if(!index.isValid())
@@ -733,14 +796,17 @@ ConfigManager::ConfigManager() : pimpl(std::make_unique<impl>()) {
     connect(this, &ConfigManager::configManagerChanged, [this]() { pimpl->onConfigManagerChanged(); });
 }
 
-ConfigManager::~ConfigManager() {}
+ConfigManager::~ConfigManager() {
+}
 
 ConfigManager* ConfigManager::instance() {
     static ConfigManager confman;
     return &confman;
 }
 
-const std::shared_ptr<Config::Manager>& Melosic::ConfigManager::getConfigManager() const { return pimpl->m_confman; }
+const std::shared_ptr<Config::Manager>& Melosic::ConfigManager::getConfigManager() const {
+    return pimpl->m_confman;
+}
 
 void ConfigManager::setConfigManager(const std::shared_ptr<Config::Manager>& confman) {
     pimpl->m_confman = confman;
@@ -756,8 +822,12 @@ void ConfigManager::openWindow() {
     pimpl->m_window->showNormal();
 }
 
-QWindow* ConfigManager::getParent() const { return pimpl->m_parent; }
+QWindow* ConfigManager::getParent() const {
+    return pimpl->m_parent;
+}
 
-void ConfigManager::setParent(QWindow* parent) { pimpl->m_parent = parent; }
+void ConfigManager::setParent(QWindow* parent) {
+    pimpl->m_parent = parent;
+}
 
 } // namespace Melosic

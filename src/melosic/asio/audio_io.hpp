@@ -26,7 +26,8 @@ namespace Melosic {
 namespace AudioIO {
 
 struct MELOSIC_EXPORT AudioOutputBase {
-    virtual ~AudioOutputBase() {}
+    virtual ~AudioOutputBase() {
+    }
 
     void cancel(std::error_code& ec) {
         get_service().cancel(get_implementation(), ec);
@@ -34,7 +35,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void cancel() {
         std::error_code ec;
         cancel(ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void assign(Output::DeviceName dev_name, std::error_code& ec) {
@@ -43,7 +45,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void assign(Output::DeviceName dev_name) {
         std::error_code ec;
         assign(std::move(dev_name), ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void prepare(const AudioSpecs as, std::error_code& ec) {
@@ -52,7 +55,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void prepare(const AudioSpecs as) {
         std::error_code ec;
         prepare(as, ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void play(std::error_code& ec) {
@@ -61,7 +65,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void play() {
         std::error_code ec;
         play(ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void pause(std::error_code& ec) {
@@ -70,7 +75,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void pause() {
         std::error_code ec;
         pause(ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void unpause(std::error_code& ec) {
@@ -79,7 +85,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void unpause() {
         std::error_code ec;
         unpause(ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     void stop(std::error_code& ec) {
@@ -88,19 +95,19 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void stop() {
         std::error_code ec;
         stop(ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    template <typename ConstBufferSequence>
-    size_t write_some(const ConstBufferSequence& buffers, std::error_code& ec) {
+    template <typename ConstBufferSequence> size_t write_some(const ConstBufferSequence& buffers, std::error_code& ec) {
         return get_service().write_some(get_implementation(), buffers, ec);
     }
 
-    template <typename ConstBufferSequence>
-    size_t write_some(const ConstBufferSequence& buffers) {
+    template <typename ConstBufferSequence> size_t write_some(const ConstBufferSequence& buffers) {
         std::error_code ec;
         auto r = write_some(buffers, ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
         return r;
     }
 
@@ -122,7 +129,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
     void non_blocking(bool mode) {
         std::error_code ec;
         non_blocking(mode, ec);
-        if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
+        if(ec)
+            BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
     template <typename ConstBufferSequence, typename WriteHandler>
@@ -140,33 +148,27 @@ struct MELOSIC_EXPORT AudioOutputBase {
         return implementation;
     }
 
-protected:
+  protected:
     AudioOutputBase() = default;
 
     virtual service_type& get_service() = 0;
     virtual const service_type& get_service() const = 0;
 
-private:
+  private:
     implementation_type implementation;
 };
 
-template <typename...>
-struct BasicAudioOutput;
+template <typename...> struct BasicAudioOutput;
 
-template <typename ServiceImpl>
-struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
+template <typename ServiceImpl> struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
     using Service = AudioOutputService<ServiceImpl>;
 
-    explicit BasicAudioOutput(asio::io_service& service) :
-        AudioOutputBase(),
-        m_service(asio::use_service<Service>(service))
-    {
+    explicit BasicAudioOutput(asio::io_service& service)
+        : AudioOutputBase(), m_service(asio::use_service<Service>(service)) {
         m_service.construct(get_implementation());
     }
 
-    BasicAudioOutput(asio::io_service& service, Output::DeviceName dev_name)
-      : BasicAudioOutput(service)
-    {
+    BasicAudioOutput(asio::io_service& service, Output::DeviceName dev_name) : BasicAudioOutput(service) {
         std::error_code ec;
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
@@ -185,10 +187,9 @@ struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
         return reinterpret_cast<service_type&>(m_service);
     }
 
-private:
+  private:
     Service& m_service;
 };
-
 }
 }
 

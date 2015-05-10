@@ -58,14 +58,19 @@ bool resample = false;
 chrono::milliseconds buf_time_msecs{1000ms};
 
 struct alsa_category_ : std::error_category {
-    const char* name() const noexcept override { return "alsa"; }
+    const char* name() const noexcept override {
+        return "alsa";
+    }
 
-    std::string message(int errnum) const override { return snd_strerror(errnum); }
+    std::string message(int errnum) const override {
+        return snd_strerror(errnum);
+    }
 } alsa_category;
 
 struct MELOSIC_EXPORT AlsaOutputServiceImpl : AudioIO::AudioOutputServiceBase {
     explicit AlsaOutputServiceImpl(asio::io_service& service)
-        : AudioIO::AudioOutputServiceBase(service), m_asio_fd(service) {}
+        : AudioIO::AudioOutputServiceBase(service), m_asio_fd(service) {
+    }
 
     void assign(Output::DeviceName dev_name, std::error_code& ec) override {
         if(m_pdh != nullptr) {
@@ -355,7 +360,8 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : AudioIO::AudioOutputServiceBase {
         return r;
     }
 
-    void async_prepare(const AudioSpecs, PrepareHandler) override {}
+    void async_prepare(const AudioSpecs, PrepareHandler) override {
+    }
 
     void async_write_some(const asio::const_buffer& buf, WriteHandler handler) override {
         auto f = [=](std::error_code ec) {
@@ -370,11 +376,17 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : AudioIO::AudioOutputServiceBase {
                              std::move(f));
     }
 
-    AudioSpecs current_specs() const override { return m_current_specs; }
+    AudioSpecs current_specs() const override {
+        return m_current_specs;
+    }
 
-    Output::DeviceState state() const override { return m_state; }
+    Output::DeviceState state() const override {
+        return m_state;
+    }
 
-    bool non_blocking() const override { return m_non_blocking; }
+    bool non_blocking() const override {
+        return m_non_blocking;
+    }
 
     void non_blocking(bool mode, std::error_code& ec) override {
         if(m_pdh != nullptr) {
@@ -483,4 +495,5 @@ extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterF
     funs << registerOutput << registerConfig;
 }
 
-extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}
+extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
+}

@@ -23,11 +23,9 @@ TEST_CASE("Get") {
     request req{network::uri{"http://ws.audioscrobbler.com/2.0/"
                              "?method=artist.getsimilar&artist=Metallica&limit=5"
                              "&api_key=47ee6adfdb3c68daeea2786add5e242d&format=json"}};
-    req
-      .version("1.1")
-      .append_header("User-Agent", "cpp-netlib client_test")
-//      .method(method::get)
-      /*.append_header("Connection", "close")*/;
+    req.version("1.1").append_header("User-Agent", "cpp-netlib client_test")
+        //      .method(method::get)
+        /*.append_header("Connection", "close")*/;
 
     auto fut = cli.get(req, {}, use_future);
 
@@ -69,11 +67,8 @@ TEST_CASE("Get Transform") {
     request req{network::uri{"http://ws.audioscrobbler.com/2.0/"
                              "?method=artist.getsimilar&artist=Metallica&limit=5"
                              "&api_key=47ee6adfdb3c68daeea2786add5e242d&format=json"}};
-    req
-      .version("1.1")
-      .method(method::get)
-      .append_header("User-Agent", "cpp-netlib client_test")
-      /*.append_header("Connection", "close")*/;
+    req.version("1.1").method(method::get).append_header("User-Agent", "cpp-netlib client_test")
+        /*.append_header("Connection", "close")*/;
 
     auto fut = cli.execute(req, {}, use_future, [=](response res) {
         REQUIRE(res.status() == status::code::ok);
@@ -90,9 +85,8 @@ TEST_CASE("Get Transform") {
 
         std::vector<std::string> names;
 
-        std::transform(elems.begin(), elems.end(), std::back_inserter(names), [](auto&& element) {
-            return jbson::get<std::string>(element);
-        });
+        std::transform(elems.begin(), elems.end(), std::back_inserter(names),
+                       [](auto&& element) { return jbson::get<std::string>(element); });
 
         return names;
     });
@@ -110,4 +104,3 @@ TEST_CASE("Get Transform") {
 
     t.join();
 }
-

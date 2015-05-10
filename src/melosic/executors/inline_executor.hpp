@@ -24,8 +24,7 @@ namespace executors {
 struct inline_executor {
     inline_executor() = default;
 
-    template <typename WorkT>
-    inline void submit(WorkT&& work) {
+    template <typename WorkT> inline void submit(WorkT&& work) {
         work();
     }
 };

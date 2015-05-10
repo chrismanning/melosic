@@ -19,7 +19,7 @@
 
 struct CategoryProxyModelTest : QObject {
     Q_OBJECT
-private Q_SLOTS:
+  private Q_SLOTS:
     void Test1() {
     }
 };

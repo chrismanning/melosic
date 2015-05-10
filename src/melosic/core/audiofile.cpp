@@ -27,13 +27,15 @@ namespace Melosic {
 namespace Core {
 
 struct AudioFile::impl {
-    explicit impl(const fs::path& p) : m_path(fs::canonical(p)) {}
+    explicit impl(const fs::path& p) : m_path(fs::canonical(p)) {
+    }
 
     fs::path m_path;
     boost::synchronized_value<std::vector<Track>> m_tracks;
 };
 
-AudioFile::AudioFile(const fs::path& p) : pimpl(std::make_shared<impl>(p)) {}
+AudioFile::AudioFile(const fs::path& p) : pimpl(std::make_shared<impl>(p)) {
+}
 
 const fs::path& AudioFile::filePath() const {
     return pimpl->m_path;

@@ -41,7 +41,7 @@ using PluginsLoaded = SignalCore<void(ForwardRange<const Melosic::Plugin::Info>)
 namespace Plugin {
 
 class Manager final {
-public:
+  public:
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -53,7 +53,7 @@ public:
     std::vector<Info> getPlugins() const;
     Signals::Plugin::PluginsLoaded& getPluginsLoadedSignal() const;
 
-private:
+  private:
     explicit Manager(const std::shared_ptr<Config::Manager>& confman);
     friend class Core::Kernel;
     struct impl;

@@ -27,27 +27,21 @@
 
 namespace Melosic {
 
-template <typename T>
-struct isWeakPtr : std::false_type {};
-template <typename T>
-struct isWeakPtr<std::weak_ptr<T>> : std::true_type {};
-template <typename T>
-struct isWeakPtr<boost::weak_ptr<T>> : std::true_type {};
+template <typename T> struct isWeakPtr : std::false_type {};
+template <typename T> struct isWeakPtr<std::weak_ptr<T>> : std::true_type {};
+template <typename T> struct isWeakPtr<boost::weak_ptr<T>> : std::true_type {};
 
-template <typename T>
-struct isSharedPtr : std::false_type {};
-template <typename T>
-struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
-template <typename T>
-struct isSharedPtr<boost::shared_ptr<T>> : std::true_type {};
+template <typename T> struct isSharedPtr : std::false_type {};
+template <typename T> struct isSharedPtr<std::shared_ptr<T>> : std::true_type {};
+template <typename T> struct isSharedPtr<boost::shared_ptr<T>> : std::true_type {};
 
-template <template<class> class Ptr, typename T>
-struct WeakPtrBind {
+template <template <class> class Ptr, typename T> struct WeakPtrBind {
     typedef T object_type;
     static_assert(isWeakPtr<Ptr<object_type>>::value, "WeakPtrBind is for binding weak pointers ONLY");
 
-    explicit WeakPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value) :
-        ptr(std::move(ptr)) {}
+    explicit WeakPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value)
+        : ptr(std::move(ptr)) {
+    }
 
     auto operator()() const {
         auto locked_ptr = ptr.lock();
@@ -60,17 +54,17 @@ struct WeakPtrBind {
         return *(*this)();
     }
 
-private:
+  private:
     Ptr<object_type> ptr;
 };
 
-template <template<class> class Ptr, typename T>
-struct SharedPtrBind {
+template <template <class> class Ptr, typename T> struct SharedPtrBind {
     typedef T object_type;
     static_assert(isSharedPtr<Ptr<object_type>>::value, "SharedPtrBind is for binding shared pointers ONLY");
 
-    explicit SharedPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value) :
-        ptr(std::move(ptr)) {}
+    explicit SharedPtrBind(Ptr<object_type> ptr) noexcept(std::is_move_constructible<Ptr<object_type>>::value)
+        : ptr(std::move(ptr)) {
+    }
 
     object_type* operator()() const {
         return ptr.get();
@@ -80,15 +74,15 @@ struct SharedPtrBind {
         return *(*this)();
     }
 
-private:
+  private:
     Ptr<object_type> ptr;
 };
 
-template <typename T>
-struct RefBind {
+template <typename T> struct RefBind {
     typedef T object_type;
 
-    explicit RefBind(std::reference_wrapper<object_type> wrapper) noexcept : wrapper(wrapper) {}
+    explicit RefBind(std::reference_wrapper<object_type> wrapper) noexcept : wrapper(wrapper) {
+    }
 
     object_type* operator()() const noexcept {
         return &wrapper.get();
@@ -98,15 +92,15 @@ struct RefBind {
         return *(*this)();
     }
 
-private:
+  private:
     std::reference_wrapper<object_type> wrapper;
 };
 
-template <typename T>
-struct PtrBind {
+template <typename T> struct PtrBind {
     typedef T object_type;
 
-    explicit PtrBind(object_type* ptr) noexcept : ptr(ptr) {}
+    explicit PtrBind(object_type* ptr) noexcept : ptr(ptr) {
+    }
 
     object_type* operator()() const noexcept {
         return ptr;
@@ -116,7 +110,7 @@ struct PtrBind {
         return *(*this)();
     }
 
-private:
+  private:
     object_type* ptr;
 };
 
@@ -130,53 +124,46 @@ auto bindObj(std::reference_wrapper<T> obj) {
     return RefBind<T>(obj);
 }
 
-template <typename KeepAlive = let_it_die, typename T>
-auto bindObj(T& obj) {
-    static_assert(std::is_class<typename std::decay<T>::type>::value,
-                  "bindObj must be called with a class object");
+template <typename KeepAlive = let_it_die, typename T> auto bindObj(T& obj) {
+    static_assert(std::is_class<typename std::decay<T>::type>::value, "bindObj must be called with a class object");
     return bindObj(std::ref(obj));
 }
 
-template <typename KeepAlive = let_it_die, typename T>
-auto bindObj(const T& obj) {
-    static_assert(std::is_class<typename std::decay<T>::type>::value,
-                  "bindObj must be called with a class object");
+template <typename KeepAlive = let_it_die, typename T> auto bindObj(const T& obj) {
+    static_assert(std::is_class<typename std::decay<T>::type>::value, "bindObj must be called with a class object");
     return bindObj(std::cref(obj));
 }
 
-template <typename KeepAlive = let_it_die, typename T>
-auto bindObj(T* ptr) {
+template <typename KeepAlive = let_it_die, typename T> auto bindObj(T* ptr) {
     return PtrBind<T>(ptr);
 }
 
-template <typename KeepAlive = let_it_die,
-          template<class> class Ptr, typename T,
+template <typename KeepAlive = let_it_die, template <class> class Ptr, typename T,
           class = typename std::enable_if<isWeakPtr<Ptr<T>>::value>::type>
 auto bindObj(Ptr<T> ptr) {
     return WeakPtrBind<Ptr, T>(std::move(ptr));
 }
 
-template <typename KeepAlive = let_it_die, typename T>
-auto bindObj(boost::shared_ptr<T> ptr) {
+template <typename KeepAlive = let_it_die, typename T> auto bindObj(boost::shared_ptr<T> ptr) {
     return bindObj(boost::weak_ptr<T>(ptr));
 }
 
-template <typename KeepAlive = let_it_die, typename T>
-auto bindObj(std::shared_ptr<T> ptr) {
+template <typename KeepAlive = let_it_die, typename T> auto bindObj(std::shared_ptr<T> ptr) {
     return bindObj(std::weak_ptr<T>(ptr));
 }
 
 template <typename KeepAlive, typename T>
-auto bindObj(boost::shared_ptr<T> ptr, typename std::enable_if<std::is_same<KeepAlive, keep_alive>::value>::type*p=0) {
+auto bindObj(boost::shared_ptr<T> ptr,
+             typename std::enable_if<std::is_same<KeepAlive, keep_alive>::value>::type* p = 0) {
     return SharedPtrBind<boost::shared_ptr, T>(std::move(ptr));
 }
 
 template <typename KeepAlive, typename T,
           typename = typename std::enable_if<std::is_same<KeepAlive, keep_alive>::value>::type>
-auto bindObj(std::shared_ptr<T> ptr, typename std::enable_if<std::is_same<KeepAlive, keep_alive>::value>::type*p=0) {
+auto bindObj(std::shared_ptr<T> ptr, typename std::enable_if<std::is_same<KeepAlive, keep_alive>::value>::type* p = 0) {
     return SharedPtrBind<std::shared_ptr, T>(std::move(ptr));
 }
 
-}// Melosic
+} // Melosic
 
 #endif // MELOSIC_PTR_ADAPTOR_HPP

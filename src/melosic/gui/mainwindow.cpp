@@ -63,12 +63,11 @@ namespace Melosic {
 
 using namespace jbson::literal;
 
-MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
-    logject(logging::keywords::channel = "MainWindow"),
-    engine(new QQmlEngine),
-    component(new QQmlComponent(engine.get())),
-    playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getDecoderManager(), kernel.getLibraryManager()))
-{
+MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player)
+    : logject(logging::keywords::channel = "MainWindow"), engine(new QQmlEngine),
+      component(new QQmlComponent(engine.get())),
+      playlistManagerModel(new PlaylistManagerModel(kernel.getPlaylistManager(), kernel.getDecoderManager(),
+                                                    kernel.getLibraryManager())) {
     ::conf.putNode("enable logging", ::enable_logging);
     scopedSigConns.emplace_back(player.stateChangedSignal().connect(&MainWindow::onStateChangeSlot, this));
 
@@ -76,7 +75,7 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
 
     LibraryManager::instance()->setLibraryManager(kernel.getLibraryManager());
 
-    //register types for use in QML
+    // register types for use in QML
     qmlRegisterType<Block>("Melosic.Playlist", 1, 0, "Block");
     qmlRegisterType<QAbstractItemModel>();
     qmlRegisterType<QItemSelectionModel>();
@@ -127,35 +126,34 @@ MainWindow::MainWindow(Core::Kernel& kernel, Core::Player& player) :
         BOOST_THROW_EXCEPTION(Exception() << ErrorTag::DecodeErrStr(str));
     }
     ConfigManager::instance()->setParent(window.get());
-//    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close);
+    //    QObject::connect(engine.data(), &QQmlEngine::quit, window.data(), &QQuickWindow::close);
     QObject::connect(engine.get(), SIGNAL(quit()), qApp, SLOT(quit()), Qt::DirectConnection);
     window->show();
 }
 
 MainWindow::~MainWindow() {
-//    TRACE_LOG(logject) << "Destroying main window";
+    //    TRACE_LOG(logject) << "Destroying main window";
 }
 
 void MainWindow::onStateChangeSlot(Output::DeviceState /*state*/) {
-//    switch(state) {
-//        case DeviceState::Playing:
-//            ui->playButton->setText("Pause");
-//            break;
-//        case DeviceState::Error:
-//        case DeviceState::Stopped:
-//        case DeviceState::Ready:
-//            ui->playButton->setText("Play");
-//            break;
-//        case DeviceState::Paused:
-//            ui->playButton->setText("Resume");
-//            break;
-//        default:
-//            break;
-//    }
+    //    switch(state) {
+    //        case DeviceState::Playing:
+    //            ui->playButton->setText("Pause");
+    //            break;
+    //        case DeviceState::Error:
+    //        case DeviceState::Stopped:
+    //        case DeviceState::Ready:
+    //            ui->playButton->setText("Play");
+    //            break;
+    //        case DeviceState::Paused:
+    //            ui->playButton->setText("Resume");
+    //            break;
+    //        default:
+    //            break;
+    //    }
 }
 
 void MainWindow::scanEndedSlot() {
-
 }
 
 } // namespace Melosic

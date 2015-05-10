@@ -24,25 +24,18 @@
 #define DLOpen(a) LoadLibrary(a)
 #define DLClose FreeLibrary
 #define DLGetSym GetProcAddress
-inline const char * DLError() {
-    char * str;
+inline const char* DLError() {
+    char* str;
     auto err = GetLastError();
-    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
-                  FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                  FORMAT_MESSAGE_IGNORE_INSERTS,
-                  NULL,
-                  err,
-                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                  (LPSTR)&str,
-                  0,
-                  NULL);
+    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                  err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&str, 0, NULL);
     return str;
 }
 
 #else // non-windows platforms
 
 #include <dlfcn.h>
-#define DLHandle void*
+#define DLHandle void *
 #define DLOpen(a) ::dlopen(a, RTLD_NOW)
 #define DLClose ::dlclose
 #define DLGetSym ::dlsym
@@ -83,24 +76,20 @@ namespace Plugin {
 struct PluginsLoaded : Signals::Signal<Signals::Plugin::PluginsLoaded> {};
 
 class Plugin {
-public:
+  public:
     Plugin(const boost::filesystem::path& filename, Core::Kernel& kernel)
-        : pluginPath(absolute(filename)),
-          kernel(kernel)
-    {
+        : pluginPath(absolute(filename)), kernel(kernel) {
         handle = DLOpen(pluginPath.string().c_str());
 
         if(handle == nullptr) {
-            BOOST_THROW_EXCEPTION(PluginException() <<
-                                  ErrorTag::FilePath(pluginPath) <<
-                                  ErrorTag::Plugin::Msg(DLError()));
+            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(pluginPath)
+                                                    << ErrorTag::Plugin::Msg(DLError()));
         }
 
         getFunction<registerPlugin_F>("registerPlugin")(&info, RegisterFuncsInserter(kernel, regFuns));
         if(info.APIVersion != expectedAPIVersion()) {
-            BOOST_THROW_EXCEPTION(PluginVersionMismatchException() <<
-                                  ErrorTag::FilePath(pluginPath) <<
-                                  ErrorTag::Plugin::Info(info));
+            BOOST_THROW_EXCEPTION(PluginVersionMismatchException() << ErrorTag::FilePath(pluginPath)
+                                                                   << ErrorTag::Plugin::Info(info));
         }
         destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
     }
@@ -109,13 +98,8 @@ public:
     Plugin& operator=(const Plugin&) = delete;
 
     Plugin(Plugin&& b)
-        : pluginPath(b.pluginPath),
-          destroyPlugin_(b.destroyPlugin_),
-          regFuns(b.regFuns),
-          handle(b.handle),
-          kernel(b.kernel),
-          info(b.info)
-    {
+        : pluginPath(b.pluginPath), destroyPlugin_(b.destroyPlugin_), regFuns(b.regFuns), handle(b.handle),
+          kernel(b.kernel), info(b.info) {
         b.handle = nullptr;
     }
 
@@ -139,11 +123,10 @@ public:
         }
     }
 
-private:
-    template <typename T>
-    std::function<T> getFunction(const std::string& symbolName) {
+  private:
+    template <typename T> std::function<T> getFunction(const std::string& symbolName) {
 #ifdef _POSIX_VERSION
-        DLError(); //clear err
+        DLError(); // clear err
 #endif
         auto sym = DLGetSym(handle, symbolName.c_str());
         auto err = DLError();
@@ -152,10 +135,9 @@ private:
 #elif defined(_WIN32)
         if(sym == nullptr) {
 #endif
-            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() <<
-                                  ErrorTag::FilePath(pluginPath) <<
-                                  ErrorTag::Plugin::Symbol(symbolName)<<
-                                  ErrorTag::Plugin::Msg(err));
+            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() << ErrorTag::FilePath(pluginPath)
+                                                                  << ErrorTag::Plugin::Symbol(symbolName)
+                                                                  << ErrorTag::Plugin::Msg(err));
         }
         return reinterpret_cast<T*>(sym);
     }
@@ -175,7 +157,7 @@ struct Manager::impl {
     using strict_lock = boost::strict_lock<mutex>;
 
     impl(const std::shared_ptr<Config::Manager>& confman) : confman(confman) {
-        searchPaths.push_back(fs::current_path().parent_path()/"lib");
+        searchPaths.push_back(fs::current_path().parent_path() / "lib");
         conf.putNode("search paths", searchPaths);
         confman->getLoadedSignal().connect(&impl::loadedSlot, this);
     }
@@ -187,9 +169,7 @@ struct Manager::impl {
 
         c->merge(conf);
         c->setDefault(conf);
-        c->iterateNodes([this] (const std::string& key, auto&& var) {
-            variableUpdateSlot(key, var);
-        });
+        c->iterateNodes([this](const std::string& key, auto&& var) { variableUpdateSlot(key, var); });
         m_signal_connections.emplace_back(c->getVariableUpdatedSignal().connect(&impl::variableUpdateSlot, this));
     }
 
@@ -208,17 +188,14 @@ struct Manager::impl {
                         for(auto& path : get<std::vector<Config::VarType>>(*sp))
                             searchPaths.emplace_back(get<std::string>(path));
                 }
-            }
-            else if(key == "blacklist") {
+            } else if(key == "blacklist") {
                 strict_lock l(mu);
                 blackList.clear();
                 for(auto& path : get<std::vector<Config::VarType>>(val))
                     blackList.push_back(get<std::string>(path));
-            }
-            else
+            } else
                 ERROR_LOG(logject) << "Config: Unknown key: " << key;
-        }
-        catch(boost::bad_get&) {
+        } catch(boost::bad_get&) {
             ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
         }
     }
@@ -239,9 +216,8 @@ struct Manager::impl {
         auto filename = filepath.filename().string();
 
         if(loadedPlugins.find(filename) != loadedPlugins.end())
-            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() <<
-                                  ErrorTag::FilePath(filename) <<
-                                  ErrorTag::Plugin::Msg("plugin already loaded"));
+            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() << ErrorTag::FilePath(filename)
+                                                                  << ErrorTag::Plugin::Msg("plugin already loaded"));
 
         auto info = loadedPlugins.emplace(filename, Plugin(filepath, kernel)).first->second.getInfo();
         LOG(logject) << "Plugin loaded: " << info;
@@ -273,8 +249,7 @@ struct Manager::impl {
                     }
                     if(fs::is_regular_file(file) && file.extension() == ".melin")
                         loadPlugin(file, kernel, l);
-                }
-                catch(...) {
+                } catch(...) {
                     ERROR_LOG(logject) << "Plugin " << file << " not loaded";
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 }
@@ -286,7 +261,7 @@ struct Manager::impl {
     std::vector<Info> getPlugins() {
         strict_lock l(mu);
         std::vector<Info> vec;
-        boost::transform(loadedPlugins | map_values, std::back_inserter(vec), [](Plugin& p) {return p.getInfo();});
+        boost::transform(loadedPlugins | map_values, std::back_inserter(vec), [](Plugin& p) { return p.getInfo(); });
         return vec;
     }
 
@@ -311,9 +286,11 @@ struct Manager::impl {
     mutex mu;
 };
 
-Manager::Manager(const std::shared_ptr<Config::Manager>& confman) : pimpl(new impl(confman)) {}
+Manager::Manager(const std::shared_ptr<Config::Manager>& confman) : pimpl(new impl(confman)) {
+}
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 void Manager::loadPlugins(Core::Kernel& kernel) {
     pimpl->loadPlugins(kernel);

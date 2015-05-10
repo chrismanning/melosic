@@ -44,7 +44,7 @@ class SelectionModel : public QItemSelectionModel {
     int currentRow() const;
     void setCurrentRow(int row);
 
-  Q_SIGNALS:
+Q_SIGNALS:
     void currentRowChanged(int row);
     void hasSelectionChanged(bool hasSelection);
 

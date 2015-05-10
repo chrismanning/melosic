@@ -43,7 +43,7 @@ class Playlist;
 class Track;
 
 class MELOSIC_EXPORT Player final {
-public:
+  public:
     explicit Player(Core::Kernel&);
 
     ~Player();
@@ -70,7 +70,8 @@ public:
     Signals::Player::StateChanged& stateChangedSignal() const;
 
     struct impl;
-private:
+
+  private:
     std::shared_ptr<impl> pimpl;
 };
 

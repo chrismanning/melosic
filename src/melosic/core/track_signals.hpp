@@ -20,7 +20,6 @@
 
 #include <chrono>
 
-namespace Melosic {
-}// Melosic
+namespace Melosic {} // Melosic
 
 #endif // MELOSIC_TRACK_SIGNALS_HPP

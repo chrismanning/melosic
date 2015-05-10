@@ -18,7 +18,9 @@
 #include <string>
 #include <thread>
 #include <mutex>
-using std::mutex; using std::unique_lock; using std::lock_guard;
+using std::mutex;
+using std::unique_lock;
+using std::lock_guard;
 #include <functional>
 namespace ph = std::placeholders;
 #include <future>
@@ -40,24 +42,22 @@ namespace executors = Melosic::executors;
 namespace lastfm {
 
 struct user::impl : std::enable_shared_from_this<impl> {
-    impl(std::weak_ptr<service> lastserv) : impl(lastserv, "", "") {}
-    impl(std::weak_ptr<service> lastserv, const std::string& username) : impl(lastserv, username, "") {}
+    impl(std::weak_ptr<service> lastserv) : impl(lastserv, "", "") {
+    }
+    impl(std::weak_ptr<service> lastserv, const std::string& username) : impl(lastserv, username, "") {
+    }
     impl(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey)
-        : lastserv(lastserv),
-          username(username),
-          sessionKey(sessionKey),
-          logject(logging::keywords::channel = "lastfm::user")
-    {}
+        : lastserv(lastserv), username(username), sessionKey(sessionKey),
+          logject(logging::keywords::channel = "lastfm::user") {
+    }
 
-private:
+  private:
     bool getInfo_impl(const std::shared_ptr<service>& lastserv) {
         if(!lastserv)
             return false;
         TRACE_LOG(logject) << "In getInfo";
         Method method = lastserv->prepareMethodCall("user.getInfo");
-        method.addParameter()
-                .addMember("user", username)
-                .addMember("api_key", lastserv->api_key());
+        method.addParameter().addMember("user", username).addMember("api_key", lastserv->api_key());
         std::string reply(std::move(lastserv->postMethod(method)));
         if(reply.empty())
             return false;
@@ -67,7 +67,7 @@ private:
         read_xml(ss, ptree, trim_whitespace);
 
         if(ptree.get<std::string>("lfm.<xmlattr>.status", "failed") != "ok") {
-            //TODO: handle error
+            // TODO: handle error
             return false;
         }
 
@@ -82,7 +82,7 @@ private:
         return true;
     }
 
-public:
+  public:
     std::future<bool> getInfo() {
         std::shared_ptr<service> lastserv = this->lastserv.lock();
         if(!lastserv) {
@@ -90,7 +90,7 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+        std::packaged_task<bool()> task([ self = shared_from_this(), lastserv ]() {
             return self->getInfo_impl(lastserv);
         });
         auto fut = task.get_future();
@@ -99,12 +99,12 @@ public:
         return fut;
     }
 
-private:
+  private:
     bool authenticate_impl(const std::shared_ptr<service>& lastserv) {
         return static_cast<bool>(lastserv);
     }
 
-public:
+  public:
     std::future<bool> authenticate() {
         std::shared_ptr<service> lastserv = this->lastserv.lock();
         if(!lastserv) {
@@ -112,7 +112,7 @@ public:
             p.set_value(false);
             return p.get_future();
         }
-        std::packaged_task<bool()> task([self = shared_from_this(), lastserv]() {
+        std::packaged_task<bool()> task([ self = shared_from_this(), lastserv ]() {
             return self->authenticate_impl(lastserv);
         });
         auto fut = task.get_future();
@@ -131,7 +131,7 @@ public:
         sessionKey = sk;
     }
 
-private:
+  private:
     std::weak_ptr<service> lastserv;
     std::string username;
     std::string sessionKey;
@@ -146,22 +146,26 @@ private:
     Mutex mu;
 };
 
-user::user() : pimpl(nullptr) {}
+user::user() : pimpl(nullptr) {
+}
 
 user::user(std::weak_ptr<service> lastserv, const std::string& username)
-    : pimpl(std::make_shared<impl>(lastserv, username)) {}
+    : pimpl(std::make_shared<impl>(lastserv, username)) {
+}
 
-user::~user() {}
+user::~user() {
+}
 
 std::future<bool> user::getInfo() {
     return pimpl->getInfo();
 }
 
 user::user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey)
-    : pimpl(new impl(lastserv, username, sessionKey))
-{}
+    : pimpl(new impl(lastserv, username, sessionKey)) {
+}
 
-user::user(user&& b) : pimpl(std::move(b.pimpl)) {}
+user::user(user&& b) : pimpl(std::move(b.pimpl)) {
+}
 
 user& user::operator=(user&& b) {
     pimpl = std::move(b.pimpl);
@@ -180,4 +184,4 @@ user::operator bool() {
     return static_cast<bool>(pimpl);
 }
 
-}//namespace lastfm
+} // namespace lastfm

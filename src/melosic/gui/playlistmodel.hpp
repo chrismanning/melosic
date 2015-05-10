@@ -75,9 +75,8 @@ class PlaylistModel : public QAbstractListModel {
     friend class TagBinding;
 
   public:
-    explicit PlaylistModel(Core::Playlist m_playlist,
-                           const std::shared_ptr<Decoder::Manager>&, const std::shared_ptr<Library::Manager>&,
-                           QObject* parent = nullptr);
+    explicit PlaylistModel(Core::Playlist m_playlist, const std::shared_ptr<Decoder::Manager>&,
+                           const std::shared_ptr<Library::Manager>&, QObject* parent = nullptr);
 
     QString name() const;
     void setName(QString name);

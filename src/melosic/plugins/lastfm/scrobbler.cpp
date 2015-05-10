@@ -27,32 +27,28 @@ using Melosic::Output::DeviceState;
 
 namespace lastfm {
 
-scrobbler::scrobbler(std::shared_ptr<service> lastserv) :
-    lastserv(lastserv),
-    logject(logging::keywords::channel = "lastfm::scrobbler")
-{
+scrobbler::scrobbler(std::shared_ptr<service> lastserv)
+    : lastserv(lastserv), logject(logging::keywords::channel = "lastfm::scrobbler") {
     TRACE_LOG(logject) << "Scrobbling enabled";
-//    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
-//            .connect(&Scrobbler::notifySlot, this, ph::_1, ph::_2));
+    //    connections.emplace_back(slotman->get<Melosic::Signals::Player::NotifyPlayPos>()
+    //            .connect(&Scrobbler::notifySlot, this, ph::_1, ph::_2));
     TRACE_LOG(logject) << "Connected notify slot";
-//    connections.emplace_back(slotman->get<Melosic::Signals::Signal<void(Output::DeviceState)>>()
-//            .connect(&Scrobbler::stateChangedSlot, this, ph::_1));
-//    TRACE_LOG(logject) << "Connected state changed slot";
-//    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::PlaylistChanged>()
-//            .connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
+    //    connections.emplace_back(slotman->get<Melosic::Signals::Signal<void(Output::DeviceState)>>()
+    //            .connect(&Scrobbler::stateChangedSlot, this, ph::_1));
+    //    TRACE_LOG(logject) << "Connected state changed slot";
+    //    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::PlaylistChanged>()
+    //            .connect(&Scrobbler::playlistChangeSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected playlist changed slot";
-//    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::TrackChanged>()
-//            .connect(&Scrobbler::trackChangedSlot, this, ph::_1));
+    //    connections.emplace_back(slotman->get<Melosic::Signals::Playlist::TrackChanged>()
+    //            .connect(&Scrobbler::trackChangedSlot, this, ph::_1));
     TRACE_LOG(logject) << "Connected track changed slot";
 }
 
 void scrobbler::notifySlot(chrono::milliseconds current, chrono::milliseconds total) {
     static std::weak_ptr<track> prev;
     std::unique_lock<Mutex> l(mu);
-    if(total > chrono::seconds(15) && current > (total / 2)
-            && static_cast<bool>(currentTrack_)
-            && currentTrack_ != prev.lock())
-    {
+    if(total > chrono::seconds(15) && current > (total / 2) && static_cast<bool>(currentTrack_) &&
+       currentTrack_ != prev.lock()) {
         l.unlock();
         cacheTrack(currentTrack_);
         l.lock();
@@ -68,16 +64,15 @@ void scrobbler::stateChangedSlot(DeviceState newstate) {
         submitCache();
         l.lock();
         currentTrack_.reset();
-    }
-    else if(newstate == DeviceState::Playing && static_cast<bool>(currentTrack_)) {
+    } else if(newstate == DeviceState::Playing && static_cast<bool>(currentTrack_)) {
         l.unlock();
         updateNowPlaying(currentTrack_);
     }
 }
 
 void scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
-//    if(playlist && *playlist)
-//        trackChangedSlot(*playlist->currentTrack());
+    //    if(playlist && *playlist)
+    //        trackChangedSlot(*playlist->currentTrack());
 }
 
 void scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {
@@ -102,8 +97,7 @@ void scrobbler::submitCache() {
         auto f = std::move(ptr->scrobble());
         l.lock();
         if(f.get()) {
-        }
-        else {
+        } else {
             i = ++cache.insert(i, ptr);
         }
     }
@@ -119,5 +113,4 @@ void scrobbler::updateNowPlaying(std::shared_ptr<track> track) {
     if(track)
         track->updateNowPlaying();
 }
-
 }

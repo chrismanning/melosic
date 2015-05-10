@@ -95,12 +95,10 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
     std::future<network::http::v2::response> get(std::string_view method, params_t params, use_future_t<>);
 
     template <typename TransformerT, typename ReturnT = std::result_of_t<TransformerT(network::http::v2::response)>>
-    std::future<ReturnT> get(std::string_view method, params_t params,
-                             use_future_t<>, TransformerT&& transform);
+    std::future<ReturnT> get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform);
 
     void get(std::string_view method, params_t params,
              std::function<void(asio::error_code, network::http::v2::response)> callback);
-
 
     std::future<tag> get_tag(std::string_view tag_name);
 
@@ -151,7 +149,9 @@ struct Parameter {
         return *this;
     }
 
-    boost::iterator_range<StringStringMap::iterator> getMembers() { return boost::make_iterator_range(members); }
+    boost::iterator_range<StringStringMap::iterator> getMembers() {
+        return boost::make_iterator_range(members);
+    }
     boost::iterator_range<StringStringMap::const_iterator> getMembers() const {
         return boost::make_iterator_range(members);
     }
@@ -163,7 +163,8 @@ struct Parameter {
 typedef std::list<Parameter> ParameterList;
 
 struct Method {
-    Method(const std::string& methodName) : methodName(methodName) {}
+    Method(const std::string& methodName) : methodName(methodName) {
+    }
     Method(Method&&) = default;
 
     Method(const Method&) = delete;
@@ -174,7 +175,9 @@ struct Method {
         return params.back();
     }
 
-    boost::iterator_range<ParameterList::iterator> getParameters() { return boost::make_iterator_range(params); }
+    boost::iterator_range<ParameterList::iterator> getParameters() {
+        return boost::make_iterator_range(params);
+    }
     boost::iterator_range<ParameterList::const_iterator> getParameters() const {
         return boost::make_iterator_range(params);
     }

@@ -21,9 +21,9 @@
 #include <boost/config.hpp>
 
 #ifdef FLAC_MELIN_EXPORTS
-#   define FLAC_MELIN_API BOOST_SYMBOL_EXPORT
+#define FLAC_MELIN_API BOOST_SYMBOL_EXPORT
 #else
-#   define FLAC_MELIN_API BOOST_SYMBOL_IMPORT
+#define FLAC_MELIN_API BOOST_SYMBOL_IMPORT
 #endif
 
 #ifndef _WIN32

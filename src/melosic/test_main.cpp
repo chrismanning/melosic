@@ -23,7 +23,7 @@
 
 #ifndef MELOSIC_TEST_NO_LINK
 #include <melosic/melin/logging.hpp>
-#endif //MELOSIC_TEST_NO_LINK
+#endif // MELOSIC_TEST_NO_LINK
 
 int main(int argc, char** argv) {
     boost::locale::generator gen;
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 
 #ifndef MELOSIC_TEST_NO_LINK
     Melosic::Logger::init(&Melosic::Logger::null_stream);
-#endif //MELOSIC_TEST_NO_LINK
+#endif // MELOSIC_TEST_NO_LINK
 
     return Catch::Session().run(argc, argv);
 }

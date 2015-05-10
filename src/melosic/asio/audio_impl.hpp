@@ -31,11 +31,11 @@ namespace Melosic {
 namespace AudioIO {
 
 struct MELOSIC_EXPORT AudioOutputServiceBase {
-    explicit AudioOutputServiceBase(asio::io_service& service) :
-        m_service(service)
-    {}
+    explicit AudioOutputServiceBase(asio::io_service& service) : m_service(service) {
+    }
 
-    virtual ~AudioOutputServiceBase() {}
+    virtual ~AudioOutputServiceBase() {
+    }
 
     virtual void destroy() = 0;
     virtual void cancel(std::error_code&) = 0;
@@ -60,15 +60,14 @@ struct MELOSIC_EXPORT AudioOutputServiceBase {
     virtual Output::DeviceState state() const = 0;
     virtual AudioSpecs current_specs() const = 0;
 
-protected:
+  protected:
     asio::io_service& get_io_service() noexcept {
         return m_service;
     }
 
-private:
+  private:
     asio::io_service& m_service;
 };
-
 }
 }
 

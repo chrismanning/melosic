@@ -29,39 +29,39 @@
 namespace Melosic {
 namespace Signals {
 
-template <typename Ret, typename ...Args>
-struct Signal<Ret (Args...)> : SignalCore<Ret (Args...)> {
-    using SignalCore<Ret (Args...)>::SignalCore;
+template <typename Ret, typename... Args> struct Signal<Ret(Args...)> : SignalCore<Ret(Args...)> {
+    using SignalCore<Ret(Args...)>::SignalCore;
 
-    template <typename ...A>
-    boost::future<void> operator()(use_future_t, A&& ...args) {
+    template <typename... A> boost::future<void> operator()(use_future_t, A&&... args) {
         static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
-        static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                      MultiArgsTrait<mpl::unpack_args<mpl::or_<std::is_convertible<mpl::_1, mpl::_2>,
-                                                               std::is_same<mpl::_1, mpl::_2>>>,
-                        mpl::vector<typename std::decay<A>::type, typename std::decay<Args>::type>...>,
-                      mpl::true_>::type::value, "signal must be called with compatible args");
+        static_assert(
+            mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                     MultiArgsTrait<mpl::unpack_args<mpl::or_<std::is_convertible<mpl::_1, mpl::_2>,
+                                                              std::is_same<mpl::_1, mpl::_2>>>,
+                                    mpl::vector<typename std::decay<A>::type, typename std::decay<Args>::type>...>,
+                     mpl::true_>::type::value,
+            "signal must be called with compatible args");
         return Super::future_call(std::forward<A>(args)...);
     }
 
-    template <typename ...A>
-    void operator()(A&& ...args) {
+    template <typename... A> void operator()(A&&... args) {
         static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
-        static_assert(mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
-                      MultiArgsTrait<mpl::unpack_args<mpl::or_<std::is_convertible<mpl::_1, mpl::_2>,
-                                                               std::is_same<mpl::_1, mpl::_2>>>,
-                        mpl::vector<typename std::decay<A>::type, typename std::decay<Args>::type>...>,
-                      mpl::true_>::type::value, "signal must be called with compatible args");
+        static_assert(
+            mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,
+                     MultiArgsTrait<mpl::unpack_args<mpl::or_<std::is_convertible<mpl::_1, mpl::_2>,
+                                                              std::is_same<mpl::_1, mpl::_2>>>,
+                                    mpl::vector<typename std::decay<A>::type, typename std::decay<Args>::type>...>,
+                     mpl::true_>::type::value,
+            "signal must be called with compatible args");
         Super::call(std::forward<A>(args)...);
     }
 
-protected:
-    using Super = Signal<Ret (Args...)>;
+  protected:
+    using Super = Signal<Ret(Args...)>;
 };
 
-template <typename Ret, typename ...Args>
-struct Signal<SignalCore<Ret (Args...)>> : Signal<Ret (Args...)> {
-    using Super = Signal<SignalCore<Ret (Args...)>>;
+template <typename Ret, typename... Args> struct Signal<SignalCore<Ret(Args...)>> : Signal<Ret(Args...)> {
+    using Super = Signal<SignalCore<Ret(Args...)>>;
 };
 
 } // namespace Signals

@@ -35,19 +35,12 @@ namespace Melosic {
 
 namespace Logger {
 
-enum class Severity {
-    info,
-    warning,
-    error,
-    debug,
-    trace
-};
+enum class Severity { info, warning, error, debug, trace };
 
 typedef logging::sources::severity_channel_logger_mt<Severity> Logger;
 
 template <typename CharT, typename TraitsT>
-MELOSIC_EXPORT
-std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, Severity lvl) {
+MELOSIC_EXPORT std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& strm, Severity lvl) {
     switch(lvl) {
         case Severity::info:
             strm << "info";
@@ -73,13 +66,15 @@ std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT
 MELOSIC_EXPORT void init(std::ostream* = nullptr);
 
 struct null_buffer : std::streambuf {
-    int overflow(int c) override { return c; }
+    int overflow(int c) override {
+        return c;
+    }
 };
 
 MELOSIC_EXPORT extern std::ostream null_stream;
 
-}//end namespace Logger
-}//end namespace Melosic
+} // end namespace Logger
+} // end namespace Melosic
 
 #ifndef MELOSIC_DISABLE_LOGGING
 

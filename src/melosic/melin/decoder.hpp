@@ -25,7 +25,9 @@
 
 #include <boost/filesystem/path.hpp>
 #include <boost/mpl/lambda.hpp>
-namespace { namespace mpl = boost::mpl; }
+namespace {
+namespace mpl = boost::mpl;
+}
 
 #include <network/uri.hpp>
 
@@ -56,7 +58,8 @@ typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)>
 class Manager final {
     explicit Manager(const std::shared_ptr<Input::Manager>&, const std::shared_ptr<Plugin::Manager>&);
     friend class Core::Kernel;
-public:
+
+  public:
     ~Manager();
 
     Manager(const Manager&) = delete;
@@ -66,13 +69,13 @@ public:
 
     MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string_view mime_type);
 
-    template <typename StringT, template <class...> class List, typename ...ListArgs>
+    template <typename StringT, template <class...> class List, typename... ListArgs>
     void addAudioFormat(Factory fact, List<StringT, ListArgs...> mime_types) {
         for(auto&& mime_type : mime_types)
             addAudioFormat(fact, std::move(mime_type));
     }
 
-    template <typename ...Strings, class = typename std::enable_if<(sizeof...(Strings) > 1)>::type>
+    template <typename... Strings, class = typename std::enable_if<(sizeof...(Strings) > 1)>::type>
     void addAudioFormat(Factory fact, Strings&&... mime_types) {
         for(auto&& mime_type : {std::forward<Strings>(mime_types)...})
             addAudioFormat(fact, mime_type);
@@ -83,15 +86,16 @@ public:
 
     std::unique_ptr<PCMSource> open(const Core::Track&) const;
 
-private:
+  private:
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
 
 class PCMSource {
-public:
+  public:
     typedef char char_type;
-    virtual ~PCMSource() {}
+    virtual ~PCMSource() {
+    }
     virtual void seek(chrono::milliseconds dur) = 0;
     virtual chrono::milliseconds tell() const = 0;
     virtual chrono::milliseconds duration() const = 0;

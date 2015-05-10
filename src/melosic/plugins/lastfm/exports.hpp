@@ -21,9 +21,9 @@
 #include <boost/config.hpp>
 
 #ifdef LASTFM_EXPORTS
-#   define LASTFM_EXPORT BOOST_SYMBOL_EXPORT
+#define LASTFM_EXPORT BOOST_SYMBOL_EXPORT
 #else
-#   define LASTFM_EXPORT BOOST_SYMBOL_IMPORT
+#define LASTFM_EXPORT BOOST_SYMBOL_IMPORT
 #endif
 
 #ifndef _WIN32
@@ -33,4 +33,3 @@
 #endif
 
 #endif // LASTFM_EXPORTS_HPP
-

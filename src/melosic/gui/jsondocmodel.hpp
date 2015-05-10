@@ -33,8 +33,8 @@ class JsonDocModel : public QAbstractListModel {
     struct impl;
     std::unique_ptr<impl> pimpl;
 
-public:
-    explicit JsonDocModel(QObject *parent = nullptr);
+  public:
+    explicit JsonDocModel(QObject* parent = nullptr);
     virtual ~JsonDocModel();
 
     enum Roles { DocumentStringRole = Qt::UserRole * 7, DocumentRole };
@@ -45,8 +45,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     QVariant data(const QModelIndex& index, int role) const override;
-    QVariant headerData(int section, Qt::Orientation orientation,
-                        int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     QHash<int, QByteArray> roleNames() const override;
 };
 

@@ -33,8 +33,7 @@ using namespace Melosic;
 static boost::exception_ptr to_boost_exception_ptr(std::exception_ptr e) {
     try {
         std::rethrow_exception(e);
-    }
-    catch(...) {
+    } catch(...) {
         return boost::current_exception();
     }
 }

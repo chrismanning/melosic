@@ -51,7 +51,8 @@ typedef std::function<std::unique_ptr<AudioIO::AudioOutputBase>(asio::io_service
 class Manager final {
     explicit Manager(const std::shared_ptr<Config::Manager>&, asio::io_service&);
     friend class Core::Kernel;
-public:
+
+  public:
     ~Manager();
 
     Manager(Manager&&) = delete;
@@ -60,8 +61,7 @@ public:
     Manager& operator=(Manager&&) = delete;
 
     MELOSIC_EXPORT void addOutputDevice(ASIOFactory fact, const Output::DeviceName& avail);
-    template <typename DeviceList>
-    void addOutputDevices(ASIOFactory fact, DeviceList avail) {
+    template <typename DeviceList> void addOutputDevices(ASIOFactory fact, DeviceList avail) {
         for(const DeviceName& device : avail) {
             addOutputDevice(fact, device);
         }
@@ -72,7 +72,7 @@ public:
     std::unique_ptr<AudioIO::AudioOutputBase> createASIOSink() const;
     Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;
 
-private:
+  private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
@@ -87,8 +87,10 @@ enum class DeviceState {
 };
 
 struct DeviceName {
-    DeviceName(std::string name) : DeviceName(name, "") {}
-    DeviceName(std::string name, std::string desc) : name(name), desc(desc) {}
+    DeviceName(std::string name) : DeviceName(name, "") {
+    }
+    DeviceName(std::string name, std::string desc) : name(name), desc(desc) {
+    }
     const std::string& getName() const {
         return name;
     }
@@ -101,7 +103,7 @@ struct DeviceName {
     template <typename CharT, typename TraitsT>
     friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&, const DeviceName&);
 
-private:
+  private:
     const std::string name, desc;
 };
 

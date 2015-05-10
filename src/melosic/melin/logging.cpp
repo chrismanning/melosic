@@ -56,8 +56,8 @@ void init(std::ostream* str) {
 
     con_sink->set_formatter(formatter);
 
-    auto file_backend = boost::make_shared<sinks::text_file_backend>(
-                keywords::file_name = Directories::dataHome()/"melosic"/"melosic.log");
+    auto file_backend = boost::make_shared<sinks::text_file_backend>(keywords::file_name = Directories::dataHome() /
+                                                                                           "melosic" / "melosic.log");
     auto file_sink = boost::make_shared<sinks::synchronous_sink<sinks::text_file_backend>>(file_backend);
     file_backend->auto_flush(true);
 

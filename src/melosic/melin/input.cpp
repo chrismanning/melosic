@@ -30,13 +30,12 @@ namespace Input {
 
 Logger::Logger logject{logging::keywords::channel = "Input::Manager"};
 
-class Manager::impl {
-
-};
+class Manager::impl {};
 
 Manager::Manager()
 //    : pimpl(new impl)
-{}
+{
+}
 
 std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
     try {
@@ -44,11 +43,9 @@ std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
             return nullptr;
         if(uri.scheme()->to_string() == "file") {
             return std::make_unique<fs::ifstream>(uri_to_path(uri));
+        } else if(uri.scheme()->to_string() == "http") {
         }
-        else if(uri.scheme()->to_string() == "http") {
-        }
-    }
-    catch(...) {
+    } catch(...) {
         ERROR_LOG(logject) << "Could not open uri " << uri << ": " << boost::current_exception_diagnostic_information();
         return nullptr;
     }
@@ -56,15 +53,16 @@ std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
     return nullptr;
 }
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 boost::filesystem::path uri_to_path(const network::uri& uri) {
-    boost::filesystem::path p/*{"/"}*/;
+    boost::filesystem::path p /*{"/"}*/;
     if(uri.host())
         p /= uri.host()->to_string();
     if(uri.path()) {
         auto str_ref = *uri.path();
-        str_ref = {str_ref.data()-1, str_ref.size()};
+        str_ref = {str_ref.data() - 1, str_ref.size()};
         auto str = std::string{};
         network::uri::decode(str_ref.begin(), str_ref.end(), std::back_inserter(str));
         p /= std::move(str);

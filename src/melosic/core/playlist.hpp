@@ -38,7 +38,7 @@ namespace Core {
 class Track;
 
 class MELOSIC_EXPORT Playlist {
-public:
+  public:
     typedef Track value_type;
     typedef optional<value_type> optional_type;
     typedef int size_type;
@@ -80,22 +80,18 @@ public:
     Signals::Playlist::TagsChanged& getTagsChangedSignal() const noexcept;
     Signals::Playlist::MultiTagsChanged& getMutlipleTagsChangedSignal() const noexcept;
 
-private:
+  private:
     class impl;
     std::shared_ptr<impl> pimpl;
 
-    template <typename>
-    struct Iterator;
-    template <typename>
-    friend struct Iterator;
+    template <typename> struct Iterator;
+    template <typename> friend struct Iterator;
 
     friend std::size_t hash_value(const Playlist&);
 
     template <typename Value>
-    using type_erased_iterator = boost::range_detail::any_iterator<Value,
-                                                                   boost::random_access_traversal_tag,
-                                                                   Value&,
-                                                                   ptrdiff_t>;
+    using type_erased_iterator =
+        boost::range_detail::any_iterator<Value, boost::random_access_traversal_tag, Value&, ptrdiff_t>;
     typedef type_erased_iterator<value_type> iterator;
     typedef type_erased_iterator<const value_type> const_iterator;
 
@@ -114,12 +110,11 @@ inline std::size_t hash_value(const Playlist& b) {
 } // namespace Melosic
 
 namespace std {
-    template <>
-    struct hash<Melosic::Core::Playlist> {
-        std::size_t operator()(Melosic::Core::Playlist const& s) const {
-            return hash_value(s);
-        }
-    };
+template <> struct hash<Melosic::Core::Playlist> {
+    std::size_t operator()(Melosic::Core::Playlist const& s) const {
+        return hash_value(s);
+    }
+};
 }
 
 #endif // MELOSIC_PLAYLIST_HPP

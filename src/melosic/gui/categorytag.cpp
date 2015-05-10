@@ -25,17 +25,15 @@
 
 namespace Melosic {
 
-CategoryTag::CategoryTag(QObject *parent) :
-    Criterion(parent)
-{
+CategoryTag::CategoryTag(QObject* parent) : Criterion(parent) {
     if(m_category_model)
         m_playlist_model = qobject_cast<PlaylistModel*>(m_category_model->sourceModel());
     else
-    connect(this, &Criterion::modelChanged, [this] (CategoryProxyModel* m) {
-        if(!m)
-            return;
-        m_playlist_model = qobject_cast<PlaylistModel*>(m->sourceModel());
-    });
+        connect(this, &Criterion::modelChanged, [this](CategoryProxyModel* m) {
+            if(!m)
+                return;
+            m_playlist_model = qobject_cast<PlaylistModel*>(m->sourceModel());
+        });
 }
 
 QString CategoryTag::result(const QModelIndex& index) const {
@@ -50,5 +48,4 @@ QString CategoryTag::result(const QModelIndex& index) const {
         return m_field;
     return QString::fromStdString(*tag);
 }
-
 }

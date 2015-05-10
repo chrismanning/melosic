@@ -48,9 +48,9 @@ struct AudioFile {
     enum class Type {
         Unsupported,
         SingleTrack,
-        MultiTrack, //embedded cue
-        Playlist,   //m3u etc.
-        Cue         //external cue
+        MultiTrack, // embedded cue
+        Playlist, // m3u etc.
+        Cue // external cue
     };
 
     Type type() const;
@@ -58,7 +58,7 @@ struct AudioFile {
     boost::synchronized_value<std::vector<Track>>& tracks();
     const boost::synchronized_value<std::vector<Track>>& tracks() const;
 
-private:
+  private:
     explicit AudioFile(const boost::filesystem::path&);
     friend class FileCache;
     friend class Library::Manager;

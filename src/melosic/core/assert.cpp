@@ -23,16 +23,13 @@
 Melosic::Logger::Logger logject{};
 
 namespace boost {
-BOOST_SYMBOL_EXPORT void assertion_failed(char const * expr, char const * function, char const * file, long line) {
-    LOG(logject) << (boost::format("%1%:%2%: %3%: Assertion `%4%' failed.")
-                     % file % line % function % expr);
+BOOST_SYMBOL_EXPORT void assertion_failed(char const* expr, char const* function, char const* file, long line) {
+    LOG(logject) << (boost::format("%1%:%2%: %3%: Assertion `%4%' failed.") % file % line % function % expr);
     std::abort();
 }
-BOOST_SYMBOL_EXPORT void assertion_failed_msg(char const * expr, char const * msg,
-                                 char const * function, char const * file, long line) {
-    LOG(logject) << (boost::format("%1%:%2%: %3%: Assertion `%4%' failed.\n")
-                 % file % line % function % expr)
-              << msg;
+BOOST_SYMBOL_EXPORT void assertion_failed_msg(char const* expr, char const* msg, char const* function, char const* file,
+                                              long line) {
+    LOG(logject) << (boost::format("%1%:%2%: %3%: Assertion `%4%' failed.\n") % file % line % function % expr) << msg;
     std::abort();
 }
 }

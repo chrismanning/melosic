@@ -36,14 +36,10 @@ struct PlayerControls::impl {
     Core::Player& player;
     Signals::ScopedConnection stateChangedConn;
 
-    impl(Core::Player& player, std::shared_ptr<Playlist::Manager> playman)
-        : player(player)
-    {
+    impl(Core::Player& player, std::shared_ptr<Playlist::Manager> playman) : player(player) {
         state = static_cast<PlayerControls::DeviceState>(player.state());
-        playman->getCurrentPlaylistChangedSignal().
-                connect([this] (optional<Core::Playlist> cp) {
-            currentPlaylist = cp;
-        });
+        playman->getCurrentPlaylistChangedSignal().connect(
+            [this](optional<Core::Playlist> cp) { currentPlaylist = cp; });
         currentPlaylist = playman->currentPlaylist();
     }
 
@@ -52,18 +48,18 @@ struct PlayerControls::impl {
     optional<Core::Playlist> currentPlaylist;
 };
 
-PlayerControls::PlayerControls(Core::Player& player, const std::shared_ptr<Playlist::Manager>& playman, QObject* parent) :
-    QObject(parent), pimpl(new impl(player, playman))
-{
+PlayerControls::PlayerControls(Core::Player& player, const std::shared_ptr<Playlist::Manager>& playman, QObject* parent)
+    : QObject(parent), pimpl(new impl(player, playman)) {
     qRegisterMetaType<DeviceState>("DeviceState");
-    pimpl->stateChangedConn = pimpl->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
+    pimpl->stateChangedConn = pimpl->player.stateChangedSignal().connect([this](Output::DeviceState ds) {
         pimpl->state = static_cast<PlayerControls::DeviceState>(ds);
         Q_EMIT stateChanged(state());
         Q_EMIT stateStrChanged(stateStr());
     });
 }
 
-PlayerControls::~PlayerControls() {}
+PlayerControls::~PlayerControls() {
+}
 
 void PlayerControls::play() {
     pimpl->player.play();
@@ -100,7 +96,7 @@ PlayerControls::DeviceState PlayerControls::state() const {
 }
 
 QString PlayerControls::stateStr() const {
-    for(int i=0; i < metaObject()->enumeratorCount(); ++i) {
+    for(int i = 0; i < metaObject()->enumeratorCount(); ++i) {
         QMetaEnum m = metaObject()->enumerator(i);
         if(m.name() == QLatin1String("DeviceState"))
             return QLatin1String(m.valueToKey(state()));

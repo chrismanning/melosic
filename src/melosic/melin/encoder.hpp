@@ -24,7 +24,7 @@ namespace Melosic {
 namespace Encoder {
 
 class Manager final {
-public:
+  public:
     Manager();
     ~Manager();
 
@@ -32,7 +32,7 @@ public:
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-private:
+  private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };

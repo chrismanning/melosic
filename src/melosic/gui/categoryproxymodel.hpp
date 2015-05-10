@@ -37,7 +37,7 @@ class CategoryProxyModel : public QIdentityProxyModel {
 
     friend class CategoryProxyModelAttached;
 
-public:
+  public:
     explicit CategoryProxyModel(QObject* parent = nullptr);
     ~CategoryProxyModel();
 
@@ -46,23 +46,23 @@ public:
     Category* category() const;
     void setCategory(Category*);
 
-    static CategoryProxyModelAttached* qmlAttachedProperties(QObject *object);
+    static CategoryProxyModelAttached* qmlAttachedProperties(QObject* object);
 
 Q_SIGNALS:
     void categoryChanged(Melosic::Category* category);
     void blocksNeedUpdating(int start, int end);
 
-private:
+  private:
     void onRowsInserted(const QModelIndex&, int start, int end);
     void onRowsMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&, int destinationRow);
-    void onRowsAboutToBeMoved(const QModelIndex&, int sourceStart, int sourceEnd,
-                              const QModelIndex&, int destinationRow);
+    void onRowsAboutToBeMoved(const QModelIndex&, int sourceStart, int sourceEnd, const QModelIndex&,
+                              int destinationRow);
     void onRowsRemoved(const QModelIndex&, int start, int end);
     void onRowsAboutToBeRemoved(const QModelIndex&, int start, int end);
 
     void onDataChanged(const QModelIndex&, const QModelIndex&, const QVector<int>&);
 
-private:
+  private:
     struct impl;
     std::unique_ptr<impl> pimpl;
     friend class Block;
@@ -89,10 +89,10 @@ class CategoryProxyModelAttached : public QObject {
 
     void internal_update();
 
-private Q_SLOTS:
+  private Q_SLOTS:
     void setModelFromParent();
 
-public:
+  public:
     explicit CategoryProxyModelAttached(QObject* parent);
     ~CategoryProxyModelAttached();
 
@@ -113,7 +113,7 @@ class Block : public QObject {
     QPersistentModelIndex m_firstIndex = QModelIndex();
     friend class CategoryProxyModel;
 
-public:
+  public:
     ~Block();
 
     bool operator==(const Block& b) const;

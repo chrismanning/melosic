@@ -31,7 +31,7 @@ namespace lastfm {
 
 struct album {
 
-private:
+  private:
     std::string m_album_name;
     artist m_artist;
     network::uri m_url;

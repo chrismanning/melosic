@@ -27,7 +27,7 @@ using unique_lock = std::unique_lock<mutex>;
 #include <melosic/gui/playlistmodel.hpp>
 #include <melosic/common/signal_core.hpp>
 
-#if 0&& !defined(NDEBUG)
+#if 0 && !defined(NDEBUG)
 #include "modeltest.h"
 #endif
 
@@ -38,26 +38,22 @@ namespace Melosic {
 PlaylistManagerModel::PlaylistManagerModel(const std::shared_ptr<Playlist::Manager>& _playman,
                                            const std::shared_ptr<Decoder::Manager>& _decman,
                                            const std::shared_ptr<Library::Manager>& _libman, QObject* parent)
-    : QAbstractListModel(parent),
-      playman(_playman),
-      decman(_decman),
-      libman(_libman),
-      logject(logging::keywords::channel = "PlaylistManagerModel")
-{
-    conns.emplace_back(playman->getPlaylistAddedSignal().connect([this] (optional<Core::Playlist> p) {
+    : QAbstractListModel(parent), playman(_playman), decman(_decman), libman(_libman),
+      logject(logging::keywords::channel = "PlaylistManagerModel") {
+    conns.emplace_back(playman->getPlaylistAddedSignal().connect([this](optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist added: " << !!p;
         if(p) {
-           auto pm = new PlaylistModel(*p, decman, libman);
+            auto pm = new PlaylistModel(*p, decman, libman);
 #if 0&& !defined(NDEBUG)
            auto mt = new ModelTest(pm);
            mt->moveToThread(this->thread());
 #endif
-           pm->moveToThread(this->thread());
-           playlists.insert({*p, pm});
+            pm->moveToThread(this->thread());
+            playlists.insert({*p, pm});
         }
     }));
-    conns.emplace_back(playman->getPlaylistRemovedSignal().connect([this] (optional<Core::Playlist> p) {
+    conns.emplace_back(playman->getPlaylistRemovedSignal().connect([this](optional<Core::Playlist> p) {
         lock_guard l(mu);
         TRACE_LOG(logject) << "Playlist removed: " << !!p;
         if(!p)
@@ -66,8 +62,9 @@ PlaylistManagerModel::PlaylistManagerModel(const std::shared_ptr<Playlist::Manag
         if(it != playlists.left.end())
             playlists.left.erase(it);
     }));
-    conns.emplace_back(playman->getCurrentPlaylistChangedSignal().connect([this] (optional<Core::Playlist> p) {
-        if(!p) return;
+    conns.emplace_back(playman->getCurrentPlaylistChangedSignal().connect([this](optional<Core::Playlist> p) {
+        if(!p)
+            return;
         lock_guard l(mu);
         auto it = playlists.left.find(*p);
         if(it != playlists.left.end())
@@ -141,7 +138,7 @@ bool PlaylistManagerModel::insertRows(int row, int count, const QModelIndex&) {
         return false;
 
     TRACE_LOG(logject) << "row: " << row << "; count: " << count;
-    beginInsertRows(QModelIndex(), row, row+count-1);
+    beginInsertRows(QModelIndex(), row, row + count - 1);
     playman->insert(row, count);
     endInsertRows();
     return true;

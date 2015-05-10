@@ -51,7 +51,7 @@ inline std::list<fs::path> readEnvDirList(const char* name, const char* defaultV
         str += defaultValue;
 
     std::list<fs::path> returnValue;
-    boost::split(returnValue, str, [] (char c) { return c == delim; });
+    boost::split(returnValue, str, [](char c) { return c == delim; });
 
     return std::move(returnValue);
 }

@@ -40,7 +40,9 @@ namespace Core {
 
 namespace {
 
-void signal_handler(int signo) { std::quick_exit(signo); }
+void signal_handler(int signo) {
+    std::quick_exit(signo);
+}
 
 void io_thread_runner(asio::io_service& io) {
     try {
@@ -49,7 +51,6 @@ void io_thread_runner(asio::io_service& io) {
         std::clog << boost::current_exception_diagnostic_information() << std::endl;
     }
 }
-
 }
 
 struct Kernel::impl {
@@ -91,7 +92,8 @@ struct Kernel::impl {
     Logger::Logger logject{logging::keywords::channel = "Kernel"};
 };
 
-Kernel::Kernel() : pimpl(new impl) {}
+Kernel::Kernel() : pimpl(new impl) {
+}
 
 Kernel::~Kernel() {
     try {
@@ -101,23 +103,41 @@ Kernel::~Kernel() {
     }
 }
 
-std::shared_ptr<Config::Manager> Kernel::getConfigManager() { return pimpl->confman; }
+std::shared_ptr<Config::Manager> Kernel::getConfigManager() {
+    return pimpl->confman;
+}
 
-std::shared_ptr<Input::Manager> Kernel::getInputManager() { return pimpl->inman; }
+std::shared_ptr<Input::Manager> Kernel::getInputManager() {
+    return pimpl->inman;
+}
 
-std::shared_ptr<Decoder::Manager> Kernel::getDecoderManager() { return pimpl->decman; }
+std::shared_ptr<Decoder::Manager> Kernel::getDecoderManager() {
+    return pimpl->decman;
+}
 
-std::shared_ptr<Output::Manager> Kernel::getOutputManager() { return pimpl->outman; }
+std::shared_ptr<Output::Manager> Kernel::getOutputManager() {
+    return pimpl->outman;
+}
 
-std::shared_ptr<Encoder::Manager> Kernel::getEncoderManager() { return pimpl->encman; }
+std::shared_ptr<Encoder::Manager> Kernel::getEncoderManager() {
+    return pimpl->encman;
+}
 
-std::shared_ptr<Plugin::Manager> Kernel::getPluginManager() { return pimpl->plugman; }
+std::shared_ptr<Plugin::Manager> Kernel::getPluginManager() {
+    return pimpl->plugman;
+}
 
-std::shared_ptr<Melosic::Playlist::Manager> Kernel::getPlaylistManager() { return pimpl->playlistman; }
+std::shared_ptr<Melosic::Playlist::Manager> Kernel::getPlaylistManager() {
+    return pimpl->playlistman;
+}
 
-std::shared_ptr<Library::Manager> Kernel::getLibraryManager() { return pimpl->libman; }
+std::shared_ptr<Library::Manager> Kernel::getLibraryManager() {
+    return pimpl->libman;
+}
 
-asio::io_service& Kernel::getIOService() { return pimpl->io_service; }
+asio::io_service& Kernel::getIOService() {
+    return pimpl->io_service;
+}
 
 } // namespace Core
 } // namespace Melosic

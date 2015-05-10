@@ -41,38 +41,32 @@ struct artist;
 struct album;
 
 struct track {
-    track(std::weak_ptr<service>,
-          const std::string& name,
-          const std::string& artist,
-          const std::string& url);
+    track(std::weak_ptr<service>, const std::string& name, const std::string& artist, const std::string& url);
     track(std::weak_ptr<service>, const Melosic::Core::Track&);
 
     ~track();
 
-    //field accessors
+    // field accessors
     ForwardRange<tag> topTags() const;
     const std::string& getName() const;
     const artist& getArtist() const;
     const network::uri& getUrl() const;
     const std::string& getWiki() const;
 
-    //network accessors
+    // network accessors
     std::future<bool> fetchInfo(bool autocorrect = false);
     std::future<bool> scrobble();
     std::future<bool> updateNowPlaying();
 
-private:
+  private:
     struct impl;
     std::shared_ptr<impl> pimpl;
 };
 
-
 template <typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>&
-operator<<(std::basic_ostream<CharT, TraitsT>& out, const lastfm::track& track) {
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const lastfm::track& track) {
     return out << track.getArtist() << " - " << track.getName() << " : " << track.getUrl();
 }
-
 }
 
 #endif // LASTFM_TRACK_HPP

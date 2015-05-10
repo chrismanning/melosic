@@ -58,7 +58,8 @@ Logger::Logger logject{logging::keywords::channel = "Decoder::Manager"};
 
 struct Manager::impl : std::enable_shared_from_this<impl> {
     impl(const std::shared_ptr<Input::Manager>& inman, const std::shared_ptr<Plugin::Manager>& plugman)
-        : inman(inman), plugman(plugman) {}
+        : inman(inman), plugman(plugman) {
+    }
     std::shared_ptr<Input::Manager> inman;
     std::shared_ptr<Plugin::Manager> plugman;
     mutex mu;
@@ -69,9 +70,11 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
 };
 
 Manager::Manager(const std::shared_ptr<Input::Manager>& inman, const std::shared_ptr<Plugin::Manager>& plugman)
-    : pimpl(std::make_shared<impl>(inman, plugman)) {}
+    : pimpl(std::make_shared<impl>(inman, plugman)) {
+}
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 void Manager::addAudioFormat(Factory fact, std::string_view mime_type) {
     unique_lock l(pimpl->mu);
@@ -86,8 +89,7 @@ void Manager::addAudioFormat(Factory fact, std::string_view mime_type) {
     if(pos == pimpl->inputFactories.end()) {
         pimpl->inputFactories.emplace(std::move(mime), fact);
         assert(++bef == pimpl->inputFactories.size());
-    }
-    else {
+    } else {
         WARN_LOG(logject) << mime_type << ": already registered to a decoder factory";
     }
 }
@@ -96,8 +98,7 @@ std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
     try {
         if(uri.scheme() && uri.scheme()->to_string() == "file")
             return tracks(Input::uri_to_path(uri));
-    }
-    catch(network::percent_decoding_error e) {
+    } catch(network::percent_decoding_error e) {
         ERROR_LOG(logject) << "Error decoding uri (" << uri << "): " << e.what();
         DEBUG_LOG(logject) << boost::diagnostic_information(e);
     }
@@ -119,8 +120,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         for(auto&& entry : fs::recursive_directory_iterator(path))
             boost::range::push_back(ret, tracks(entry.path()));
         std::sort(ret.begin(), ret.end());
-    }
-    else if(fs::is_regular_file(status)) {
+    } else if(fs::is_regular_file(status)) {
         // TODO: detect files, including playlists
         FileRef taglib_file{path.c_str()};
         if(taglib_file.isNull())
@@ -128,7 +128,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
 
         assert(taglib_file.tag() != nullptr);
         auto taglib_tags = taglib_file.tag()->properties();
-        if(/*is playlist or cue*/taglib_tags.contains("CUEFILE"))
+        if(/*is playlist or cue*/ taglib_tags.contains("CUEFILE"))
             return ret;
 
         Core::TagMap tags;
@@ -149,8 +149,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
                 t.end(pcm_src->duration());
                 t.audioSpecs(pcm_src->getAudioSpecs());
             }
-        }
-        catch(...) {
+        } catch(...) {
             ERROR_LOG(logject) << "Could not open track at uri " << t.uri();
             ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
         }
@@ -162,7 +161,8 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
 }
 
 struct libmagic_handle final {
-    libmagic_handle() noexcept : libmagic_handle(MAGIC_NONE) {}
+    libmagic_handle() noexcept : libmagic_handle(MAGIC_NONE) {
+    }
 
     explicit libmagic_handle(int flags) noexcept {
         m_handle = magic_open(flags);
@@ -180,12 +180,12 @@ struct libmagic_handle final {
         return m_handle;
     }
 
-private:
+  private:
     magic_t m_handle;
 };
 
 static std::string detect_mime_type(std::istream& stream) {
-    thread_local libmagic_handle cookie(MAGIC_SYMLINK|MAGIC_MIME_TYPE|MAGIC_ERROR);
+    thread_local libmagic_handle cookie(MAGIC_SYMLINK | MAGIC_MIME_TYPE | MAGIC_ERROR);
 
     std::array<char, 80> buf;
     auto cur = stream.tellg();
@@ -209,11 +209,12 @@ struct TrackSource : PCMSource {
         assert(end >= 0ms);
         if(start > 0ms)
             pimpl->seek(start);
-//        if(m_end != pimpl->duration() && +(m_end - pimpl->duration()) < 1000ms)
-//            m_end = pimpl->duration();
+        //        if(m_end != pimpl->duration() && +(m_end - pimpl->duration()) < 1000ms)
+        //            m_end = pimpl->duration();
     }
 
-    virtual ~TrackSource() {}
+    virtual ~TrackSource() {
+    }
 
     void seek(chrono::milliseconds dur) override {
         dur += m_start;
@@ -283,8 +284,8 @@ std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
 
 std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     auto ret = pimpl->open(track.uri());
-//    if(ret)
-//        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
+    //    if(ret)
+    //        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
     return std::move(ret);
 }
 

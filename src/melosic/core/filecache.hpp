@@ -30,13 +30,13 @@ namespace Core {
 struct AudioFile;
 
 class FileCache {
-public:
+  public:
     FileCache();
     ~FileCache();
 
     optional<Core::AudioFile> getFile(const boost::filesystem::path&, std::error_code&) const;
 
-private:
+  private:
     struct impl;
     std::unique_ptr<impl> pimpl;
 };

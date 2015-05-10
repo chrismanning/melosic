@@ -31,8 +31,7 @@ namespace Signals {
 
 namespace Config {
 typedef SignalCore<void(const std::string&, const Melosic::Config::VarType&)> VariableUpdated;
-typedef SignalCore<
-    void(std::reference_wrapper<boost::synchronized_value<Melosic::Config::Conf>>)> Loaded;
+typedef SignalCore<void(std::reference_wrapper<boost::synchronized_value<Melosic::Config::Conf>>)> Loaded;
 }
 }
 }

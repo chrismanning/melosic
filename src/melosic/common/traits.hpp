@@ -20,37 +20,32 @@
 
 #include <boost/mpl/apply.hpp>
 #include <boost/mpl/logical.hpp>
-namespace { namespace mpl = boost::mpl; }
+namespace {
+namespace mpl = boost::mpl;
+}
 
-//some useful type traits
+// some useful type traits
 
 namespace Melosic {
 
-template <class Trait, typename ...Args>
+template <class Trait, typename... Args>
 using MultiArgsTrait = typename mpl::and_<mpl::true_, mpl::apply<Trait, Args>...>::type;
 
-template <class T>
-struct ObjFromMemFunPtr {};
+template <class T> struct ObjFromMemFunPtr {};
 
-template <class T, class U>
-struct ObjFromMemFunPtr<T U::*> {
-    typedef U type;
-};
+template <class T, class U> struct ObjFromMemFunPtr<T U::*> { typedef U type; };
 
 namespace detail {
-template <typename T>
-constexpr bool is_nothrow_swappable_impl() {
+template <typename T> constexpr bool is_nothrow_swappable_impl() {
     using std::swap;
     return noexcept(swap(std::declval<T&>(), std::declval<T&>()));
 }
 }
 
-template <typename T>
-struct is_nothrow_swappable {
+template <typename T> struct is_nothrow_swappable {
     typedef is_nothrow_swappable<T> type;
     static constexpr bool value = detail::is_nothrow_swappable_impl<T>();
 };
-
 }
 
 #endif // MELOSIC_TRAITS_HPP

@@ -39,8 +39,10 @@ namespace executors = Melosic::executors;
 namespace lastfm {
 
 struct artist::impl : std::enable_shared_from_this<impl> {
-    impl(std::weak_ptr<service> lastserv) : lastserv(lastserv) {}
-    impl(std::weak_ptr<service> lastserv, const std::string& name) : lastserv(lastserv), name(name) {}
+    impl(std::weak_ptr<service> lastserv) : lastserv(lastserv) {
+    }
+    impl(std::weak_ptr<service> lastserv, const std::string& name) : lastserv(lastserv), name(name) {
+    }
 
   private:
     bool getInfo_impl(const std::shared_ptr<service>& lastserv, bool autocorrect) {
@@ -123,10 +125,12 @@ struct artist::impl : std::enable_shared_from_this<impl> {
     Mutex mu;
 };
 
-artist::artist(std::weak_ptr<service> lastserv) : pimpl(std::move(std::make_shared<impl>(lastserv))) {}
+artist::artist(std::weak_ptr<service> lastserv) : pimpl(std::move(std::make_shared<impl>(lastserv))) {
+}
 
 artist::artist(std::weak_ptr<service> lastserv, const std::string& artist)
-    : pimpl(std::move(std::make_shared<impl>(lastserv, artist))) {}
+    : pimpl(std::move(std::make_shared<impl>(lastserv, artist))) {
+}
 
 artist& artist::operator=(artist&& b) {
     pimpl = std::move(b.pimpl);
@@ -140,12 +144,20 @@ artist& artist::operator=(const std::string& artist) {
     return *this;
 }
 
-artist::operator bool() { return !getName().empty(); }
+artist::operator bool() {
+    return !getName().empty();
+}
 
-const std::string& artist::getName() const { return pimpl->getName(); }
+const std::string& artist::getName() const {
+    return pimpl->getName();
+}
 
-const network::uri& artist::getUrl() const { return pimpl->getUrl(); }
+const network::uri& artist::getUrl() const {
+    return pimpl->getUrl();
+}
 
-std::future<bool> artist::fetchInfo(bool autocorrect) { return pimpl->getInfo(autocorrect); }
+std::future<bool> artist::fetchInfo(bool autocorrect) {
+    return pimpl->getInfo(autocorrect);
+}
 
 } // namespace lastfm

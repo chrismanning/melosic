@@ -29,9 +29,9 @@ using namespace std::literals;
 }
 
 #ifdef EXECUTORS_EXPORTS
-#   define EXECUTORS_EXPORT BOOST_SYMBOL_EXPORT
+#define EXECUTORS_EXPORT BOOST_SYMBOL_EXPORT
 #else
-#   define EXECUTORS_EXPORT BOOST_SYMBOL_IMPORT
+#define EXECUTORS_EXPORT BOOST_SYMBOL_IMPORT
 #endif
 
 namespace Melosic {

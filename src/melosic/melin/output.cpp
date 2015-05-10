@@ -44,7 +44,7 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 };
 
 class Manager::impl {
-public:
+  public:
     impl(const std::shared_ptr<Config::Manager>& confman, asio::io_service& io_service) : io_service(io_service) {
         conf.putNode("output device", "default"s);
         conf.putNode("buffer time", 1000);
@@ -57,7 +57,7 @@ public:
         auto c = base->createChild("Output"s, conf);
         c->merge(conf);
         c->setDefault(conf);
-        c->iterateNodes([&] (const std::string& key, auto&& var) {
+        c->iterateNodes([&](const std::string& key, auto&& var) {
             TRACE_LOG(logject) << "Config: variable loaded: " << key;
             variableUpdateSlot(key, var);
         });
@@ -74,11 +74,9 @@ public:
                     LOG(logject) << "Chosen output same as current. Not reinitialising.";
                 else
                     setASIOSink(sn);
-            }
-            else
+            } else
                 ERROR_LOG(logject) << "Config: Unknown key: " << key;
-        }
-        catch(boost::bad_get&) {
+        } catch(boost::bad_get&) {
             ERROR_LOG(logject) << "Config: Couldn't get variable for key: " << key;
         }
     }
@@ -121,7 +119,7 @@ public:
         return playerSinkChanged;
     }
 
-private:
+  private:
     mutex mu;
     asio::io_service& io_service;
     std::string sinkName;
@@ -134,9 +132,11 @@ private:
 };
 
 Manager::Manager(const std::shared_ptr<Config::Manager>& confman, asio::io_service& io_service)
-    : pimpl(new impl(confman, io_service)) {}
+    : pimpl(new impl(confman, io_service)) {
+}
 
-Manager::~Manager() {}
+Manager::~Manager() {
+}
 
 void Manager::addOutputDevice(ASIOFactory fact, const DeviceName& avail) {
     pimpl->addOutputDevice(fact, avail);

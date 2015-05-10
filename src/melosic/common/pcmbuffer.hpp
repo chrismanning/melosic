@@ -36,7 +36,7 @@ struct ConstPCMBuffer : asio::const_buffer {
     AudioSpecs audio_specs;
 };
 
-} //end namespace Melosic
+} // end namespace Melosic
 
 namespace asio {
 
@@ -46,7 +46,6 @@ inline size_t buffer_size(const Melosic::PCMBuffer& b) {
 inline size_t buffer_size(const Melosic::ConstPCMBuffer& b) {
     return buffer_size(const_buffer(b));
 }
-
 }
 
 #endif // MELOSIC_PCMBUFFER_HPP

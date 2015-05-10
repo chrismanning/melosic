@@ -43,16 +43,16 @@ struct FileCache::impl {
     mutex mu;
 };
 
-FileCache::FileCache() :
-    pimpl(std::make_unique<impl>())
-{}
+FileCache::FileCache() : pimpl(std::make_unique<impl>()) {
+}
 
-FileCache::~FileCache() {}
+FileCache::~FileCache() {
+}
 
 optional<Core::AudioFile> FileCache::getFile(const fs::path& p_, std::error_code& ec) const {
     unique_lock l(pimpl->mu);
 
-    fs::path p{fs::canonical(p_/*, ec*/)};
+    fs::path p{fs::canonical(p_ /*, ec*/)};
     if(!fs::exists(p) || fs::is_other(p) || fs::is_directory(p)) {
         pimpl->fileDB.erase(p);
         return nullopt;

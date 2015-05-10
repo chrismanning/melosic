@@ -92,7 +92,9 @@ class Track::impl {
     //        return static_cast<bool>(taglibfile);
     //    }
 
-    const network::uri& uri() { return m_uri; }
+    const network::uri& uri() {
+        return m_uri;
+    }
 
     optional<std::string> parse_format(std::string, std::error_code&);
 
@@ -107,21 +109,16 @@ class Track::impl {
 };
 
 Track::Track(const network::uri& location, chrono::milliseconds end, chrono::milliseconds start)
-    : pimpl(std::make_shared<impl>())
-{
+    : pimpl(std::make_shared<impl>()) {
     pimpl->m_uri = location;
     pimpl->end = end;
     pimpl->start = start;
 }
 
-Track::Track(const jbson::document& track_doc)
-    : pimpl(std::make_shared<impl>())
-{
+Track::Track(const jbson::document& track_doc) : pimpl(std::make_shared<impl>()) {
     auto it = track_doc.find("type");
-    if(it == track_doc.end() ||
-            it->type() != jbson::element_type::string_element ||
-            jbson::get<jbson::element_type::string_element>(*it) != "track")
-    {
+    if(it == track_doc.end() || it->type() != jbson::element_type::string_element ||
+       jbson::get<jbson::element_type::string_element>(*it) != "track") {
         BOOST_THROW_EXCEPTION(std::runtime_error("document is not a track"));
     }
 
@@ -130,35 +127,30 @@ Track::Track(const jbson::document& track_doc)
         if(element.name() == "location") {
             try {
                 pimpl->m_uri = network::uri(element.value<std::string>());
-            }
-            catch(...) {
+            } catch(...) {
                 std::throw_with_nested(std::runtime_error("'location' should be a string"));
             }
-        }
-        else if(element.name() == "start") {
+        } else if(element.name() == "start") {
             if(element.type() == element_type::int32_element)
                 pimpl->start = chrono::milliseconds{element.value<int32_t>()};
             else if(element.type() == element_type::int64_element)
                 pimpl->start = chrono::milliseconds{element.value<int64_t>()};
             else
                 BOOST_THROW_EXCEPTION(std::runtime_error("'start' should be an integer"));
-        }
-        else if(element.name() == "end") {
+        } else if(element.name() == "end") {
             if(element.type() == element_type::int32_element)
                 pimpl->end = chrono::milliseconds{element.value<int32_t>()};
             else if(element.type() == element_type::int64_element)
                 pimpl->end = chrono::milliseconds{element.value<int64_t>()};
             else
                 BOOST_THROW_EXCEPTION(std::runtime_error("'end' should be an integer"));
-        }
-        else if(element.name() == "metadata") {
+        } else if(element.name() == "metadata") {
             TagMap tags;
 
             decltype(jbson::get<element_type::array_element>(element)) metadata;
             try {
                 metadata = jbson::get<element_type::array_element>(element);
-            }
-            catch(...) {
+            } catch(...) {
                 std::throw_with_nested(std::runtime_error("'metadata' should be an array"));
             }
 
@@ -166,8 +158,7 @@ Track::Track(const jbson::document& track_doc)
                 decltype(jbson::get<element_type::document_element>(tag)) tag_doc;
                 try {
                     tag_doc = jbson::get<element_type::document_element>(tag);
-                }
-                catch(...) {
+                } catch(...) {
                     std::throw_with_nested(std::runtime_error("'metadata' elements should all be document"));
                 }
 
@@ -192,15 +183,17 @@ Track::Track(const jbson::document& track_doc)
         BOOST_THROW_EXCEPTION(std::runtime_error("track must have a location"));
 }
 
-Track::~Track() {}
-
-bool Track::operator==(const Track& b) const noexcept {
-    return pimpl == b.pimpl || (pimpl->m_uri == b.pimpl->m_uri &&
-                                pimpl->end == b.pimpl->end &&
-                                pimpl->start == b.pimpl->start);
+Track::~Track() {
 }
 
-bool Track::operator!=(const Track& b) const noexcept { return !(*this == b); }
+bool Track::operator==(const Track& b) const noexcept {
+    return pimpl == b.pimpl ||
+           (pimpl->m_uri == b.pimpl->m_uri && pimpl->end == b.pimpl->end && pimpl->start == b.pimpl->start);
+}
+
+bool Track::operator!=(const Track& b) const noexcept {
+    return !(*this == b);
+}
 
 void Track::audioSpecs(AudioSpecs as) {
     unique_lock l(pimpl->mu);
@@ -286,7 +279,9 @@ optional<std::string> Track::format_string(const std::string& fmt_str) const {
     return pimpl->parse_format(fmt_str, ec);
 }
 
-Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept { return pimpl->tagsChanged; }
+Signals::Track::TagsChanged& Track::getTagsChangedSignal() const noexcept {
+    return pimpl->tagsChanged;
+}
 
 jbson::document Track::bson() const {
     using std::get;
@@ -294,18 +289,17 @@ jbson::document Track::bson() const {
 
     shared_lock l(pimpl->mu);
 
-    auto ob = jbson::builder("type", "track")
-                            ("location", element_type::string_element, uri().string())
-                            ("channels", element_type::int32_element, pimpl->as.channels)
-                            ("sample rate", element_type::int64_element, pimpl->as.sample_rate)
-                            ("start", element_type::int64_element, pimpl->start.count())
-                            ("end", element_type::int64_element, pimpl->end.count());
+    auto ob = jbson::builder("type", "track")("location", element_type::string_element, uri().string())(
+        "channels", element_type::int32_element, pimpl->as.channels)("sample rate", element_type::int64_element,
+                                                                     pimpl->as.sample_rate)(
+        "start", element_type::int64_element, pimpl->start.count())("end", element_type::int64_element,
+                                                                    pimpl->end.count());
     auto arr = pimpl->m_tags([](auto&& metadata) {
         jbson::array_builder arb;
         for(auto&& pair : metadata)
-            arb(jbson::element_type::document_element, jbson::builder
-                ("key", element_type::string_element, boost::to_lower_copy(get<0>(pair)))
-                ("value", element_type::string_element, get<1>(pair)));
+            arb(jbson::element_type::document_element,
+                jbson::builder("key", element_type::string_element, boost::to_lower_copy(get<0>(pair)))(
+                    "value", element_type::string_element, get<1>(pair)));
         return std::move(arb);
     });
     ob("metadata", element_type::array_element, arr);

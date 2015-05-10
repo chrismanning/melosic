@@ -21,10 +21,8 @@
 
 namespace Melosic {
 
-QuickLogBackend::QuickLogBackend(QObject *parent) :
-    QObject(parent)
-{
-    connect(this, &QuickLogBackend::append, [this] (QString str) {
+QuickLogBackend::QuickLogBackend(QObject* parent) : QObject(parent) {
+    connect(this, &QuickLogBackend::append, [this](QString str) {
         if(!m_text_edit)
             return;
         m_text_edit->append(str);
@@ -46,9 +44,7 @@ void QuickLogBackend::setTextEdit(QObject* te) {
     m_text_edit = te->findChild<QQuickTextEdit*>();
     assert(m_text_edit);
 
-    connect(m_text_edit, &QQuickTextEdit::destroyed, [this] (QObject*) {
-        m_text_edit = nullptr;
-    });
+    connect(m_text_edit, &QQuickTextEdit::destroyed, [this](QObject*) { m_text_edit = nullptr; });
 
     Q_EMIT textEditChanged(m_text_edit);
 }

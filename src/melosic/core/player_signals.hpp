@@ -35,9 +35,7 @@ namespace Player {
 typedef SignalCore<void(Melosic::Output::DeviceState)> StateChanged;
 typedef SignalCore<void(chrono::milliseconds /*current*/, chrono::milliseconds /*total*/)> NotifyPlayPos;
 }
-
 }
-
 }
 
 #endif // MELOSIC_STATECHANGED_HPP

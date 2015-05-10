@@ -63,8 +63,7 @@ class MELOSIC_EXPORT Manager {
     std::unique_ptr<impl> pimpl;
 };
 
-class MELOSIC_EXPORT Conf final : boost::partially_ordered<Conf>,
-                                  boost::equality_comparable<Conf> {
+class MELOSIC_EXPORT Conf final : boost::partially_ordered<Conf>, boost::equality_comparable<Conf> {
   public:
     using conf_variable_type = VarType;
     using node_key_type = std::string;

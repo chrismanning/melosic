@@ -25,7 +25,7 @@
 namespace Melosic {
 
 Category::Category(QObject* parent) : QObject(parent) {
-    connect(this, &Category::modelChanged, [this] (CategoryProxyModel* m) {
+    connect(this, &Category::modelChanged, [this](CategoryProxyModel* m) {
         for(Criterion* c : m_criteria)
             c->setModel(m);
     });
@@ -56,7 +56,7 @@ void Category::setModel(CategoryProxyModel* m) {
 }
 
 Criterion::Criterion(QObject* parent) : QObject(parent) {
-    connect(this, &Criterion::patternChanged, [this] (QString p) { m_regex.setPattern(p); });
+    connect(this, &Criterion::patternChanged, [this](QString p) { m_regex.setPattern(p); });
 }
 
 QString Criterion::pattern() const {
@@ -77,7 +77,8 @@ CategoryProxyModel* Criterion::model() const {
     return m_category_model;
 }
 
-Role::Role(QObject* parent) : Criterion(parent) {}
+Role::Role(QObject* parent) : Criterion(parent) {
+}
 
 QString Role::role() const {
     return m_role;

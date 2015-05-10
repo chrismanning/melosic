@@ -32,9 +32,10 @@ using namespace jbson::literal;
 using namespace Melosic;
 
 template <typename RangeT>
-static std::vector<jbson::element>
-to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<RangeT,
-         boost::mpl::quote1<jbson::detail::is_element>>::value>* = nullptr) {
+static std::vector<jbson::element> to_array(
+    RangeT&& range,
+    std::enable_if_t<jbson::detail::is_range_of_value<RangeT, boost::mpl::quote1<jbson::detail::is_element>>::value>* =
+        nullptr) {
     std::vector<jbson::element> arr;
     size_t i{0};
     boost::transform(range, std::back_inserter(arr), [&i](auto&& val) {
@@ -48,17 +49,18 @@ to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<Range
 
 template <typename RangeT>
 static std::vector<jbson::element>
-to_array(RangeT&& range, std::enable_if_t<jbson::detail::is_range_of_value<
-         RangeT, boost::mpl::bind<boost::mpl::quote2<jbson::detail::is_range_of_value>, boost::mpl::arg<1>,
-         boost::mpl::quote1<jbson::detail::is_element>>>::value>* = nullptr) {
+to_array(RangeT&& range,
+         std::enable_if_t<jbson::detail::is_range_of_value<
+             RangeT, boost::mpl::bind<boost::mpl::quote2<jbson::detail::is_range_of_value>, boost::mpl::arg<1>,
+                                      boost::mpl::quote1<jbson::detail::is_element>>>::value>* = nullptr) {
     std::vector<jbson::element> arr;
     size_t i{0};
     boost::transform(range | boost::adaptors::filtered([](auto&& val) { return boost::distance(val) >= 1; }),
                      std::back_inserter(arr), [&i](auto&& val) {
-        jbson::element el{*val.begin()};
-        el.name(std::to_string(i++));
-        return el;
-    });
+                         jbson::element el{*val.begin()};
+                         el.name(std::to_string(i++));
+                         return el;
+                     });
     return std::move(arr);
 }
 
@@ -73,15 +75,14 @@ struct FilterTest : QObject {
     ejdb::collection coll;
     std::error_code ec;
 
-private Q_SLOTS:
+  private Q_SLOTS:
     // global
     void initTestCase() {
         Logger::init();
-        db.open(QDir::tempPath().toStdString()+ "/testdb", ejdb::db_mode::read|
-                                                ejdb::db_mode::write|
-                                                ejdb::db_mode::create|
-                                                ejdb::db_mode::truncate|
-                                                ejdb::db_mode::trans_sync, ec);
+        db.open(QDir::tempPath().toStdString() + "/testdb",
+                ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create | ejdb::db_mode::truncate |
+                    ejdb::db_mode::trans_sync,
+                ec);
         QVERIFY(!ec);
         QVERIFY(db.is_open());
 
@@ -124,10 +125,9 @@ private Q_SLOTS:
         QVERIFY(!ec);
         QVERIFY(!db.is_open());
 
-        QVERIFY(db.open(QDir::tempPath().toStdString()+ "/testdb", ejdb::db_mode::read|
-                        ejdb::db_mode::write|
-                        ejdb::db_mode::create|
-                        ejdb::db_mode::trans_sync, ec));
+        QVERIFY(db.open(QDir::tempPath().toStdString() + "/testdb",
+                        ejdb::db_mode::read | ejdb::db_mode::write | ejdb::db_mode::create | ejdb::db_mode::trans_sync,
+                        ec));
         QVERIFY(!ec);
         QVERIFY(db.is_open());
 
@@ -159,9 +159,8 @@ private Q_SLOTS:
             auto in_arr = to_array(selection);
 
             jbson::builder qry;
-            qry = jbson::builder("city", jbson::element_type::document_element, jbson::builder
-                                 ("$in", jbson::element_type::array_element, in_arr)
-                                );
+            qry = jbson::builder("city", jbson::element_type::document_element,
+                                 jbson::builder("$in", jbson::element_type::array_element, in_arr));
             if(selection.size() != in_arr.size()) {
                 auto unknown = jbson::builder("city", jbson::builder("$exists", false));
                 if(in_arr.empty())
@@ -186,9 +185,8 @@ private Q_SLOTS:
             auto in_arr = to_array(selection);
 
             jbson::builder qry;
-            qry = jbson::builder("age", jbson::element_type::document_element, jbson::builder
-                                 ("$in", jbson::element_type::array_element, in_arr)
-                                );
+            qry = jbson::builder("age", jbson::element_type::document_element,
+                                 jbson::builder("$in", jbson::element_type::array_element, in_arr));
             if(selection.size() != in_arr.size()) {
                 auto unknown = jbson::builder("age", jbson::builder("$exists", false));
                 if(in_arr.empty())
@@ -241,8 +239,8 @@ private Q_SLOTS:
         boost::sort(results);
 
         docs.clear();
-        std::transform(results.begin(), std::unique(results.begin(), results.end()),
-                       std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
+        std::transform(results.begin(), std::unique(results.begin(), results.end()), std::back_inserter(docs),
+                       [](auto&& d) { return jbson::document{d}; });
 
         QCOMPARE(docs.size(), static_cast<decltype(results.size())>(7));
     }
@@ -259,9 +257,7 @@ private Q_SLOTS:
         QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
         QVERIFY(spy3.isValid());
 
-        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "London", 1,
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0), JsonDocModel::DocumentStringRole, "London", 1,
                                           Qt::MatchContains);
         QCOMPARE(idxs.size(), 1);
 
@@ -276,31 +272,31 @@ private Q_SLOTS:
 
         QVariant data;
 
-        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral("{  }"));
 
-        data = pane2->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(1, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 25 })"));
 
-        data = pane2->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(2, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 32 })"));
 
-        data = pane2->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(3, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 46 })"));
 
-        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
 
-        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(1, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Dave" })"));
 
-        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(2, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Jim" })"));
 
@@ -328,17 +324,13 @@ private Q_SLOTS:
 
         QItemSelection selection;
 
-        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "Manchester", 1,
-                                          Qt::MatchContains);
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0), JsonDocModel::DocumentStringRole, "Manchester",
+                                          1, Qt::MatchContains);
         QCOMPARE(idxs.size(), 1);
         selection.push_back(QItemSelectionRange(idxs[0]));
 
-        idxs = pane1->model()->match(pane1->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "Bristol", 1,
-                                          Qt::MatchContains);
+        idxs = pane1->model()->match(pane1->model()->index(0, 0), JsonDocModel::DocumentStringRole, "Bristol", 1,
+                                     Qt::MatchContains);
         QCOMPARE(idxs.size(), 1);
         selection.push_back(QItemSelectionRange(idxs[0]));
 
@@ -353,35 +345,35 @@ private Q_SLOTS:
 
         QVariant data;
 
-        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 21 })"));
 
-        data = pane2->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(1, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 32 })"));
 
-        data = pane2->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(2, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 42 })"));
 
-        data = pane2->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(3, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 46 })"));
 
-        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({  })"));
 
-        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(1, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Alice" })"));
 
-        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(2, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bob" })"));
 
-        data = pane3->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(3, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Fred" })"));
 
@@ -404,9 +396,7 @@ private Q_SLOTS:
         QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
         QVERIFY(spy3.isValid());
 
-        auto idxs = pane2->model()->match(pane2->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "32", 1,
+        auto idxs = pane2->model()->match(pane2->model()->index(0, 0), JsonDocModel::DocumentStringRole, "32", 1,
                                           Qt::MatchContains);
         QCOMPARE(idxs.size(), 1);
 
@@ -423,19 +413,19 @@ private Q_SLOTS:
 
         QVariant data;
 
-        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Alice" })"));
 
-        data = pane3->model()->index(1,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(1, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
 
-        data = pane3->model()->index(2,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(2, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Dave" })"));
 
-        data = pane3->model()->index(3,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(3, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Jane" })"));
 
@@ -461,9 +451,7 @@ private Q_SLOTS:
         QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
         QVERIFY(spy3.isValid());
 
-        auto idxs = pane1->model()->match(pane1->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "{  }", 1,
+        auto idxs = pane1->model()->match(pane1->model()->index(0, 0), JsonDocModel::DocumentStringRole, "{  }", 1,
                                           Qt::MatchExactly);
         QCOMPARE(idxs.size(), 1);
 
@@ -478,11 +466,11 @@ private Q_SLOTS:
 
         QVariant data;
 
-        data = pane2->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane2->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "age" : 45 })"));
 
-        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bob" })"));
 
@@ -505,9 +493,7 @@ private Q_SLOTS:
         QSignalSpy spy3{pane2.get(), SIGNAL(queryGenerated(QVariant))};
         QVERIFY(spy3.isValid());
 
-        auto idxs = pane2->model()->match(pane2->model()->index(0, 0),
-                                          JsonDocModel::DocumentStringRole,
-                                          "{  }", 1,
+        auto idxs = pane2->model()->match(pane2->model()->index(0, 0), JsonDocModel::DocumentStringRole, "{  }", 1,
                                           Qt::MatchExactly);
         QCOMPARE(idxs.size(), 1);
 
@@ -524,7 +510,7 @@ private Q_SLOTS:
 
         QVariant data;
 
-        data = pane3->model()->index(0,0).data(JsonDocModel::DocumentStringRole);
+        data = pane3->model()->index(0, 0).data(JsonDocModel::DocumentStringRole);
         QVERIFY(data.type() == QVariant::String);
         QCOMPARE(data.toString(), QStringLiteral(R"({ "name" : "Bill" })"));
 

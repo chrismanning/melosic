@@ -19,9 +19,7 @@
 
 namespace lastfm {
 
-album::album()
-{
-
+album::album() {
 }
 
 } // namespace lastfm

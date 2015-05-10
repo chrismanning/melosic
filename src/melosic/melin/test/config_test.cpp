@@ -27,8 +27,7 @@ namespace fs = boost::filesystem;
 #include <melosic/common/signal_core.hpp>
 using namespace Melosic;
 
-template <typename T>
-static constexpr int TypeIndex = boost::mpl::index_of<Config::VarType::types, T>::type::value;
+template <typename T> static constexpr int TypeIndex = boost::mpl::index_of<Config::VarType::types, T>::type::value;
 
 TEST_CASE("ConfVars") {
     Config::VarType var = "The quick brown fox jumped over the lazy dog."s;

@@ -70,14 +70,17 @@ static constexpr auto base_url = "http://ws.audioscrobbler.com/2.0/"_sv;
 struct service::impl {
     impl(std::string_view api_key, std::string_view shared_secret)
         : null_worker(std::make_unique<asio::io_service::work>(io_service)), client(io_service),
-          m_thread([&]() { io_service.run(); }), api_key(api_key), shared_secret(shared_secret) {}
+          m_thread([&]() { io_service.run(); }), api_key(api_key), shared_secret(shared_secret) {
+    }
 
     ~impl() {
         null_worker.reset();
         m_thread.join();
     }
 
-    Method prepareMethodCall(const std::string& methodName) { return Method(methodName); }
+    Method prepareMethodCall(const std::string& methodName) {
+        return Method(methodName);
+    }
 
     //    std::string postMethod(const Method& method) {
     //        network::uri_builder uri_build;
@@ -179,13 +182,19 @@ struct service::impl {
     friend class service;
 };
 
-service::service(std::string_view api_key, std::string_view shared_secret) : pimpl(new impl(api_key, shared_secret)) {}
+service::service(std::string_view api_key, std::string_view shared_secret) : pimpl(new impl(api_key, shared_secret)) {
+}
 
-service::~service() {}
+service::~service() {
+}
 
-std::string_view service::api_key() const { return pimpl->api_key; }
+std::string_view service::api_key() const {
+    return pimpl->api_key;
+}
 
-std::string_view service::shared_secret() const { return pimpl->shared_secret; }
+std::string_view service::shared_secret() const {
+    return pimpl->shared_secret;
+}
 
 Method service::prepareMethodCall(const std::string& methodName) {
     return std::move(pimpl->prepareMethodCall(methodName));
@@ -218,8 +227,7 @@ Method service::sign(Method method) {
 }
 
 std::future<tag> service::get_tag(std::experimental::string_view tag_name) {
-    return get("tag.getinfo", {{"tag", tag_name.to_string()}}, use_future,
-               [](network::http::v2::response response) {
+    return get("tag.getinfo", {{"tag", tag_name.to_string()}}, use_future, [](network::http::v2::response response) {
         auto doc = jbson::read_json(response.body());
         check_error(doc);
         auto elem = doc.find("tag");
@@ -259,10 +267,16 @@ void service::trackChangedSlot(const Melosic::Core::Track& newTrack) {
     pimpl->currentTrack_ = std::make_shared<track>(shared_from_this(), newTrack);
 }
 
-std::shared_ptr<track> service::currentTrack() { return pimpl->currentTrack_; }
+std::shared_ptr<track> service::currentTrack() {
+    return pimpl->currentTrack_;
+}
 
-void service::setUser(user u) { pimpl->setUser(std::move(u)); }
+void service::setUser(user u) {
+    pimpl->setUser(std::move(u));
+}
 
-user& service::getUser() { return pimpl->getUser(); }
+user& service::getUser() {
+    return pimpl->getUser();
+}
 
 } // namespace lastfm
