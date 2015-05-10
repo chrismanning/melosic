@@ -23,12 +23,12 @@
 #include <melosic/asio/audio_service.hpp>
 
 namespace Melosic {
-namespace ASIO {
+namespace AudioIO {
 
 struct MELOSIC_EXPORT AudioOutputBase {
     virtual ~AudioOutputBase() {}
 
-    void cancel(std::error_code& ec) noexcept {
+    void cancel(std::error_code& ec) {
         get_service().cancel(get_implementation(), ec);
     }
     void cancel() {
@@ -37,7 +37,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void assign(Output::DeviceName dev_name, std::error_code& ec) noexcept {
+    void assign(Output::DeviceName dev_name, std::error_code& ec) {
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
     void assign(Output::DeviceName dev_name) {
@@ -46,7 +46,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void prepare(const AudioSpecs as, std::error_code& ec) noexcept {
+    void prepare(const AudioSpecs as, std::error_code& ec) {
         get_service().prepare(get_implementation(), as, ec);
     }
     void prepare(const AudioSpecs as) {
@@ -55,7 +55,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void play(std::error_code& ec) noexcept {
+    void play(std::error_code& ec) {
         get_service().play(get_implementation(), ec);
     }
     void play() {
@@ -64,7 +64,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void pause(std::error_code& ec) noexcept {
+    void pause(std::error_code& ec) {
         get_service().pause(get_implementation(), ec);
     }
     void pause() {
@@ -73,7 +73,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void unpause(std::error_code& ec) noexcept {
+    void unpause(std::error_code& ec) {
         get_service().unpause(get_implementation(), ec);
     }
     void unpause() {
@@ -82,7 +82,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
         if(ec) BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void stop(std::error_code& ec) noexcept {
+    void stop(std::error_code& ec) {
         get_service().stop(get_implementation(), ec);
     }
     void stop() {
@@ -95,6 +95,7 @@ struct MELOSIC_EXPORT AudioOutputBase {
     size_t write_some(const ConstBufferSequence& buffers, std::error_code& ec) {
         return get_service().write_some(get_implementation(), buffers, ec);
     }
+
     template <typename ConstBufferSequence>
     size_t write_some(const ConstBufferSequence& buffers) {
         std::error_code ec;
@@ -103,19 +104,19 @@ struct MELOSIC_EXPORT AudioOutputBase {
         return r;
     }
 
-    AudioSpecs current_specs() const noexcept {
+    AudioSpecs current_specs() const {
         return get_service().current_specs(get_implementation());
     }
 
-    Output::DeviceState state() const noexcept {
+    Output::DeviceState state() const {
         return get_service().state(get_implementation());
     }
 
-    bool non_blocking() const noexcept {
+    bool non_blocking() const {
         return get_service().non_blocking(get_implementation());
     }
 
-    void non_blocking(bool mode, std::error_code& ec) noexcept {
+    void non_blocking(bool mode, std::error_code& ec) {
         get_service().non_blocking(get_implementation(), mode, ec);
     }
     void non_blocking(bool mode) {
@@ -142,8 +143,8 @@ struct MELOSIC_EXPORT AudioOutputBase {
 protected:
     AudioOutputBase() = default;
 
-    virtual service_type& get_service() noexcept = 0;
-    virtual const service_type& get_service() const noexcept = 0;
+    virtual service_type& get_service() = 0;
+    virtual const service_type& get_service() const = 0;
 
 private:
     implementation_type implementation;
@@ -156,14 +157,14 @@ template <typename ServiceImpl>
 struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
     using Service = AudioOutputService<ServiceImpl>;
 
-    explicit BasicAudioOutput(io_service& service) :
+    explicit BasicAudioOutput(asio::io_service& service) :
         AudioOutputBase(),
-        m_service(use_service<Service>(service))
+        m_service(asio::use_service<Service>(service))
     {
         m_service.construct(get_implementation());
     }
 
-    BasicAudioOutput(io_service& service, Output::DeviceName dev_name)
+    BasicAudioOutput(asio::io_service& service, Output::DeviceName dev_name)
       : BasicAudioOutput(service)
     {
         std::error_code ec;
@@ -176,12 +177,12 @@ struct BasicAudioOutput<AudioOutputService<ServiceImpl>> : AudioOutputBase {
         m_service.destroy(get_implementation());
     }
 
-    service_type& get_service() noexcept override {
-        return reinterpret_cast<AudioOutputService<AudioOutputServiceBase>&>(m_service);
+    service_type& get_service() override {
+        return reinterpret_cast<service_type&>(m_service);
     }
 
-    const service_type& get_service() const noexcept override {
-        return reinterpret_cast<AudioOutputService<AudioOutputServiceBase>&>(m_service);
+    const service_type& get_service() const override {
+        return reinterpret_cast<service_type&>(m_service);
     }
 
 private:

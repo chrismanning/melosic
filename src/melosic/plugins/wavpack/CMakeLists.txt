@@ -15,7 +15,7 @@ add_library(${WAVPACK} SHARED wavpack.cpp wavpackdecoder.cpp exports.hpp)
 target_link_libraries(${WAVPACK} ${WAVPACK_LIBRARIES} melosiclib)
 set_target_properties(${WAVPACK} PROPERTIES PREFIX "")
 set_target_properties(${WAVPACK} PROPERTIES SUFFIX ".melin")
-include_directories(${WAVPACK_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${WAVPACK_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
 set_target_properties(${WAVPACK} PROPERTIES COMPILE_DEFINITIONS WAVPACK_MELIN_EXPORTS=${WAVPACK}_EXPORTS)
 
 add_subdirectory(test)

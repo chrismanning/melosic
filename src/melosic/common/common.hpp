@@ -22,8 +22,14 @@
 #include <chrono>
 namespace chrono = std::chrono;
 #include <string>
+#include <experimental/string_view>
 
 #include <boost/config.hpp>
+
+namespace std {
+namespace experimental {}
+using namespace experimental;
+}
 
 namespace Melosic {
 using namespace std::literals;

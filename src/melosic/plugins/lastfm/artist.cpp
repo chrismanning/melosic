@@ -94,7 +94,7 @@ struct artist::impl : std::enable_shared_from_this<impl> {
             return self->getInfo_impl(lastserv, autocorrect);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }

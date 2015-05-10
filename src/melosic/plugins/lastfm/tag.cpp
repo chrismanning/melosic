@@ -57,9 +57,7 @@ void tag::wiki(wiki_t wiki) { m_wiki = wiki; }
 
 std::future<std::vector<tag>> tag::get_similar(service& serv) const {
     return serv.get("tag.getsimilar", {{"tag", m_name}}, use_future, [](auto&& response) {
-        jbson::json_reader reader{};
-        reader.parse(response.body());
-        auto doc = static_cast<jbson::document>(reader);
+        auto doc = jbson::read_json(response.body());
         check_error(doc);
 
         std::vector<tag> tags{};

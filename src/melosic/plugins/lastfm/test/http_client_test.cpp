@@ -83,10 +83,9 @@ TEST_CASE("Get Transform") {
         auto content_type = boost::trim_copy(*content_type_opt);
         REQUIRE(content_type == "application/json; charset=utf-8;");
 
-        jbson::json_reader reader{};
-        reader.parse(res.body());
+        auto doc = jbson::read_json(res.body());
 
-        auto elems = jbson::path_select(static_cast<jbson::document>(reader), "$.similarartists.artist[*].name");
+        auto elems = jbson::path_select(doc, "$.similarartists.artist[*].name");
         CHECK(elems.size() == 5);
 
         std::vector<std::string> names;

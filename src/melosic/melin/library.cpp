@@ -21,8 +21,10 @@
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
-#include <boost/functional/hash/hash.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/functional/hash/hash.hpp>
+
+#include <asio/post.hpp>
 
 #ifndef NDEBUG
 #include <jbson/json_writer.hpp>
@@ -254,11 +256,7 @@ void Manager::impl::variableUpdateSlot(const Config::Conf::node_key_type& key, c
                     missing_dirs.push_back(p);
             }
 
-            executors::default_executor()->submit([
-                this,
-                missing_dirs,
-                self = shared_from_this()
-            ] {
+            asio::post([ this, missing_dirs, self = shared_from_this() ] {
                 while(m_scanning.load()) {
                     std::this_thread::sleep_for(10ms);
                     std::this_thread::yield();
@@ -364,7 +362,7 @@ void Manager::impl::scan(const fs::path& dir) {
                 continue;
             }
 
-            if(uri.scheme() != boost::string_ref("file"))
+            if(uri.scheme() && uri.scheme()->to_string() != "file")
                 continue;
 
             boost::system::error_code bec;
@@ -400,8 +398,9 @@ void Manager::impl::scan(const fs::path& dir) {
         auto under_dir =
             apply_named_paths(query(qdoc), {{"oid", "$._id"}, {"location", "$.location"}, {"modified", "$.modified"}});
 
-        using lib_container = boost::container::flat_multimap<
-            fs::path, std::tuple<std::chrono::system_clock::time_point, std::array<char, 12>>>;
+        using lib_container =
+            boost::container::flat_multimap<fs::path,
+                                            std::tuple<std::chrono::system_clock::time_point, std::array<char, 12>>>;
         lib_container lib;
 
         for(auto&& set : under_dir) {
@@ -454,9 +453,9 @@ void Manager::impl::scan(const fs::path& dir) {
                     add(p);
                 else {
                     auto modified = std::chrono::system_clock::from_time_t(fs::last_write_time(p));
-                    bool needs_update =
-                        std::any_of(get<0>(tracks), get<1>(tracks),
-                                    [modified](auto&& track) { return get<0>(get<1>(track)) < modified; });
+                    bool needs_update = std::any_of(get<0>(tracks), get<1>(tracks), [modified](auto&& track) {
+                        return get<0>(get<1>(track)) < modified;
+                    });
                     if(needs_update)
                         update(p);
                 }
@@ -593,10 +592,10 @@ std::vector<jbson::document> Manager::impl::query(const jbson::document& qdoc) {
 Manager::Manager(const std::shared_ptr<Config::Manager>& confman, const std::shared_ptr<Decoder::Manager>& decman,
                  const std::shared_ptr<Plugin::Manager>& plugman)
     : pimpl(std::make_shared<impl>(confman, decman)) {
-    plugman->getPluginsLoadedSignal().connect([pimpl=pimpl](auto&&) {
+    plugman->getPluginsLoadedSignal().connect([pimpl = pimpl](auto&&) {
         TRACE_LOG(logject) << "Plugins loaded. Scanning all...";
         pimpl->pluginsLoaded.store(true);
-        executors::default_executor()->submit([=]() { pimpl->scan(); });
+        asio::post([=]() { pimpl->scan(); });
     });
 }
 
@@ -636,7 +635,7 @@ Signals::Library::ScanStarted& Manager::getScanStartedSignal() noexcept { return
 
 Signals::Library::ScanEnded& Manager::getScanEndedSignal() noexcept { return pimpl->scanEnded; }
 
-std::vector<jbson::element> apply_path(const std::vector<jbson::document>& docs, boost::string_ref path) {
+std::vector<jbson::element> apply_path(const std::vector<jbson::document>& docs, std::string_view path) {
     std::vector<jbson::element> vec;
     if(path.empty() || (path.size() == 1 && path.front() == '$')) {
         for(auto&& doc : docs)

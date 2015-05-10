@@ -39,7 +39,7 @@ struct PlayerControls::impl {
     impl(Core::Player& player, std::shared_ptr<Playlist::Manager> playman)
         : player(player)
     {
-        state = (PlayerControls::DeviceState) player.state();
+        state = static_cast<PlayerControls::DeviceState>(player.state());
         playman->getCurrentPlaylistChangedSignal().
                 connect([this] (optional<Core::Playlist> cp) {
             currentPlaylist = cp;
@@ -57,7 +57,7 @@ PlayerControls::PlayerControls(Core::Player& player, const std::shared_ptr<Playl
 {
     qRegisterMetaType<DeviceState>("DeviceState");
     pimpl->stateChangedConn = pimpl->player.stateChangedSignal().connect([this] (Output::DeviceState ds) {
-        pimpl->state = (PlayerControls::DeviceState) ds;
+        pimpl->state = static_cast<PlayerControls::DeviceState>(ds);
         Q_EMIT stateChanged(state());
         Q_EMIT stateStrChanged(stateStr());
     });

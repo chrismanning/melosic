@@ -79,13 +79,13 @@ FlacDecoder::FlacDecoderImpl::FlacDecoderImpl(std::unique_ptr<std::istream> inpu
 FlacDecoder::FlacDecoderImpl::~FlacDecoderImpl() { finish(); }
 
 bool FlacDecoder::FlacDecoderImpl::end() const {
-    auto state = (::FLAC__StreamDecoderState)get_state();
+    ::FLAC__StreamDecoderState state = get_state();
     return state == FLAC__STREAM_DECODER_END_OF_STREAM || state == FLAC__STREAM_DECODER_ABORTED;
 }
 
 FLAC__StreamDecoderReadStatus FlacDecoder::FlacDecoderImpl::read_callback(FLAC__byte buffer[], size_t* bytes) {
     try {
-        auto n = io::read(*m_input, (char*)buffer, *bytes);
+        auto n = io::read(*m_input, reinterpret_cast<char*>(buffer), *bytes);
 
         if(n < 0) {
             *bytes = 0;
@@ -111,30 +111,30 @@ FLAC__StreamDecoderWriteStatus FlacDecoder::FlacDecoderImpl::write_callback(cons
         case 8:
             for(unsigned i = 0, u = 0; i < frame->header.blocksize && u < (frame->header.blocksize * as.channels); i++)
                 for(unsigned j = 0; j < frame->header.channels; j++, u++)
-                    buf.push_back((char)(buffer[j][i]));
+                    buf.push_back(static_cast<char>(buffer[j][i]));
             break;
         case 16:
             for(unsigned i = 0, u = 0; i < frame->header.blocksize && u < (frame->header.blocksize * as.channels); i++)
                 for(unsigned j = 0; j < frame->header.channels; j++, u++) {
-                    buf.push_back((char)(buffer[j][i]));
-                    buf.push_back((char)(buffer[j][i] >> 8));
+                    buf.push_back(static_cast<char>(buffer[j][i]));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 8));
                 }
             break;
         case 24:
             for(unsigned i = 0, u = 0; i < frame->header.blocksize && u < (frame->header.blocksize * as.channels); i++)
                 for(unsigned j = 0; j < frame->header.channels; j++, u++) {
-                    buf.push_back((char)(buffer[j][i]));
-                    buf.push_back((char)(buffer[j][i] >> 8));
-                    buf.push_back((char)(buffer[j][i] >> 16));
+                    buf.push_back(static_cast<char>(buffer[j][i]));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 8));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 16));
                 }
             break;
         case 32:
             for(unsigned i = 0, u = 0; i < frame->header.blocksize && u < (frame->header.blocksize * as.channels); i++)
                 for(unsigned j = 0; j < frame->header.channels; j++, u++) {
-                    buf.push_back((char)(buffer[j][i]));
-                    buf.push_back((char)(buffer[j][i] >> 8));
-                    buf.push_back((char)(buffer[j][i] >> 16));
-                    buf.push_back((char)(buffer[j][i] >> 24));
+                    buf.push_back(static_cast<char>(buffer[j][i]));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 8));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 16));
+                    buf.push_back(static_cast<char>(buffer[j][i] >> 24));
                 }
             break;
         default:
@@ -165,7 +165,7 @@ void FlacDecoder::FlacDecoderImpl::metadata_callback(const FLAC__StreamMetadata*
 
 FLAC__StreamDecoderSeekStatus FlacDecoder::FlacDecoderImpl::seek_callback(FLAC__uint64 absolute_byte_offset) {
     auto off = io::position_to_offset(io::seek(*m_input, absolute_byte_offset, std::ios_base::beg));
-    if(off == (int64_t)absolute_byte_offset)
+    if(off == static_cast<int64_t>(absolute_byte_offset))
         return FLAC__STREAM_DECODER_SEEK_STATUS_OK;
     else
         return FLAC__STREAM_DECODER_SEEK_STATUS_ERROR;

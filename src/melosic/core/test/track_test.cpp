@@ -20,7 +20,6 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/filesystem.hpp>
 namespace fs = boost::filesystem;
-#include <boost/utility/string_ref.hpp>
 
 #include <jbson/json_reader.hpp>
 using namespace jbson;

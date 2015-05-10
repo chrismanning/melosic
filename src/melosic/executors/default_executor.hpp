@@ -39,8 +39,6 @@ namespace executors {
 
 using default_executor_t = thread_pool;
 
-EXECUTORS_EXPORT std::shared_ptr<default_executor_t> default_executor();
-
 } // namespace executors
 } // namespace Melosic
 

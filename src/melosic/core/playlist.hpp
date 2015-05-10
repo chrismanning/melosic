@@ -24,7 +24,6 @@ namespace chrono = std::chrono;
 using namespace std::literals;
 
 #include <boost/filesystem/path.hpp>
-#include <boost/utility/string_ref_fwd.hpp>
 #include <boost/range/detail/any_iterator.hpp>
 
 #include <melosic/common/range.hpp>
@@ -72,7 +71,7 @@ public:
     void clear();
     void swap(Playlist& b);
 
-    boost::string_ref name() const;
+    std::string_view name() const;
     void name(std::string);
 
     bool operator==(const Playlist&) const;

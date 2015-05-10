@@ -227,7 +227,7 @@ private Q_SLOTS:
         auto results = coll.execute_query(query);
         QVERIFY(!results.empty());
 
-        QCOMPARE(results.size(), (size_t)13);
+        QCOMPARE(results.size(), static_cast<decltype(results.size())>(13));
     }
     void queryTest2() {
         auto query = db.create_query("{}"_json_doc.data(), ec);
@@ -244,7 +244,7 @@ private Q_SLOTS:
         std::transform(results.begin(), std::unique(results.begin(), results.end()),
                        std::back_inserter(docs), [](auto&& d) { return jbson::document{d}; });
 
-        QCOMPARE(docs.size(), (size_t)7);
+        QCOMPARE(docs.size(), static_cast<decltype(results.size())>(7));
     }
 
     void filterTest1() {

@@ -28,53 +28,45 @@
 #include <melosic/melin/output.hpp>
 
 namespace Melosic {
-namespace ASIO {
-
-using namespace ::asio;
+namespace AudioIO {
 
 struct MELOSIC_EXPORT AudioOutputServiceBase {
-    explicit AudioOutputServiceBase(io_service& service) :
-        m_service(service),
-        m_strand(m_service)
+    explicit AudioOutputServiceBase(asio::io_service& service) :
+        m_service(service)
     {}
 
     virtual ~AudioOutputServiceBase() {}
 
-    io_service::strand& get_strand() noexcept {
-        return m_strand;
-    }
-
     virtual void destroy() = 0;
-    virtual void cancel(std::error_code&) noexcept = 0;
-    virtual void assign(Output::DeviceName dev_name, std::error_code& ec) noexcept = 0;
+    virtual void cancel(std::error_code&) = 0;
+    virtual void assign(Output::DeviceName dev_name, std::error_code& ec) = 0;
 
-    virtual AudioSpecs prepare(const AudioSpecs, std::error_code&) noexcept = 0;
-    virtual void play(std::error_code&) noexcept = 0;
-    virtual void pause(std::error_code&) noexcept = 0;
-    virtual void unpause(std::error_code&) noexcept = 0;
-    virtual void stop(std::error_code&) noexcept = 0;
-    virtual size_t write_some(const const_buffer&, std::error_code&) noexcept = 0;
+    virtual AudioSpecs prepare(const AudioSpecs, std::error_code&) = 0;
+    virtual void play(std::error_code&) = 0;
+    virtual void pause(std::error_code&) = 0;
+    virtual void unpause(std::error_code&) = 0;
+    virtual void stop(std::error_code&) = 0;
+    virtual size_t write_some(const asio::const_buffer&, std::error_code&) = 0;
 
     typedef std::function<void(std::error_code, AudioSpecs)> PrepareHandler;
-    virtual void async_prepare(const AudioSpecs, PrepareHandler) noexcept = 0;
+    virtual void async_prepare(AudioSpecs, PrepareHandler) = 0;
 
     typedef std::function<void(std::error_code, std::size_t)> WriteHandler;
-    virtual void async_write_some(const const_buffer&, WriteHandler) = 0;
+    virtual void async_write_some(const asio::const_buffer&, WriteHandler) = 0;
 
-    virtual bool non_blocking() const noexcept = 0;
-    virtual void non_blocking(bool, std::error_code&) noexcept = 0;
+    virtual bool non_blocking() const = 0;
+    virtual void non_blocking(bool, std::error_code&) = 0;
 
-    virtual Output::DeviceState state() const noexcept = 0;
-    virtual AudioSpecs current_specs() const noexcept = 0;
+    virtual Output::DeviceState state() const = 0;
+    virtual AudioSpecs current_specs() const = 0;
 
 protected:
-    io_service& get_io_service() noexcept {
+    asio::io_service& get_io_service() noexcept {
         return m_service;
     }
 
 private:
-    io_service& m_service;
-    io_service::strand m_strand;
+    asio::io_service& m_service;
 };
 
 }

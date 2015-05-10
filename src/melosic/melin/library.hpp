@@ -25,7 +25,6 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/functional/hash_fwd.hpp>
 #include <boost/thread/synchronized_value.hpp>
-#include <boost/utility/string_ref_fwd.hpp>
 
 #include <ejpp/ejdb.hpp>
 
@@ -105,7 +104,7 @@ class Manager final {
 };
 
 MELOSIC_EXPORT
-std::vector<jbson::element> apply_path(const std::vector<jbson::document>&, boost::string_ref);
+std::vector<jbson::element> apply_path(const std::vector<jbson::document>&, std::string_view);
 
 MELOSIC_EXPORT
 jbson::document_set apply_named_paths(const jbson::document&, ForwardRange<std::tuple<std::string, std::string>>);

@@ -38,7 +38,7 @@ struct DeviceName;
 namespace Config {
 class Manager;
 }
-namespace ASIO {
+namespace AudioIO {
 struct AudioOutputBase;
 }
 namespace Core {
@@ -46,7 +46,7 @@ class Kernel;
 }
 
 namespace Output {
-typedef std::function<std::unique_ptr<ASIO::AudioOutputBase>(asio::io_service&, DeviceName)> ASIOFactory;
+typedef std::function<std::unique_ptr<AudioIO::AudioOutputBase>(asio::io_service&, DeviceName)> ASIOFactory;
 
 class Manager final {
     explicit Manager(const std::shared_ptr<Config::Manager>&, asio::io_service&);
@@ -69,7 +69,7 @@ public:
 
     const std::string& currentSinkName() const;
 
-    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink() const;
+    std::unique_ptr<AudioIO::AudioOutputBase> createASIOSink() const;
     Signals::Output::PlayerSinkChanged& getPlayerSinkChangedSignal() const;
 
 private:

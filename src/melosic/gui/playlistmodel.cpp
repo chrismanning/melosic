@@ -27,6 +27,8 @@
 #include <QItemSelectionModel>
 #include <QJsonDocument>
 
+#include <asio/post.hpp>
+
 #include <melosic/core/track.hpp>
 #include <melosic/melin/kernel.hpp>
 #include <melosic/core/playlist.hpp>
@@ -139,7 +141,7 @@ QMimeData* PlaylistModel::mimeData(const QModelIndexList& indexes) const {
 
     for(const QModelIndex& index : indexes) {
         if(index.isValid()) {
-            auto text = data(index, (int)TrackRoles::FilePath).toString();
+            auto text = data(index, TrackRoles::FilePath).toString();
             stream << text;
         }
     }
@@ -176,7 +178,7 @@ struct Refresher {
         p.refreshTracks(start, start+stride);
         start += stride;
         if(start < end)
-            executors::default_executor()->submit(Refresher(p, start, end, stride));
+            asio::post(Refresher(p, start, end, stride));
     }
 
     mutable Core::Playlist p;
@@ -271,9 +273,9 @@ bool PlaylistModel::insertTracks(int row, QSequentialIterable var_list) {
                             auto metadata_query = jbson::builder{};
 
                             auto str = i.key().toStdString();
-                            metadata_query.emplace("key", boost::string_ref(str));
+                            metadata_query.emplace("key", std::string_view(str));
                             str = i.value().toString().toStdString();
-                            metadata_query.emplace("value", boost::string_ref(str));
+                            metadata_query.emplace("value", std::string_view(str));
 
                             and_query.emplace(jbson::builder("metadata", jbson::builder
                                                              ("$elemMatch", std::move(metadata_query))

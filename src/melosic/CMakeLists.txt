@@ -17,7 +17,7 @@ add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib)
 
 add_subdirectory(gui)
 
-include_directories(${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
+include_directories(SYSTEM ${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
 
 add_subdirectory(plugins)
 

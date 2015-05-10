@@ -120,7 +120,7 @@ Track::Track(const jbson::document& track_doc)
     auto it = track_doc.find("type");
     if(it == track_doc.end() ||
             it->type() != jbson::element_type::string_element ||
-            it->value<boost::string_ref>() != "track")
+            jbson::get<jbson::element_type::string_element>(*it) != "track")
     {
         BOOST_THROW_EXCEPTION(std::runtime_error("document is not a track"));
     }

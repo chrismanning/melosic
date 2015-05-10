@@ -16,9 +16,11 @@
 **************************************************************************/
 
 #include <csignal>
-#include <thread>
+
+#include <boost/thread/scoped_thread.hpp>
 
 #include <asio/io_service.hpp>
+#include <asio/executor_work.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/config.hpp>
@@ -36,33 +38,31 @@
 namespace Melosic {
 namespace Core {
 
-static void signal_handler(int signo) {
-    std::quick_exit(signo);
-}
+namespace {
 
-static void io_thread_runner(asio::io_service& io) {
+void signal_handler(int signo) { std::quick_exit(signo); }
+
+void io_thread_runner(asio::io_service& io) {
     try {
         io.run();
-    }
-    catch(...) {
+    } catch(...) {
         std::clog << boost::current_exception_diagnostic_information() << std::endl;
     }
 }
 
+}
+
 struct Kernel::impl {
+    using null_worker_type = decltype(asio::make_work(std::declval<asio::io_service&>()));
     impl()
-        : confman(new Config::Manager{"melosic.conf"}),
-          plugman(new Plugin::Manager{confman}),
-          io_service(),
-          outman(new Output::Manager{confman, io_service}),
-          null_worker(new asio::io_service::work(io_service)),
-          io_thread(io_thread_runner, std::ref(io_service)),
-          inman(new Input::Manager{}),
-          decman(new Decoder::Manager{inman, plugman}),
-          encman(new Encoder::Manager{}),
-          libman(new Library::Manager{confman, decman, plugman}),
-          playlistman(new Melosic::Playlist::Manager{})
-    {
+        : confman(new Config::Manager{"melosic.conf"}), plugman(new Plugin::Manager{confman}), audio_io_service(),
+          outman(new Output::Manager{confman, audio_io_service}),
+          audio_null_worker(new null_worker_type(audio_io_service.get_executor())),
+          audio_io_thread(io_thread_runner, std::ref(audio_io_service)), inman(new Input::Manager{}),
+          decman(new Decoder::Manager{inman, plugman}), encman(new Encoder::Manager{}),
+          libman(new Library::Manager{confman, decman, plugman}), playlistman(new Melosic::Playlist::Manager{}),
+          io_service(), null_worker(new null_worker_type(io_service.get_executor())),
+          io_thread(io_thread_runner, std::ref(io_service)) {
         std::signal(SIGABRT, signal_handler);
         std::signal(SIGINT, signal_handler);
         std::signal(SIGQUIT, signal_handler);
@@ -70,21 +70,24 @@ struct Kernel::impl {
     }
 
     ~impl() {
+        audio_null_worker.reset();
         null_worker.reset();
-        io_thread.join();
     }
 
     std::shared_ptr<Config::Manager> confman;
     std::shared_ptr<Plugin::Manager> plugman;
-    asio::io_service io_service;
+    asio::io_service audio_io_service;
     std::shared_ptr<Output::Manager> outman;
-    std::unique_ptr<asio::io_service::work> null_worker;
-    std::thread io_thread;
+    std::unique_ptr<null_worker_type> audio_null_worker;
+    boost::scoped_thread<> audio_io_thread;
     std::shared_ptr<Input::Manager> inman;
     std::shared_ptr<Decoder::Manager> decman;
     std::shared_ptr<Encoder::Manager> encman;
     std::shared_ptr<Library::Manager> libman;
     std::shared_ptr<Melosic::Playlist::Manager> playlistman;
+    asio::io_service io_service;
+    std::unique_ptr<null_worker_type> null_worker;
+    boost::scoped_thread<> io_thread;
     Logger::Logger logject{logging::keywords::channel = "Kernel"};
 };
 

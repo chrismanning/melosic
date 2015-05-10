@@ -20,6 +20,7 @@ endif()
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_THREAD_PROVIDES_EXECUTORS -DBOOST_THREAD_VERSION=4 -DBOOST_THREAD_USES_DATETIME)
+add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 add_definitions(-DOPENSSL_NO_SSL2)
 
 if(MELOSIC_ASIO_HANDLER_TRACKING)
@@ -34,13 +35,13 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time regex REQUIRED)
 link_directories(${Boost_LIBRARY_DIR})
-include_directories(${Boost_INCLUDE_DIR})
+include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
 find_package(Asio 1.10.1 REQUIRED)
 
 include_directories(include)
 add_subdirectory(extern)
-include_directories(${EXTERN_INCLUDES})
+include_directories(SYSTEM ${EXTERN_INCLUDES})
 link_directories(${CMAKE_BINARY_DIR}/extern/lib)
 
 if(NOT WIN32)
@@ -68,6 +69,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -fno-omit-frame-pointer")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-local-typedefs -Wno-missing-field-initializers")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-attributes -Wno-unused-parameter -Wno-deprecated-register")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-redeclared-class-member -Wno-ignored-qualifiers")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wold-style-cast")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
@@ -79,12 +81,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
-add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED=0)
-
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
-include_directories(src ${Boost_INCLUDE_DIRS} ${TAGLIB_INCLUDES})
+include_directories(src)
+include_directories(SYSTEM ${TAGLIB_INCLUDES})
 SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} z)
 SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp -lnetwork-uri)
 

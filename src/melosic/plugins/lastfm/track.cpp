@@ -138,7 +138,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
             return self->getInfo_impl(lastserv, autocorrect);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }
@@ -185,7 +185,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
             return self->scrobble_impl(lastserv);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }
@@ -231,7 +231,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
             return self->updateNowPlaying_impl(lastserv);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }

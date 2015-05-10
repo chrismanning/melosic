@@ -45,7 +45,7 @@ struct PlayerSinkChanged : Signals::Signal<Signals::Output::PlayerSinkChanged> {
 
 class Manager::impl {
 public:
-    impl(const std::shared_ptr<Config::Manager>& confman, ASIO::io_service& io_service) : io_service(io_service) {
+    impl(const std::shared_ptr<Config::Manager>& confman, asio::io_service& io_service) : io_service(io_service) {
         conf.putNode("output device", "default"s);
         conf.putNode("buffer time", 1000);
         confman->getLoadedSignal().connect(&impl::loadedSlot, this);
@@ -96,7 +96,7 @@ public:
         return sinkName;
     }
 
-    std::unique_ptr<ASIO::AudioOutputBase> createASIOSink() {
+    std::unique_ptr<AudioIO::AudioOutputBase> createASIOSink() {
         TRACE_LOG(logject) << "Creating player sink " << sinkName;
         lock_guard l(mu);
 
@@ -123,7 +123,7 @@ public:
 
 private:
     mutex mu;
-    ASIO::io_service& io_service;
+    asio::io_service& io_service;
     std::string sinkName;
     std::map<DeviceName, ASIOFactory> asioOutputFactories;
     Config::Conf conf{"Output"};
@@ -146,7 +146,7 @@ const std::string& Manager::currentSinkName() const {
     return pimpl->currentSinkName();
 }
 
-std::unique_ptr<ASIO::AudioOutputBase> Manager::createASIOSink() const {
+std::unique_ptr<AudioIO::AudioOutputBase> Manager::createASIOSink() const {
     return std::move(pimpl->createASIOSink());
 }
 

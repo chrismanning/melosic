@@ -34,7 +34,7 @@ extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterF
 
 extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
     decman->addAudioFormat([](auto input) { return std::make_unique<FlacDecoder>(std::move(input)); },
-                           boost::string_ref("audio/flac"), boost::string_ref("audio/x-flac"));
+                           std::string_view("audio/flac"), std::string_view("audio/x-flac"));
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {}

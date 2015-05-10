@@ -94,7 +94,7 @@ public:
             return self->getInfo_impl(lastserv);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }
@@ -116,7 +116,7 @@ public:
             return self->authenticate_impl(lastserv);
         });
         auto fut = task.get_future();
-        executors::default_executor()->submit(std::move(task));
+        asio::post(std::move(task));
 
         return fut;
     }

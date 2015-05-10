@@ -64,7 +64,7 @@ public:
     Manager(Manager&&) = delete;
     Manager& operator=(Manager&&) = delete;
 
-    MELOSIC_EXPORT void addAudioFormat(Factory fact, boost::string_ref mime_type);
+    MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string_view mime_type);
 
     template <typename StringT, template <class...> class List, typename ...ListArgs>
     void addAudioFormat(Factory fact, List<StringT, ListArgs...> mime_types) {

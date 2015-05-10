@@ -167,7 +167,7 @@ void CategoryProxyModel::onDataChanged(const QModelIndex& topleft,
 void CategoryProxyModel::impl::checkForConsistency() {
     if(!m_category)
         return;
-    assert(block_index.size() == (size_t)parent.rowCount());
+    assert(block_index.size() == static_cast<size_t>(parent.rowCount()));
     std::shared_ptr<Block> prev_block;
     QString prev_category;
     for(auto i = 0; i < parent.rowCount(); ++i) {
@@ -200,7 +200,7 @@ void CategoryProxyModel::impl::updateBlock(const int idx, std::shared_ptr<Block>
     if(!m_category)
         return;
     assert(idx >= 0);
-    assert(idx < (int)block_index.size());
+    assert(idx < static_cast<int>(block_index.size()));
 
     TRACE_LOG(logject) << "Updating block for index " << idx;
 
@@ -289,7 +289,7 @@ void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int
             auto b_end = b->firstRow() + b->count();
             if(b_end >= first) {
                 for(auto i = first; i < b_end; ++i,++trail_ref) {
-                    assert(i < (int)block_index.size());
+                    assert(i < static_cast<int>(block_index.size()));
                     block_index[i] = nullptr;
                 }
                 b->setCount(first - b->firstRow());
@@ -302,9 +302,9 @@ void CategoryProxyModel::impl::onRowsInserted(const QModelIndex&, int first, int
         block_index.insert(std::next(block_index.begin(), first), last-first+1, std::shared_ptr<Block>{nullptr});
     }
 
-    for(auto i = 1; i <= trail_ref && (i+last) < (int)block_index.size(); ++i)
+    for(auto i = 1; i <= trail_ref && (i+last) < static_cast<int>(block_index.size()); ++i)
         updateBlock(last+i, block_index[last+i]);
-    if(last+1 < (int)block_index.size() && block_index[last+1])
+    if(last+1 < static_cast<int>(block_index.size()) && block_index[last+1])
         assert(block_index[last+1]->firstRow() == last+1);
 
     TRACE_LOG(logject) << "Rows inserted: " << first << " - " << last;
@@ -322,9 +322,9 @@ void CategoryProxyModel::impl::onRowsMoved(const QModelIndex&, int sourceStart,
     block_index.erase(std::next(block_index.begin(), sourceStart), std::next(block_index.begin(), sourceEnd+1));
 
     sourceEnd = sourceStart;
-    if(--sourceStart > (int)block_index.size())
+    if(--sourceStart > static_cast<int>(block_index.size()))
         sourceStart = block_index.size()-1;
-    if(++sourceEnd >= (int)block_index.size())
+    if(++sourceEnd >= static_cast<int>(block_index.size()))
         sourceEnd = block_index.size()-1;
 
     onRowsInserted({}, dest, dest+s);
@@ -348,9 +348,9 @@ void CategoryProxyModel::impl::onRowsRemoved(const QModelIndex&, int start, int 
     block_index.erase(std::next(block_index.begin(), start), std::next(block_index.begin(), end+1));
 
     end = start;
-    if(--start > (int)block_index.size())
+    if(--start > static_cast<int>(block_index.size()))
         start = block_index.size()-1;
-    if(end >= (int)block_index.size())
+    if(end >= static_cast<int>(block_index.size()))
         end = block_index.size()-1;
 
     Q_EMIT parent.dataChanged(parent.index(start, 0), parent.index(end, 0));
@@ -391,12 +391,12 @@ void CategoryProxyModel::impl::onDataChanged(const QModelIndex& istart,
 
     // merge forward
     auto n = 0;
-    assert(block_index.size() == (size_t)parent.rowCount());
+    assert(block_index.size() == static_cast<size_t>(parent.rowCount()));
     const auto category = indexCategory(end);
     const auto block = block_index[end];
     assert(block);
     {
-        for(++n; end+n < (int)block_index.size(); ++n) {
+        for(++n; end+n < static_cast<int>(block_index.size()); ++n) {
             const auto next_category = indexCategory(end+n);
             if(category != next_category)
                 break;

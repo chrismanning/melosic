@@ -51,7 +51,7 @@ int JsonDocModel::rowCount(const QModelIndex&) const {
     return static_cast<int>(pimpl->m_docs.size());
 }
 
-static QString toQString(boost::string_ref str) {
+static QString toQString(std::string_view str) {
     return QString::fromUtf8(str.data(), str.size());
 }
 
@@ -60,20 +60,20 @@ struct QVariantVisitor {
     explicit QVariantVisitor(QVariantMap& map) : m_map(map) {}
 
     template <typename T>
-    void operator()(boost::string_ref name, jbson::element_type e, T v, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
+    void operator()(std::string_view name, jbson::element_type e, T v, std::enable_if_t<std::is_arithmetic<T>::value>* = 0) {
         m_map.insert(toQString(name), QVariant::fromValue(v));
     }
 
-    void operator()(boost::string_ref name, jbson::element_type, std::string str) {
+    void operator()(std::string_view name, jbson::element_type, std::string str) {
         m_map.insert(toQString(name), QString::fromStdString(str));
     }
 
-    void operator()(boost::string_ref name, jbson::element_type, boost::string_ref str) {
+    void operator()(std::string_view name, jbson::element_type, std::string_view str) {
         m_map.insert(toQString(name), toQString(str));
     }
 
     template <typename T>
-    void operator()(boost::string_ref name, jbson::element_type, jbson::basic_document<T>&& doc) {
+    void operator()(std::string_view name, jbson::element_type, jbson::basic_document<T>&& doc) {
         QVariantMap map{};
         QVariantVisitor v{map};
         for(auto&& e : doc)
@@ -82,7 +82,7 @@ struct QVariantVisitor {
     }
 
     template <typename T>
-    void operator()(boost::string_ref name, jbson::element_type, jbson::basic_array<T>&& doc) {
+    void operator()(std::string_view name, jbson::element_type, jbson::basic_array<T>&& doc) {
         QVariantMap map{};
         QVariantVisitor v{map};
         for(auto&& e : doc)
@@ -91,10 +91,10 @@ struct QVariantVisitor {
     }
 
     template <typename T>
-    void operator()(boost::string_ref, jbson::element_type, T&&, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
+    void operator()(std::string_view, jbson::element_type, T&&, std::enable_if_t<!std::is_arithmetic<T>::value>* = 0) {
 //        assert(false);
     }
-    void operator()(boost::string_ref, jbson::element_type) {
+    void operator()(std::string_view, jbson::element_type) {
 //        assert(false);
     }
 };

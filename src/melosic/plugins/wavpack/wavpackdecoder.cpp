@@ -37,7 +37,7 @@ static Logger::Logger logject{logging::keywords::channel = "Wavpack"};
 
 int32_t read_bytes_impl(void* input, void* data, int32_t bcount) {
     try {
-        return io::read(*(std::istream*)input, (char*)data, bcount);
+        return io::read(*static_cast<std::istream*>(input), static_cast<char*>(data), bcount);
     } catch(std::ios_base::failure& e) {
         ERROR_LOG(logject) << e.what();
         return 0;
@@ -45,11 +45,11 @@ int32_t read_bytes_impl(void* input, void* data, int32_t bcount) {
 }
 
 uint32_t get_pos_impl(void* input) {
-    return io::position_to_offset(io::seek(*(std::istream*)input, 0, std::ios_base::cur));
+    return io::position_to_offset(io::seek(*static_cast<std::istream*>(input), 0, std::ios_base::cur));
 }
 
 int set_pos_abs_impl(void* input, uint32_t pos) {
-    io::seek(*(std::istream*)input, pos, std::ios_base::beg);
+    io::seek(*static_cast<std::istream*>(input), pos, std::ios_base::beg);
     return 0;
 }
 
@@ -69,22 +69,22 @@ int set_pos_rel_impl(void* input, int32_t delta, int mode) {
             return -1;
     }
 
-    io::seek(*(std::istream*)input, delta, seek_dir);
+    io::seek(*static_cast<std::istream*>(input), delta, seek_dir);
 
     return 0;
 }
 
 int push_back_byte_impl(void* input, int c) {
-    ((std::istream*)input)->putback(c);
+    static_cast<std::istream*>(input)->putback(c);
 
     return c;
 }
 
 uint32_t get_length_impl(void* input) {
-    auto ret = io::seek(*(std::istream*)input, 0, std::ios_base::cur);
+    auto ret = io::seek(*static_cast<std::istream*>(input), 0, std::ios_base::cur);
     auto cur = io::position_to_offset(ret);
-    auto stream_length = io::position_to_offset(io::seek(*(std::istream*)input, 0, std::ios_base::end));
-    io::seek(*(std::istream*)input, cur, std::ios_base::beg);
+    auto stream_length = io::position_to_offset(io::seek(*static_cast<std::istream*>(input), 0, std::ios_base::end));
+    io::seek(*static_cast<std::istream*>(input), cur, std::ios_base::beg);
 
     return stream_length;
 }

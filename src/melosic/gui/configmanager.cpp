@@ -35,6 +35,7 @@
 #include <QScrollArea>
 #include <QSignalMapper>
 #include <QComboBox>
+#include <QPushButton>
 
 #include <kpageview.h>
 #include <kpagemodel.h>
@@ -214,7 +215,7 @@ struct ConfigSpinBox : QSpinBox, Configurable {
           m_configurator(new ConfigWidget<ConfigSpinBox>(this)) {
         setRange(std::numeric_limits<double>::min(), std::numeric_limits<double>::max());
         setValue(val);
-        connect(this, (void (QSpinBox::*)(int)) & QSpinBox::valueChanged, [this](int val) {
+        connect(this, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [this](int val) {
             if(val != m_reset_value && !m_modified)
                 Q_EMIT m_configurator->modifiedChanged(true);
             else if(val == m_reset_value && m_modified)
@@ -258,7 +259,7 @@ struct ConfigDoubleSpinBox : QDoubleSpinBox, Configurable {
           m_configurator(new ConfigWidget<ConfigDoubleSpinBox>(this)) {
         setRange(std::numeric_limits<double>::min(), std::numeric_limits<double>::max());
         setValue(val);
-        connect(this, (void (QDoubleSpinBox::*)(double)) & QDoubleSpinBox::valueChanged, [this](double val) {
+        connect(this, static_cast<void (QDoubleSpinBox::*)(double)>(&QDoubleSpinBox::valueChanged), [this](double val) {
             if(val != m_reset_value && !m_modified)
                 Q_EMIT m_configurator->modifiedChanged(true);
             else if(val == m_reset_value && m_modified)
@@ -428,7 +429,7 @@ static GeneratorConfWidget* generate_config_widget(std::shared_ptr<Config::Conf>
     auto layout = new QFormLayout(conf_widget);
 
     auto signal_mapper = new QSignalMapper(static_cast<Configurator*>(conf_widget));
-    QObject::connect(signal_mapper, (void (QSignalMapper::*)(QObject*)) & QSignalMapper::mapped,
+    QObject::connect(signal_mapper, static_cast<void (QSignalMapper::*)(QObject*)>(&QSignalMapper::mapped),
                      [conf_widget](QObject*) -> void { Q_EMIT conf_widget->modifiedChanged(conf_widget->modified()); });
 
     conf->iterateNodes([=](auto&& name, auto&& var) {
@@ -589,7 +590,7 @@ struct ConfTreeModel : KPageModel {
 
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override {
         auto parentItem = getItem(parent);
-        if(!parentItem || row < 0 || parentItem->m_children.size() < (size_t)row)
+        if(!parentItem || row < 0 || parentItem->m_children.size() < static_cast<size_t>(row))
             return {};
 
         return createIndex(row, column, &parentItem->m_children[+row]);
@@ -693,23 +694,23 @@ struct ConfigManager::impl {
 
         QObject::connect(buttons, &QDialogButtonBox::clicked, [buttons, this, model](auto&& button) {
             assert(model->m_config_root.configure());
-            if(button == (QAbstractButton*)buttons->button(QDialogButtonBox::Ok)) {
+            if(button == static_cast<QAbstractButton*>(buttons->button(QDialogButtonBox::Ok))) {
                 std::clog << "Ok clicked\n";
                 model->m_config_root.configure()->apply();
                 m_confman->saveConfig();
                 m_window->hide();
-            } else if(button == (QAbstractButton*)buttons->button(QDialogButtonBox::Cancel)) {
+            } else if(button == static_cast<QAbstractButton*>(buttons->button(QDialogButtonBox::Cancel))) {
                 std::clog << "Cancel clicked\n";
                 model->m_config_root.configure()->reset();
                 m_window->hide();
-            } else if(button == (QAbstractButton*)buttons->button(QDialogButtonBox::Apply)) {
+            } else if(button == static_cast<QAbstractButton*>(buttons->button(QDialogButtonBox::Apply))) {
                 std::clog << "Apply clicked\n";
                 model->m_config_root.configure()->apply();
                 m_confman->saveConfig();
-            } else if(button == (QAbstractButton*)buttons->button(QDialogButtonBox::Reset)) {
+            } else if(button == static_cast<QAbstractButton*>(buttons->button(QDialogButtonBox::Reset))) {
                 std::clog << "Reset clicked\n";
                 model->m_config_root.configure()->reset();
-            } else if(button == (QAbstractButton*)buttons->button(QDialogButtonBox::RestoreDefaults)) {
+            } else if(button == static_cast<QAbstractButton*>(buttons->button(QDialogButtonBox::RestoreDefaults))) {
                 std::clog << "Restore Defaults clicked\n";
             } else
                 assert(false);

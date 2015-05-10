@@ -57,21 +57,15 @@ static Melosic::Logger::Logger logject(logging::keywords::channel = "lastfm::ser
 
 namespace lastfm {
 
-constexpr size_t cstrlen(const char* str) {
-    size_t len = 0;
-    while(str && *str++)
-        ++len;
-    return len;
+constexpr std::string_view operator""_sv(const char* str, size_t len) {
+    return {str, len};
 }
 
-#define CONSTEXPR_STRING(str)                                                                                          \
-    std::experimental::string_view { str, cstrlen(str) }
+static_assert((""_sv).size() == 0, "");
+static_assert((" "_sv).size() == 1, "");
+static_assert(("  "_sv).size() == 2, "");
 
-static_assert(CONSTEXPR_STRING("").size() == 0, "");
-static_assert(CONSTEXPR_STRING(" ").size() == 1, "");
-static_assert(CONSTEXPR_STRING("  ").size() == 2, "");
-
-static constexpr auto base_url = CONSTEXPR_STRING("http://ws.audioscrobbler.com/2.0/");
+static constexpr auto base_url = "http://ws.audioscrobbler.com/2.0/"_sv;
 
 struct service::impl {
     impl(std::string_view api_key, std::string_view shared_secret)
@@ -226,9 +220,7 @@ Method service::sign(Method method) {
 std::future<tag> service::get_tag(std::experimental::string_view tag_name) {
     return get("tag.getinfo", {{"tag", tag_name.to_string()}}, use_future,
                [](network::http::v2::response response) {
-        jbson::json_reader reader{};
-        reader.parse(response.body());
-        auto doc = static_cast<jbson::document>(reader);
+        auto doc = jbson::read_json(response.body());
         check_error(doc);
         auto elem = doc.find("tag");
         if(elem == doc.end()) {

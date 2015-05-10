@@ -104,9 +104,7 @@ static jbson::document to_document(const QVariant& var) {
 
     jbson::document doc;
     try {
-        jbson::json_reader reader;
-        reader.parse(json_string);
-        doc = std::move(reader);
+        doc = jbson::read_json(json_string);
     } catch(...) {
         std::clog << boost::current_exception_diagnostic_information();
         std::clog << "Using empty query" << std::endl;
@@ -288,7 +286,7 @@ void FilterPane::impl::refresh() {
             // sort using fields with varying priorities
             TRACE_LOG(logject) << "sorting query results";
             sort_by_criteria(ds, boost::adaptors::transform(
-                                     sort_fields, [](auto&& bs) { return boost::string_ref(bs, bs.size()); }));
+                                     sort_fields, [](auto&& bs) { return std::string_view(bs, bs.size()); }));
             // put all unique docs in a vector
             std::transform(ds.begin(), std::unique(ds.begin(), ds.end()), std::back_inserter(docs),
                            [](auto&& d) { return jbson::document{d}; });
@@ -370,16 +368,16 @@ QAbstractItemModel* FilterPane::model() const { return &pimpl->m_model; }
 QJSValue FilterPane::queryGenerator() const { return pimpl->m_qml_query_generator; }
 
 struct toJSValue {
-    QJSValue operator()(boost::string_ref, jbson::element_type, boost::string_ref str) const {
+    QJSValue operator()(std::string_view, jbson::element_type, std::string_view str) const {
         return QJSValue{QString::fromLocal8Bit(str.data(), str.size())};
     }
-    QJSValue operator()(boost::string_ref, jbson::element_type, bool val) const { return QJSValue{val}; }
-    QJSValue operator()(boost::string_ref, jbson::element_type, int32_t val) const { return QJSValue{val}; }
-    QJSValue operator()(boost::string_ref, jbson::element_type, double val) const { return QJSValue{val}; }
+    QJSValue operator()(std::string_view, jbson::element_type, bool val) const { return QJSValue{val}; }
+    QJSValue operator()(std::string_view, jbson::element_type, int32_t val) const { return QJSValue{val}; }
+    QJSValue operator()(std::string_view, jbson::element_type, double val) const { return QJSValue{val}; }
 
-    template <typename T> QJSValue operator()(boost::string_ref, jbson::element_type, T&&) const { return QJSValue{}; }
+    template <typename T> QJSValue operator()(std::string_view, jbson::element_type, T&&) const { return QJSValue{}; }
 
-    QJSValue operator()(boost::string_ref, jbson::element_type) const { return QJSValue{}; }
+    QJSValue operator()(std::string_view, jbson::element_type) const { return QJSValue{}; }
 };
 
 template <typename SelectionT>

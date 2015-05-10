@@ -73,7 +73,7 @@ Manager::Manager(const std::shared_ptr<Input::Manager>& inman, const std::shared
 
 Manager::~Manager() {}
 
-void Manager::addAudioFormat(Factory fact, boost::string_ref mime_type) {
+void Manager::addAudioFormat(Factory fact, std::string_view mime_type) {
     unique_lock l(pimpl->mu);
 
     auto mime = mime_type.to_string();
@@ -94,7 +94,7 @@ void Manager::addAudioFormat(Factory fact, boost::string_ref mime_type) {
 
 std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
     try {
-        if(uri.scheme() == boost::string_ref("file"))
+        if(uri.scheme() && uri.scheme()->to_string() == "file")
             return tracks(Input::uri_to_path(uri));
     }
     catch(network::percent_decoding_error e) {
@@ -140,7 +140,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
         t.tags(tags);
 
         auto ap = taglib_file.audioProperties();
-        t.audioSpecs({(uint8_t)ap->channels(), 0, (uint32_t)ap->sampleRate()});
+        t.audioSpecs({static_cast<uint8_t>(ap->channels()), 0, static_cast<uint32_t>(ap->sampleRate())});
         t.end(chrono::seconds{ap->length()});
 
         try {

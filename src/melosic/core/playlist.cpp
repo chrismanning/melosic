@@ -283,7 +283,7 @@ void Playlist::swap(Playlist& b) {
     std::swap(pimpl, b.pimpl);
 }
 
-boost::string_ref Playlist::name() const {
+std::string_view Playlist::name() const {
     shared_lock l(pimpl->mu);
     return pimpl->getName();
 }
