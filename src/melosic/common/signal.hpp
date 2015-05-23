@@ -32,7 +32,7 @@ namespace Signals {
 template <typename Ret, typename... Args> struct Signal<Ret(Args...)> : SignalCore<Ret(Args...)> {
     using SignalCore<Ret(Args...)>::SignalCore;
 
-    template <typename... A> boost::future<void> operator()(use_future_t, A&&... args) {
+    template <typename... A> std::future<void> operator()(use_future_t, A&&... args) {
         static_assert(sizeof...(A) == sizeof...(Args), "Must be called with same number of args");
         static_assert(
             mpl::if_<mpl::bool_<(sizeof...(Args) > 0)>,

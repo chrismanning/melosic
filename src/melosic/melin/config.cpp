@@ -17,6 +17,7 @@
 
 #include <functional>
 #include <map>
+#include <set>
 #include <thread>
 #include <mutex>
 

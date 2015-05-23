@@ -17,6 +17,8 @@
 
 #include <memory>
 #include <cstdlib>
+#include <chrono>
+using namespace std::literals;
 
 #include <boost/smart_ptr/make_shared.hpp>
 #include <boost/chrono.hpp>
@@ -29,12 +31,12 @@ typedef Melosic::Signals::Signal<void(int32_t)> SignalType;
 auto use_future = Melosic::Signals::use_future;
 
 static void sleep_slot(int32_t) {
-    boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+    std::this_thread::sleep_for(100ms);
 }
 
 TEST_CASE("Signal Test") {
     SignalType sig1;
-    const auto defaultTimeout = boost::chrono::milliseconds(100);
+    constexpr auto defaultTimeout = 100ms;
 
     REQUIRE(0u == sig1.slotCount());
 
@@ -67,7 +69,7 @@ TEST_CASE("Signal Test") {
         int scalar{rand()};
         auto f(sig1(use_future, scalar));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK((a_ * scalar) == a);
         CHECK((b_ * scalar) == b);
     }
@@ -85,7 +87,7 @@ TEST_CASE("Signal Test") {
 
         auto f(ref_sig(use_future, std::ref(a)));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK((a_ + 1) == a);
     }
 
@@ -101,7 +103,7 @@ TEST_CASE("Signal Test") {
 
         auto f(ref_sig(use_future, a));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK((a_ + 1) == a);
     }
 
@@ -124,7 +126,7 @@ TEST_CASE("Signal Test") {
 
         auto f(ref_sig(use_future, std::ref(a)));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
     }
 
     SECTION("SignalStructReferenceTest") {
@@ -135,7 +137,7 @@ TEST_CASE("Signal Test") {
 
         auto f(ref_sig(use_future, a));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
     }
 
     struct S {
@@ -152,7 +154,7 @@ TEST_CASE("Signal Test") {
         int32_t i{rand()};
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(i == s.m_a);
         c.disconnect();
         CHECK(0u == sig1.slotCount());
@@ -166,7 +168,7 @@ TEST_CASE("Signal Test") {
         int32_t i{rand()};
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(i == s->m_a);
 
         s.reset();
@@ -174,7 +176,7 @@ TEST_CASE("Signal Test") {
         f = sig1(use_future, i);
         r = f.wait_for(defaultTimeout);
         CHECK_NOTHROW(f.get());
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(0u == sig1.slotCount());
     }
 
@@ -186,7 +188,7 @@ TEST_CASE("Signal Test") {
         int32_t i{rand()};
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(i == s->m_a);
 
         s.reset();
@@ -194,7 +196,7 @@ TEST_CASE("Signal Test") {
         f = sig1(use_future, i);
         r = f.wait_for(defaultTimeout);
         CHECK_NOTHROW(f.get());
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(0u == sig1.slotCount());
     }
 
@@ -205,7 +207,7 @@ TEST_CASE("Signal Test") {
         int32_t i{rand()};
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(i == s.m_a);
         c.disconnect();
         CHECK(0u == sig1.slotCount());
@@ -223,7 +225,7 @@ TEST_CASE("Signal Test") {
 
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
 
         CHECK(res == i + 1);
         c1.disconnect();
@@ -242,7 +244,7 @@ TEST_CASE("Signal Test") {
 
         auto f(sig1(use_future, i));
         auto r(f.wait_for(defaultTimeout));
-        REQUIRE(boost::future_status::ready == r);
+        REQUIRE(std::future_status::ready == r);
         CHECK(0u == sig2.slotCount());
 
         c1.disconnect();
