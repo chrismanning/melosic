@@ -27,8 +27,8 @@
 
 namespace lastfm {
 
-struct LASTFM_EXPORT wiki {
-    explicit wiki(std::string_view summary = {}, std::string_view content = {}, date_t published = {});
+struct LASTFM_EXPORT wiki_t {
+    explicit wiki_t(std::string_view summary = {}, std::string_view content = {}, date_t published = {});
 
     std::string_view summary() const;
     void summary(std::string_view);
@@ -45,7 +45,7 @@ struct LASTFM_EXPORT wiki {
     date_t m_published;
 };
 
-template <typename Container> void value_get(const jbson::basic_element<Container>& elem, wiki& var) {
+template <typename Container> void value_get(const jbson::basic_element<Container>& elem, wiki_t& var) {
     auto doc = jbson::get<jbson::element_type::document_element>(elem);
     for(auto&& elem : doc) {
         if(elem.name() == "summary") {

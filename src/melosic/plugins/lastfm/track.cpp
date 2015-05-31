@@ -50,14 +50,14 @@ namespace lastfm {
 
 struct track::impl : std::enable_shared_from_this<impl> {
     impl(std::weak_ptr<service> lastserv, const std::string& name, const std::string& artist, const std::string& url)
-        : lastserv(lastserv), name(name), m_artist(lastserv, artist), url(url) {
+        : lastserv(lastserv), name(name), url(url) {
     }
 
-    impl(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track) : lastserv(lastserv), m_artist(lastserv) {
+    impl(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track) : lastserv(lastserv){
         {
             auto artist_name = ""s; // track.getTag("artist");
-            if(artist_name != "?")
-                this->m_artist = artist(lastserv, artist_name);
+//            if(artist_name != "?")
+//                this->m_artist = artist(lastserv, artist_name);
         }
         {
             auto title = ""s; // track.getTag("title");
@@ -81,10 +81,10 @@ struct track::impl : std::enable_shared_from_this<impl> {
         if(!lastserv)
             return false;
         TRACE_LOG(logject) << "In getInfo";
-        if(!m_artist) {
-            TRACE_LOG(logject) << "getInfo: Required parameter \"artist\" not set. Returning.";
-            return false;
-        }
+//        if(!m_artist) {
+//            TRACE_LOG(logject) << "getInfo: Required parameter \"artist\" not set. Returning.";
+//            return false;
+//        }
         if(name.empty()) {
             TRACE_LOG(logject) << "getInfo: Required parameter \"name\" not set. Returning.";
             return false;
@@ -92,7 +92,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
         Method method = lastserv->prepareMethodCall("track.getInfo");
         Parameter& p = method.addParameter()
                            .addMember("track", name)
-                           .addMember("artist", m_artist.getName())
+//                           .addMember("artist", m_artist.getName())
                            .addMember("api_key", lastserv->api_key());
         if(autocorrect)
             p.addMember("autocorrect[1]");
@@ -113,14 +113,14 @@ struct track::impl : std::enable_shared_from_this<impl> {
         if(autocorrect) {
             lock_guard<Mutex> l(mu);
             name = ptree.get<std::string>("name");
-            m_artist = artist(this->lastserv, ptree.get<std::string>("artist.name"));
+//            m_artist = artist(this->lastserv, ptree.get<std::string>("artist.name"));
         }
         unique_lock<Mutex> l(mu);
         url = network::uri(ptree.get<std::string>("url"));
         topTags_.clear();
         for(const boost::property_tree::ptree::value_type& val : ptree.get_child("toptags")) {
-            topTags_.emplace_back(val.second.get<std::string>("name"),
-                                  network::uri{val.second.get<std::string>("url")});
+//            topTags_.emplace_back(val.second.get<std::string>("name"),
+//                                  network::uri{val.second.get<std::string>("url")});
         }
         return true;
     }
@@ -151,7 +151,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
         TRACE_LOG(logject) << "In scrobble";
         Method method = lastserv->prepareMethodCall("track.scrobble");
         method.addParameter()
-            .addMember("artist", m_artist.getName())
+//            .addMember("artist", m_artist.getName())
             .addMember("track", name)
             .addMember("api_key", lastserv->api_key())
             .addMember("timestamp", boost::lexical_cast<std::string>(timestamp));
@@ -198,7 +198,7 @@ struct track::impl : std::enable_shared_from_this<impl> {
         TRACE_LOG(logject) << "In updateNowPlaying";
         Method method = lastserv->prepareMethodCall("track.updateNowPlaying");
         method.addParameter()
-            .addMember("artist", m_artist.getName())
+//            .addMember("artist", m_artist.getName())
             .addMember("track", name)
             .addMember("api_key", lastserv->api_key());
 

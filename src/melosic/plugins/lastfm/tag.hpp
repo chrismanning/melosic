@@ -23,6 +23,7 @@
 #include <experimental/type_traits>
 #include <future>
 #include <chrono>
+#include <experimental/optional>
 
 #include <boost/thread/future.hpp>
 
@@ -32,6 +33,7 @@
 
 #include "lastfm.hpp"
 #include "wiki.hpp"
+#include "artist.hpp"
 
 namespace lastfm {
 
@@ -40,11 +42,8 @@ struct album;
 struct artist;
 struct track;
 
-using wiki_t = wiki;
-
 struct LASTFM_EXPORT tag {
-    explicit tag(std::string_view tag_name = {}, const network::uri& url = {}, int reach = 0, int taggings = 0,
-                 bool streamable = false, wiki_t wiki = wiki_t{});
+    explicit tag() = default;
 
     std::string_view name() const;
     void name(std::string_view);
@@ -61,15 +60,17 @@ struct LASTFM_EXPORT tag {
     bool streamable() const;
     void streamable(bool);
 
-    wiki_t wiki() const;
+    const wiki_t& wiki() const;
     void wiki(wiki_t);
 
     // api methods
 
     std::future<std::vector<tag>> get_similar(service&) const;
-    boost::future<std::vector<album>> get_top_albums(service&, int limit = 50, int page = 1) const;
-    boost::future<std::vector<artist>> get_top_artists(service&, int limit = 50, int page = 1) const;
-    boost::future<std::vector<tag>> get_top_tags(service&) const;
+    std::future<std::vector<album>> get_top_albums(service&, std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt) const;
+    std::future<std::vector<artist>> get_top_artists(service&, std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt) const;
+    std::future<std::vector<tag>> get_top_tags(service&) const;
     boost::future<std::vector<track>> get_top_tracks(service&, int limit = 50, int page = 1) const;
     boost::future<std::vector<artist>> get_weekly_artist_chart(service&, date_t from = {}, date_t to = {},
                                                                int limit = 50) const;
@@ -102,7 +103,7 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
         } else if(elem.name() == "streamable") {
             var.streamable(jbson::get<jbson::element_type::string_element>(elem) == "1");
         } else if(elem.name() == "wiki") {
-            var.wiki(jbson::get<wiki>(elem));
+            var.wiki(jbson::get<wiki_t>(elem));
         }
     }
 }

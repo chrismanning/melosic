@@ -13,7 +13,7 @@ add_subdirectory(melin)
 add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
 set_target_properties(${PROJECT_NAME}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PROJECT_NAME}lib_EXPORTS)
 
-add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib)
+add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib rapidjson)
 
 add_subdirectory(gui)
 

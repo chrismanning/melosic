@@ -203,7 +203,7 @@ struct Manager::impl {
                 TRACE_LOG(logject) << "node is null. skipping...";
                 return;
             }
-            obj.AddMember(key.data(), std::move(val), poolAlloc);
+            obj.AddMember(json::StringRef(key), std::move(val), poolAlloc);
         });
         c.iterateChildren([&](auto&& childconf) {
             TRACE_LOG(logject) << "adding conf to json: " << childconf->name();
@@ -212,7 +212,7 @@ struct Manager::impl {
                 TRACE_LOG(logject) << "conf child is empty. skipping...";
                 return;
             }
-            obj.AddMember(childconf->name().data(), std::move(child), poolAlloc);
+            obj.AddMember(json::StringRef(childconf->name()), std::move(child), poolAlloc);
         });
         return obj;
     }
@@ -224,7 +224,7 @@ struct Manager::impl {
         assert(!confPath.empty());
 
         auto sync_conf = m_conf.synchronize();
-        json::Document rootjson(JsonFromConf(*sync_conf));
+        auto rootjson = JsonFromConf(*sync_conf);
         json::StringBuffer strbuf;
         json::PrettyWriter<json::StringBuffer> writer(strbuf);
         rootjson.Accept(writer);

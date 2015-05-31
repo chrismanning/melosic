@@ -63,6 +63,7 @@ struct user;
 struct Method;
 struct track;
 struct tag;
+struct artist;
 using asio::use_future_t;
 constexpr use_future_t<> use_future{};
 
@@ -101,6 +102,8 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
              std::function<void(asio::error_code, network::http::v2::response)> callback);
 
     std::future<tag> get_tag(std::string_view tag_name);
+
+    std::future<artist> get_artist(std::string_view artist_name);
 
   private:
     struct impl;

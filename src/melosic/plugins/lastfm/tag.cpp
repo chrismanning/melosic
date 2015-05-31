@@ -27,11 +27,6 @@
 
 namespace lastfm {
 
-tag::tag(std::string_view tag_name, const network::uri& url, int reach, int taggings, bool streamable, wiki_t wiki)
-    : m_name(tag_name), m_url(url), m_reach(reach), m_taggings(taggings), m_streamable(streamable),
-      m_wiki(std::move(wiki)) {
-}
-
 std::string_view tag::name() const {
     return m_name;
 }
@@ -72,7 +67,7 @@ void tag::streamable(bool streamable) {
     m_streamable = streamable;
 }
 
-wiki_t tag::wiki() const {
+const wiki_t& tag::wiki() const {
     return m_wiki;
 }
 
@@ -80,8 +75,50 @@ void tag::wiki(wiki_t wiki) {
     m_wiki = wiki;
 }
 
+namespace {
+
+using std::get;
+
+using params_t = service::params_t;
+
+template <typename TupleT>
+using optionalise_param_t = std::tuple<std::tuple_element_t<0, TupleT>, std::optional<std::tuple_element_t<1, TupleT>>>;
+
+template <typename StringT, typename OptT> auto make_param(std::tuple<StringT, std::optional<OptT>> t) {
+    return std::make_tuple(get<0>(t), get<1>(t) ? std::make_optional(std::to_string(*get<1>(t))) : std::nullopt);
+}
+
+template <typename StringT, typename OptT> auto make_param(std::tuple<StringT, OptT> t) {
+    return std::make_tuple(get<0>(t), std::make_optional(get<1>(t)));
+}
+
+template <typename MaybeT, typename Fun>
+auto apply(MaybeT&& maybe, Fun&& fun) -> std::enable_if_t<!std::is_void_v<decltype(fun(*maybe))>,
+std::optional<decltype(fun(*maybe))>> {
+    if(maybe)
+        return fun(*maybe);
+    return std::nullopt;
+}
+
+template <typename MaybeT, typename Fun>
+auto apply(MaybeT&& maybe, Fun&& fun) -> void {
+    if(maybe)
+        fun(*maybe);
+}
+
+template <template <typename...> typename TupleT, typename... StringT, typename... OptT>
+params_t make_params(TupleT<StringT, OptT>&&... optional_params) {
+    params_t params;
+    for(auto&& param : {make_param(optional_params)...}) {
+        apply(get<1>(param), [&, &name=get<0>(param)](auto&& just) { return params.emplace_back(name, just); });
+    }
+    return params;
+}
+
+}
+
 std::future<std::vector<tag>> tag::get_similar(service& serv) const {
-    return serv.get("tag.getsimilar", {{"tag", m_name}}, use_future, [](auto&& response) {
+    return serv.get("tag.getsimilar", make_params(std::make_tuple("tag", m_name)), use_future, [](auto&& response) {
         auto doc = jbson::read_json(response.body());
         check_error(doc);
 
@@ -95,16 +132,40 @@ std::future<std::vector<tag>> tag::get_similar(service& serv) const {
     });
 }
 
-boost::future<std::vector<album>> tag::get_top_albums(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<album>>();
+std::future<std::vector<album>> tag::get_top_albums(service&, std::optional<int> limit, std::optional<int> page) const {
 }
 
-boost::future<std::vector<artist>> tag::get_top_artists(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<artist>>();
+std::future<std::vector<artist>> tag::get_top_artists(service& serv, std::optional<int> limit,
+                                                      std::optional<int> page) const {
+    return serv.get("tag.gettopartists", make_params(std::make_tuple("tag", m_name), std::make_tuple("limit", limit),
+                                                     std::make_tuple("page", page)),
+                    use_future, [](auto&& response) {
+                        auto doc = jbson::read_json(response.body());
+                        check_error(doc);
+
+                        std::vector<artist> artists{};
+
+                        for(auto&& elem : jbson::path_select(doc, "topartists.artist.*")) {
+                            artists.push_back(jbson::get<artist>(elem));
+                        }
+
+                        return artists;
+                    });
 }
 
-boost::future<std::vector<tag>> tag::get_top_tags(service&) const {
-    return boost::make_ready_future<std::vector<tag>>();
+std::future<std::vector<tag>> tag::get_top_tags(service& serv) const {
+    return serv.get("tag.gettoptags", {}, use_future, [](auto&& response) {
+        auto doc = jbson::read_json(response.body());
+        check_error(doc);
+
+        std::vector<tag> tags{};
+
+        for(auto&& elem : jbson::path_select(doc, "toptags.tag.*")) {
+            tags.push_back(jbson::get<tag>(elem));
+        }
+
+        return tags;
+    });
 }
 
 boost::future<std::vector<track>> tag::get_top_tracks(service&, int limit, int page) const {

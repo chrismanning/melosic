@@ -44,6 +44,8 @@ add_subdirectory(extern)
 include_directories(SYSTEM ${EXTERN_INCLUDES})
 link_directories(${CMAKE_BINARY_DIR}/extern/lib)
 
+add_definitions(-DRAPIDJSON_HAS_STDSTRING)
+
 if(NOT WIN32)
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -pthread")
 

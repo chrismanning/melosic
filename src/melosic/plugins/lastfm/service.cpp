@@ -238,6 +238,18 @@ std::future<tag> service::get_tag(std::experimental::string_view tag_name) {
     });
 }
 
+std::future<artist> service::get_artist(std::string_view artist_name) {
+    return get("artist.getinfo", {{"artist", artist_name.to_string()}}, use_future, [](network::http::v2::response response) {
+        auto doc = jbson::read_json(response.body());
+        check_error(doc);
+        auto elem = doc.find("artist");
+        if(elem == doc.end()) {
+            throw 0;
+        }
+        return jbson::get<artist>(*elem);
+    });
+}
+
 std::string service::postMethod(const Method& method) {
     return {};
     //    return std::move(pimpl->postMethod(method));
