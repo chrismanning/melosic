@@ -65,17 +65,48 @@ struct LASTFM_EXPORT tag {
 
     // api methods
 
+    static std::future<tag> get_info(service&, std::string_view name);
+    std::future<tag> get_info(service&);
+
+    static std::future<std::vector<tag>> get_similar(service&, std::string_view name);
     std::future<std::vector<tag>> get_similar(service&) const;
+
+    static std::future<std::vector<album>> get_top_albums(service&, std::string_view name,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
     std::future<std::vector<album>> get_top_albums(service&, std::optional<int> limit = std::nullopt,
-                                                     std::optional<int> page = std::nullopt) const;
+                                                   std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<artist>> get_top_artists(service&, std::string_view name,
+                                                            std::optional<int> limit = std::nullopt,
+                                                            std::optional<int> page = std::nullopt);
     std::future<std::vector<artist>> get_top_artists(service&, std::optional<int> limit = std::nullopt,
                                                      std::optional<int> page = std::nullopt) const;
-    std::future<std::vector<tag>> get_top_tags(service&) const;
-    boost::future<std::vector<track>> get_top_tracks(service&, int limit = 50, int page = 1) const;
-    boost::future<std::vector<artist>> get_weekly_artist_chart(service&, date_t from = {}, date_t to = {},
-                                                               int limit = 50) const;
-    boost::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;
-    boost::future<std::vector<tag>> search(service&, int limit = 50, int page = 1) const;
+
+    static std::future<std::vector<tag>> get_top_tags(service&);
+
+    static std::future<std::vector<track>> get_top_tracks(service&, std::string_view name,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    std::future<std::vector<track>> get_top_tracks(service&, std::optional<int> limit = std::nullopt,
+                                                   std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<artist>> get_weekly_artist_chart(service&, std::string_view name,
+                                                                    std::optional<date_t> from = std::nullopt,
+                                                                    std::optional<date_t> to = std::nullopt,
+                                                                    std::optional<int> limit = std::nullopt);
+    std::future<std::vector<artist>> get_weekly_artist_chart(service&, std::optional<date_t> from = std::nullopt,
+                                                             std::optional<date_t> to = std::nullopt,
+                                                             std::optional<int> limit = std::nullopt) const;
+
+    static std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&, std::string_view name);
+    std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;
+
+    static std::future<std::vector<tag>> search(service&, std::string_view name,
+                                                std::optional<int> limit = std::nullopt,
+                                                std::optional<int> page = std::nullopt);
+    std::future<std::vector<tag>> search(service&, std::optional<int> limit = std::nullopt,
+                                         std::optional<int> page = std::nullopt) const;
 
   private:
     std::string m_name;

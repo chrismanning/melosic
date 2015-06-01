@@ -38,8 +38,7 @@ TEST_CASE("get_tag") {
     CHECK(wiki.summary().size() <= wiki.content().size());
 
     auto published = date_t::clock::to_time_t(wiki.published());
-    auto tm = std::localtime(&published);
-    std::clog << std::put_time(tm, "%a %d %b %Y %H:%M:%S") << std::endl;
+    std::clog << std::put_time(std::gmtime(&published), "%a %d %b %Y %H:%M:%S") << std::endl;
 
     auto similar_tags_fut = tag.get_similar(serv);
     status = similar_tags_fut.wait_for(5000ms);
@@ -77,8 +76,7 @@ TEST_CASE("get_artist") {
     CHECK(wiki.summary().size() <= wiki.content().size());
 
     auto published = date_t::clock::to_time_t(wiki.published());
-    auto tm = std::localtime(&published);
-    std::clog << std::put_time(tm, "%a %d %b %Y %H:%M:%S") << std::endl;
+    std::clog << std::put_time(std::gmtime(&published), "%a %d %b %Y %H:%M:%S") << std::endl;
 
     CHECK(artist.similar().size() > 0);
     CHECK(artist.tags().size() > 0);

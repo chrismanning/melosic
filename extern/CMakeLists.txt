@@ -64,4 +64,9 @@ CMAKE_ARGS -DCMAKE_BUILD_TYPE:STRING=Release
 )
 add_dependencies(ejpp jbson ejdb)
 
+#hana
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/hana/include)
+FILE(GLOB_RECURSE hana_headers ${CMAKE_CURRENT_SOURCE_DIR}/hana/include/*.hpp)
+add_custom_target(hana_headers_lib ALL SOURCES ${hana_headers})
+
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} PARENT_SCOPE)

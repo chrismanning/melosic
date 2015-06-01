@@ -27,16 +27,27 @@
 
 #include "exports.hpp"
 
-namespace std {
-namespace experimental {}
-using namespace experimental;
-}
-
 namespace lastfm {
 
 using date_t = std::chrono::system_clock::time_point;
 
 } // namespace lastfm
+
+namespace std {
+namespace experimental {}
+using namespace experimental;
+namespace chrono {
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& elem, lastfm::date_t& var) {
+    std::tm tm;
+    auto str = jbson::get<std::string>(elem);
+    std::stringstream ss{str};
+    ss >> std::get_time(&tm, "%a, %d %b %Y %H:%M:%S");
+    var = lastfm::date_t::clock::from_time_t(std::mktime(&tm));
+}
+
+}
+}
 
 namespace std {
 namespace experimental {

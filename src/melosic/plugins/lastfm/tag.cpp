@@ -18,12 +18,49 @@
 #include <jbson/path.hpp>
 #include <jbson/json_reader.hpp>
 
+#include <boost/hana.hpp>
+namespace hana = boost::hana;
+
 #include "artist.hpp"
 #include "album.hpp"
 #include "track.hpp"
 #include "service.hpp"
 #include "tag.hpp"
 #include "error.hpp"
+
+namespace boost::hana {
+
+    namespace ext::std {
+        struct Optional;
+    }
+
+    template <typename T> struct datatype<::std::optional<T>> { using type = ext::std::Optional; };
+
+    template <> struct lift_impl<ext::std::Optional> {
+        template <typename X> static constexpr decltype(auto) apply(X&& x) {
+            return std::make_optional(std::forward<X>(x));
+        }
+    };
+
+    template <> struct ap_impl<ext::std::Optional> {
+        template <typename F, typename... X>
+        static constexpr auto apply_impl(std::false_type, F&& f, X&&... x)
+            -> decltype(std::make_optional((*f)(x.value()...))) {
+            if(f && (... && x))
+                return std::make_optional((*f)(x.value()...));
+            return std::nullopt;
+        }
+        template <typename F, typename... X> static constexpr void apply_impl(std::true_type, F&& f, X&&... x) {
+            if(f && (... && x))
+                (*f)(x.value()...);
+        }
+        template <typename F, typename... X> static constexpr decltype(auto) apply(F&& f, X&&... x) {
+            return apply_impl(std::is_void<decltype((*f)(x.value()...))>{}, std::forward<F>(f), std::forward<X>(x)...);
+        }
+    };
+
+    template <> struct transform_impl<ext::std::Optional> : Applicative::transform_impl<ext::std::Optional> {};
+}
 
 namespace lastfm {
 
@@ -81,44 +118,36 @@ using std::get;
 
 using params_t = service::params_t;
 
-template <typename TupleT>
-using optionalise_param_t = std::tuple<std::tuple_element_t<0, TupleT>, std::optional<std::tuple_element_t<1, TupleT>>>;
+auto to_string = hana::overload(
+    [](date_t t) {
+        auto time = date_t::clock::to_time_t(t);
+        std::stringstream ss{};
+        ss << std::put_time(std::gmtime(&time), "%a, %d %b %Y %H:%M:%S");
+        return ss.str();
+    },
+    [](std::string_view s) { return s.to_string(); }, [](auto&& i) { return ::std::to_string(i); });
 
 template <typename StringT, typename OptT> auto make_param(std::tuple<StringT, std::optional<OptT>> t) {
-    return std::make_tuple(get<0>(t), get<1>(t) ? std::make_optional(std::to_string(*get<1>(t))) : std::nullopt);
+    return std::make_tuple(std::string_view{get<0>(t)}, hana::transform(get<1>(t), to_string));
 }
 
 template <typename StringT, typename OptT> auto make_param(std::tuple<StringT, OptT> t) {
-    return std::make_tuple(get<0>(t), std::make_optional(get<1>(t)));
-}
-
-template <typename MaybeT, typename Fun>
-auto apply(MaybeT&& maybe, Fun&& fun) -> std::enable_if_t<!std::is_void_v<decltype(fun(*maybe))>,
-std::optional<decltype(fun(*maybe))>> {
-    if(maybe)
-        return fun(*maybe);
-    return std::nullopt;
-}
-
-template <typename MaybeT, typename Fun>
-auto apply(MaybeT&& maybe, Fun&& fun) -> void {
-    if(maybe)
-        fun(*maybe);
+    return std::make_tuple(std::string_view{get<0>(t)}, std::make_optional(to_string(get<1>(t))));
 }
 
 template <template <typename...> typename TupleT, typename... StringT, typename... OptT>
 params_t make_params(TupleT<StringT, OptT>&&... optional_params) {
     params_t params;
     for(auto&& param : {make_param(optional_params)...}) {
-        apply(get<1>(param), [&, &name=get<0>(param)](auto&& just) { return params.emplace_back(name, just); });
+        hana::transform(get<1>(param),
+                        [&, & name = get<0>(param) ](auto&& just) { return params.emplace_back(name, just); });
     }
     return params;
 }
-
 }
 
-std::future<std::vector<tag>> tag::get_similar(service& serv) const {
-    return serv.get("tag.getsimilar", make_params(std::make_tuple("tag", m_name)), use_future, [](auto&& response) {
+std::future<std::vector<tag>> tag::get_similar(service& serv, std::string_view name) {
+    return serv.get("tag.getsimilar", make_params(std::make_tuple("tag", name)), use_future, [](auto&& response) {
         auto doc = jbson::read_json(response.body());
         check_error(doc);
 
@@ -132,12 +161,36 @@ std::future<std::vector<tag>> tag::get_similar(service& serv) const {
     });
 }
 
-std::future<std::vector<album>> tag::get_top_albums(service&, std::optional<int> limit, std::optional<int> page) const {
+std::future<std::vector<tag>> tag::get_similar(service& serv) const {
+    return get_similar(serv, m_name);
 }
 
-std::future<std::vector<artist>> tag::get_top_artists(service& serv, std::optional<int> limit,
-                                                      std::optional<int> page) const {
-    return serv.get("tag.gettopartists", make_params(std::make_tuple("tag", m_name), std::make_tuple("limit", limit),
+std::future<std::vector<album>> tag::get_top_albums(service& serv, std::string_view name, std::optional<int> limit,
+                                                    std::optional<int> page) {
+    return serv.get("tag.gettopalbums", make_params(std::make_tuple("tag", name), std::make_tuple("limit", limit),
+                                                    std::make_tuple("page", page)),
+                    use_future, [](auto&& response) {
+                        auto doc = jbson::read_json(response.body());
+                        check_error(doc);
+
+                        std::vector<album> albums{};
+
+                        for(auto&& elem : jbson::path_select(doc, "topalbums.album.*")) {
+                            albums.push_back(jbson::get<album>(elem));
+                        }
+
+                        return albums;
+                    });
+}
+
+std::future<std::vector<album>> tag::get_top_albums(service& serv, std::optional<int> limit,
+                                                    std::optional<int> page) const {
+    return get_top_albums(serv, m_name, limit, page);
+}
+
+std::future<std::vector<artist>> tag::get_top_artists(service& serv, std::string_view name, std::optional<int> limit,
+                                                      std::optional<int> page) {
+    return serv.get("tag.gettopartists", make_params(std::make_tuple("tag", name), std::make_tuple("limit", limit),
                                                      std::make_tuple("page", page)),
                     use_future, [](auto&& response) {
                         auto doc = jbson::read_json(response.body());
@@ -153,7 +206,12 @@ std::future<std::vector<artist>> tag::get_top_artists(service& serv, std::option
                     });
 }
 
-std::future<std::vector<tag>> tag::get_top_tags(service& serv) const {
+std::future<std::vector<artist>> tag::get_top_artists(service& serv, std::optional<int> limit,
+                                                      std::optional<int> page) const {
+    return get_top_artists(serv, m_name, limit, page);
+}
+
+std::future<std::vector<tag>> tag::get_top_tags(service& serv) {
     return serv.get("tag.gettoptags", {}, use_future, [](auto&& response) {
         auto doc = jbson::read_json(response.body());
         check_error(doc);
@@ -168,20 +226,53 @@ std::future<std::vector<tag>> tag::get_top_tags(service& serv) const {
     });
 }
 
-boost::future<std::vector<track>> tag::get_top_tracks(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<track>>();
+std::future<std::vector<track>> tag::get_top_tracks(service& serv, std::string_view name, std::optional<int> limit,
+                                                    std::optional<int> page) {
 }
 
-boost::future<std::vector<artist>> tag::get_weekly_artist_chart(service&, date_t from, date_t to, int limit) const {
-    return boost::make_ready_future<std::vector<artist>>();
+std::future<std::vector<track>> tag::get_top_tracks(service& serv, std::optional<int> limit,
+                                                    std::optional<int> page) const {
+    return get_top_tracks(serv, m_name, limit, page);
 }
 
-boost::future<std::vector<std::tuple<date_t, date_t>>> tag::get_weekly_chart_list(service&) const {
-    return boost::make_ready_future<std::vector<std::tuple<date_t, date_t>>>();
+std::future<std::vector<artist>> tag::get_weekly_artist_chart(service& serv, std::string_view name,
+                                                              std::optional<date_t> from, std::optional<date_t> to,
+                                                              std::optional<int> limit) {
 }
 
-boost::future<std::vector<tag>> tag::search(service&, int limit, int page) const {
-    return boost::make_ready_future<std::vector<tag>>();
+std::future<std::vector<artist>> tag::get_weekly_artist_chart(service& serv, std::optional<date_t> from,
+                                                              std::optional<date_t> to,
+                                                              std::optional<int> limit) const {
+    return get_weekly_artist_chart(serv, m_name, from, to, limit);
+}
+
+std::future<std::vector<std::tuple<date_t, date_t>>> tag::get_weekly_chart_list(service& serv, std::string_view name) {
+}
+
+std::future<std::vector<std::tuple<date_t, date_t>>> tag::get_weekly_chart_list(service& serv) const {
+    return get_weekly_chart_list(serv, m_name);
+}
+
+std::future<std::vector<tag>> tag::search(service& serv, std::string_view name, std::optional<int> limit,
+                                          std::optional<int> page) {
+    return serv.get("tag.search", make_params(std::make_tuple("tag", name), std::make_tuple("limit", limit),
+                                              std::make_tuple("page", page)),
+                    use_future, [](auto&& response) {
+                        auto doc = jbson::read_json(response.body());
+                        check_error(doc);
+
+                        std::vector<tag> tags{};
+
+                        for(auto&& elem : jbson::path_select(doc, "results.tagmatches.tag.*")) {
+                            tags.push_back(jbson::get<tag>(elem));
+                        }
+
+                        return tags;
+                    });
+}
+
+std::future<std::vector<tag>> tag::search(service& serv, std::optional<int> limit, std::optional<int> page) const {
+    return search(serv, m_name, limit, page);
 }
 
 } // namespace lastfm

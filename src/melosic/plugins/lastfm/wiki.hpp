@@ -55,11 +55,7 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             auto str = jbson::get<jbson::element_type::string_element>(elem);
             var.content({str.data(), str.size()});
         } else if(elem.name() == "published") {
-            std::tm tm;
-            auto str = jbson::get<std::string>(elem);
-            std::stringstream ss(str);
-            ss >> std::get_time(&tm, "%a, %d %b %Y %H:%M:%S ");
-            var.published(date_t::clock::from_time_t(std::mktime(&tm)));
+            var.published(jbson::get<date_t>(elem));
         }
     }
 }
