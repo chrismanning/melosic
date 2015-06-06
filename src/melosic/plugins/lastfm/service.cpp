@@ -44,6 +44,7 @@ using boost::algorithm::hex;
 #include <melosic/core/track.hpp>
 #include <melosic/common/error.hpp>
 
+#include <jbson/document.hpp>
 #include <jbson/json_reader.hpp>
 
 #include "service.hpp"
@@ -226,30 +227,6 @@ Method service::sign(Method method) {
     return std::move(method);
 }
 
-std::future<tag> service::get_tag(std::experimental::string_view tag_name) {
-    return get("tag.getinfo", {{"tag", tag_name.to_string()}}, use_future, [](network::http::v2::response response) {
-        auto doc = jbson::read_json(response.body());
-        check_error(doc);
-        auto elem = doc.find("tag");
-        if(elem == doc.end()) {
-            throw 0;
-        }
-        return jbson::get<tag>(*elem);
-    });
-}
-
-std::future<artist> service::get_artist(std::string_view artist_name) {
-    return get("artist.getinfo", {{"artist", artist_name.to_string()}}, use_future, [](network::http::v2::response response) {
-        auto doc = jbson::read_json(response.body());
-        check_error(doc);
-        auto elem = doc.find("artist");
-        if(elem == doc.end()) {
-            throw 0;
-        }
-        return jbson::get<artist>(*elem);
-    });
-}
-
 std::string service::postMethod(const Method& method) {
     return {};
     //    return std::move(pimpl->postMethod(method));
@@ -289,6 +266,15 @@ void service::setUser(user u) {
 
 user& service::getUser() {
     return pimpl->getUser();
+}
+
+jbson::document service::document_callback(asio::error_code ec, network::http::v2::response res) {
+    if(ec) {
+        throw std::system_error(ec);
+    }
+    auto doc = jbson::read_json(res.body());
+    check_error(doc);
+    return doc;
 }
 
 } // namespace lastfm

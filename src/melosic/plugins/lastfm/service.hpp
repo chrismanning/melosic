@@ -37,7 +37,12 @@
 #include <network/http/v2/client.hpp>
 #include <network/http/v2/client/response.hpp>
 
+#include <jbson/document.hpp>
+
 #include "lastfm.hpp"
+#include "hana_optional.hpp"
+
+namespace hana = boost::hana;
 
 namespace Melosic {
 
@@ -95,17 +100,15 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
 
     std::future<network::http::v2::response> get(std::string_view method, params_t params, use_future_t<>);
 
-    template <typename TransformerT, typename ReturnT = std::result_of_t<TransformerT(network::http::v2::response)>>
+    template <typename TransformerT, typename ReturnT = std::result_of_t<TransformerT(jbson::document)>>
     std::future<ReturnT> get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform);
 
     void get(std::string_view method, params_t params,
              std::function<void(asio::error_code, network::http::v2::response)> callback);
 
-    std::future<tag> get_tag(std::string_view tag_name);
-
-    std::future<artist> get_artist(std::string_view artist_name);
-
   private:
+    static jbson::document document_callback(asio::error_code, network::http::v2::response);
+
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
@@ -123,7 +126,9 @@ std::future<ReturnT> service::get(std::string_view method, params_t params, use_
             }
 
             try {
-                m_promise->set_value(transform(res));
+                auto doc = document_callback(ec, std::move(res));
+
+                m_promise->set_value(transform(doc));
             } catch(...) {
                 m_promise->set_exception(std::current_exception());
             }
@@ -192,6 +197,95 @@ struct Method {
     const std::string methodName;
     ParameterList params;
 };
-}
+
+namespace detail {
+
+struct to_string_ {
+    inline std::string operator()(date_t t) const {
+        auto time = date_t::clock::to_time_t(t);
+        std::stringstream ss{};
+        ss << std::put_time(std::gmtime(&time), "%a, %d %b %Y %H:%M:%S");
+        return ss.str();
+    }
+    inline std::string operator()(std::string_view s) const { return s.to_string(); }
+    inline std::string operator()(std::string s) const { return std::move(s); }
+    template <typename N>
+    inline std::string operator()(N&& i) const { return ::std::to_string(i); }
+};
+
+struct make_params_ {
+    template <typename... PairT> service::params_t operator()(PairT&&... optional_params) const {
+        using std::get;
+        service::params_t params;
+        for(auto&& param : {make_param(optional_params)...}) {
+            hana::transform(get<1>(param),
+                            [&, & name = get<0>(param) ](auto&& just) { return params.emplace_back(name, just); });
+        }
+        return params;
+    }
+private:
+    template <typename PairT> static decltype(auto) make_param(PairT&& t) {
+        using std::get;
+        constexpr auto to_string = to_string_{};
+        return std::make_tuple(get<0>(t), hana::transform(hana::flatten(std::make_optional(get<1>(t))), to_string));
+    }
+};
+
+} // namespace detail
+
+constexpr auto make_params = detail::make_params_{};
+
+namespace detail {
+
+struct vector_to_optional_ {
+    template <typename T, typename... Args> std::optional<T> operator()(std::vector<T, Args...>&& vec) const {
+        return vec.empty() ? std::nullopt : std::make_optional(std::move(vec.front()));
+    }
+
+    template <typename T, typename... Args> std::optional<T> operator()(const std::vector<T, Args...>& vec) const {
+        return vec.empty() ? std::nullopt : std::make_optional(vec.front());
+    }
+};
+
+} // namespace detail
+
+constexpr auto vector_to_optional = detail::vector_to_optional_{};
+
+namespace detail {
+
+template <typename T>
+struct deserialise_ {
+    template <typename ElemT>
+    T operator()(ElemT&& elem) const {
+        return jbson::get<T>(elem);
+    }
+};
+
+} // namespace detail
+
+template <typename T>
+constexpr auto deserialise = detail::deserialise_<T>{};
+
+namespace detail {
+
+struct transform_copy_ {
+    template <typename V, typename F>
+    auto operator()(V&& v, F&& f) const {
+        using U = std::remove_cv_t<std::remove_reference_t<decltype(f(*v.begin()))>>;
+        using Alloc = typename std::remove_reference_t<V>::allocator_type;
+        using NewAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<U>;
+        std::vector<U, NewAlloc> result;
+        result.reserve(v.size());
+
+        std::transform(std::begin(v), std::end(v), std::back_inserter(result), std::forward<F>(f));
+        return result;
+    }
+};
+
+} // namespace detail
+
+constexpr auto transform_copy = detail::transform_copy_{};
+
+} // namespace lastfm
 
 #endif // LASTFM_SERVICE_HPP

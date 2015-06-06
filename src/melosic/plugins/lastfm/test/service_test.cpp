@@ -19,7 +19,7 @@ using namespace lastfm;
 TEST_CASE("get_tag") {
     service serv{"47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67"};
 
-    auto tag_fut = serv.get_tag("Rock");
+    auto tag_fut = tag::get_info(serv, "Rock");
 
     auto status = tag_fut.wait_for(1000ms);
     REQUIRE(status == std::future_status::ready);
@@ -59,7 +59,7 @@ TEST_CASE("get_artist") {
     try {
     service serv{"47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67"};
 
-    auto artist_fut = serv.get_artist("Metallica");
+    auto artist_fut = artist::get_info(serv, "Metallica");
 
     auto status = artist_fut.wait_for(1000ms);
     REQUIRE(status == std::future_status::ready);

@@ -66,7 +66,7 @@ struct LASTFM_EXPORT tag {
     // api methods
 
     static std::future<tag> get_info(service&, std::string_view name);
-    std::future<tag> get_info(service&);
+    std::future<tag> get_info(service&) const;
 
     static std::future<std::vector<tag>> get_similar(service&, std::string_view name);
     std::future<std::vector<tag>> get_similar(service&) const;
@@ -91,13 +91,13 @@ struct LASTFM_EXPORT tag {
     std::future<std::vector<track>> get_top_tracks(service&, std::optional<int> limit = std::nullopt,
                                                    std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<artist>> get_weekly_artist_chart(service&, std::string_view name,
-                                                                    std::optional<date_t> from = std::nullopt,
-                                                                    std::optional<date_t> to = std::nullopt,
-                                                                    std::optional<int> limit = std::nullopt);
-    std::future<std::vector<artist>> get_weekly_artist_chart(service&, std::optional<date_t> from = std::nullopt,
-                                                             std::optional<date_t> to = std::nullopt,
-                                                             std::optional<int> limit = std::nullopt) const;
+    static std::future<std::vector<artist>>
+    get_weekly_artist_chart(service&, std::string_view name,
+                            std::optional<std::tuple<date_t, date_t>> date_range = std::nullopt,
+                            std::optional<int> limit = std::nullopt);
+    std::future<std::vector<artist>>
+    get_weekly_artist_chart(service&, std::optional<std::tuple<date_t, date_t>> date_range = std::nullopt,
+                            std::optional<int> limit = std::nullopt) const;
 
     static std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&, std::string_view name);
     std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;

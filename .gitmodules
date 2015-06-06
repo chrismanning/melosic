@@ -4,16 +4,16 @@
     ignore = dirty
 [submodule "extern/rapidjson"]
 	path = extern/rapidjson
-	url = git@github.com:chrismanning/rapidjson.git
-    ignore = dirty
+	url = https://github.com/miloyip/rapidjson.git
 [submodule "extern/ejdb"]
 	path = extern/ejdb
 	url = https://github.com/Softmotions/ejdb.git
-    ignore = dirty
 [submodule "extern/ejpp"]
 	path = extern/ejpp
 	url = https://github.com/chrismanning/ejpp.git
-    ignore = dirty
 [submodule "extern/jbson"]
 	path = extern/jbson
 	url = https://github.com/chrismanning/jbson.git
+[submodule "extern/hana"]
+	path = extern/hana
+	url = https://github.com/ldionne/hana.git

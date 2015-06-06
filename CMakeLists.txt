@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8.11)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1y")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 
 option(MELOSIC_ENABLE_TESTING "Enable testing" ON)
 option(MELOSIC_SANITIZE_THREAD "Use -fsanitize=thread where available" OFF)
@@ -29,6 +29,7 @@ endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option -Wno-unused-private-field -Wno-mismatched-tags")
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-c++1z-extensions")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)

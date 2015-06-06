@@ -79,6 +79,9 @@ struct LASTFM_EXPORT artist {
 
     // api methods
 
+    static std::future<artist> get_info(service&, std::string_view name);
+    std::future<artist> get_info(service&) const;
+
     std::future<std::vector<artist>> get_similar(service&) const;
 
   private:

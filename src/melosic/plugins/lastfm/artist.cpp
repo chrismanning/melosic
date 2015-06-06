@@ -15,6 +15,8 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
+#include <jbson/path.hpp>
+
 #include "artist.hpp"
 #include "service.hpp"
 #include "tag.hpp"
@@ -83,6 +85,19 @@ const wiki_t& artist::wiki() const {
 
 void artist::wiki(wiki_t wiki) {
     m_wiki = wiki;
+}
+
+std::future<artist> artist::get_info(service& serv, std::string_view name) {
+    auto transformer = [](auto&& doc) {
+        if(auto artist_ = hana::transform(vector_to_optional(jbson::path_select(doc, "artist")), deserialise<artist>))
+            return std::move(*artist_);
+        throw std::runtime_error("invalid response from artist.getinfo");
+    };
+    return serv.get("artist.getinfo", make_params(std::make_pair("artist", name)), use_future, transformer);
+}
+
+std::future<artist> artist::get_info(service& serv) const {
+    return get_info(serv, m_name);
 }
 
 } // namespace lastfm

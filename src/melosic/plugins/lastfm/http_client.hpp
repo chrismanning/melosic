@@ -192,19 +192,19 @@ class LASTFM_EXPORT client {
     template <typename TransformerT>
     auto execute(request req, request_options options, use_future_t<>, TransformerT&& transformer);
 
-    inline std::future<response> execute(request req, request_options options, use_future_t<>);
+    std::future<response> execute(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> get(request req, request_options options, use_future_t<>);
+    std::future<response> get(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> post(request req, request_options options, use_future_t<>);
+    std::future<response> post(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> put(request req, request_options options, use_future_t<>);
+    std::future<response> put(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> delete_(request req, request_options options, use_future_t<>);
+    std::future<response> delete_(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> head(request req, request_options options, use_future_t<>);
+    std::future<response> head(request req, request_options options, use_future_t<>);
 
-    inline std::future<response> options(request req, request_options options, use_future_t<>);
+    std::future<response> options(request req, request_options options, use_future_t<>);
 
   private:
     template <typename> class impl;
@@ -563,42 +563,8 @@ auto client::execute(request req, request_options options, use_future_t<>, Trans
     return fut;
 }
 
-std::future<response> client::execute(request req, request_options options, use_future_t<>) {
-    return execute(std::move(req), std::move(options), use_future, identity_t{});
-}
-
-std::future<response> client::get(request req, request_options options, use_future_t<>) {
-    req.method(method::get);
-    return execute(req, options, use_future);
-}
-
-std::future<response> client::post(request req, request_options options, use_future_t<>) {
-    req.method(method::post);
-    return execute(req, options, use_future);
-}
-
-std::future<response> client::put(request req, request_options options, use_future_t<>) {
-    req.method(method::put);
-    return execute(req, options, use_future);
-}
-
-std::future<response> client::delete_(request req, request_options options, use_future_t<>) {
-    req.method(method::delete_);
-    return execute(req, options, use_future);
-}
-
-std::future<response> client::head(request req, request_options options, use_future_t<>) {
-    req.method(method::head);
-    return execute(req, options, use_future);
-}
-
-std::future<response> client::options(request req, request_options options, use_future_t<>) {
-    req.method(method::options);
-    return execute(req, options, use_future);
-}
-
 } // namespace v0
 } // namespace http
 } // namespace network
 
-#endif // NETWORK_HTTP_V3_CLIENT_CLIENT_INC
+#endif // NETWORK_HTTP_V0_CLIENT_CLIENT_INC

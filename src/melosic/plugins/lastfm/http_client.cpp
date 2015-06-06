@@ -35,6 +35,40 @@ std::istream& getline_with_newline(std::istream& is, std::string& line) {
     }
 }
 
-} // namespace v3
+std::future<response> client::execute(request req, request_options options, use_future_t<>) {
+    return execute(std::move(req), std::move(options), use_future, identity_t{});
+}
+
+std::future<response> client::get(request req, request_options options, use_future_t<>) {
+    req.method(method::get);
+    return execute(req, options, use_future);
+}
+
+std::future<response> client::post(request req, request_options options, use_future_t<>) {
+    req.method(method::post);
+    return execute(req, options, use_future);
+}
+
+std::future<response> client::put(request req, request_options options, use_future_t<>) {
+    req.method(method::put);
+    return execute(req, options, use_future);
+}
+
+std::future<response> client::delete_(request req, request_options options, use_future_t<>) {
+    req.method(method::delete_);
+    return execute(req, options, use_future);
+}
+
+std::future<response> client::head(request req, request_options options, use_future_t<>) {
+    req.method(method::head);
+    return execute(req, options, use_future);
+}
+
+std::future<response> client::options(request req, request_options options, use_future_t<>) {
+    req.method(method::options);
+    return execute(req, options, use_future);
+}
+
+} // namespace v0
 } // namespace http
 } // namespace network
