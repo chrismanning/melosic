@@ -49,17 +49,6 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
 }
 }
 
-namespace std {
-namespace experimental {
-
-template <typename Container> void value_get(const jbson::basic_element<Container>& elem, string_view& var) {
-    auto str = jbson::get<jbson::element_type::string_element>(elem);
-    var = string_view{str.data(), str.size()};
-}
-
-} // namespace std
-} // namespace experimental
-
 namespace network {
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& elem, uri& var) {
