@@ -15,317 +15,125 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <thread>
-#include <mutex>
-using std::unique_lock;
-using std::lock_guard;
-#include <functional>
-namespace ph = std::placeholders;
-#include <string>
-using namespace std::literals;
-
-#include <boost/lexical_cast.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-using namespace boost::property_tree::xml_parser;
-#include <shared_mutex>
-#include <boost/thread/shared_lock_guard.hpp>
-using shared_mutex = std::shared_timed_mutex;
-template <typename Mutex> using shared_lock = boost::shared_lock_guard<Mutex>;
-
-#include <melosic/core/track.hpp>
-#include <melosic/melin/logging.hpp>
-#include <melosic/executors/default_executor.hpp>
-namespace executors = Melosic::executors;
-
 #include "track.hpp"
 #include "service.hpp"
-#include "tag.hpp"
-#include "artist.hpp"
-#include "utilities.hpp"
-
-static Melosic::Logger::Logger logject(logging::keywords::channel = "lastfm::track");
 
 namespace lastfm {
 
-struct track::impl : std::enable_shared_from_this<impl> {
-    impl(std::weak_ptr<service> lastserv, const std::string& name, const std::string& artist, const std::string& url)
-        : lastserv(lastserv), name(name), url(url) {
-    }
+std::string_view track::name() const {
+    return m_name;
+}
 
-    impl(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track) : lastserv(lastserv){
-        {
-            auto artist_name = ""s; // track.getTag("artist");
-//            if(artist_name != "?")
-//                this->m_artist = artist(lastserv, artist_name);
+void track::name(std::string_view name) {
+    m_name = name.to_string();
+}
+
+const artist& track::artist() const {
+    return m_artist;
+}
+
+void track::artist(struct artist artist) {
+    m_artist = std::move(artist);
+}
+
+const album& track::album() const {
+    return m_album;
+}
+
+void track::album(struct album album) {
+    m_album = std::move(album);
+}
+
+int track::tracknumber() const {
+    return m_tracknumber;
+}
+
+void track::tracknumber(int tracknumber) {
+    m_tracknumber = tracknumber;
+}
+
+std::chrono::milliseconds track::duration() const {
+    return m_duration;
+}
+
+void track::duration(std::chrono::milliseconds duration) {
+    m_duration = duration;
+}
+
+const std::vector<tag>& track::tags() const {
+    return m_tags;
+}
+
+void track::tags(std::vector<tag> tags) {
+    m_tags = std::move(tags);
+}
+
+const std::vector<track>& track::similar() const {
+    return m_similar;
+}
+
+void track::similar(std::vector<track> similar) {
+    m_similar = std::move(similar);
+}
+
+const network::uri& track::url() const {
+    return m_url;
+}
+
+void track::url(network::uri url) {
+    m_url = std::move(url);
+}
+
+int track::listeners() const {
+    return m_listeners;
+}
+
+void track::listeners(int listeners) {
+    m_listeners = listeners;
+}
+
+int track::plays() const {
+    return m_plays;
+}
+
+void track::plays(int plays) {
+    m_plays = plays;
+}
+
+bool track::streamable() const {
+    return m_streamable;
+}
+
+void track::streamable(bool streamable) {
+    m_streamable = streamable;
+}
+
+const wiki& track::wiki() const {
+    return m_wiki;
+}
+
+void track::wiki(struct wiki wiki) {
+    m_wiki = std::move(wiki);
+}
+
+std::future<track> track::get_info(service& serv, std::string_view name, std::string_view artist,
+                                   bool autocorrect,
+                                   std::optional<std::string_view> username) {
+    auto transformer = [](auto&& doc) {
+        if(auto elem = vector_to_optional(jbson::path_select(doc, "track"))) {
+            return jbson::get<track>(*elem);
         }
-        {
-            auto title = ""s; // track.getTag("title");
-            if(title != "?")
-                this->name = title;
-        }
-        //        {   auto album = track.getTag("album");
-        //            if(album != "?")
-        //                this->album = album;}
-        {
-            auto tracknum = ""s; // track.getTag("tracknumber");
-            if(tracknum != "?")
-                this->tracknumber = boost::lexical_cast<int>(tracknum);
-        }
-        this->duration = track.duration().count();
-        timestamp = chrono::system_clock::to_time_t(chrono::system_clock::now());
-    }
-
-  private:
-    bool getInfo_impl(std::shared_ptr<service> lastserv, bool autocorrect) {
-        if(!lastserv)
-            return false;
-        TRACE_LOG(logject) << "In getInfo";
-//        if(!m_artist) {
-//            TRACE_LOG(logject) << "getInfo: Required parameter \"artist\" not set. Returning.";
-//            return false;
-//        }
-        if(name.empty()) {
-            TRACE_LOG(logject) << "getInfo: Required parameter \"name\" not set. Returning.";
-            return false;
-        }
-        Method method = lastserv->prepareMethodCall("track.getInfo");
-        Parameter& p = method.addParameter()
-                           .addMember("track", name)
-//                           .addMember("artist", m_artist.getName())
-                           .addMember("api_key", lastserv->api_key());
-        if(autocorrect)
-            p.addMember("autocorrect[1]");
-        std::string reply(std::move(lastserv->postMethod(method)));
-        if(reply.empty())
-            return false;
-
-        boost::property_tree::ptree ptree;
-        std::stringstream ss(reply);
-        read_xml(ss, ptree, trim_whitespace);
-
-        if(ptree.get<std::string>("lfm.<xmlattr>.status", "failed") != "ok") {
-            // TODO: handle error
-            return false;
-        }
-
-        ptree = ptree.get_child("lfm.track");
-        if(autocorrect) {
-            lock_guard<Mutex> l(mu);
-            name = ptree.get<std::string>("name");
-//            m_artist = artist(this->lastserv, ptree.get<std::string>("artist.name"));
-        }
-        unique_lock<Mutex> l(mu);
-        url = network::uri(ptree.get<std::string>("url"));
-        topTags_.clear();
-        for(const boost::property_tree::ptree::value_type& val : ptree.get_child("toptags")) {
-//            topTags_.emplace_back(val.second.get<std::string>("name"),
-//                                  network::uri{val.second.get<std::string>("url")});
-        }
-        return true;
-    }
-
-  public:
-    std::future<bool> getInfo(bool autocorrect) {
-        unique_lock<Mutex> l(mu);
-        std::shared_ptr<service> lastserv = this->lastserv.lock();
-        l.unlock();
-        if(!lastserv) {
-            std::promise<bool> p;
-            p.set_value(false);
-            return p.get_future();
-        }
-        std::packaged_task<bool()> task([ self = shared_from_this(), lastserv, autocorrect ]() {
-            return self->getInfo_impl(lastserv, autocorrect);
-        });
-        auto fut = task.get_future();
-        asio::post(std::move(task));
-
-        return fut;
-    }
-
-  private:
-    bool scrobble_impl(std::shared_ptr<service> lastserv) {
-        if(!lastserv)
-            return false;
-        TRACE_LOG(logject) << "In scrobble";
-        Method method = lastserv->prepareMethodCall("track.scrobble");
-        method.addParameter()
-//            .addMember("artist", m_artist.getName())
-            .addMember("track", name)
-            .addMember("api_key", lastserv->api_key())
-            .addMember("timestamp", boost::lexical_cast<std::string>(timestamp));
-
-        std::string reply(std::move(lastserv->postMethod(lastserv->sign(std::move(method)))));
-        if(reply.empty())
-            return false;
-
-        boost::property_tree::ptree ptree;
-        std::stringstream ss(reply);
-        read_xml(ss, ptree, trim_whitespace);
-
-        if(ptree.get<std::string>("lfm.<xmlattr>.status", "failed") != "ok") {
-            // TODO: handle error
-            return false;
-        }
-
-        return true;
-    }
-
-  public:
-    std::future<bool> scrobble() {
-        unique_lock<Mutex> l(mu);
-        std::shared_ptr<service> lastserv = this->lastserv.lock();
-        l.unlock();
-        if(!lastserv) {
-            std::promise<bool> p;
-            p.set_value(false);
-            return p.get_future();
-        }
-        std::packaged_task<bool()> task([ self = shared_from_this(), lastserv ]() {
-            return self->scrobble_impl(lastserv);
-        });
-        auto fut = task.get_future();
-        asio::post(std::move(task));
-
-        return fut;
-    }
-
-  private:
-    bool updateNowPlaying_impl(std::shared_ptr<service> lastserv) {
-        if(!lastserv)
-            return false;
-        TRACE_LOG(logject) << "In updateNowPlaying";
-        Method method = lastserv->prepareMethodCall("track.updateNowPlaying");
-        method.addParameter()
-//            .addMember("artist", m_artist.getName())
-            .addMember("track", name)
-            .addMember("api_key", lastserv->api_key());
-
-        std::string reply(std::move(lastserv->postMethod(lastserv->sign(std::move(method)))));
-        if(reply.empty())
-            return false;
-
-        boost::property_tree::ptree ptree;
-        std::stringstream ss(reply);
-        read_xml(ss, ptree, trim_whitespace);
-
-        if(ptree.get<std::string>("lfm.<xmlattr>.status", "failed") != "ok") {
-            // TODO: handle error
-            return false;
-        }
-
-        return true;
-    }
-
-  public:
-    std::future<bool> updateNowPlaying() {
-        unique_lock<Mutex> l(mu);
-        std::shared_ptr<service> lastserv = this->lastserv.lock();
-        l.unlock();
-        if(!lastserv) {
-            std::promise<bool> p;
-            p.set_value(false);
-            return p.get_future();
-        }
-        std::packaged_task<bool()> task([ self = shared_from_this(), lastserv ]() {
-            return self->updateNowPlaying_impl(lastserv);
-        });
-        auto fut = task.get_future();
-        asio::post(std::move(task));
-
-        return fut;
-    }
-
-    ForwardRange<tag> topTags() {
-        shared_lock<Mutex> l(mu);
-        return topTags_;
-    }
-
-    const std::string& getName() {
-        shared_lock<Mutex> l(mu);
-        return name;
-    }
-
-    const artist& getArtist() {
-        shared_lock<Mutex> l(mu);
-        return m_artist;
-    }
-
-    const network::uri& getUrl() {
-        shared_lock<Mutex> l(mu);
-        return url;
-    }
-
-    const std::string& getWiki() {
-        shared_lock<Mutex> l(mu);
-        return wiki;
-    }
-
-  private:
-    std::weak_ptr<service> lastserv;
-    std::string name;
-    artist m_artist;
-    network::uri url;
-    std::list<tag> topTags_;
-    int tracknumber = 0;
-    long duration = 0;
-    uint64_t timestamp = 0;
-    //    Album album;
-    std::string wiki;
-    std::list<track> similar;
-    typedef shared_mutex Mutex;
-    Mutex mu;
-};
-
-track::track(std::weak_ptr<service> lastserv, const std::string& name, const std::string& artist,
-             const std::string& url)
-    : pimpl(new impl(std::move(lastserv), name, artist, url)) {
-}
-track::track(std::weak_ptr<service> lastserv, const Melosic::Core::Track& track)
-    : pimpl(std::make_shared<impl>(lastserv, track)) {
+        throw std::runtime_error("invalid response from tag.getinfo");
+    };
+    return serv.get("track.getinfo", make_params(std::make_pair("track", name),
+                                                 std::make_pair("artist", artist),
+                                                 std::make_pair("autocorrect", autocorrect),
+                                                 std::make_pair("username", username)), use_future, transformer);
 }
 
-track::~track() {
+std::future<track> track::get_info(service& serv, bool autocorrect,
+                                   std::optional<std::string_view> username) const {
+    return get_info(serv, m_name, m_artist.name(), autocorrect, username);
 }
 
-std::future<bool> track::fetchInfo(bool autocorrect) {
-    return pimpl->getInfo(autocorrect);
-}
-
-std::future<bool> track::scrobble() {
-    return pimpl->scrobble();
-}
-
-std::future<bool> track::updateNowPlaying() {
-    return pimpl->updateNowPlaying();
-}
-
-void print(const boost::property_tree::ptree& pt) {
-    using boost::property_tree::ptree;
-    for(const ptree::value_type& val : pt) {
-        std::clog << val.first << ": " << val.second.get_value<std::string>() << std::endl;
-        print(val.second);
-    }
-}
-
-ForwardRange<tag> track::topTags() const {
-    return pimpl->topTags();
-}
-
-const std::string& track::getName() const {
-    return pimpl->getName();
-}
-
-const artist& track::getArtist() const {
-    return pimpl->getArtist();
-}
-
-const network::uri& track::getUrl() const {
-    return pimpl->getUrl();
-}
-
-const std::string& track::getWiki() const {
-    return pimpl->getWiki();
-}
-}
+} // namespace lastfm

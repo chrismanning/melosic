@@ -57,7 +57,7 @@ struct LASTFM_EXPORT artist {
     void name(std::string_view);
 
     const network::uri& url() const;
-    void url(const network::uri&);
+    void url(network::uri);
 
     const std::vector<artist>& similar() const;
     void similar(std::vector<artist>);
@@ -74,8 +74,8 @@ struct LASTFM_EXPORT artist {
     bool streamable() const;
     void streamable(bool);
 
-    const wiki_t& wiki() const;
-    void wiki(wiki_t);
+    const wiki& wiki() const;
+    void wiki(struct wiki);
 
     // api methods
 
@@ -92,7 +92,7 @@ struct LASTFM_EXPORT artist {
     int m_listeners = 0;
     int m_plays = 0;
     bool m_streamable = false;
-    wiki_t m_wiki;
+    struct wiki m_wiki;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& artist_elem, artist& var) {
@@ -112,7 +112,7 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
         } else if(elem.name() == "streamable") {
             var.streamable(jbson::get<jbson::element_type::string_element>(elem) == "1");
         } else if(elem.name() == "bio") {
-            var.wiki(jbson::get<wiki_t>(elem));
+            var.wiki(jbson::get<wiki>(elem));
         } else if(elem.name() == "similar") {
             if(elem.type() == jbson::element_type::document_element) {
                 for(auto&& e : jbson::get<jbson::element_type::document_element>(elem))

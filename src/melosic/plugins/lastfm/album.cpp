@@ -41,8 +41,8 @@ const network::uri& album::url() const {
     return m_url;
 }
 
-void album::url(const network::uri& url) {
-    m_url = url;
+void album::url(network::uri url) {
+    m_url = std::move(url);
 }
 
 date_t album::release_date() const {
@@ -85,11 +85,11 @@ void album::streamable(bool streamable) {
     m_streamable = streamable;
 }
 
-const wiki_t& album::wiki() const {
+const wiki& album::wiki() const {
     return m_wiki;
 }
 
-void album::wiki(wiki_t wiki) {
+void album::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 

@@ -76,41 +76,41 @@ void scrobbler::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> play
 }
 
 void scrobbler::trackChangedSlot(const Melosic::Core::Track& newTrack) {
-    TRACE_LOG(logject) << "Track changed";
-    submitCache();
-    std::unique_lock<Mutex> l(mu);
-    currentTrack_ = std::make_shared<track>(lastserv, newTrack);
-    if(state == DeviceState::Playing) {
-        l.unlock();
-        updateNowPlaying(currentTrack_);
-    }
+//    TRACE_LOG(logject) << "Track changed";
+//    submitCache();
+//    std::unique_lock<Mutex> l(mu);
+//    currentTrack_ = std::make_shared<track>(lastserv, newTrack);
+//    if(state == DeviceState::Playing) {
+//        l.unlock();
+//        updateNowPlaying(currentTrack_);
+//    }
 }
 
 void scrobbler::submitCache() {
-    TRACE_LOG(logject) << "Submitting cache";
-    std::unique_lock<Mutex> l(mu);
-    auto i = cache.begin();
-    while(i != cache.end()) {
-        auto ptr = *i;
-        i = cache.erase(i);
-        l.unlock();
-        auto f = std::move(ptr->scrobble());
-        l.lock();
-        if(f.get()) {
-        } else {
-            i = ++cache.insert(i, ptr);
-        }
-    }
+//    TRACE_LOG(logject) << "Submitting cache";
+//    std::unique_lock<Mutex> l(mu);
+//    auto i = cache.begin();
+//    while(i != cache.end()) {
+//        auto ptr = *i;
+//        i = cache.erase(i);
+//        l.unlock();
+//        auto f = std::move(ptr->scrobble());
+//        l.lock();
+//        if(f.get()) {
+//        } else {
+//            i = ++cache.insert(i, ptr);
+//        }
+//    }
 }
 
 void scrobbler::cacheTrack(std::shared_ptr<track> track) {
-    TRACE_LOG(logject) << "Caching track for submission";
-    std::lock_guard<Mutex> l(mu);
-    cache.push_back(track);
+//    TRACE_LOG(logject) << "Caching track for submission";
+//    std::lock_guard<Mutex> l(mu);
+//    cache.push_back(track);
 }
 
 void scrobbler::updateNowPlaying(std::shared_ptr<track> track) {
-    if(track)
-        track->updateNowPlaying();
+//    if(track)
+//        track->updateNowPlaying();
 }
 }

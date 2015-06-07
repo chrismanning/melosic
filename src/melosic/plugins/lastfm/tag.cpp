@@ -43,8 +43,8 @@ const network::uri& tag::url() const {
     return m_url;
 }
 
-void tag::url(const network::uri& url) {
-    m_url = url;
+void tag::url(network::uri url) {
+    m_url = std::move(url);
 }
 
 int tag::reach() const {
@@ -71,11 +71,11 @@ void tag::streamable(bool streamable) {
     m_streamable = streamable;
 }
 
-const wiki_t& tag::wiki() const {
+const wiki& tag::wiki() const {
     return m_wiki;
 }
 
-void tag::wiki(wiki_t wiki) {
+void tag::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 

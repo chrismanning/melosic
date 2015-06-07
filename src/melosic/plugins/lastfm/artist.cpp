@@ -35,8 +35,8 @@ const network::uri& artist::url() const {
     return m_url;
 }
 
-void artist::url(const network::uri& url) {
-    m_url = url;
+void artist::url(network::uri url) {
+    m_url = std::move(url);
 }
 
 const std::vector<artist>& artist::similar() const {
@@ -79,11 +79,11 @@ void artist::streamable(bool streamable) {
     m_streamable = streamable;
 }
 
-const wiki_t& artist::wiki() const {
+const wiki& artist::wiki() const {
     return m_wiki;
 }
 
-void artist::wiki(wiki_t wiki) {
+void artist::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 

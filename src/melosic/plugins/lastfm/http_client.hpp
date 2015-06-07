@@ -57,7 +57,7 @@ using v2::method;
 using asio::use_future_t;
 constexpr use_future_t<> use_future{};
 
-class client_options {
+class LASTFM_EXPORT client_options {
   public:
     client_options();
 

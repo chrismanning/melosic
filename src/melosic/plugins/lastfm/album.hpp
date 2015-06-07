@@ -25,9 +25,10 @@
 
 #include "artist.hpp"
 #include "tag.hpp"
-#include "track.hpp"
 
 namespace lastfm {
+
+struct track;
 
 struct LASTFM_EXPORT album {
     explicit album() = default;
@@ -39,7 +40,7 @@ struct LASTFM_EXPORT album {
     void artist(struct artist);
 
     const network::uri& url() const;
-    void url(const network::uri&);
+    void url(network::uri);
 
     date_t release_date() const;
     void release_date(date_t);
@@ -56,8 +57,8 @@ struct LASTFM_EXPORT album {
     bool streamable() const;
     void streamable(bool);
 
-    const wiki_t& wiki() const;
-    void wiki(wiki_t);
+    const wiki& wiki() const;
+    void wiki(struct wiki);
 
     // api methods
 
@@ -73,18 +74,21 @@ struct LASTFM_EXPORT album {
     int m_listeners = 0;
     int m_plays = 0;
     bool m_streamable = false;
-    wiki_t m_wiki;
+    struct wiki m_wiki;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& album_elem, album& var) {
     auto doc = jbson::get<jbson::element_type::document_element>(album_elem);
     for(auto&& elem : doc) {
-        if(elem.name() == "name") {
-            auto str = jbson::get<jbson::element_type::string_element>(elem);
-            var.name({str.data(), str.size()});
-        }
-        else if(elem.name() == "artist") {
-            var.artist(jbson::get<artist>(elem));
+        if(elem.name() == "name" || elem.name() == "title") {
+            var.name(jbson::get<jbson::element_type::string_element>(elem));
+        } else if(elem.name() == "artist") {
+            if(elem.type() == jbson::element_type::string_element) {
+                artist a;
+                a.name(jbson::get<jbson::element_type::string_element>(elem));
+                var.artist(std::move(a));
+            } else
+                var.artist(jbson::get<artist>(elem));
         } else if(elem.name() == "url") {
             var.url(jbson::get<network::uri>(elem));
         } else if(elem.name() == "listeners") {
@@ -94,7 +98,7 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             auto str = jbson::get<jbson::element_type::string_element>(elem);
             var.plays(std::strtol(str.data(), nullptr, 10));
         } else if(elem.name() == "wiki") {
-            var.wiki(jbson::get<wiki_t>(elem));
+            var.wiki(jbson::get<wiki>(elem));
         } else if(elem.name() == "releasedate") {
             var.release_date(jbson::get<date_t>(elem));
         } else if(elem.name() == "toptags") {

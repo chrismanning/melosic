@@ -24,13 +24,14 @@ using std::lock_guard;
 
 #include <shared_mutex>
 #include <boost/thread/shared_lock_guard.hpp>
+#include <boost/range/algorithm/sort.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/algorithm/hex.hpp>
+#include <boost/thread/thread.hpp>
 using shared_mutex = std::shared_timed_mutex;
 template <typename Mutex> using shared_lock = boost::shared_lock_guard<Mutex>;
-#include <boost/range/algorithm/sort.hpp>
 using namespace boost::range;
-#include <boost/range/adaptors.hpp>
 using namespace boost::adaptors;
-#include <boost/algorithm/hex.hpp>
 using boost::algorithm::hex;
 
 #include <openssl/md5.h>
@@ -70,13 +71,16 @@ static constexpr auto base_url = "http://ws.audioscrobbler.com/2.0/"_sv;
 
 struct service::impl {
     impl(std::string_view api_key, std::string_view shared_secret)
-        : null_worker(std::make_unique<asio::io_service::work>(io_service)), client(io_service),
-          m_thread([&]() { io_service.run(); }), api_key(api_key), shared_secret(shared_secret) {
+        : null_worker(std::make_unique<asio::io_service::work>(io_service)), client(io_service), api_key(api_key),
+          shared_secret(shared_secret) {
+        for(auto i = 0u; i < 3; ++i) {
+            m_threads.create_thread([&]() { io_service.run(); });
+        }
     }
 
     ~impl() {
         null_worker.reset();
-        m_thread.join();
+        m_threads.join_all();
     }
 
     Method prepareMethodCall(const std::string& methodName) {
@@ -157,7 +161,9 @@ struct service::impl {
         uri_build.query("method", method.to_string());
         for(const auto& member :
             boost::adaptors::filter(params, [](auto&& pair) { return std::get<0>(pair) != "method"; })) {
-            uri_build.query(std::get<0>(member), std::get<1>(member));
+            std::string in = std::get<1>(member), out;
+            network::uri::encode_query(in.begin(), in.end(), std::back_inserter(out));
+            uri_build.query(std::get<0>(member), std::move(out));
         }
         if(format_it == std::end(params))
             uri_build.query("format", "json");
@@ -172,7 +178,7 @@ struct service::impl {
     asio::io_service io_service;
     std::unique_ptr<asio::io_service::work> null_worker;
     network::http::v0::client client;
-    asio::thread m_thread;
+    boost::thread_group m_threads;
 
     const std::string api_key;
     const std::string shared_secret;
@@ -253,7 +259,7 @@ void service::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playli
 }
 
 void service::trackChangedSlot(const Melosic::Core::Track& newTrack) {
-    pimpl->currentTrack_ = std::make_shared<track>(shared_from_this(), newTrack);
+    //    pimpl->currentTrack_ = std::make_shared<track>(shared_from_this(), newTrack);
 }
 
 std::shared_ptr<track> service::currentTrack() {
@@ -270,7 +276,7 @@ user& service::getUser() {
 
 jbson::document service::document_callback(asio::error_code ec, network::http::v2::response res) {
     if(ec) {
-        throw std::system_error(ec);
+        BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
     auto doc = jbson::read_json(res.body());
     check_error(doc);

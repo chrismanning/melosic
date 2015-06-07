@@ -1,0 +1,76 @@
+{
+  "track": {
+    "id": "1006986",
+    "name": "Master of Puppets",
+    "mbid": "945f0942-2200-4aff-9cc3-dcfeb662acdc",
+    "url": "http://www.last.fm/music/Metallica/_/Master+of+Puppets",
+    "duration": "514000",
+    "streamable": {
+      "#text": "0",
+      "fulltrack": "0"
+    },
+    "listeners": "782890",
+    "playcount": "6924524",
+    "artist": {
+      "name": "Metallica",
+      "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+      "url": "http://www.last.fm/music/Metallica"
+    },
+    "album": {
+      "artist": "Metallica",
+      "title": "Master of Puppets",
+      "mbid": "6c6a6ccb-fd2b-4e93-88bb-78adc7be1d3e",
+      "url": "http://www.last.fm/music/Metallica/Master+of+Puppets",
+      "image": [
+        {
+          "#text": "http://userserve-ak.last.fm/serve/64s/97432289.png",
+          "size": "small"
+        },
+        {
+          "#text": "http://userserve-ak.last.fm/serve/126/97432289.png",
+          "size": "medium"
+        },
+        {
+          "#text": "http://userserve-ak.last.fm/serve/174s/97432289.png",
+          "size": "large"
+        },
+        {
+          "#text": "http://userserve-ak.last.fm/serve/300x300/97432289.png",
+          "size": "extralarge"
+        }
+      ],
+      "@attr": {
+        "position": "2"
+      }
+    },
+    "toptags": {
+      "tag": [
+        {
+          "name": "thrash metal",
+          "url": "http://www.last.fm/tag/thrash%20metal"
+        },
+        {
+          "name": "metal",
+          "url": "http://www.last.fm/tag/metal"
+        },
+        {
+          "name": "heavy metal",
+          "url": "http://www.last.fm/tag/heavy%20metal"
+        },
+        {
+          "name": "metallica",
+          "url": "http://www.last.fm/tag/metallica"
+        },
+        {
+          "name": "rock",
+          "url": "http://www.last.fm/tag/rock"
+        }
+      ]
+    },
+    "wiki": {
+      "published": "Thu, 22 Jan 2009 23:01:35 +0000",
+      "summary": "Master of Puppets is the second song off Metallica's 1986 album Master of Puppets.  The song, following the theme of control with the rest of the album, discusses drugs and their effects. Addiction, the master referenced in the title, narrates the song, testifying to the destruction that comes from being under the control of drugs. James Hetfield explained  the song &quot;deals pretty much with drugs. How things get switched around, instead of you controlling what you're taking and doing, it's drugs controlling you.",
+      "content": "Master of Puppets is the second song off Metallica's 1986 album Master of Puppets.\n \n The song, following the theme of control with the rest of the album, discusses drugs and their effects. Addiction, the master referenced in the title, narrates the song, testifying to the destruction that comes from being under the control of drugs. James Hetfield explained  the song &quot;deals pretty much with drugs. How things get switched around, instead of you controlling what you're taking and doing, it's drugs controlling you.&quot; Master of Puppets is also notable for its long instrumental section beginning about three and a half minutes into the song.\n \n        \nUser-contributed text is available under the Creative Commons By-SA License and may also be available under the GNU FDL."
+    }
+  }
+}

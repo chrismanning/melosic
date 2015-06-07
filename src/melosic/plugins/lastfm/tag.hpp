@@ -49,7 +49,7 @@ struct LASTFM_EXPORT tag {
     void name(std::string_view);
 
     const network::uri& url() const;
-    void url(const network::uri&);
+    void url(network::uri);
 
     int reach() const;
     void reach(int);
@@ -60,8 +60,8 @@ struct LASTFM_EXPORT tag {
     bool streamable() const;
     void streamable(bool);
 
-    const wiki_t& wiki() const;
-    void wiki(wiki_t);
+    const wiki& wiki() const;
+    void wiki(struct wiki);
 
     // api methods
 
@@ -114,7 +114,7 @@ struct LASTFM_EXPORT tag {
     int m_reach = 0;
     int m_taggings = 0;
     bool m_streamable = false;
-    wiki_t m_wiki;
+    struct wiki m_wiki;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& tag_elem, tag& var) {
@@ -134,7 +134,7 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
         } else if(elem.name() == "streamable") {
             var.streamable(jbson::get<jbson::element_type::string_element>(elem) == "1");
         } else if(elem.name() == "wiki") {
-            var.wiki(jbson::get<wiki_t>(elem));
+            var.wiki(jbson::get<wiki>(elem));
         }
     }
 }

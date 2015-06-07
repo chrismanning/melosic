@@ -30,7 +30,8 @@
 #include <boost/range/adaptor/filtered.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 
-#include <asio.hpp>
+#include <asio/package.hpp>
+#include <asio/post.hpp>
 #include <asio/use_future.hpp>
 
 #include <network/uri.hpp>
@@ -106,12 +107,23 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
     void get(std::string_view method, params_t params,
              std::function<void(asio::error_code, network::http::v2::response)> callback);
 
+    template <typename T, typename ContinueT>
+    auto then(std::future<T> fut, ContinueT&& continuation);
+
   private:
     static jbson::document document_callback(asio::error_code, network::http::v2::response);
 
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
+
+template <typename T, typename ContinueT>
+auto service::then(std::future<T> fut, ContinueT&& continuation) {
+    return asio::post(asio::package([fut=std::move(fut), continuation=std::forward<ContinueT>(continuation)]() mutable {
+        fut.wait();
+        return continuation(std::move(fut));
+    }));
+}
 
 template <typename TransformerT, typename ReturnT>
 std::future<ReturnT> service::get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform) {
@@ -219,7 +231,10 @@ struct make_params_ {
         service::params_t params;
         for(auto&& param : {make_param(optional_params)...}) {
             hana::transform(get<1>(param),
-                            [&, & name = get<0>(param) ](auto&& just) { return params.emplace_back(name, just); });
+                            [&, & name = get<0>(param) ](auto&& just) {
+                if(!just.empty())
+                    params.emplace_back(name, just);
+            });
         }
         return params;
     }
@@ -234,22 +249,6 @@ private:
 } // namespace detail
 
 constexpr auto make_params = detail::make_params_{};
-
-namespace detail {
-
-struct vector_to_optional_ {
-    template <typename T, typename... Args> std::optional<T> operator()(std::vector<T, Args...>&& vec) const {
-        return vec.empty() ? std::nullopt : std::make_optional(std::move(vec.front()));
-    }
-
-    template <typename T, typename... Args> std::optional<T> operator()(const std::vector<T, Args...>& vec) const {
-        return vec.empty() ? std::nullopt : std::make_optional(vec.front());
-    }
-};
-
-} // namespace detail
-
-constexpr auto vector_to_optional = detail::vector_to_optional_{};
 
 namespace detail {
 
