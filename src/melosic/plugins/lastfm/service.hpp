@@ -42,6 +42,7 @@
 
 #include "lastfm.hpp"
 #include "hana_optional.hpp"
+#include "detail/transform.hpp"
 
 namespace hana = boost::hana;
 
@@ -249,41 +250,6 @@ private:
 } // namespace detail
 
 constexpr auto make_params = detail::make_params_{};
-
-namespace detail {
-
-template <typename T>
-struct deserialise_ {
-    template <typename ElemT>
-    T operator()(ElemT&& elem) const {
-        return jbson::get<T>(elem);
-    }
-};
-
-} // namespace detail
-
-template <typename T>
-constexpr auto deserialise = detail::deserialise_<T>{};
-
-namespace detail {
-
-struct transform_copy_ {
-    template <typename V, typename F>
-    auto operator()(V&& v, F&& f) const {
-        using U = std::remove_cv_t<std::remove_reference_t<decltype(f(*v.begin()))>>;
-        using Alloc = typename std::remove_reference_t<V>::allocator_type;
-        using NewAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<U>;
-        std::vector<U, NewAlloc> result;
-        result.reserve(v.size());
-
-        std::transform(std::begin(v), std::end(v), std::back_inserter(result), std::forward<F>(f));
-        return result;
-    }
-};
-
-} // namespace detail
-
-constexpr auto transform_copy = detail::transform_copy_{};
 
 } // namespace lastfm
 

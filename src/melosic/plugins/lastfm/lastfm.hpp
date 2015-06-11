@@ -50,26 +50,6 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
 } // namespace chrono
 } // namespace std
 
-namespace lastfm {
-
-namespace detail {
-
-struct vector_to_optional_ {
-    template <typename T, typename... Args> std::optional<T> operator()(std::vector<T, Args...>&& vec) const {
-        return vec.empty() ? std::nullopt : std::make_optional(std::move(vec.front()));
-    }
-
-    template <typename T, typename... Args> std::optional<T> operator()(const std::vector<T, Args...>& vec) const {
-        return vec.empty() ? std::nullopt : std::make_optional(vec.front());
-    }
-};
-
-} // namespace detail
-
-constexpr auto vector_to_optional = detail::vector_to_optional_{};
-
-} // namespace lastfm
-
 namespace network {
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& elem, uri& var) {

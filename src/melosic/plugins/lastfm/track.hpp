@@ -26,6 +26,7 @@
 
 #include "artist.hpp"
 #include "album.hpp"
+#include "detail/transform.hpp"
 
 namespace lastfm {
 class service;
