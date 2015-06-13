@@ -117,4 +117,15 @@ std::future<album> album::get_info(service& serv, std::optional<std::string_view
     return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
+std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
+                                                  bool autocorrect) {
+    return serv.get("album.gettoptags", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                                    std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+}
+
+std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect) const {
+    return get_top_tags(serv, m_name, m_artist.name(), autocorrect);
+}
+
 } // namespace lastfm

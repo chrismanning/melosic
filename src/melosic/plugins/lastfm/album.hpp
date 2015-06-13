@@ -68,11 +68,12 @@ struct LASTFM_EXPORT album {
     static std::future<album> get_info(service&, std::string_view name, std::string_view artist,
                                        std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                        std::optional<std::string_view> username = std::nullopt);
-    std::future<album> get_info(service&,
-                                std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+    std::future<album> get_info(service&, std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                 std::optional<std::string_view> username = std::nullopt) const;
 
-    std::future<std::vector<album>> get_similar(service&) const;
+    static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
+                                                      bool autocorrect = false);
+    std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false) const;
 
   private:
     std::string m_name;
