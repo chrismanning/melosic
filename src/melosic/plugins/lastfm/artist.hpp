@@ -79,8 +79,12 @@ struct LASTFM_EXPORT artist {
 
     // api methods
 
-    static std::future<artist> get_info(service&, std::string_view name);
-    std::future<artist> get_info(service&) const;
+    static std::future<artist> get_info(service&, std::string_view name,
+                                        std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                        std::optional<std::string_view> username = std::nullopt);
+    std::future<artist> get_info(service&, std::optional<std::string_view> lang = std::nullopt,
+                                 bool autocorrect = false,
+                                 std::optional<std::string_view> username = std::nullopt) const;
 
     std::future<std::vector<artist>> get_similar(service&) const;
 

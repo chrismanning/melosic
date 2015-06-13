@@ -116,23 +116,15 @@ void track::wiki(struct wiki wiki) {
     m_wiki = std::move(wiki);
 }
 
-std::future<track> track::get_info(service& serv, std::string_view name, std::string_view artist,
-                                   bool autocorrect,
+std::future<track> track::get_info(service& serv, std::string_view name, std::string_view artist, bool autocorrect,
                                    std::optional<std::string_view> username) {
-    auto transformer = [](auto&& doc) {
-        if(auto elem = vector_to_optional(jbson::path_select(doc, "track"))) {
-            return jbson::get<track>(*elem);
-        }
-        throw std::runtime_error("invalid response from tag.getinfo");
-    };
-    return serv.get("track.getinfo", make_params(std::make_pair("track", name),
-                                                 std::make_pair("artist", artist),
-                                                 std::make_pair("autocorrect", autocorrect),
-                                                 std::make_pair("username", username)), use_future, transformer);
+    return serv.get("track.getinfo",
+                    make_params(std::make_pair("track", name), std::make_pair("artist", artist),
+                                std::make_pair("autocorrect", autocorrect), std::make_pair("username", username)),
+                    use_future, transform_select<track>("track"));
 }
 
-std::future<track> track::get_info(service& serv, bool autocorrect,
-                                   std::optional<std::string_view> username) const {
+std::future<track> track::get_info(service& serv, bool autocorrect, std::optional<std::string_view> username) const {
     return get_info(serv, m_name, m_artist.name(), autocorrect, username);
 }
 

@@ -45,6 +45,9 @@ struct LASTFM_EXPORT album {
     date_t release_date() const;
     void release_date(date_t);
 
+    const std::vector<track>& tracks() const;
+    void tracks(std::vector<track>);
+
     const std::vector<tag>& tags() const;
     void tags(std::vector<tag>);
 
@@ -61,6 +64,13 @@ struct LASTFM_EXPORT album {
     void wiki(struct wiki);
 
     // api methods
+
+    static std::future<album> get_info(service&, std::string_view name, std::string_view artist,
+                                       std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                       std::optional<std::string_view> username = std::nullopt);
+    std::future<album> get_info(service&,
+                                std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                std::optional<std::string_view> username = std::nullopt) const;
 
     std::future<std::vector<album>> get_similar(service&) const;
 

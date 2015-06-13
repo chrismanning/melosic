@@ -81,7 +81,16 @@ constexpr auto vector_to_optional = detail::vector_to_optional_{};
 namespace detail {
 
 template <typename T>
-struct transform_select_ {};
+struct transform_select_ {
+    auto operator()(std::string_view path) const {
+        return [path = path.to_string()](auto&& doc) {
+            if(auto elem = vector_to_optional(jbson::path_select(std::forward<decltype(doc)>(doc), path))) {
+                return jbson::get<T>(*elem);
+            }
+            throw std::runtime_error("invalid response");
+        };
+    }
+};
 
 template <typename T>
 struct transform_select_<std::vector<T>> {
@@ -89,18 +98,6 @@ struct transform_select_<std::vector<T>> {
         return [path = path.to_string()](auto&& doc) {
             auto elems = jbson::path_select(std::forward<decltype(doc)>(doc), path);
             return transform_copy(elems, deserialise<T>);
-        };
-    }
-};
-
-template <typename T>
-struct transform_select_<std::optional<T>> {
-    auto operator()(std::string_view path) const {
-        return [path = path.to_string()](auto&& doc) {
-            if(auto elem = vector_to_optional(jbson::path_select(std::forward<decltype(doc)>(doc), path))) {
-                return jbson::get<T>(*elem);
-            }
-            throw std::runtime_error("invalid response");
         };
     }
 };

@@ -80,8 +80,7 @@ void tag::wiki(struct wiki wiki) {
 }
 
 std::future<tag> tag::get_info(service& serv, std::string_view name) {
-    return serv.get("tag.getinfo", make_params(std::make_pair("tag", name)), use_future,
-                    transform_select<std::optional<tag>>("tag"));
+    return serv.get("tag.getinfo", make_params(std::make_pair("tag", name)), use_future, transform_select<tag>("tag"));
 }
 
 std::future<tag> tag::get_info(service& serv) const {
@@ -127,6 +126,9 @@ std::future<std::vector<tag>> tag::get_top_tags(service& serv) {
 
 std::future<std::vector<track>> tag::get_top_tracks(service& serv, std::string_view name, std::optional<int> limit,
                                                     std::optional<int> page) {
+    return serv.get("tag.gettoptracks", make_params(std::make_tuple("tag", name), std::make_tuple("limit", limit),
+                                                    std::make_tuple("page", page)),
+                    use_future, transform_select<std::vector<track>>("toptracks.track.*"));
 }
 
 std::future<std::vector<track>> tag::get_top_tracks(service& serv, std::optional<int> limit,

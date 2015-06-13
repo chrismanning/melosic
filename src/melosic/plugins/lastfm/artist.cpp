@@ -87,17 +87,17 @@ void artist::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 
-std::future<artist> artist::get_info(service& serv, std::string_view name) {
-    auto transformer = [](auto&& doc) {
-        if(auto artist_ = hana::transform(vector_to_optional(jbson::path_select(doc, "artist")), deserialise<artist>))
-            return std::move(*artist_);
-        throw std::runtime_error("invalid response from artist.getinfo");
-    };
-    return serv.get("artist.getinfo", make_params(std::make_pair("artist", name)), use_future, transformer);
+std::future<artist> artist::get_info(service& serv, std::string_view name, std::optional<std::string_view> lang,
+                                     bool autocorrect, std::optional<std::string_view> username) {
+    return serv.get("artist.getinfo",
+                    make_params(std::make_pair("artist", name), std::make_pair("lang", lang),
+                                std::make_pair("autocorrect", autocorrect), std::make_pair("username", username)),
+                    use_future, transform_select<artist>("artist"));
 }
 
-std::future<artist> artist::get_info(service& serv) const {
-    return get_info(serv, m_name);
+std::future<artist> artist::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
+                                     std::optional<std::string_view> username) const {
+    return get_info(serv, m_name, lang, autocorrect, username);
 }
 
 } // namespace lastfm
