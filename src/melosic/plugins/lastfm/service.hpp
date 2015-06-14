@@ -67,7 +67,6 @@ class Manager;
 namespace lastfm {
 
 struct user;
-struct Method;
 struct track;
 struct tag;
 struct artist;
@@ -78,7 +77,7 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
   public:
     using params_t = std::vector<std::tuple<std::string, std::string>>;
 
-    service(std::string_view api_key, std::string_view shared_secret);
+    explicit service(std::string_view api_key, std::string_view shared_secret);
 
     ~service();
 
@@ -92,10 +91,6 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
     std::shared_ptr<track> currentTrack();
     void trackChangedSlot(const Melosic::Core::Track& newTrack);
     void playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist);
-
-    Method prepareMethodCall(const std::string& methodName);
-    Method sign(Method method);
-    std::string postMethod(const Method& method);
 
     network::http::v2::request make_read_request(std::string_view method, params_t params);
     network::http::v2::request make_write_request(std::string_view method, params_t params);
@@ -157,59 +152,6 @@ std::future<ReturnT> service::get(std::string_view method, params_t params, use_
 
     return fut;
 }
-
-typedef std::map<std::string, std::string> StringStringMap;
-typedef std::pair<std::string, std::string> Member;
-struct Parameter {
-    Parameter() = default;
-    Parameter(Parameter&&) = delete;
-    Parameter(const Parameter&) = delete;
-
-    Parameter& addMember(const std::string& key, std::string_view value = {}) {
-        members.emplace(key, value.data() ? value.to_string() : "");
-        return *this;
-    }
-
-    boost::iterator_range<StringStringMap::iterator> getMembers() {
-        return boost::make_iterator_range(members);
-    }
-    boost::iterator_range<StringStringMap::const_iterator> getMembers() const {
-        return boost::make_iterator_range(members);
-    }
-
-  private:
-    StringStringMap members;
-};
-
-typedef std::list<Parameter> ParameterList;
-
-struct Method {
-    Method(const std::string& methodName) : methodName(methodName) {
-    }
-    Method(Method&&) = default;
-
-    Method(const Method&) = delete;
-    Method& operator=(const Method&) = delete;
-
-    Parameter& addParameter() {
-        params.emplace_back();
-        return params.back();
-    }
-
-    boost::iterator_range<ParameterList::iterator> getParameters() {
-        return boost::make_iterator_range(params);
-    }
-    boost::iterator_range<ParameterList::const_iterator> getParameters() const {
-        return boost::make_iterator_range(params);
-    }
-
-    const std::string& renderXML();
-
-  private:
-    friend class service;
-    const std::string methodName;
-    ParameterList params;
-};
 
 namespace detail {
 

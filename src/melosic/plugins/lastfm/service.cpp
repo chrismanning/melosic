@@ -83,10 +83,6 @@ struct service::impl {
         m_threads.join_all();
     }
 
-    Method prepareMethodCall(const std::string& methodName) {
-        return Method(methodName);
-    }
-
     //    std::string postMethod(const Method& method) {
     //        network::uri_builder uri_build;
     //        const Parameter& param = method.getParameters().front();
@@ -149,26 +145,17 @@ struct service::impl {
     }
 
     network::http::v0::request make_read_request(std::experimental::string_view method, params_t params) {
-        auto format_it = boost::find_if(params, [](auto&& pair) { return std::get<0>(pair) == "format"; });
-        if(format_it != std::end(params) && std::get<1>(*format_it) != "json")
-            std::get<1>(*format_it) = "json";
-        auto api_key_it = boost::find_if(params, [](auto&& pair) { return std::get<0>(pair) == "api_key"; });
-        if(api_key_it != std::end(params) && std::get<1>(*api_key_it) != api_key)
-            std::get<1>(*api_key_it) = api_key;
-
         network::uri_builder uri_build{network::uri{std::begin(base_url), std::end(base_url)}};
 
         uri_build.query("method", method.to_string());
-        for(const auto& member :
-            boost::adaptors::filter(params, [](auto&& pair) { return std::get<0>(pair) != "method"; })) {
+        using namespace boost::adaptors;
+        for(const auto& member : params | filtered([](auto&& pair) { return std::get<0>(pair) != "method"; })) {
             std::string in = std::get<1>(member), out;
             network::uri::encode_query(in.begin(), in.end(), std::back_inserter(out));
             uri_build.query(std::get<0>(member), std::move(out));
         }
-        if(format_it == std::end(params))
-            uri_build.query("format", "json");
-        if(api_key_it == std::end(params))
-            uri_build.query("api_key", api_key);
+        uri_build.query("format", "json");
+        uri_build.query("api_key", api_key);
 
         network::http::v0::request req{network::uri{uri_build}};
         req.method(network::http::v2::method::get).version("1.0");
@@ -203,40 +190,31 @@ std::string_view service::shared_secret() const {
     return pimpl->shared_secret;
 }
 
-Method service::prepareMethodCall(const std::string& methodName) {
-    return std::move(pimpl->prepareMethodCall(methodName));
-}
+//Method service::sign(Method method) {
+//    TRACE_LOG(logject) << "Signing method call";
+//    method.getParameters().front().addMember("sk", getUser().getSessionKey());
+//    std::deque<Member> members(method.getParameters().front().getMembers().begin(),
+//                               method.getParameters().front().getMembers().end());
+//    members.emplace_back("method", method.methodName);
+//    sort(members, [](const Member& a, const Member& b) { return b.first > a.first; });
+//    std::string sig;
+//    for(auto& mem : members) {
+//        sig += mem.first + mem.second;
+//    }
+//    sig += shared_secret().to_string();
+//    TRACE_LOG(logject) << "sig: " << sig;
 
-Method service::sign(Method method) {
-    TRACE_LOG(logject) << "Signing method call";
-    method.getParameters().front().addMember("sk", getUser().getSessionKey());
-    std::deque<Member> members(method.getParameters().front().getMembers().begin(),
-                               method.getParameters().front().getMembers().end());
-    members.emplace_back("method", method.methodName);
-    sort(members, [](const Member& a, const Member& b) { return b.first > a.first; });
-    std::string sig;
-    for(auto& mem : members) {
-        sig += mem.first + mem.second;
-    }
-    sig += shared_secret().to_string();
-    TRACE_LOG(logject) << "sig: " << sig;
+//    std::array<uint8_t, MD5_DIGEST_LENGTH> sigp;
+//    MD5(reinterpret_cast<const uint8_t*>(sig.c_str()), sig.length(), sigp.data());
+//    sig.clear();
 
-    std::array<uint8_t, MD5_DIGEST_LENGTH> sigp;
-    MD5(reinterpret_cast<const uint8_t*>(sig.c_str()), sig.length(), sigp.data());
-    sig.clear();
+//    hex(sigp, std::back_inserter(sig));
+//    TRACE_LOG(logject) << "MD5 sig: " << sig;
 
-    hex(sigp, std::back_inserter(sig));
-    TRACE_LOG(logject) << "MD5 sig: " << sig;
+//    method.getParameters().front().addMember("api_sig", sig);
 
-    method.getParameters().front().addMember("api_sig", sig);
-
-    return std::move(method);
-}
-
-std::string service::postMethod(const Method& method) {
-    return {};
-    //    return std::move(pimpl->postMethod(method));
-}
+//    return std::move(method);
+//}
 
 network::http::v2::request service::make_read_request(std::experimental::string_view method, params_t params) {
     return pimpl->make_read_request(method, std::move(params));

@@ -27,29 +27,7 @@ namespace lastfm {
 class service;
 
 struct user {
-  public:
-    user();
-    user(std::weak_ptr<service> lastserv, const std::string& username);
-    user(std::weak_ptr<service> lastserv, const std::string& username, const std::string& sessionKey);
-
-    user(const user&) = delete;
-    user& operator=(const user&) = delete;
-    user(user&&);
-    user& operator=(user&&);
-
-    ~user();
-
-    std::future<bool> getInfo();
-
-    void authenticate();
-    const std::string& getSessionKey() const;
-    void setSessionKey(const std::string&);
-
-    explicit operator bool();
-
-  private:
-    struct impl;
-    std::shared_ptr<impl> pimpl;
+    explicit user() = default;
 };
 
 } // namespace lastfm

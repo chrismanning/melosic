@@ -47,9 +47,9 @@ static std::string sk;
 void refreshConfig(const std::string& key, const Config::VarType& value) {
     try {
         if(key == "username") {
-            if(lastserv->getUser() && !lastserv->getUser().getSessionKey().empty())
-                sk = lastserv->getUser().getSessionKey();
-            lastserv->setUser(user(lastserv, boost::get<std::string>(value), sk));
+//            if(lastserv->getUser() && !lastserv->getUser().getSessionKey().empty())
+//                sk = lastserv->getUser().getSessionKey();
+//            lastserv->setUser(user(lastserv, boost::get<std::string>(value), sk));
         } else if(key == "enable scrobbling") {
             if(boost::get<bool>(value)) {
                 //                if(slotman == nullptr)
@@ -59,10 +59,10 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
                 g_scrobbler.reset();
             }
         } else if(key == "session key") {
-            if(lastserv->getUser())
-                lastserv->getUser().setSessionKey(boost::get<std::string>(value));
-            else
-                sk = boost::get<std::string>(value);
+//            if(lastserv->getUser())
+//                lastserv->getUser().setSessionKey(boost::get<std::string>(value));
+//            else
+//                sk = boost::get<std::string>(value);
         } else
             assert(false);
         TRACE_LOG(logject) << "Config: Updated variable: " << key;
