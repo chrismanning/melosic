@@ -26,10 +26,10 @@
 #include <melosic/common/connection.hpp>
 using namespace Melosic;
 
-#include "lastfm.hpp"
-#include "scrobbler.hpp"
-#include "service.hpp"
-#include "user.hpp"
+#include <lastfm/lastfm.hpp>
+#include <lastfm/scrobbler.hpp>
+#include <lastfm/service.hpp>
+#include <lastfm/user.hpp>
 using namespace lastfm;
 
 static Logger::Logger logject(logging::keywords::channel = "lastfm");

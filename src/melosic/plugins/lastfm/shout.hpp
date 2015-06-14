@@ -15,51 +15,48 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_WIKI_HPP
-#define LASTFM_WIKI_HPP
-
-#include <string>
-#include <experimental/string_view>
-
-#include <jbson/element.hpp>
+#ifndef LASTFM_SHOUT_HPP
+#define LASTFM_SHOUT_HPP
 
 #include <lastfm/lastfm.hpp>
 
 namespace lastfm {
 
-struct LASTFM_EXPORT wiki {
-    explicit wiki(std::string_view summary = {}, std::string_view content = {}, date_t published = {});
+class service;
 
-    std::string_view summary() const;
-    void summary(std::string_view);
+struct LASTFM_EXPORT shout {
+    explicit shout() = default;
 
-    std::string_view content() const;
-    void content(std::string_view);
+    std::string_view author() const;
+    void author(std::string_view);
 
-    date_t published() const;
-    void published(date_t);
+    std::string_view body() const;
+    void body(std::string_view);
 
-  private:
-    std::string m_summary;
-    std::string m_content;
-    date_t m_published;
+    date_t date() const;
+    void date(date_t);
+
+private:
+    std::string m_author;
+    std::string m_body;
+    date_t m_date;
 };
 
-template <typename Container> void value_get(const jbson::basic_element<Container>& elem, wiki& var) {
+template <typename Container> void value_get(const jbson::basic_element<Container>& elem, shout& var) {
     auto doc = jbson::get<jbson::element_type::document_element>(elem);
     for(auto&& elem : doc) {
-        if(elem.name() == "summary") {
+        if(elem.name() == "author") {
             auto str = jbson::get<jbson::element_type::string_element>(elem);
-            var.summary({str.data(), str.size()});
-        } else if(elem.name() == "content") {
+            var.body({str.data(), str.size()});
+        } else if(elem.name() == "body") {
             auto str = jbson::get<jbson::element_type::string_element>(elem);
-            var.content({str.data(), str.size()});
-        } else if(elem.name() == "published") {
-            var.published(jbson::get<date_t>(elem));
+            var.body({str.data(), str.size()});
+        } else if(elem.name() == "date") {
+            var.date(jbson::get<date_t>(elem));
         }
     }
 }
 
 } // namespace lastfm
 
-#endif // LASTFM_WIKI_HPP
+#endif // LASTFM_SHOUT_HPP

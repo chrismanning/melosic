@@ -18,29 +18,16 @@
 #ifndef LASTFM_TAG_HPP
 #define LASTFM_TAG_HPP
 
-#include <string>
-#include <experimental/string_view>
-#include <experimental/type_traits>
-#include <future>
-#include <chrono>
-#include <experimental/optional>
-
-#include <boost/thread/future.hpp>
-
-#include <network/uri.hpp>
-
-#include <jbson/element.hpp>
-
-#include "lastfm.hpp"
-#include "wiki.hpp"
-#include "artist.hpp"
+#include <lastfm/lastfm.hpp>
+#include <lastfm/wiki.hpp>
 
 namespace lastfm {
 
 class service;
-struct album;
-struct artist;
 struct track;
+struct artist;
+struct album;
+struct wiki;
 
 struct LASTFM_EXPORT tag {
     explicit tag() = default;

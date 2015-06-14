@@ -31,7 +31,7 @@ using std::unique_lock;
 #include <melosic/common/connection.hpp>
 #include <melosic/melin/output.hpp>
 
-#include "track.hpp"
+#include <lastfm/track.hpp>
 
 namespace Melosic {
 

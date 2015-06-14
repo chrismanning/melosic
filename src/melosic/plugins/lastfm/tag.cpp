@@ -15,19 +15,15 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/range/combine.hpp>
-
-#include <boost/hana/ext/boost/tuple.hpp>
-#include <boost/hana/ext/std/tuple.hpp>
-#include <boost/hana/ext/std/vector.hpp>
-
 #include <jbson/path.hpp>
 
-#include "artist.hpp"
-#include "album.hpp"
-#include "track.hpp"
-#include "service.hpp"
-#include "tag.hpp"
+#include <boost/hana/ext/std/tuple.hpp>
+
+#include <lastfm/tag.hpp>
+#include <lastfm/artist.hpp>
+#include <lastfm/album.hpp>
+#include <lastfm/track.hpp>
+#include <lastfm/service.hpp>
 
 namespace lastfm {
 

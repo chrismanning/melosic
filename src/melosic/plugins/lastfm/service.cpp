@@ -48,12 +48,12 @@ using boost::algorithm::hex;
 #include <jbson/document.hpp>
 #include <jbson/json_reader.hpp>
 
-#include "service.hpp"
-#include "track.hpp"
-#include "user.hpp"
-#include "wiki.hpp"
-#include "http_client.hpp"
-#include "error.hpp"
+#include <lastfm/service.hpp>
+#include <lastfm/track.hpp>
+#include <lastfm/user.hpp>
+#include <lastfm/wiki.hpp>
+#include <lastfm/http_client.hpp>
+#include <lastfm/error.hpp>
 
 static Melosic::Logger::Logger logject(logging::keywords::channel = "lastfm::service");
 

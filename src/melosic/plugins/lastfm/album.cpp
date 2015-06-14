@@ -15,10 +15,10 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "album.hpp"
-#include "service.hpp"
-#include "track.hpp"
-#include "tag.hpp"
+#include <lastfm/album.hpp>
+#include <lastfm/service.hpp>
+#include <lastfm/tag.hpp>
+#include <lastfm/track.hpp>
 
 namespace lastfm {
 
@@ -62,12 +62,12 @@ void album::tracks(std::vector<track> tracks) {
     m_tracks = tracks;
 }
 
-const std::vector<tag>& album::tags() const {
-    return m_tags;
+const std::vector<tag>& album::top_tags() const {
+    return m_top_tags;
 }
 
-void album::tags(std::vector<tag> tags) {
-    m_tags = std::move(tags);
+void album::top_tags(std::vector<tag> tags) {
+    m_top_tags = std::move(tags);
 }
 
 int album::listeners() const {
@@ -102,6 +102,14 @@ void album::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 
+const std::vector<shout>& album::shouts() const {
+    return m_shouts;
+}
+
+void album::shouts(std::vector<shout> shouts) {
+    m_shouts = std::move(shouts);
+}
+
 std::future<album> album::get_info(service& serv, std::string_view name, std::string_view artist,
                                    std::optional<std::string_view> lang, bool autocorrect,
                                    std::optional<std::string_view> username) {
@@ -117,6 +125,31 @@ std::future<album> album::get_info(service& serv, std::optional<std::string_view
     return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
+std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view name,
+                                                           std::string_view artist, std::string_view countrycode,
+                                                           bool autocorrect) {
+    return serv.get("album.getbuylinks",
+                    make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                std::make_pair("countrycode", countrycode), std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
+}
+
+std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view countrycode,
+                                                           bool autocorrect) const {
+    return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
+}
+
+std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
+                                                  bool autocorrect) {
+    return serv.get("album.getshouts", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                                   std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<shout>>("album"));
+}
+
+std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect) const {
+    return get_shouts(serv, m_name, m_artist.name(), autocorrect);
+}
+
 std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
                                                   bool autocorrect) {
     return serv.get("album.gettoptags", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
@@ -126,6 +159,29 @@ std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_vie
 
 std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect) const {
     return get_top_tags(serv, m_name, m_artist.name(), autocorrect);
+}
+
+std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view name, std::string_view artist,
+                                              std::string_view username, bool autocorrect) {
+    return serv.get("album.gettags",
+                    make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
+}
+
+std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect) const {
+    return get_tags(serv, m_name, m_artist.name(), username, autocorrect);
+}
+
+std::future<std::vector<album>> album::search(service& serv, std::string_view name, std::optional<int> limit,
+                                              std::optional<int> page) {
+    return serv.get("album.search", make_params(std::make_tuple("album", name), std::make_tuple("limit", limit),
+                                                std::make_tuple("page", page)),
+                    use_future, transform_select<std::vector<album>>("results.albummatches.album.*"));
+}
+
+std::future<std::vector<album>> album::search(service& serv, std::optional<int> limit, std::optional<int> page) const {
+    return search(serv, m_name, limit, page);
 }
 
 } // namespace lastfm

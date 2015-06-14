@@ -7,7 +7,7 @@ namespace std {
 using namespace experimental;
 }
 
-#include "../http_client.hpp"
+#include <lastfm/http_client.hpp>
 
 #include <jbson/json_reader.hpp>
 #include <jbson/path.hpp>

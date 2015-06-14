@@ -18,35 +18,12 @@
 #ifndef LASTFM_ARTIST_HPP
 #define LASTFM_ARTIST_HPP
 
-#include <string>
-#include <experimental/string_view>
-#include <experimental/type_traits>
-#include <future>
-#include <chrono>
-#include <experimental/optional>
-
-#include <boost/thread/future.hpp>
-
-#include <network/uri.hpp>
-
-#include <jbson/element.hpp>
-
-#include "lastfm.hpp"
-#include "wiki.hpp"
-#include "tag.hpp"
-
-namespace std {
-
-template <typename Container, typename Elem>
-void value_get(const jbson::basic_element<Container>& vector_elem, std::vector<Elem>& var) {
-    auto arr = jbson::get<jbson::element_type::array_element>(vector_elem);
-    for(auto&& elem : arr) {
-        var.push_back(jbson::get<Elem>(elem));
-    }
-}
-}
+#include <lastfm/lastfm.hpp>
+#include <lastfm/wiki.hpp>
+//#include <lastfm/tag.hpp>
 
 namespace lastfm {
+
 class service;
 struct tag;
 

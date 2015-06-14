@@ -18,18 +18,14 @@
 #ifndef LASTFM_TRACK_HPP
 #define LASTFM_TRACK_HPP
 
-#include <future>
-
-#include <network/uri.hpp>
-
-#include <jbson/path.hpp>
-
-#include "artist.hpp"
-#include "album.hpp"
-#include "detail/transform.hpp"
+#include <lastfm/album.hpp>
+#include <lastfm/artist.hpp>
+#include <lastfm/detail/transform.hpp>
 
 namespace lastfm {
+
 class service;
+struct tag;
 
 struct LASTFM_EXPORT track {
     explicit track() = default;

@@ -40,9 +40,9 @@
 
 #include <jbson/document.hpp>
 
-#include "lastfm.hpp"
-#include "hana_optional.hpp"
-#include "detail/transform.hpp"
+#include <lastfm/lastfm.hpp>
+#include <lastfm/detail/hana_optional.hpp>
+#include <lastfm/detail/transform.hpp>
 
 namespace hana = boost::hana;
 
@@ -228,14 +228,12 @@ struct to_string_ {
 
 struct make_params_ {
     template <typename... PairT> service::params_t operator()(PairT&&... optional_params) const {
-        using std::get;
         service::params_t params;
         for(auto&& param : {make_param(optional_params)...}) {
-            hana::transform(get<1>(param),
-                            [&, & name = get<0>(param) ](auto&& just) {
-                if(!just.empty())
-                    params.emplace_back(name, just);
-            });
+            auto& name = std::get<0>(param);
+            auto& maybe = std::get<1>(param);
+            if(maybe && !maybe->empty())
+                params.emplace_back(name, *maybe);
         }
         return params;
     }

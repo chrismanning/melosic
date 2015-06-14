@@ -18,7 +18,7 @@
 #include <string>
 using namespace std::string_literals;
 
-#include "./error.hpp"
+#include <lastfm/error.hpp>
 
 namespace lastfm {
 

@@ -19,6 +19,7 @@
 #define LASTFM_HPP
 
 #include <chrono>
+#include <future>
 #include <experimental/string_view>
 #include <experimental/optional>
 
@@ -26,7 +27,7 @@
 
 #include <jbson/element.hpp>
 
-#include "exports.hpp"
+#include <lastfm/exports.hpp>
 
 namespace lastfm {
 
@@ -48,6 +49,15 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
 }
 
 } // namespace chrono
+
+template <typename Container, typename Elem>
+void value_get(const jbson::basic_element<Container>& vector_elem, vector<Elem>& var) {
+    auto arr = jbson::get<jbson::element_type::array_element>(vector_elem);
+    for(auto&& elem : arr) {
+        var.push_back(jbson::get<Elem>(elem));
+    }
+}
+
 } // namespace std
 
 namespace network {

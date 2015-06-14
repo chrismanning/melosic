@@ -15,36 +15,48 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <lastfm/wiki.hpp>
+#include "affiliation.hpp"
 
 namespace lastfm {
 
-wiki::wiki(std::string_view summary, std::string_view content, date_t published)
-    : m_summary(summary), m_content(content.to_string()), m_published(published) {
+std::string_view affiliation::supplier_name() const {
+    return m_supplier_name;
 }
 
-std::string_view wiki::summary() const {
-    return m_summary;
+void affiliation::supplier_name(std::string_view supplier_name) {
+    m_supplier_name = supplier_name.to_string();
 }
 
-void wiki::summary(std::string_view summary) {
-    m_summary = summary.to_string();
+const network::uri& affiliation::buy_link() const {
+    return m_buy_link;
 }
 
-std::string_view wiki::content() const {
-    return m_content;
+void affiliation::buy_link(network::uri buy_link) {
+    m_buy_link = std::move(buy_link);
 }
 
-void wiki::content(std::string_view content) {
-    m_content = content.to_string();
+std::string_view affiliation::price() const {
+    return m_price;
 }
 
-date_t wiki::published() const {
-    return m_published;
+void affiliation::price(std::string_view price) {
+    m_price = price.to_string();
 }
 
-void wiki::published(date_t published) {
-    m_published = published;
+const network::uri& affiliation::supplier_icon() const {
+    return m_supplier_icon;
+}
+
+void affiliation::supplier_icon(network::uri supplier_icon) {
+    m_supplier_icon = std::move(supplier_icon);
+}
+
+bool affiliation::is_search() const {
+    return m_is_search;
+}
+
+void affiliation::is_search(bool is_search) {
+    m_is_search = is_search;
 }
 
 } // namespace lastfm

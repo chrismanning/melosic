@@ -22,8 +22,8 @@ using Melosic::Output::DeviceState;
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal.hpp>
 
-#include "scrobbler.hpp"
-#include "service.hpp"
+#include <lastfm/scrobbler.hpp>
+#include <lastfm/service.hpp>
 
 namespace lastfm {
 

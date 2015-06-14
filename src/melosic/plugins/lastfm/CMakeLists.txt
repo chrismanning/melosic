@@ -1,6 +1,6 @@
 set(LASTFM lastfm)
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 SET(SRC lastfm.cpp)
 SET(SRC ${SRC} scrobbler.cpp)
@@ -12,7 +12,13 @@ SET(SRC ${SRC} album.cpp)
 SET(SRC ${SRC} track.cpp)
 SET(SRC ${SRC} error.cpp)
 SET(SRC ${SRC} wiki.cpp)
+SET(SRC ${SRC} shout.cpp)
+SET(SRC ${SRC} affiliation.cpp)
 SET(SRC ${SRC} http_client.cpp)
+
+FILE(GLOB_RECURSE LASTFM_COMMON_SRC_LIST *.hpp)
+
+add_custom_target(lastfm_heads ALL SOURCES ${LASTFM_COMMON_SRC_LIST})
 
 add_library(${LASTFM} SHARED ${SRC})
 

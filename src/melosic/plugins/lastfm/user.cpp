@@ -36,8 +36,8 @@ using namespace boost::property_tree::xml_parser;
 #include <melosic/executors/default_executor.hpp>
 namespace executors = Melosic::executors;
 
-#include "user.hpp"
-#include "service.hpp"
+#include <lastfm/user.hpp>
+#include <lastfm/service.hpp>
 
 namespace lastfm {
 

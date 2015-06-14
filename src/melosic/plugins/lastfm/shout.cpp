@@ -15,36 +15,32 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <lastfm/wiki.hpp>
+#include <lastfm/shout.hpp>
 
 namespace lastfm {
 
-wiki::wiki(std::string_view summary, std::string_view content, date_t published)
-    : m_summary(summary), m_content(content.to_string()), m_published(published) {
+std::string_view shout::author() const {
+    return m_author;
 }
 
-std::string_view wiki::summary() const {
-    return m_summary;
+void shout::author(std::string_view author) {
+    m_author = author.to_string();
 }
 
-void wiki::summary(std::string_view summary) {
-    m_summary = summary.to_string();
+std::string_view shout::body() const {
+    return m_body;
 }
 
-std::string_view wiki::content() const {
-    return m_content;
+void shout::body(std::string_view body) {
+    m_body = body.to_string();
 }
 
-void wiki::content(std::string_view content) {
-    m_content = content.to_string();
+date_t shout::date() const {
+    return m_date;
 }
 
-date_t wiki::published() const {
-    return m_published;
-}
-
-void wiki::published(date_t published) {
-    m_published = published;
+void shout::date(date_t date) {
+    m_date = date;
 }
 
 } // namespace lastfm

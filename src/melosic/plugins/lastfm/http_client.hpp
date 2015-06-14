@@ -42,8 +42,8 @@
 #include <asio/deadline_timer.hpp>
 #include <asio/use_future.hpp>
 
-#include "exports.hpp"
-#include "mfunction.hpp"
+#include <lastfm/exports.hpp>
+#include <lastfm/mfunction.hpp>
 
 namespace network {
 namespace http {

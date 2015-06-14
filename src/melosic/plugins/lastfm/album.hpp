@@ -23,12 +23,15 @@
 
 #include <network/uri.hpp>
 
-#include "artist.hpp"
-#include "tag.hpp"
+#include <lastfm/lastfm.hpp>
+#include <lastfm/artist.hpp>
+#include <lastfm/shout.hpp>
+#include <lastfm/affiliation.hpp>
 
 namespace lastfm {
 
 struct track;
+struct tag;
 
 struct LASTFM_EXPORT album {
     explicit album() = default;
@@ -48,8 +51,8 @@ struct LASTFM_EXPORT album {
     const std::vector<track>& tracks() const;
     void tracks(std::vector<track>);
 
-    const std::vector<tag>& tags() const;
-    void tags(std::vector<tag>);
+    const std::vector<tag>& top_tags() const;
+    void top_tags(std::vector<tag>);
 
     int listeners() const;
     void listeners(int);
@@ -63,6 +66,9 @@ struct LASTFM_EXPORT album {
     const wiki& wiki() const;
     void wiki(struct wiki);
 
+    const std::vector<shout>& shouts() const;
+    void shouts(std::vector<shout>);
+
     // api methods
 
     static std::future<album> get_info(service&, std::string_view name, std::string_view artist,
@@ -71,21 +77,41 @@ struct LASTFM_EXPORT album {
     std::future<album> get_info(service&, std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                 std::optional<std::string_view> username = std::nullopt) const;
 
+    static std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view name, std::string_view artist,
+                                                               std::string_view countrycode, bool autocorrect = false);
+    std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
+                                                        bool autocorrect = false) const;
+
+    static std::future<std::vector<shout>> get_shouts(service&, std::string_view name, std::string_view artist,
+                                                      bool autocorrect = false);
+    std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false) const;
+
     static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
                                                       bool autocorrect = false);
     std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false) const;
+
+    static std::future<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view artist,
+                                                  std::string_view username, bool autocorrect = false);
+    std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false) const;
+
+    static std::future<std::vector<album>> search(service&, std::string_view name,
+                                                  std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt);
+    std::future<std::vector<album>> search(service&, std::optional<int> limit = std::nullopt,
+                                           std::optional<int> page = std::nullopt) const;
 
   private:
     std::string m_name;
     struct artist m_artist;
     network::uri m_url;
     date_t m_release_date;
-    std::vector<tag> m_tags;
+    std::vector<tag> m_top_tags;
     std::vector<track> m_tracks;
     int m_listeners = 0;
     int m_plays = 0;
     bool m_streamable = false;
     struct wiki m_wiki;
+    std::vector<shout> m_shouts;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& album_elem, album& var) {
@@ -112,13 +138,13 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             var.wiki(jbson::get<wiki>(elem));
         } else if(elem.name() == "releasedate") {
             var.release_date(jbson::get<date_t>(elem));
-        } else if(elem.name() == "toptags") {
+        } else if(elem.name() == "toptags" || elem.name() == "tags") {
             if(elem.type() == jbson::element_type::document_element) {
                 for(auto&& e : jbson::get<jbson::element_type::document_element>(elem))
                     if(e.name() == "tag")
-                        var.tags(jbson::get<std::vector<tag>>(e));
+                        var.top_tags(jbson::get<std::vector<tag>>(e));
             } else {
-                var.tags(jbson::get<std::vector<tag>>(elem));
+                var.top_tags(jbson::get<std::vector<tag>>(elem));
             }
         }
     }

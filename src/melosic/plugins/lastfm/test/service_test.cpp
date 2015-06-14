@@ -9,9 +9,9 @@ using namespace std::literals;
 #include <boost/exception/diagnostic_information.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
-#include "../service.hpp"
-#include "../tag.hpp"
-#include "../track.hpp"
+#include <lastfm/service.hpp>
+#include <lastfm/tag.hpp>
+#include <lastfm/track.hpp>
 
 #include <jbson/json_reader.hpp>
 

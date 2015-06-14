@@ -15,11 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <jbson/path.hpp>
-
-#include "artist.hpp"
-#include "service.hpp"
-#include "tag.hpp"
+#include <lastfm/artist.hpp>
+#include <lastfm/tag.hpp>
+#include <lastfm/service.hpp>
 
 namespace lastfm {
 

@@ -15,8 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include "track.hpp"
-#include "service.hpp"
+#include <lastfm/track.hpp>
+#include <lastfm/tag.hpp>
+#include <lastfm/service.hpp>
 
 namespace lastfm {
 
