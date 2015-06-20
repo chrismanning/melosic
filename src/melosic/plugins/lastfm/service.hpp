@@ -25,6 +25,7 @@
 #include <experimental/string_view>
 
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/hana/ext/std.hpp>
 
 #include <asio/package.hpp>
 #include <asio/post.hpp>
@@ -148,9 +149,9 @@ struct make_params_ {
 
   private:
     template <typename PairT> static decltype(auto) make_param(PairT&& t) {
-        using std::get;
-        constexpr auto to_string = to_string_{};
-        return std::make_tuple(get<0>(t), hana::transform(hana::flatten(std::make_optional(get<1>(t))), to_string));
+        return hana::unpack(std::forward<PairT>(t), [](auto&& a, auto&& b) {
+            return std::make_tuple(std::string{a}, hana::transform(hana::flatten(std::make_optional(b)), to_string_{}));
+        });
     }
 };
 
