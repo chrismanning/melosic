@@ -17,19 +17,11 @@
 
 #include <sstream>
 #include <memory>
-#include <thread>
-#include <mutex>
-using std::mutex;
-using std::lock_guard;
 
-#include <shared_mutex>
-#include <boost/thread/shared_lock_guard.hpp>
 #include <boost/range/algorithm/sort.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <boost/thread/thread.hpp>
-using shared_mutex = std::shared_timed_mutex;
-template <typename Mutex> using shared_lock = boost::shared_lock_guard<Mutex>;
 using namespace boost::range;
 using namespace boost::adaptors;
 using boost::algorithm::hex;
@@ -40,11 +32,6 @@ using boost::algorithm::hex;
 #include <network/uri/uri_builder.hpp>
 #include <network/http/v2/client.hpp>
 
-#include <melosic/melin/logging.hpp>
-#include <melosic/core/playlist.hpp>
-#include <melosic/core/track.hpp>
-#include <melosic/common/error.hpp>
-
 #include <jbson/document.hpp>
 #include <jbson/json_reader.hpp>
 
@@ -54,8 +41,6 @@ using boost::algorithm::hex;
 #include <lastfm/wiki.hpp>
 #include <lastfm/http_client.hpp>
 #include <lastfm/error.hpp>
-
-static Melosic::Logger::Logger logject(logging::keywords::channel = "lastfm::service");
 
 namespace lastfm {
 
@@ -134,16 +119,6 @@ struct service::impl {
     //        return str;
     //    }
 
-    user& setUser(user u) {
-        lock_guard<Mutex> l(mu);
-        return user = std::move(u);
-    }
-
-    user& getUser() {
-        shared_lock<Mutex> l(mu);
-        return user;
-    }
-
     network::http::v0::request make_read_request(std::experimental::string_view method, params_t params) {
         network::uri_builder uri_build{network::uri{std::begin(base_url), std::end(base_url)}};
 
@@ -170,9 +145,6 @@ struct service::impl {
     const std::string api_key;
     const std::string shared_secret;
     user user;
-    std::shared_ptr<track> currentTrack_;
-    typedef shared_mutex Mutex;
-    Mutex mu;
     friend class service;
 };
 
@@ -190,7 +162,7 @@ std::string_view service::shared_secret() const {
     return pimpl->shared_secret;
 }
 
-//Method service::sign(Method method) {
+// Method service::sign(Method method) {
 //    TRACE_LOG(logject) << "Signing method call";
 //    method.getParameters().front().addMember("sk", getUser().getSessionKey());
 //    std::deque<Member> members(method.getParameters().front().getMembers().begin(),
@@ -216,47 +188,19 @@ std::string_view service::shared_secret() const {
 //    return std::move(method);
 //}
 
-network::http::v2::request service::make_read_request(std::experimental::string_view method, params_t params) {
-    return pimpl->make_read_request(method, std::move(params));
-}
-
-std::future<network::http::v2::response> service::get(std::string_view method, params_t params, use_future_t<>) {
-    auto req = pimpl->make_read_request(method, std::move(params));
-    return pimpl->client.execute(req, {}, network::http::v0::use_future);
-}
-
 void service::get(std::string_view method, service::params_t params,
-                  std::function<void(asio::error_code, network::http::v2::response)> callback) {
+                  util::mfunction<void(asio::error_code, std::string)> callback) {
     auto req = pimpl->make_read_request(method, std::move(params));
-    return pimpl->client.execute(req, {}, std::move(callback));
+    return pimpl->client.execute(std::move(req), {}, [c = std::move(callback)](auto error_code, auto response) mutable {
+        return c(error_code, response.body());
+    });
 }
 
-void service::playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist) {
-    //    if(playlist && *playlist)
-    //        trackChangedSlot(*playlist->currentTrack());
-}
-
-void service::trackChangedSlot(const Melosic::Core::Track& newTrack) {
-    //    pimpl->currentTrack_ = std::make_shared<track>(shared_from_this(), newTrack);
-}
-
-std::shared_ptr<track> service::currentTrack() {
-    return pimpl->currentTrack_;
-}
-
-void service::setUser(user u) {
-    pimpl->setUser(std::move(u));
-}
-
-user& service::getUser() {
-    return pimpl->getUser();
-}
-
-jbson::document service::document_callback(asio::error_code ec, network::http::v2::response res) {
+jbson::document service::document_callback(asio::error_code ec, std::string body) {
     if(ec) {
         BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
-    auto doc = jbson::read_json(res.body());
+    auto doc = jbson::read_json(body);
     check_error(doc);
     return doc;
 }

@@ -34,35 +34,14 @@
 #include <asio/post.hpp>
 #include <asio/use_future.hpp>
 
-#include <network/uri.hpp>
-#include <network/http/v2/client.hpp>
-#include <network/http/v2/client/response.hpp>
-
 #include <jbson/document.hpp>
 
 #include <lastfm/lastfm.hpp>
 #include <lastfm/detail/hana_optional.hpp>
 #include <lastfm/detail/transform.hpp>
+#include <lastfm/mfunction.hpp>
 
 namespace hana = boost::hana;
-
-namespace Melosic {
-
-namespace Core {
-class Track;
-class Playlist;
-}
-
-namespace Output {
-enum class DeviceState;
-}
-namespace Slots {
-class Manager;
-}
-namespace Thread {
-class Manager;
-}
-}
 
 namespace lastfm {
 
@@ -73,7 +52,7 @@ struct artist;
 using asio::use_future_t;
 constexpr use_future_t<> use_future{};
 
-class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
+class LASTFM_EXPORT service {
   public:
     using params_t = std::vector<std::tuple<std::string, std::string>>;
 
@@ -81,44 +60,29 @@ class LASTFM_EXPORT service : public std::enable_shared_from_this<service> {
 
     ~service();
 
-    //    Scrobbler scrobbler();
-    user& getUser();
-    void setUser(user u);
-
     std::string_view api_key() const;
     std::string_view shared_secret() const;
-
-    std::shared_ptr<track> currentTrack();
-    void trackChangedSlot(const Melosic::Core::Track& newTrack);
-    void playlistChangeSlot(std::shared_ptr<Melosic::Core::Playlist> playlist);
-
-    network::http::v2::request make_read_request(std::string_view method, params_t params);
-    network::http::v2::request make_write_request(std::string_view method, params_t params);
-
-    std::future<network::http::v2::response> get(std::string_view method, params_t params, use_future_t<>);
 
     template <typename TransformerT, typename ReturnT = std::result_of_t<TransformerT(jbson::document)>>
     std::future<ReturnT> get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform);
 
-    void get(std::string_view method, params_t params,
-             std::function<void(asio::error_code, network::http::v2::response)> callback);
+    void get(std::string_view method, params_t params, util::mfunction<void(asio::error_code, std::string)> callback);
 
-    template <typename T, typename ContinueT>
-    auto then(std::future<T> fut, ContinueT&& continuation);
+    template <typename T, typename ContinueT> auto then(std::future<T> fut, ContinueT&& continuation);
 
   private:
-    static jbson::document document_callback(asio::error_code, network::http::v2::response);
+    static jbson::document document_callback(asio::error_code, std::string);
 
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
 
-template <typename T, typename ContinueT>
-auto service::then(std::future<T> fut, ContinueT&& continuation) {
-    return asio::post(asio::package([fut=std::move(fut), continuation=std::forward<ContinueT>(continuation)]() mutable {
-        fut.wait();
-        return continuation(std::move(fut));
-    }));
+template <typename T, typename ContinueT> auto service::then(std::future<T> fut, ContinueT&& continuation) {
+    return asio::post(
+        asio::package([ fut = std::move(fut), continuation = std::forward<ContinueT>(continuation) ]() mutable {
+            fut.wait();
+            return continuation(std::move(fut));
+        }));
 }
 
 template <typename TransformerT, typename ReturnT>
@@ -127,14 +91,14 @@ std::future<ReturnT> service::get(std::string_view method, params_t params, use_
     using ret_t = ReturnT;
 
     struct transformer_wrapper {
-        void operator()(asio::error_code ec, network::http::v2::response res) const {
+        void operator()(asio::error_code ec, std::string body) const {
             if(ec) {
                 m_promise->set_exception(std::make_exception_ptr(std::system_error(ec)));
                 return;
             }
 
             try {
-                auto doc = document_callback(ec, std::move(res));
+                auto doc = document_callback(ec, std::move(body));
 
                 m_promise->set_value(transform(doc));
             } catch(...) {
@@ -162,10 +126,15 @@ struct to_string_ {
         ss << std::put_time(std::gmtime(&time), "%a, %d %b %Y %H:%M:%S");
         return ss.str();
     }
-    inline std::string operator()(std::string_view s) const { return s.to_string(); }
-    inline std::string operator()(std::string s) const { return std::move(s); }
-    template <typename N>
-    inline std::string operator()(N&& i) const { return ::std::to_string(i); }
+    inline std::string operator()(std::string_view s) const {
+        return s.to_string();
+    }
+    inline std::string operator()(std::string s) const {
+        return std::move(s);
+    }
+    template <typename N> inline std::string operator()(N&& i) const {
+        return ::std::to_string(i);
+    }
 };
 
 struct make_params_ {
@@ -179,7 +148,8 @@ struct make_params_ {
         }
         return params;
     }
-private:
+
+  private:
     template <typename PairT> static decltype(auto) make_param(PairT&& t) {
         using std::get;
         constexpr auto to_string = to_string_{};

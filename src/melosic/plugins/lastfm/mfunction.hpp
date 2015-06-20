@@ -29,7 +29,6 @@ template <typename Ret, typename... Args>
 class mfunction<Ret(Args...)> {
     struct function_base {
         virtual Ret invoke(Args...) const = 0;
-        virtual Ret invoke(Args...) = 0;
     };
     std::unique_ptr<function_base> fun_base;
 
@@ -40,15 +39,10 @@ class mfunction<Ret(Args...)> {
         template <typename Fun_>
         function_impl(Fun_&& fun) : fun(std::forward<Fun_>(fun)) {}
 
-        Ret invoke(Args... args) const {
+        Ret invoke(Args... args) const override {
             return fun(std::forward<Args>(args)...);
         }
-
-        Ret invoke(Args... args) {
-            return fun(std::forward<Args>(args)...);
-        }
-
-        function_t fun;
+        mutable function_t fun;
     };
 
   public:
