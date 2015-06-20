@@ -29,31 +29,32 @@
 
 #include <jbson/json_reader.hpp>
 
+#include <lastfm/album.hpp>
 #include <lastfm/track.hpp>
 #include <lastfm/tag.hpp>
 
-TEST_CASE("track_deserialise") {
+TEST_CASE("album_deserialise") {
     boost::filesystem::path test_dir{MELOSIC_TEST_DATA_DIR};
     SECTION("get_info") {
-        boost::filesystem::ifstream is{test_dir/"track_getinfo.json"};
-        std::string track_json;
-        REQUIRE(std::getline(is, track_json, static_cast<char>(EOF)));
+        boost::filesystem::ifstream is{test_dir/"album_getinfo.json"};
+        std::string album_json;
+        REQUIRE(std::getline(is, album_json, static_cast<char>(EOF)));
 
-        auto doc = jbson::read_json(track_json);
+        auto doc = jbson::read_json(album_json);
         REQUIRE(boost::size(doc) == 1);
 
-        auto track_elem = *doc.begin();
+        auto album_elem = *doc.begin();
 
-        lastfm::track track;
-        REQUIRE_NOTHROW(track = jbson::get<lastfm::track>(track_elem));
+        lastfm::album album;
+        REQUIRE_NOTHROW(album = jbson::get<lastfm::album>(album_elem));
 
-        CHECK(track.name() == "Master of Puppets");
-        CHECK(track.artist().name() == "Metallica");
-        CHECK(track.album().name() == "Master of Puppets");
-        CHECK(track.tracknumber() == 2);
-        REQUIRE(track.top_tags().size() > 0);
-        CHECK(track.top_tags().front().name() == "thrash metal");
-        CHECK_FALSE(track.streamable());
-        CHECK(track.wiki().summary().size() > 0);
+        CHECK(album.name() == "Master of Puppets");
+        CHECK(album.artist().name() == "Metallica");
+        REQUIRE(album.top_tags().size() > 0);
+        CHECK(album.top_tags().front().name() == "thrash metal");
+        CHECK_FALSE(album.streamable());
+        CHECK(album.tracks().size() > 0);
+        REQUIRE(album.images().size() > 0);
+        CHECK(album.images().back().size() != lastfm::image_size::small);
     }
 }

@@ -27,6 +27,7 @@
 #include <lastfm/artist.hpp>
 #include <lastfm/shout.hpp>
 #include <lastfm/affiliation.hpp>
+#include <lastfm/image.hpp>
 
 namespace lastfm {
 
@@ -68,6 +69,9 @@ struct LASTFM_EXPORT album {
 
     const std::vector<shout>& shouts() const;
     void shouts(std::vector<shout>);
+
+    const std::vector<image>& images() const;
+    void images(std::vector<image>);
 
     // api methods
 
@@ -112,6 +116,7 @@ struct LASTFM_EXPORT album {
     bool m_streamable = false;
     struct wiki m_wiki;
     std::vector<shout> m_shouts;
+    std::vector<image> m_images;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& album_elem, album& var) {
@@ -146,6 +151,16 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             } else {
                 var.top_tags(jbson::get<std::vector<tag>>(elem));
             }
+        } else if(elem.name() == "tracks") {
+            if(elem.type() == jbson::element_type::document_element) {
+                for(auto&& e : jbson::get<jbson::element_type::document_element>(elem))
+                    if(e.name() == "track")
+                        var.tracks(jbson::get<std::vector<track>>(e));
+            } else {
+                var.tracks(jbson::get<std::vector<track>>(elem));
+            }
+        } else if(elem.name() == "image") {
+            var.images(jbson::get<std::vector<image>>(elem));
         }
     }
 }

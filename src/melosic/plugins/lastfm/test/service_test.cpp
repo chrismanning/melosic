@@ -78,7 +78,7 @@ TEST_CASE("get_artist") {
     std::clog << std::put_time(std::gmtime(&published), "%a %d %b %Y %H:%M:%S") << std::endl;
 
     CHECK(artist.similar().size() > 0);
-    CHECK(artist.tags().size() > 0);
+    CHECK(artist.top_tags().size() > 0);
 }
 
 TEST_CASE("get_artist_then") {
@@ -105,7 +105,7 @@ TEST_CASE("get_artist_then") {
         std::clog << std::put_time(std::gmtime(&published), "%a %d %b %Y %H:%M:%S") << std::endl;
 
         CHECK(artist.similar().size() > 0);
-        CHECK(artist.tags().size() > 0);
+        CHECK(artist.top_tags().size() > 0);
     }).wait();
 }
 
@@ -132,7 +132,7 @@ TEST_CASE("get_track") {
     std::clog << std::put_time(std::gmtime(&published), "%a %d %b %Y %H:%M:%S") << std::endl;
 
     CHECK(track.similar().size() == 0);
-    CHECK(track.tags().size() > 0);
+    CHECK(track.top_tags().size() > 0);
     }
     catch(...) {
         std::clog << boost::current_exception_diagnostic_information();

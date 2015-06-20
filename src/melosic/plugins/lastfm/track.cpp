@@ -61,11 +61,11 @@ void track::duration(std::chrono::milliseconds duration) {
     m_duration = duration;
 }
 
-const std::vector<tag>& track::tags() const {
+const std::vector<tag>& track::top_tags() const {
     return m_tags;
 }
 
-void track::tags(std::vector<tag> tags) {
+void track::top_tags(std::vector<tag> tags) {
     m_tags = std::move(tags);
 }
 

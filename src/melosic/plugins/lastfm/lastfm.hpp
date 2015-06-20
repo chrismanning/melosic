@@ -31,6 +31,10 @@
 
 namespace lastfm {
 
+constexpr std::string_view operator""_sv(const char* str, size_t len) {
+    return {str, len};
+}
+
 using date_t = std::chrono::system_clock::time_point;
 
 } // namespace lastfm

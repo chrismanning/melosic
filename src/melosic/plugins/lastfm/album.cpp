@@ -110,6 +110,14 @@ void album::shouts(std::vector<shout> shouts) {
     m_shouts = std::move(shouts);
 }
 
+const std::vector<image>& album::images() const {
+    return m_images;
+}
+
+void album::images(std::vector<image> images) {
+    m_images = std::move(images);
+}
+
 std::future<album> album::get_info(service& serv, std::string_view name, std::string_view artist,
                                    std::optional<std::string_view> lang, bool autocorrect,
                                    std::optional<std::string_view> username) {

@@ -10,5 +10,11 @@ target_link_libraries(service_test ${LINK_LIBS} ${PROJECT_NAME}lib ssl crypto ne
 set_property(TARGET service_test APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
 set_property(TARGET service_test APPEND PROPERTY COMPILE_DEFINITIONS MELOSIC_DISABLE_LOGGING)
 
-cxx_test(lastfm_track_test)
-target_link_libraries(lastfm_track_test ${LASTFM})
+function(lastfm_cxx_test test_name)
+    cxx_test(${test_name})
+    target_link_libraries(${test_name} ${LASTFM})
+endfunction()
+
+lastfm_cxx_test(lastfm_track_test)
+lastfm_cxx_test(lastfm_album_test)
+lastfm_cxx_test(lastfm_artist_test)

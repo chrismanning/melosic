@@ -44,14 +44,6 @@ using boost::algorithm::hex;
 
 namespace lastfm {
 
-constexpr std::string_view operator""_sv(const char* str, size_t len) {
-    return {str, len};
-}
-
-static_assert((""_sv).size() == 0, "");
-static_assert((" "_sv).size() == 1, "");
-static_assert(("  "_sv).size() == 2, "");
-
 static constexpr auto base_url = "http://ws.audioscrobbler.com/2.0/"_sv;
 
 struct service::impl {

@@ -45,8 +45,8 @@ struct LASTFM_EXPORT track {
     std::chrono::milliseconds duration() const;
     void duration(std::chrono::milliseconds);
 
-    const std::vector<tag>& tags() const;
-    void tags(std::vector<tag>);
+    const std::vector<tag>& top_tags() const;
+    void top_tags(std::vector<tag>);
 
     const std::vector<track>& similar() const;
     void similar(std::vector<track>);
@@ -104,13 +104,13 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
                 auto str = jbson::get<jbson::element_type::string_element>(*num);
                 var.tracknumber(std::strtol(str.data(), nullptr, 10));
             }
-        } else if(elem.name() == "toptags") {
+        } else if(elem.name() == "toptags" || elem.name() == "tags") {
             if(elem.type() == jbson::element_type::document_element) {
                 for(auto&& e : jbson::get<jbson::element_type::document_element>(elem))
                     if(e.name() == "tag")
-                        var.tags(jbson::get<std::vector<tag>>(e));
+                        var.top_tags(jbson::get<std::vector<tag>>(e));
             } else {
-                var.tags(jbson::get<std::vector<tag>>(elem));
+                var.top_tags(jbson::get<std::vector<tag>>(elem));
             }
         } else if(elem.name() == "similar") {
             if(elem.type() == jbson::element_type::document_element) {

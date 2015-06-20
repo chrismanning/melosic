@@ -20,6 +20,7 @@
 
 #include <lastfm/lastfm.hpp>
 #include <lastfm/wiki.hpp>
+#include <lastfm/image.hpp>
 //#include <lastfm/tag.hpp>
 
 namespace lastfm {
@@ -39,8 +40,8 @@ struct LASTFM_EXPORT artist {
     const std::vector<artist>& similar() const;
     void similar(std::vector<artist>);
 
-    const std::vector<tag>& tags() const;
-    void tags(std::vector<tag>);
+    const std::vector<tag>& top_tags() const;
+    void top_tags(std::vector<tag>);
 
     int listeners() const;
     void listeners(int);
@@ -54,6 +55,9 @@ struct LASTFM_EXPORT artist {
     const wiki& wiki() const;
     void wiki(struct wiki);
 
+    const std::vector<image>& images() const;
+    void images(std::vector<image>);
+
     // api methods
 
     static std::future<artist> get_info(service&, std::string_view name,
@@ -63,7 +67,13 @@ struct LASTFM_EXPORT artist {
                                  bool autocorrect = false,
                                  std::optional<std::string_view> username = std::nullopt) const;
 
-    std::future<std::vector<artist>> get_similar(service&) const;
+    static std::future<artist> get_correction(service&, std::string_view name);
+    std::future<artist> get_correction(service&) const;
+
+    static std::future<std::vector<artist>> get_similar(service&, std::string_view name, bool autocorrect = false,
+                                                        std::optional<int> limit = std::nullopt);
+    std::future<std::vector<artist>> get_similar(service&, bool autocorrect = false,
+                                                 std::optional<int> limit = std::nullopt) const;
 
   private:
     std::string m_name;
@@ -74,6 +84,7 @@ struct LASTFM_EXPORT artist {
     int m_plays = 0;
     bool m_streamable = false;
     struct wiki m_wiki;
+    std::vector<image> m_images;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& artist_elem, artist& var) {
@@ -102,14 +113,16 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             } else {
                 var.similar(jbson::get<std::vector<artist>>(elem));
             }
-        } else if(elem.name() == "tags") {
+        } else if(elem.name() == "tags" || elem.name() == "toptags") {
             if(elem.type() == jbson::element_type::document_element) {
                 for(auto&& e : jbson::get<jbson::element_type::document_element>(elem))
                     if(e.name() == "tag")
-                        var.tags(jbson::get<std::vector<tag>>(e));
+                        var.top_tags(jbson::get<std::vector<tag>>(e));
             } else {
-                var.tags(jbson::get<std::vector<tag>>(elem));
+                var.top_tags(jbson::get<std::vector<tag>>(elem));
             }
+        } else if(elem.name() == "image") {
+            var.images(jbson::get<std::vector<image>>(elem));
         }
     }
 }

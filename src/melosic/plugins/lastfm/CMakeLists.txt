@@ -14,6 +14,7 @@ SET(SRC ${SRC} error.cpp)
 SET(SRC ${SRC} wiki.cpp)
 SET(SRC ${SRC} shout.cpp)
 SET(SRC ${SRC} affiliation.cpp)
+SET(SRC ${SRC} image.cpp)
 SET(SRC ${SRC} http_client.cpp)
 
 FILE(GLOB_RECURSE LASTFM_COMMON_SRC_LIST *.hpp)

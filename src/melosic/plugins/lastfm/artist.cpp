@@ -45,11 +45,11 @@ void artist::similar(std::vector<artist> similar) {
     m_similar = std::move(similar);
 }
 
-const std::vector<tag>& artist::tags() const {
+const std::vector<tag>& artist::top_tags() const {
     return m_tags;
 }
 
-void artist::tags(std::vector<tag> tags) {
+void artist::top_tags(std::vector<tag> tags) {
     m_tags = std::move(tags);
 }
 
@@ -85,6 +85,14 @@ void artist::wiki(struct wiki wiki) {
     m_wiki = wiki;
 }
 
+const std::vector<image>& artist::images() const {
+    return m_images;
+}
+
+void artist::images(std::vector<image> images) {
+    m_images = std::move(images);
+}
+
 std::future<artist> artist::get_info(service& serv, std::string_view name, std::optional<std::string_view> lang,
                                      bool autocorrect, std::optional<std::string_view> username) {
     return serv.get("artist.getinfo",
@@ -96,6 +104,26 @@ std::future<artist> artist::get_info(service& serv, std::string_view name, std::
 std::future<artist> artist::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
                                      std::optional<std::string_view> username) const {
     return get_info(serv, m_name, lang, autocorrect, username);
+}
+
+std::future<artist> artist::get_correction(service& serv, std::string_view name) {
+    return serv.get("artist.getcorrection", make_params(std::make_pair("artist", name)), use_future,
+                    transform_select<artist>("corrections.correction.artist"));
+}
+
+std::future<artist> artist::get_correction(service& serv) const {
+    return get_correction(serv, m_name);
+}
+
+std::future<std::vector<artist>> artist::get_similar(service& serv, std::string_view name, bool autocorrect,
+                                                     std::optional<int> limit) {
+    return serv.get("artist.getsimilar",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit)),
+                    use_future, transform_select<std::vector<artist>>("similarartists.artist"));
+}
+
+std::future<std::vector<artist>> artist::get_similar(service& serv, bool autocorrect, std::optional<int> limit) const {
 }
 
 } // namespace lastfm
