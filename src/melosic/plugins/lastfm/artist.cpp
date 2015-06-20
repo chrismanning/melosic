@@ -124,6 +124,7 @@ std::future<std::vector<artist>> artist::get_similar(service& serv, std::string_
 }
 
 std::future<std::vector<artist>> artist::get_similar(service& serv, bool autocorrect, std::optional<int> limit) const {
+    return get_similar(serv, m_name, autocorrect, limit);
 }
 
 } // namespace lastfm

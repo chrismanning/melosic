@@ -20,15 +20,11 @@
 
 #include <string>
 #include <memory>
-#include <map>
 #include <vector>
 #include <future>
-#include <thread>
 #include <experimental/string_view>
 
-#include <boost/range/iterator_range.hpp>
-#include <boost/range/adaptor/filtered.hpp>
-#include <boost/range/algorithm/find_if.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <asio/package.hpp>
 #include <asio/post.hpp>
@@ -133,7 +129,8 @@ struct to_string_ {
         return std::move(s);
     }
     template <typename N> inline std::string operator()(N&& i) const {
-        return ::std::to_string(i);
+        using ::std::to_string;
+        return to_string(i);
     }
 };
 

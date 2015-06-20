@@ -23,6 +23,8 @@
 
 #include <network/uri.hpp>
 
+#include <boost/uuid/uuid.hpp>
+
 #include <lastfm/lastfm.hpp>
 #include <lastfm/artist.hpp>
 #include <lastfm/shout.hpp>
@@ -73,8 +75,14 @@ struct LASTFM_EXPORT album {
     const std::vector<image>& images() const;
     void images(std::vector<image>);
 
+    boost::uuids::uuid mbid() const;
+    void mbid(boost::uuids::uuid);
+
     // api methods
 
+    static std::future<album> get_info(service&, boost::uuids::uuid mbid,
+                                       std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                       std::optional<std::string_view> username = std::nullopt);
     static std::future<album> get_info(service&, std::string_view name, std::string_view artist,
                                        std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                        std::optional<std::string_view> username = std::nullopt);
@@ -117,6 +125,7 @@ struct LASTFM_EXPORT album {
     struct wiki m_wiki;
     std::vector<shout> m_shouts;
     std::vector<image> m_images;
+    boost::uuids::uuid m_mbid{{0}};
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& album_elem, album& var) {

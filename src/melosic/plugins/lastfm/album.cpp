@@ -118,6 +118,22 @@ void album::images(std::vector<image> images) {
     m_images = std::move(images);
 }
 
+boost::uuids::uuid album::mbid() const {
+    return m_mbid;
+}
+
+void album::mbid(boost::uuids::uuid mbid) {
+    m_mbid = mbid;
+}
+
+std::future<album> album::get_info(service& serv, boost::uuids::uuid mbid, std::optional<std::string_view> lang,
+                                   bool autocorrect, std::optional<std::string_view> username) {
+    return serv.get("album.getinfo",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("lang", lang),
+                                std::make_pair("autocorrect", autocorrect), std::make_pair("username", username)),
+                    use_future, transform_select<album>("album"));
+}
+
 std::future<album> album::get_info(service& serv, std::string_view name, std::string_view artist,
                                    std::optional<std::string_view> lang, bool autocorrect,
                                    std::optional<std::string_view> username) {
@@ -130,6 +146,8 @@ std::future<album> album::get_info(service& serv, std::string_view name, std::st
 
 std::future<album> album::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
                                    std::optional<std::string_view> username) const {
+    if(!m_mbid.is_nil())
+        return get_info(serv, m_mbid, lang, autocorrect, username);
     return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
