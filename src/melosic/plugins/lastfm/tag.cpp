@@ -17,8 +17,6 @@
 
 #include <jbson/path.hpp>
 
-#include <boost/hana/ext/std/tuple.hpp>
-
 #include <lastfm/tag.hpp>
 #include <lastfm/artist.hpp>
 #include <lastfm/album.hpp>
@@ -136,11 +134,8 @@ std::future<std::vector<artist>> tag::get_weekly_artist_chart(service& serv, std
                                                               std::optional<std::tuple<date_t, date_t>> date_range,
                                                               std::optional<int> limit) {
     std::optional<date_t> from, to;
-    auto lift_tuple = [](auto&& opt_tuple) {
-        return hana::transform(std::forward<decltype(opt_tuple)>(opt_tuple), hana::lift<hana::ext::std::Optional>);
-    };
-    auto tie_date_range = [&](auto&& tuple_opt) { std::tie(from, to) = std::forward<decltype(tuple_opt)>(tuple_opt); };
-    hana::transform(date_range, hana::compose(tie_date_range, lift_tuple));
+    if(date_range)
+        std::tie(from, to) = *date_range;
 
     return serv.get("tag.getweeklyartistchart", make_params(std::make_tuple("tag", name), std::make_tuple("from", from),
                                                             std::make_tuple("to", to), std::make_tuple("limit", limit)),
