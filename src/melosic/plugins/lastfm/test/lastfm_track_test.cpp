@@ -30,6 +30,7 @@
 #include <jbson/json_reader.hpp>
 
 #include <lastfm/track.hpp>
+#include <lastfm/tag.hpp>
 
 TEST_CASE("deserialise") {
     boost::filesystem::path test_dir{MELOSIC_TEST_DATA_DIR};
