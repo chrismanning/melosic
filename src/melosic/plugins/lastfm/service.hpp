@@ -137,18 +137,18 @@ struct to_string_ {
 
 struct make_params_ {
     template <typename... PairT> service::params_t operator()(PairT&&... optional_params) const {
-        service::params_t params;
-        for(auto&& param : {make_param(optional_params)...}) {
-            auto& name = std::get<0>(param);
-            auto& maybe = std::get<1>(param);
-            if(maybe && !maybe->empty())
-                params.emplace_back(name, *maybe);
+        service::params_t params{};
+        for(auto&& param : {make_param(std::forward<PairT>(optional_params))...}) {
+            hana::unpack(std::forward<decltype(param)>(param), [&](auto&& name, auto&& maybe) {
+                if(maybe && !maybe->empty())
+                    params.emplace_back(std::move(name), *std::move(maybe));
+            });
         }
         return params;
     }
 
   private:
-    template <typename PairT> static decltype(auto) make_param(PairT&& t) {
+    template <typename PairT> static std::tuple<std::string, std::optional<std::string>> make_param(PairT&& t) {
         return hana::unpack(std::forward<PairT>(t), [](auto&& a, auto&& b) {
             return std::make_tuple(std::string{a}, hana::transform(hana::flatten(std::make_optional(b)), to_string_{}));
         });
