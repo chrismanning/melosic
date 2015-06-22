@@ -1,0 +1,211 @@
+{
+  "album": {
+    "name": "Master of Puppets",
+    "artist": "Metallica",
+    "id": "1411810",
+    "mbid": "6c6a6ccb-fd2b-4e93-88bb-78adc7be1d3e",
+    "url": "http://www.last.fm/music/Metallica/Master+of+Puppets",
+    "releasedate": "    28 May 2004, 00:00",
+    "image": [
+      {
+        "#text": "http://userserve-ak.last.fm/serve/34s/97432289.png",
+        "size": "small"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/64s/97432289.png",
+        "size": "medium"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/174s/97432289.png",
+        "size": "large"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/300x300/97432289.png",
+        "size": "extralarge"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/_/97432289/Master+of+Puppets.png",
+        "size": "mega"
+      }
+    ],
+    "listeners": "836737",
+    "playcount": "18744868",
+    "tracks": {
+      "track": [
+        {
+          "name": "Battery",
+          "duration": "312",
+          "mbid": "464c11c2-222d-425c-91d1-e3f69f3110cc",
+          "url": "http://www.last.fm/music/Metallica/_/Battery",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "1"
+          }
+        },
+        {
+          "name": "Master of Puppets",
+          "duration": "514",
+          "mbid": "945f0942-2200-4aff-9cc3-dcfeb662acdc",
+          "url": "http://www.last.fm/music/Metallica/_/Master+of+Puppets",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "2"
+          }
+        },
+        {
+          "name": "The Thing That Should Not Be",
+          "duration": "394",
+          "mbid": "606e8e80-1f0f-4e87-82f4-17140bbb4502",
+          "url": "http://www.last.fm/music/Metallica/_/The+Thing+That+Should+Not+Be",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "3"
+          }
+        },
+        {
+          "name": "Welcome Home (Sanitarium) (Sanitarium)",
+          "duration": "387",
+          "mbid": "",
+          "url": "http://www.last.fm/music/Metallica/_/Welcome+Home+(Sanitarium)+(Sanitarium)",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "4"
+          }
+        },
+        {
+          "name": "Disposable Heroes",
+          "duration": "496",
+          "mbid": "27cef818-2c1e-4de0-a5f9-9de1d04e9bad",
+          "url": "http://www.last.fm/music/Metallica/_/Disposable+Heroes",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "5"
+          }
+        },
+        {
+          "name": "Leper Messiah",
+          "duration": "340",
+          "mbid": "4fb5a3f4-1a13-42ad-ac6e-a4ab00284828",
+          "url": "http://www.last.fm/music/Metallica/_/Leper+Messiah",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "6"
+          }
+        },
+        {
+          "name": "Orion",
+          "duration": "506",
+          "mbid": "073544e7-f647-43cf-8c6e-a4e44a6d3b57",
+          "url": "http://www.last.fm/music/Metallica/_/Orion",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "7"
+          }
+        },
+        {
+          "name": "Damage Inc.",
+          "duration": "332",
+          "mbid": "fd0f73b2-6605-48ec-ad74-52beb00d775b",
+          "url": "http://www.last.fm/music/Metallica/_/Damage+Inc.",
+          "streamable": {
+            "#text": "0",
+            "fulltrack": "0"
+          },
+          "artist": {
+            "name": "Metallica",
+            "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+            "url": "http://www.last.fm/music/Metallica"
+          },
+          "@attr": {
+            "rank": "8"
+          }
+        }
+      ]
+    },
+    "toptags": {
+      "tag": [
+        {
+          "name": "thrash metal",
+          "url": "http://www.last.fm/tag/thrash%20metal"
+        },
+        {
+          "name": "albums i own",
+          "url": "http://www.last.fm/tag/albums%20i%20own"
+        },
+        {
+          "name": "metal",
+          "url": "http://www.last.fm/tag/metal"
+        },
+        {
+          "name": "heavy metal",
+          "url": "http://www.last.fm/tag/heavy%20metal"
+        },
+        {
+          "name": "favourite albums",
+          "url": "http://www.last.fm/tag/favourite%20albums"
+        }
+      ]
+    },
+    "wiki": {
+      "published": "Tue, 23 Dec 2008 04:54:18 +0000",
+      "summary": "Master of Puppets is the third studio album by American heavy metal band <a href=\"http://www.last.fm/music/Metallica\" class=\"bbcode_artist\">Metallica</a>. The album was recorded in 1985 and released by Elektra Records on March 3, 1986 in North America.  Now widely considered a classic of thrash metal, the album proved to be a modest commercial success upon its release by reaching #29 on the U.S. Billboard 200, making it the very first thrash metal album to crack the Top 40.",
+      "content": "Master of Puppets is the third studio album by American heavy metal band <a href=\"http://www.last.fm/music/Metallica\" class=\"bbcode_artist\">Metallica</a>. The album was recorded in 1985 and released by Elektra Records on March 3, 1986 in North America.\n \n Now widely considered a classic of thrash metal, the album proved to be a modest commercial success upon its release by reaching #29 on the U.S. Billboard 200, making it the very first thrash metal album to crack the Top 40. With the band's rising popularity from the release of Metallica, awareness of the album has increased, and according to the RIAA, it has sold over six million copies in the U.S. alone. It was the last album the band recorded with bass player Cliff Burton, who died in a tour bus crash six months after it was released.\n \n Historical significance\n \n The band's line-up during the album's recording was James Hetfield on vocals and rhythm guitar, Lars Ulrich on drums, Kirk Hammett on lead guitar, and Cliff Burton on bass. The album is remembered in part due to the death of Burton shortly after the release of the album in a bus accident while supporting the album on tour.\n \n When it was released, Master of Puppets provided many metal fans with an alternative image to the commercially popular glam metal bands, such as <a href=\"http://www.last.fm/music/Poison\" class=\"bbcode_artist\">Poison</a>, <a href=\"http://www.last.fm/music/Bon+Jovi\" class=\"bbcode_artist\">Bon Jovi</a>,<a href=\"http://www.last.fm/music/M%C3%B6tley+Cr%C3%BCe\" class=\"bbcode_artist\">M&ouml;tley Cr&uuml;e</a>, and <a href=\"http://www.last.fm/music/Ratt\" class=\"bbcode_artist\">Ratt</a>. The album has frequently been tagged by critics as &quot;one of the most influential heavy metal albums of all time.&quot;\n \n As an early parody of the PMRC's &quot;explicit lyrics&quot; warning labels, many prints of Metallica's 1986 release of Master of Puppets sported a sticker on the front in the shape of a stop-sign saying:\n \n     &quot;The only track you probably won't want to play is &quot;Damage, Inc.&quot; due to the multiple use of the infamous &quot;F&quot; word. otherwise, there aren't any &quot;Shits,&quot; &quot;Fucks,&quot; &quot;Pisses,&quot; &quot;Sucks,&quot; &quot;Cunts,&quot; &quot;Motherfuckers,&quot; or &quot;Cocksuckers&quot; anywhere on this record&quot;\n \n To celebrate the 20th anniversary of its release, Metallica played the album in its entirety on their Escape from the Studio '06 tour, for the first time ever at the Rock am Ring festival on June 3, 2006. These concerts included the first-ever complete performances of the instrumental &quot;Orion&quot; (though portions of the song's lengthy middle section had been performed at various times as part of instrumental medleys and bass solos since the early 1990s).\n \n The title track was ranked Number 51 in the &quot;The Greatest Guitar Solos&quot; from Guitar World. In 2006, the album was voted the fourth &quot;greatest guitar album of all time&quot; in Guitar World. And the April 5, edition of Kerrang! was dedicated to it, providing readers with the cover album &quot;Master of Puppets: Remastered&quot;. In March 2007, the guitar magazine Total Guitar ranked the 100 greatest riffs of all time, and the main riff in the album's title track was ranked number one.\n \n Former Metallica guitarist Dave Mustaine has long claimed to have written the riff for &quot;Leper Messiah&quot;. Metallica has denied it.\n \n In 1999, Master of Puppets was re-released with Ride the Lightning in a remastered audiophile Gold CD edition mixed by renowned engineer Steve Hoffman.\n \n Reception\n \n Upon its release, Master of Puppets was immediately commercially successful, selling over half a million copies at its time of release without any major video/radio airplay, making it the band's first record to be certified Gold by the RIAA.\n \n According to Allmusic's Steve Huey, Master of Puppets &quot;was the band's greatest achievement.&quot; &quot;Some critics have called Master of Puppets the best heavy metal album ever recorded&quot;, Huey noted. Master of Puppets has featured on several &quot;greatest albums of all time&quot; lists. The album is present in a list dubbed &quot;The All-TIME 100 Albums&quot; and published by TIME magazine in November 2006. In TIME critic Josh Tyrangiel's opinion, &quot;Metallica didn't bother with hooks or pop discipline&quot; in writing Master of Puppets. Metal Rules rated the album as being number one in a list of the &quot;Top 100 Heavy Metal Albums&quot; published in September 2003, whereas IGN also rated the album as being at first position in a list of the &quot;Top 25 Metal Albums&quot; issued in January 2007. It is included in the book 1001 Albums You Must Hear Before You Die, and Q magazine counted it among the 50 heaviest albums of all time. In 2003, the album was ranked number 167 on Rolling Stone magazine's list of the 500 greatest albums of all time.\n \n        \nUser-contributed text is available under the Creative Commons By-SA License and may also be available under the GNU FDL."
+    }
+  }
+}

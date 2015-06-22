@@ -1,0 +1,233 @@
+{
+  "artist": {
+    "name": "Metallica",
+    "mbid": "65f4f0c5-ef9e-490c-aee3-909e7ae6b2ab",
+    "bandmembers": {
+      "member": [
+        {
+          "name": "James Hetfield",
+          "yearfrom": "1981"
+        },
+        {
+          "name": "Lars Ulrich",
+          "yearfrom": "1981"
+        },
+        {
+          "name": "Kirk Hammett",
+          "yearfrom": "1983"
+        },
+        {
+          "name": "Robert Trujillo",
+          "yearfrom": "2003"
+        }
+      ]
+    },
+    "url": "http://www.last.fm/music/Metallica",
+    "image": [
+      {
+        "#text": "http://userserve-ak.last.fm/serve/34/217427.jpg",
+        "size": "small"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/64/217427.jpg",
+        "size": "medium"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/126/217427.jpg",
+        "size": "large"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/252/217427.jpg",
+        "size": "extralarge"
+      },
+      {
+        "#text": "http://userserve-ak.last.fm/serve/500/217427/Metallica.jpg",
+        "size": "mega"
+      }
+    ],
+    "streamable": "0",
+    "ontour": "1",
+    "stats": {
+      "listeners": "2676943",
+      "playcount": "246132457"
+    },
+    "similar": {
+      "artist": [
+        {
+          "name": "Megadeth",
+          "url": "http://www.last.fm/music/Megadeth",
+          "image": [
+            {
+              "#text": "http://userserve-ak.last.fm/serve/34/100238499.jpg",
+              "size": "small"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/64/100238499.jpg",
+              "size": "medium"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/126/100238499.jpg",
+              "size": "large"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/252/100238499.jpg",
+              "size": "extralarge"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/500/100238499/Megadeth+1604698_10152029114187330_5803.jpg",
+              "size": "mega"
+            }
+          ]
+        },
+        {
+          "name": "Pantera",
+          "url": "http://www.last.fm/music/Pantera",
+          "image": [
+            {
+              "#text": "http://userserve-ak.last.fm/serve/34/6264889.jpg",
+              "size": "small"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/64/6264889.jpg",
+              "size": "medium"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/126/6264889.jpg",
+              "size": "large"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/252/6264889.jpg",
+              "size": "extralarge"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/500/6264889/Pantera+6ecb5ef41907.jpg",
+              "size": "mega"
+            }
+          ]
+        },
+        {
+          "name": "Iron Maiden",
+          "url": "http://www.last.fm/music/Iron+Maiden",
+          "image": [
+            {
+              "#text": "http://userserve-ak.last.fm/serve/34/427749.jpg",
+              "size": "small"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/64/427749.jpg",
+              "size": "medium"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/126/427749.jpg",
+              "size": "large"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/252/427749.jpg",
+              "size": "extralarge"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/500/427749/Iron+Maiden.jpg",
+              "size": "mega"
+            }
+          ]
+        },
+        {
+          "name": "Slayer",
+          "url": "http://www.last.fm/music/Slayer",
+          "image": [
+            {
+              "#text": "http://userserve-ak.last.fm/serve/34/10447745.jpg",
+              "size": "small"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/64/10447745.jpg",
+              "size": "medium"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/126/10447745.jpg",
+              "size": "large"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/252/10447745.jpg",
+              "size": "extralarge"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/_/10447745/Slayer.jpg",
+              "size": "mega"
+            }
+          ]
+        },
+        {
+          "name": "Anthrax",
+          "url": "http://www.last.fm/music/Anthrax",
+          "image": [
+            {
+              "#text": "http://userserve-ak.last.fm/serve/34/58062977.jpg",
+              "size": "small"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/64/58062977.jpg",
+              "size": "medium"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/126/58062977.jpg",
+              "size": "large"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/252/58062977.jpg",
+              "size": "extralarge"
+            },
+            {
+              "#text": "http://userserve-ak.last.fm/serve/500/58062977/Anthrax+_2803.jpg",
+              "size": "mega"
+            }
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "tag": [
+        {
+          "name": "thrash metal",
+          "url": "http://www.last.fm/tag/thrash%20metal"
+        },
+        {
+          "name": "metal",
+          "url": "http://www.last.fm/tag/metal"
+        },
+        {
+          "name": "heavy metal",
+          "url": "http://www.last.fm/tag/heavy%20metal"
+        },
+        {
+          "name": "hard rock",
+          "url": "http://www.last.fm/tag/hard%20rock"
+        },
+        {
+          "name": "rock",
+          "url": "http://www.last.fm/tag/rock"
+        }
+      ]
+    },
+    "bio": {
+      "links": {
+        "link": {
+          "#text": "",
+          "rel": "original",
+          "href": "http://www.last.fm/music/Metallica/+wiki"
+        }
+      },
+      "published": "Tue, 13 May 2014 14:12:57 +0000",
+      "summary": "\n                Metallica is an American metal band formed in 1981 in Los Angeles, California, United States when drummer Lars Ulrich posted an advertisement in The Recycler. Metallica’s line-up originally consisted of Ulrich, rhythm guitarist and vocalist James Hetfield, and lead guitarist Dave Mustaine. Mustaine was later fired due to problems with alcoholism and drug addiction - he went on to form the band Megadeth. Exodus guitarist Kirk Hammett took his place.\n\n        <a href=\"http://www.last.fm/music/Metallica\">Read more about Metallica on Last.fm</a>.\n    \n    ",
+      "content": "\n                    Metallica is an American metal band formed in 1981 in Los Angeles, California, United States when drummer Lars Ulrich posted an advertisement in The Recycler. Metallica’s line-up originally consisted of Ulrich, rhythm guitarist and vocalist James Hetfield, and lead guitarist Dave Mustaine. Mustaine was later fired due to problems with alcoholism and drug addiction - he went on to form the band Megadeth. Exodus guitarist Kirk Hammett took his place.\n\n        <a href=\"http://www.last.fm/music/Metallica\">Read more about Metallica on Last.fm</a>.\n    \n    \nUser-contributed text is available under the Creative Commons By-SA License and may also be available under the GNU FDL.\n    ",
+      "placeformed": "Los Angeles, California, United States",
+      "yearformed": "1981",
+      "formationlist": {
+        "formation": {
+          "yearfrom": "1981",
+          "yearto": ""
+        }
+      }
+    }
+  }
+}
