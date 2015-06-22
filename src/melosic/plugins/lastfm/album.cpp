@@ -152,11 +152,10 @@ std::future<album> album::get_info(service& serv, std::optional<std::string_view
 }
 
 std::future<std::vector<affiliation>> album::get_buy_links(service& serv, boost::uuids::uuid mbid,
-                                                           std::string_view countrycode,
-                                                           bool autocorrect) {
+                                                           std::string_view countrycode, bool autocorrect) {
     return serv.get("album.getbuylinks",
-                    make_params(std::make_pair("mbid", mbid),
-                                std::make_pair("countrycode", countrycode), std::make_pair("autocorrect", autocorrect)),
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("countrycode", countrycode),
+                                std::make_pair("autocorrect", autocorrect)),
                     use_future, transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
 }
 
@@ -176,11 +175,10 @@ std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::s
     return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid,
-                                                  bool autocorrect) {
-    return serv.get("album.getshouts", make_params(std::make_pair("mbid", mbid),
-                                                   std::make_pair("autocorrect", autocorrect)),
-                    use_future, transform_select<std::vector<shout>>("album"));
+std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect) {
+    return serv.get("album.getshouts",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect)), use_future,
+                    transform_select<std::vector<shout>>("album"));
 }
 
 std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
@@ -196,11 +194,10 @@ std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrec
     return get_shouts(serv, m_name, m_artist.name(), autocorrect);
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid,
-                                                  bool autocorrect) {
-    return serv.get("album.gettoptags", make_params(std::make_pair("mbid", mbid),
-                                                    std::make_pair("autocorrect", autocorrect)),
-                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect) {
+    return serv.get("album.gettoptags",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect)), use_future,
+                    transform_select<std::vector<tag>>("toptags.tag.*"));
 }
 
 std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
@@ -216,11 +213,10 @@ std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrec
     return get_top_tags(serv, m_name, m_artist.name(), autocorrect);
 }
 
-std::future<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid,
-                                              std::string_view username, bool autocorrect) {
-    return serv.get("album.gettags",
-                    make_params(std::make_pair("mbid", mbid),
-                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect)),
+std::future<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
+                                              bool autocorrect) {
+    return serv.get("album.gettags", make_params(std::make_pair("mbid", mbid), std::make_pair("user", username),
+                                                 std::make_pair("autocorrect", autocorrect)),
                     use_future, transform_select<std::vector<tag>>("tags.tag.*"));
 }
 

@@ -96,20 +96,18 @@ struct LASTFM_EXPORT album {
     std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
                                                         bool autocorrect = false) const;
 
-    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid,
-                                                      bool autocorrect = false);
+    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false);
     static std::future<std::vector<shout>> get_shouts(service&, std::string_view name, std::string_view artist,
                                                       bool autocorrect = false);
     std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false) const;
 
-    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid,
-                                                      bool autocorrect = false);
+    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false);
     static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
                                                       bool autocorrect = false);
     std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false) const;
 
-    static std::future<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid,
-                                                  std::string_view username, bool autocorrect = false);
+    static std::future<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
+                                                  bool autocorrect = false);
     static std::future<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view artist,
                                                   std::string_view username, bool autocorrect = false);
     std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false) const;
