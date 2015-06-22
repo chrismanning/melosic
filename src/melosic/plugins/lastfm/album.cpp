@@ -175,63 +175,75 @@ std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::s
     return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect) {
+std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                  std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.getshouts",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect)), use_future,
-                    transform_select<std::vector<shout>>("album"));
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
 }
 
 std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
-                                                  bool autocorrect) {
+                                                  bool autocorrect, std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.getshouts", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                                   std::make_pair("autocorrect", autocorrect)),
-                    use_future, transform_select<std::vector<shout>>("album"));
+                                                   std::make_pair("autocorrect", autocorrect),
+                                                   std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect) const {
+std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect, std::optional<int> limit,
+                                                  std::optional<int> page) const {
     if(!m_mbid.is_nil())
-        return get_shouts(serv, m_mbid, autocorrect);
-    return get_shouts(serv, m_name, m_artist.name(), autocorrect);
+        return get_shouts(serv, m_mbid, autocorrect, limit, page);
+    return get_shouts(serv, m_name, m_artist.name(), autocorrect, limit, page);
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect) {
+std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                  std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.gettoptags",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect)), use_future,
-                    transform_select<std::vector<tag>>("toptags.tag.*"));
-}
-
-std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
-                                                  bool autocorrect) {
-    return serv.get("album.gettoptags", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                                    std::make_pair("autocorrect", autocorrect)),
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
                     use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect) const {
+std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
+                                                  bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("album.gettoptags", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                                    std::make_pair("autocorrect", autocorrect),
+                                                    std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+}
+
+std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect, std::optional<int> limit,
+                                                  std::optional<int> page) const {
     if(!m_mbid.is_nil())
-        return get_top_tags(serv, m_mbid, autocorrect);
-    return get_top_tags(serv, m_name, m_artist.name(), autocorrect);
+        return get_top_tags(serv, m_mbid, autocorrect, limit, page);
+    return get_top_tags(serv, m_name, m_artist.name(), autocorrect, limit, page);
 }
 
 std::future<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
-                                              bool autocorrect) {
+                                              bool autocorrect, std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.gettags", make_params(std::make_pair("mbid", mbid), std::make_pair("user", username),
-                                                 std::make_pair("autocorrect", autocorrect)),
+                                                 std::make_pair("autocorrect", autocorrect),
+                                                 std::make_pair("limit", limit), std::make_pair("page", page)),
                     use_future, transform_select<std::vector<tag>>("tags.tag.*"));
 }
 
 std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view name, std::string_view artist,
-                                              std::string_view username, bool autocorrect) {
+                                              std::string_view username, bool autocorrect, std::optional<int> limit,
+                                              std::optional<int> page) {
     return serv.get("album.gettags",
                     make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect)),
+                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
                     use_future, transform_select<std::vector<tag>>("tags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect) const {
+std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect,
+                                              std::optional<int> limit, std::optional<int> page) const {
     if(!m_mbid.is_nil())
-        return get_tags(serv, m_mbid, username, autocorrect);
-    return get_tags(serv, m_name, m_artist.name(), username, autocorrect);
+        return get_tags(serv, m_mbid, username, autocorrect, limit, page);
+    return get_tags(serv, m_name, m_artist.name(), username, autocorrect, limit, page);
 }
 
 std::future<std::vector<album>> album::search(service& serv, std::string_view name, std::optional<int> limit,

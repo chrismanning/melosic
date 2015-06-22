@@ -96,21 +96,36 @@ struct LASTFM_EXPORT album {
     std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
                                                         bool autocorrect = false) const;
 
-    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false);
+    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
     static std::future<std::vector<shout>> get_shouts(service&, std::string_view name, std::string_view artist,
-                                                      bool autocorrect = false);
-    std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false) const;
+                                                      bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false);
+    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
     static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
-                                                      bool autocorrect = false);
-    std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false) const;
+                                                      bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
 
     static std::future<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
-                                                  bool autocorrect = false);
+                                                  bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt);
     static std::future<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view artist,
-                                                  std::string_view username, bool autocorrect = false);
-    std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false) const;
+                                                  std::string_view username, bool autocorrect = false,
+                                                  std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt);
+    std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false,
+                                           std::optional<int> limit = std::nullopt,
+                                           std::optional<int> page = std::nullopt) const;
 
     static std::future<std::vector<album>> search(service&, std::string_view name,
                                                   std::optional<int> limit = std::nullopt,
