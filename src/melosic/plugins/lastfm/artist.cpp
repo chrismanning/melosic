@@ -15,9 +15,12 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <lastfm/artist.hpp>
 #include <lastfm/tag.hpp>
 #include <lastfm/service.hpp>
+#include <lastfm/album.hpp>
+#include <lastfm/track.hpp>
+#include <lastfm/user.hpp>
+#include <lastfm/artist.hpp>
 
 namespace lastfm {
 
@@ -93,6 +96,22 @@ void artist::images(std::vector<image> images) {
     m_images = std::move(images);
 }
 
+boost::uuids::uuid artist::mbid() const {
+    return m_mbid;
+}
+
+void artist::mbid(boost::uuids::uuid mbid) {
+    m_mbid = mbid;
+}
+
+std::future<artist> artist::get_info(service& serv, boost::uuids::uuid mbid, std::optional<std::string_view> lang,
+                                     bool autocorrect, std::optional<std::string_view> username) {
+    return serv.get("artist.getinfo",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("lang", lang),
+                                std::make_pair("autocorrect", autocorrect), std::make_pair("username", username)),
+                    use_future, transform_select<artist>("artist"));
+}
+
 std::future<artist> artist::get_info(service& serv, std::string_view name, std::optional<std::string_view> lang,
                                      bool autocorrect, std::optional<std::string_view> username) {
     return serv.get("artist.getinfo",
@@ -115,16 +134,174 @@ std::future<artist> artist::get_correction(service& serv) const {
     return get_correction(serv, m_name);
 }
 
+std::future<std::vector<shout>> artist::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getshouts",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
+}
+
+std::future<std::vector<shout>> artist::get_shouts(service& serv, std::string_view name, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getshouts",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
+}
+
+std::future<std::vector<shout>> artist::get_shouts(service& serv, bool autocorrect, std::optional<int> limit,
+                                                   std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_shouts(serv, m_mbid, autocorrect, limit, page);
+    return get_shouts(serv, m_name, autocorrect, limit, page);
+}
+
+std::future<std::vector<artist>> artist::get_similar(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                     std::optional<int> limit) {
+    return serv.get("artist.getsimilar",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit)),
+                    use_future, transform_select<std::vector<artist>>("similarartists.artist.*"));
+}
+
 std::future<std::vector<artist>> artist::get_similar(service& serv, std::string_view name, bool autocorrect,
                                                      std::optional<int> limit) {
     return serv.get("artist.getsimilar",
                     make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
                                 std::make_pair("limit", limit)),
-                    use_future, transform_select<std::vector<artist>>("similarartists.artist"));
+                    use_future, transform_select<std::vector<artist>>("similarartists.artist.*"));
 }
 
 std::future<std::vector<artist>> artist::get_similar(service& serv, bool autocorrect, std::optional<int> limit) const {
+    if(!m_mbid.is_nil())
+        return get_similar(serv, m_mbid, autocorrect, limit);
     return get_similar(serv, m_name, autocorrect, limit);
+}
+
+std::future<std::vector<tag>> artist::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
+                                               bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettags", make_params(std::make_pair("mbid", mbid), std::make_pair("username", username),
+                                                  std::make_pair("autocorrect", autocorrect),
+                                                  std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
+}
+
+std::future<std::vector<tag>> artist::get_tags(service& serv, std::string_view name, std::string_view username,
+                                               bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettags", make_params(std::make_pair("artist", name), std::make_pair("username", username),
+                                                  std::make_pair("autocorrect", autocorrect),
+                                                  std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
+}
+
+std::future<std::vector<tag>> artist::get_tags(service& serv, std::string_view username, bool autocorrect,
+                                               std::optional<int> limit, std::optional<int> page) const {
+    return get_tags(serv, m_name, username, autocorrect, limit, page);
+}
+
+std::future<std::vector<album>> artist::get_top_albums(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                       std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettopalbums",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<album>>("topalbums.album.*"));
+}
+
+std::future<std::vector<album>> artist::get_top_albums(service& serv, std::string_view name, bool autocorrect,
+                                                       std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettopalbums",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<album>>("topalbums.album.*"));
+}
+
+std::future<std::vector<album>> artist::get_top_albums(service& serv, bool autocorrect, std::optional<int> limit,
+                                                       std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_top_albums(serv, m_mbid, autocorrect, limit, page);
+    return get_top_albums(serv, m_name, autocorrect, limit, page);
+}
+
+std::future<std::vector<user>> artist::get_top_fans(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                    std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettopfans",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<user>>("topfans.user.*"));
+}
+
+std::future<std::vector<user>> artist::get_top_fans(service& serv, std::string_view name, bool autocorrect,
+                                                    std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettopfans",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<user>>("topfans.user.*"));
+}
+
+std::future<std::vector<user>> artist::get_top_fans(service& serv, bool autocorrect, std::optional<int> limit,
+                                                    std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_top_fans(serv, m_mbid, autocorrect, limit, page);
+    return get_top_fans(serv, m_name, autocorrect, limit, page);
+}
+
+std::future<std::vector<tag>> artist::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettoptags",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+}
+
+std::future<std::vector<tag>> artist::get_top_tags(service& serv, std::string_view name, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettoptags",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+}
+
+std::future<std::vector<tag>> artist::get_top_tags(service& serv, bool autocorrect, std::optional<int> limit,
+                                                   std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_top_tags(serv, m_mbid, autocorrect, limit, page);
+    return get_top_tags(serv, m_name, autocorrect, limit, page);
+}
+
+std::future<std::vector<track>> artist::get_top_tracks(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                       std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettoptracks",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<track>>("toptracks.track.*"));
+}
+
+std::future<std::vector<track>> artist::get_top_tracks(service& serv, std::string_view name, bool autocorrect,
+                                                       std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.gettoptracks",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<track>>("toptracks.track.*"));
+}
+
+std::future<std::vector<track>> artist::get_top_tracks(service& serv, bool autocorrect, std::optional<int> limit,
+                                                       std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_top_tracks(serv, m_mbid, autocorrect, limit, page);
+    return get_top_tracks(serv, m_name, autocorrect, limit, page);
+}
+
+std::future<std::vector<artist>> artist::search(service& serv, std::string_view name, std::optional<int> limit,
+                                                std::optional<int> page) {
+    return serv.get("artist.search", make_params(std::make_pair("artist", name), std::make_pair("limit", limit),
+                                                 std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<artist>>("results.artistmatches.artist.*"));
+}
+
+std::future<std::vector<artist>> artist::search(service& serv, std::optional<int> limit,
+                                                std::optional<int> page) const {
+    return search(serv, m_name, limit, page);
 }
 
 } // namespace lastfm

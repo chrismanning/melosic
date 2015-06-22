@@ -18,17 +18,24 @@
 #ifndef USER_HPP
 #define USER_HPP
 
-#include <memory>
-#include <string>
-
 #include <network/uri.hpp>
+
+#include <jbson/element.hpp>
+
+#include <lastfm/lastfm.hpp>
 
 namespace lastfm {
 class service;
 
-struct user {
+struct LASTFM_EXPORT user {
     explicit user() = default;
 };
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& user_elem, user& var) {
+//    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
+//    for(auto&& elem : doc) {
+//    }
+}
 
 } // namespace lastfm
 

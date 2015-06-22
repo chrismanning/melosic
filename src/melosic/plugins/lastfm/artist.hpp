@@ -18,15 +18,20 @@
 #ifndef LASTFM_ARTIST_HPP
 #define LASTFM_ARTIST_HPP
 
+#include <boost/uuid/uuid.hpp>
+
 #include <lastfm/lastfm.hpp>
 #include <lastfm/wiki.hpp>
 #include <lastfm/image.hpp>
-//#include <lastfm/tag.hpp>
+#include <lastfm/shout.hpp>
 
 namespace lastfm {
 
 class service;
 struct tag;
+struct album;
+struct user;
+struct track;
 
 struct LASTFM_EXPORT artist {
     explicit artist() = default;
@@ -58,8 +63,14 @@ struct LASTFM_EXPORT artist {
     const std::vector<image>& images() const;
     void images(std::vector<image>);
 
+    boost::uuids::uuid mbid() const;
+    void mbid(boost::uuids::uuid);
+
     // api methods
 
+    static std::future<artist> get_info(service&, boost::uuids::uuid mbid,
+                                        std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                        std::optional<std::string_view> username = std::nullopt);
     static std::future<artist> get_info(service&, std::string_view name,
                                         std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                         std::optional<std::string_view> username = std::nullopt);
@@ -70,10 +81,78 @@ struct LASTFM_EXPORT artist {
     static std::future<artist> get_correction(service&, std::string_view name);
     std::future<artist> get_correction(service&) const;
 
+    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    static std::future<std::vector<shout>> get_shouts(service&, std::string_view name, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<artist>> get_similar(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                        std::optional<int> limit = std::nullopt);
     static std::future<std::vector<artist>> get_similar(service&, std::string_view name, bool autocorrect = false,
                                                         std::optional<int> limit = std::nullopt);
     std::future<std::vector<artist>> get_similar(service&, bool autocorrect = false,
                                                  std::optional<int> limit = std::nullopt) const;
+
+    static std::future<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
+                                                  bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt);
+    static std::future<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view username,
+                                                  bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt);
+    std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false,
+                                           std::optional<int> limit = std::nullopt,
+                                           std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<album>> get_top_albums(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    static std::future<std::vector<album>> get_top_albums(service&, std::string_view name, bool autocorrect = false,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    std::future<std::vector<album>> get_top_albums(service&, bool autocorrect = false,
+                                                   std::optional<int> limit = std::nullopt,
+                                                   std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<user>> get_top_fans(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                       std::optional<int> limit = std::nullopt,
+                                                       std::optional<int> page = std::nullopt);
+    static std::future<std::vector<user>> get_top_fans(service&, std::string_view name, bool autocorrect = false,
+                                                       std::optional<int> limit = std::nullopt,
+                                                       std::optional<int> page = std::nullopt);
+    std::future<std::vector<user>> get_top_fans(service&, bool autocorrect = false,
+                                                std::optional<int> limit = std::nullopt,
+                                                std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<track>> get_top_tracks(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    static std::future<std::vector<track>> get_top_tracks(service&, std::string_view name, bool autocorrect = false,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    std::future<std::vector<track>> get_top_tracks(service&, bool autocorrect = false,
+                                                   std::optional<int> limit = std::nullopt,
+                                                   std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<artist>> search(service&, std::string_view name,
+                                                   std::optional<int> limit = std::nullopt,
+                                                   std::optional<int> page = std::nullopt);
+    std::future<std::vector<artist>> search(service&, std::optional<int> limit = std::nullopt,
+                                            std::optional<int> page = std::nullopt) const;
 
   private:
     std::string m_name;
@@ -85,6 +164,7 @@ struct LASTFM_EXPORT artist {
     bool m_streamable = false;
     struct wiki m_wiki;
     std::vector<image> m_images;
+    boost::uuids::uuid m_mbid{{0}};
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& artist_elem, artist& var) {
