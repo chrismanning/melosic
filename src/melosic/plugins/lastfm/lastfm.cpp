@@ -24,10 +24,10 @@
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/signal.hpp>
 #include <melosic/common/connection.hpp>
+#include <melosic/melin/config.hpp>
 using namespace Melosic;
 
 #include <lastfm/lastfm.hpp>
-#include <lastfm/scrobbler.hpp>
 #include <lastfm/service.hpp>
 #include <lastfm/user.hpp>
 using namespace lastfm;
@@ -40,7 +40,7 @@ static constexpr Plugin::Info lastFmInfo("lastfm", Plugin::Type::utility | Plugi
 
 static const std::shared_ptr<service> lastserv =
     std::make_shared<service>("47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67");
-static std::shared_ptr<scrobbler> g_scrobbler;
+
 static Config::Manager* confman = nullptr;
 static std::string sk;
 
@@ -51,13 +51,6 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 //                sk = lastserv->getUser().getSessionKey();
 //            lastserv->setUser(user(lastserv, boost::get<std::string>(value), sk));
         } else if(key == "enable scrobbling") {
-            if(boost::get<bool>(value)) {
-                //                if(slotman == nullptr)
-                //                    return;
-                g_scrobbler.reset(new scrobbler(lastserv));
-            } else {
-                g_scrobbler.reset();
-            }
         } else if(key == "session key") {
 //            if(lastserv->getUser())
 //                lastserv->getUser().setSessionKey(boost::get<std::string>(value));

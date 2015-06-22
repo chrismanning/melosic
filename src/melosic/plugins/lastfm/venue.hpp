@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,23 +15,25 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_UTILITIES_HPP
-#define LASTFM_UTILITIES_HPP
+#ifndef LASTFM_VENUE_HPP
+#define LASTFM_VENUE_HPP
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/thread/locks.hpp>
+#include <jbson/element.hpp>
 
-#include <functional>
-namespace ph = std::placeholders;
+#include <lastfm/lastfm.hpp>
 
 namespace lastfm {
 
-struct NoAttributes {
-    bool operator()(const boost::property_tree::ptree::value_type& val) const {
-        return !(val.first == "<xmlattr>");
-    }
+struct LASTFM_EXPORT venue {
+    explicit venue() = default;
 };
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& user_elem, venue& var) {
+//    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
+//    for(auto&& elem : doc) {
+//    }
+}
 
 } // namespace lastfm
 
-#endif // LASTFM_UTILITIES_HPP
+#endif // LASTFM_VENUE_HPP
