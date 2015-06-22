@@ -151,6 +151,15 @@ std::future<album> album::get_info(service& serv, std::optional<std::string_view
     return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
+std::future<std::vector<affiliation>> album::get_buy_links(service& serv, boost::uuids::uuid mbid,
+                                                           std::string_view countrycode,
+                                                           bool autocorrect) {
+    return serv.get("album.getbuylinks",
+                    make_params(std::make_pair("mbid", mbid),
+                                std::make_pair("countrycode", countrycode), std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
+}
+
 std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view name,
                                                            std::string_view artist, std::string_view countrycode,
                                                            bool autocorrect) {
@@ -162,7 +171,16 @@ std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::s
 
 std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view countrycode,
                                                            bool autocorrect) const {
+    if(!m_mbid.is_nil())
+        return get_buy_links(serv, m_mbid, countrycode, autocorrect);
     return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
+}
+
+std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid,
+                                                  bool autocorrect) {
+    return serv.get("album.getshouts", make_params(std::make_pair("mbid", mbid),
+                                                   std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<shout>>("album"));
 }
 
 std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
@@ -173,7 +191,16 @@ std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_vie
 }
 
 std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect) const {
+    if(!m_mbid.is_nil())
+        return get_shouts(serv, m_mbid, autocorrect);
     return get_shouts(serv, m_name, m_artist.name(), autocorrect);
+}
+
+std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid,
+                                                  bool autocorrect) {
+    return serv.get("album.gettoptags", make_params(std::make_pair("mbid", mbid),
+                                                    std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
 }
 
 std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
@@ -184,7 +211,17 @@ std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_vie
 }
 
 std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect) const {
+    if(!m_mbid.is_nil())
+        return get_top_tags(serv, m_mbid, autocorrect);
     return get_top_tags(serv, m_name, m_artist.name(), autocorrect);
+}
+
+std::future<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid,
+                                              std::string_view username, bool autocorrect) {
+    return serv.get("album.gettags",
+                    make_params(std::make_pair("mbid", mbid),
+                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect)),
+                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
 }
 
 std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view name, std::string_view artist,
@@ -196,6 +233,8 @@ std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view na
 }
 
 std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect) const {
+    if(!m_mbid.is_nil())
+        return get_tags(serv, m_mbid, username, autocorrect);
     return get_tags(serv, m_name, m_artist.name(), username, autocorrect);
 }
 
