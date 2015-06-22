@@ -30,6 +30,7 @@ namespace fs = boost::filesystem;
 #include <jbson/json_writer.hpp>
 #endif
 #include <jbson/json_reader.hpp>
+#include <jbson/builder.hpp>
 #include <jbson/path.hpp>
 using namespace jbson::literal;
 
