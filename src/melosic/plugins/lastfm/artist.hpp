@@ -25,11 +25,11 @@
 #include <lastfm/image.hpp>
 #include <lastfm/shout.hpp>
 #include <lastfm/event.hpp>
+#include <lastfm/tag.hpp>
 
 namespace lastfm {
 
 class service;
-struct tag;
 struct album;
 struct user;
 struct track;
@@ -192,6 +192,10 @@ struct LASTFM_EXPORT artist {
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& artist_elem, artist& var) {
+    if(artist_elem.type() == jbson::element_type::string_element) {
+        var.name(jbson::get<jbson::element_type::string_element>(artist_elem));
+        return;
+    }
     auto doc = jbson::get<jbson::element_type::document_element>(artist_elem);
     for(auto&& elem : doc) {
         if(elem.name() == "name") {

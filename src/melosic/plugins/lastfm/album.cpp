@@ -17,7 +17,6 @@
 
 #include <lastfm/album.hpp>
 #include <lastfm/service.hpp>
-#include <lastfm/tag.hpp>
 #include <lastfm/track.hpp>
 
 namespace lastfm {

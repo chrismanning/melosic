@@ -21,17 +21,55 @@
 #include <jbson/element.hpp>
 
 #include <lastfm/lastfm.hpp>
+#include <lastfm/image.hpp>
 
 namespace lastfm {
 
+struct image;
+
 struct LASTFM_EXPORT venue {
     explicit venue() = default;
+
+    std::string_view id() const;
+    void id(std::string_view id);
+
+    std::string_view name() const;
+    void name(std::string_view name);
+
+    const network::uri& url() const;
+    void url(network::uri url);
+
+    const network::uri& website() const;
+    void website(network::uri website);
+
+    const std::vector<image>& images() const;
+    void images(std::vector<image> images);
+
+private:
+    std::string m_id;
+    std::string m_name;
+    network::uri m_url;
+    network::uri m_website;
+    std::vector<image> m_images;
 };
 
-template <typename Container> void value_get(const jbson::basic_element<Container>& user_elem, venue& var) {
-//    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
-//    for(auto&& elem : doc) {
-//    }
+template <typename Container> void value_get(const jbson::basic_element<Container>& venue_elem, venue& var) {
+    auto doc = jbson::get<jbson::element_type::document_element>(venue_elem);
+    for(auto&& elem : doc) {
+        if(elem.name() == "id") {
+            auto str = jbson::get<jbson::element_type::string_element>(elem);
+            var.id({str.data(), str.size()});
+        } else if(elem.name() == "name") {
+            auto str = jbson::get<jbson::element_type::string_element>(elem);
+            var.name({str.data(), str.size()});
+        } else if(elem.name() == "url") {
+            var.url(jbson::get<network::uri>(elem));
+        } else if(elem.name() == "website") {
+            var.website(jbson::get<network::uri>(elem));
+        } else if(elem.name() == "image") {
+            var.images(jbson::get<std::vector<image>>(elem));
+        }
+    }
 }
 
 } // namespace lastfm

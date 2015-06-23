@@ -30,11 +30,11 @@
 #include <lastfm/shout.hpp>
 #include <lastfm/affiliation.hpp>
 #include <lastfm/image.hpp>
+#include <lastfm/tag.hpp>
 
 namespace lastfm {
 
 struct track;
-struct tag;
 
 struct LASTFM_EXPORT album {
     explicit album() = default;

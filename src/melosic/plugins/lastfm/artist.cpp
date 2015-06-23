@@ -15,7 +15,6 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <lastfm/tag.hpp>
 #include <lastfm/service.hpp>
 #include <lastfm/album.hpp>
 #include <lastfm/track.hpp>
