@@ -24,6 +24,7 @@
 #include <lastfm/wiki.hpp>
 #include <lastfm/image.hpp>
 #include <lastfm/shout.hpp>
+#include <lastfm/event.hpp>
 
 namespace lastfm {
 
@@ -80,6 +81,29 @@ struct LASTFM_EXPORT artist {
 
     static std::future<artist> get_correction(service&, std::string_view name);
     std::future<artist> get_correction(service&) const;
+
+    static std::future<std::vector<event>> get_events(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      bool festivalsonly = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    static std::future<std::vector<event>> get_events(service&, std::string_view name, bool autocorrect = false,
+                                                      bool festivalsonly = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<event>> get_events(service&, bool autocorrect = false,
+                                               bool festivalsonly = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
+
+    static std::future<std::vector<event>> get_past_events(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    static std::future<std::vector<event>> get_past_events(service&, std::string_view name, bool autocorrect = false,
+                                                      std::optional<int> limit = std::nullopt,
+                                                      std::optional<int> page = std::nullopt);
+    std::future<std::vector<event>> get_past_events(service&, bool autocorrect = false,
+                                               std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt) const;
 
     static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
                                                       std::optional<int> limit = std::nullopt,

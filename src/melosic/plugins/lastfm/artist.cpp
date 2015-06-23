@@ -134,6 +134,57 @@ std::future<artist> artist::get_correction(service& serv) const {
     return get_correction(serv, m_name);
 }
 
+std::future<std::vector<event>> artist::get_events(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                   bool festivalsonly,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getevents",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("festivalsonly", festivalsonly),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<event>>("events.event.*"));
+}
+
+std::future<std::vector<event>> artist::get_events(service& serv, std::string_view name, bool autocorrect,
+                                                   bool festivalsonly,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getevents",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("festivalsonly", festivalsonly),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<event>>("events.event.*"));
+}
+
+std::future<std::vector<event>> artist::get_events(service& serv, bool autocorrect,
+                                                   bool festivalsonly, std::optional<int> limit,
+                                                   std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_events(serv, m_mbid, autocorrect, festivalsonly, limit, page);
+    return get_events(serv, m_name, autocorrect, festivalsonly, limit, page);
+}
+
+std::future<std::vector<event>> artist::get_past_events(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getpastevents",
+                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<event>>("events.event.*"));
+}
+
+std::future<std::vector<event>> artist::get_past_events(service& serv, std::string_view name, bool autocorrect,
+                                                   std::optional<int> limit, std::optional<int> page) {
+    return serv.get("artist.getpastevents",
+                    make_params(std::make_pair("artist", name), std::make_pair("autocorrect", autocorrect),
+                                std::make_pair("limit", limit), std::make_pair("page", page)),
+                    use_future, transform_select<std::vector<event>>("events.event.*"));
+}
+
+std::future<std::vector<event>> artist::get_past_events(service& serv, bool autocorrect, std::optional<int> limit,
+                                                   std::optional<int> page) const {
+    if(!m_mbid.is_nil())
+        return get_past_events(serv, m_mbid, autocorrect, limit, page);
+    return get_past_events(serv, m_name, autocorrect, limit, page);
+}
+
 std::future<std::vector<shout>> artist::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
                                                    std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.getshouts",
