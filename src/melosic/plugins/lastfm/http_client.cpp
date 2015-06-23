@@ -3,6 +3,18 @@
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
+#include <algorithm>
+
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/range/algorithm/find.hpp>
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <asio.hpp>
+#include <asio/strand.hpp>
+#include <asio/deadline_timer.hpp>
+
 #include <lastfm/http_client.hpp>
 
 namespace network {

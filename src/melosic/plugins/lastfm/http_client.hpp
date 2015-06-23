@@ -14,32 +14,16 @@
 #define NETWORK_HTTP_V0_CLIENT_CLIENT_INC
 
 #include <future>
-#include <memory>
-#include <cstdint>
-#include <algorithm>
 #include <string>
 #include <vector>
 #include <chrono>
 
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/range/algorithm/find.hpp>
-#include <boost/smart_ptr/intrusive_ptr.hpp>
-#include <boost/smart_ptr/intrusive_ref_counter.hpp>
-#include <boost/lexical_cast.hpp>
-
-#include <network/config.hpp>
 #include <network/version.hpp>
-#include <network/http/v2/client/request.hpp>
-#include <network/http/v2/client/response.hpp>
 #include <network/uri.hpp>
-#include <network/config.hpp>
 #include <network/http/v2/method.hpp>
 #include <network/http/v2/client/request.hpp>
 #include <network/http/v2/client/response.hpp>
 
-#include <asio.hpp>
-#include <asio/strand.hpp>
-#include <asio/deadline_timer.hpp>
 #include <asio/use_future.hpp>
 
 #include <lastfm/exports.hpp>

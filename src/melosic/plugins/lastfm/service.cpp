@@ -26,6 +26,8 @@ using namespace boost::range;
 using namespace boost::adaptors;
 using boost::algorithm::hex;
 
+#include <asio/io_service.hpp>
+
 #include <openssl/md5.h>
 
 #include <network/uri.hpp>
