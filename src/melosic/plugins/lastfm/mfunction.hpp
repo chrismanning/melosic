@@ -22,22 +22,19 @@
 
 namespace util {
 
-template <typename Ret, typename... Args>
-class mfunction;
+template <typename Ret, typename... Args> class mfunction;
 
-template <typename Ret, typename... Args>
-class mfunction<Ret(Args...)> {
+template <typename Ret, typename... Args> class mfunction<Ret(Args...)> {
     struct function_base {
         virtual Ret invoke(Args...) const = 0;
     };
     std::unique_ptr<function_base> fun_base;
 
-    template <typename Fun>
-    struct function_impl : function_base {
+    template <typename Fun> struct function_impl : function_base {
         using function_t = std::decay_t<Fun>;
 
-        template <typename Fun_>
-        function_impl(Fun_&& fun) : fun(std::forward<Fun_>(fun)) {}
+        template <typename Fun_> function_impl(Fun_&& fun) : fun(std::forward<Fun_>(fun)) {
+        }
 
         Ret invoke(Args... args) const override {
             return fun(std::forward<Args>(args)...);
@@ -51,7 +48,9 @@ class mfunction<Ret(Args...)> {
     mfunction(mfunction&&) noexcept = default;
 
     template <typename Fun>
-    mfunction(Fun&& fun) : fun_base(std::make_unique<function_impl<Fun>>(std::forward<Fun>(fun))) {}
+    mfunction(Fun&& fun)
+        : fun_base(std::make_unique<function_impl<Fun>>(std::forward<Fun>(fun))) {
+    }
 
     Ret operator()(Args... args) const {
         assert(fun_base);
@@ -71,4 +70,3 @@ class mfunction<Ret(Args...)> {
 } // namespace util
 
 #endif // MFUNCTION_HPP
-

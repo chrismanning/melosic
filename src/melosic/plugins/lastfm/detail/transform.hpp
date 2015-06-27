@@ -29,24 +29,20 @@ namespace lastfm {
 
 namespace detail {
 
-template <typename T>
-struct deserialise_ {
-    template <typename ElemT>
-    T operator()(ElemT&& elem) const {
+template <typename T> struct deserialise_ {
+    template <typename ElemT> T operator()(ElemT&& elem) const {
         return jbson::get<T>(elem);
     }
 };
 
 } // namespace detail
 
-template <typename T>
-constexpr auto deserialise = detail::deserialise_<T>{};
+template <typename T> constexpr auto deserialise = detail::deserialise_<T>{};
 
 namespace detail {
 
 struct transform_copy_ {
-    template <typename V, typename F>
-    auto operator()(V&& v, F&& f) const {
+    template <typename V, typename F> auto operator()(V&& v, F&& f) const {
         using U = std::remove_cv_t<std::remove_reference_t<decltype(f(*v.begin()))>>;
         using Alloc = typename std::remove_reference_t<V>::allocator_type;
         using NewAlloc = typename std::allocator_traits<Alloc>::template rebind_alloc<U>;
@@ -80,8 +76,7 @@ constexpr auto vector_to_optional = detail::vector_to_optional_{};
 
 namespace detail {
 
-template <typename T>
-struct transform_select_ {
+template <typename T> struct transform_select_ {
     auto operator()(std::string_view path) const {
         return [path = path.to_string()](auto&& doc) {
             if(auto elem = vector_to_optional(jbson::path_select(std::forward<decltype(doc)>(doc), path))) {
@@ -92,8 +87,7 @@ struct transform_select_ {
     }
 };
 
-template <typename T>
-struct transform_select_<std::vector<T>> {
+template <typename T> struct transform_select_<std::vector<T>> {
     auto operator()(std::string_view path) const {
         return [path = path.to_string()](auto&& doc) {
             auto elems = jbson::path_select(std::forward<decltype(doc)>(doc), path);
@@ -104,10 +98,8 @@ struct transform_select_<std::vector<T>> {
 
 } // namespace detail
 
-template <typename T>
-constexpr auto transform_select = detail::transform_select_<T>{};
+template <typename T> constexpr auto transform_select = detail::transform_select_<T>{};
 
 } // namespace lastfm
 
 #endif // LASTFM_TRANSFORM
-

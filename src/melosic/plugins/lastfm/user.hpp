@@ -32,9 +32,9 @@ struct LASTFM_EXPORT user {
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& user_elem, user& var) {
-//    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
-//    for(auto&& elem : doc) {
-//    }
+    //    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
+    //    for(auto&& elem : doc) {
+    //    }
 }
 
 } // namespace lastfm

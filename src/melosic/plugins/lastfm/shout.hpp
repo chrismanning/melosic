@@ -36,7 +36,7 @@ struct LASTFM_EXPORT shout {
     date_t date() const;
     void date(date_t);
 
-private:
+  private:
     std::string m_author;
     std::string m_body;
     date_t m_date;

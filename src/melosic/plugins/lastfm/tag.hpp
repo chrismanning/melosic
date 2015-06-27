@@ -52,48 +52,47 @@ struct LASTFM_EXPORT tag {
 
     // api methods
 
-    static std::future<tag> get_info(service&, std::string_view name);
-    std::future<tag> get_info(service&) const;
+    static pplx::task<tag> get_info(service&, std::string_view name);
+    pplx::task<tag> get_info(service&) const;
 
-    static std::future<std::vector<tag>> get_similar(service&, std::string_view name);
-    std::future<std::vector<tag>> get_similar(service&) const;
+    static pplx::task<std::vector<tag>> get_similar(service&, std::string_view name);
+    pplx::task<std::vector<tag>> get_similar(service&) const;
 
-    static std::future<std::vector<album>> get_top_albums(service&, std::string_view name,
-                                                          std::optional<int> limit = std::nullopt,
-                                                          std::optional<int> page = std::nullopt);
-    std::future<std::vector<album>> get_top_albums(service&, std::optional<int> limit = std::nullopt,
-                                                   std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<album>> get_top_albums(service&, std::string_view name,
+                                                         std::optional<int> limit = std::nullopt,
+                                                         std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<album>> get_top_albums(service&, std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<artist>> get_top_artists(service&, std::string_view name,
-                                                            std::optional<int> limit = std::nullopt,
-                                                            std::optional<int> page = std::nullopt);
-    std::future<std::vector<artist>> get_top_artists(service&, std::optional<int> limit = std::nullopt,
-                                                     std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<artist>> get_top_artists(service&, std::string_view name,
+                                                           std::optional<int> limit = std::nullopt,
+                                                           std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<artist>> get_top_artists(service&, std::optional<int> limit = std::nullopt,
+                                                    std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<tag>> get_top_tags(service&);
+    static pplx::task<std::vector<tag>> get_top_tags(service&);
 
-    static std::future<std::vector<track>> get_top_tracks(service&, std::string_view name,
-                                                          std::optional<int> limit = std::nullopt,
-                                                          std::optional<int> page = std::nullopt);
-    std::future<std::vector<track>> get_top_tracks(service&, std::optional<int> limit = std::nullopt,
-                                                   std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<track>> get_top_tracks(service&, std::string_view name,
+                                                         std::optional<int> limit = std::nullopt,
+                                                         std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<track>> get_top_tracks(service&, std::optional<int> limit = std::nullopt,
+                                                  std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<artist>>
+    static pplx::task<std::vector<artist>>
     get_weekly_artist_chart(service&, std::string_view name,
                             std::optional<std::tuple<date_t, date_t>> date_range = std::nullopt,
                             std::optional<int> limit = std::nullopt);
-    std::future<std::vector<artist>>
+    pplx::task<std::vector<artist>>
     get_weekly_artist_chart(service&, std::optional<std::tuple<date_t, date_t>> date_range = std::nullopt,
                             std::optional<int> limit = std::nullopt) const;
 
-    static std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&, std::string_view name);
-    std::future<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;
+    static pplx::task<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&, std::string_view name);
+    pplx::task<std::vector<std::tuple<date_t, date_t>>> get_weekly_chart_list(service&) const;
 
-    static std::future<std::vector<tag>> search(service&, std::string_view name,
-                                                std::optional<int> limit = std::nullopt,
-                                                std::optional<int> page = std::nullopt);
-    std::future<std::vector<tag>> search(service&, std::optional<int> limit = std::nullopt,
-                                         std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<tag>> search(service&, std::string_view name, std::optional<int> limit = std::nullopt,
+                                               std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<tag>> search(service&, std::optional<int> limit = std::nullopt,
+                                        std::optional<int> page = std::nullopt) const;
 
   private:
     std::string m_name;

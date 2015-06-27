@@ -16,7 +16,6 @@ SET(SRC ${SRC} affiliation.cpp)
 SET(SRC ${SRC} image.cpp)
 SET(SRC ${SRC} event.cpp)
 SET(SRC ${SRC} venue.cpp)
-SET(SRC ${SRC} http_client.cpp)
 
 FILE(GLOB_RECURSE LASTFM_COMMON_SRC_LIST *.hpp)
 
@@ -32,7 +31,7 @@ else()
 set(LINK_LIBS network-http-v2-client)
 endif()
 
-target_link_libraries(${LASTFM} ssl crypto ${LINK_LIBS} melosiclib)
+target_link_libraries(${LASTFM} ssl crypto ${LINK_LIBS} melosiclib cpprest)
 set_target_properties(${LASTFM} PROPERTIES PREFIX "")
 set_target_properties(${LASTFM} PROPERTIES SUFFIX ".melin")
 set_target_properties(${LASTFM} PROPERTIES COMPILE_DEFINITIONS LASTFM_EXPORTS=${LASTFM}_EXPORTS)

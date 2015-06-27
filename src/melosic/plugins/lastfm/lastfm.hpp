@@ -19,9 +19,10 @@
 #define LASTFM_HPP
 
 #include <chrono>
-#include <future>
 #include <experimental/string_view>
 #include <experimental/optional>
+
+#include <pplx/pplxtasks.h>
 
 #include <network/uri.hpp>
 
@@ -32,6 +33,18 @@
 namespace lastfm {
 
 constexpr std::string_view operator""_sv(const char* str, size_t len) {
+    return {str, len};
+}
+
+constexpr std::wstring_view operator""_sv(const wchar_t* str, size_t len) {
+    return {str, len};
+}
+
+constexpr std::u16string_view operator""_sv(const char16_t* str, size_t len) {
+    return {str, len};
+}
+
+constexpr std::u32string_view operator""_sv(const char32_t* str, size_t len) {
     return {str, len};
 }
 

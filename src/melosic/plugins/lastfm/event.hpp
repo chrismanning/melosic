@@ -56,7 +56,7 @@ struct LASTFM_EXPORT event {
     const network::uri& url() const;
     void url(network::uri url);
 
-private:
+  private:
     std::string m_id;
     std::string m_name;
     std::vector<artist> m_artists;

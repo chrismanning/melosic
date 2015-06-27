@@ -35,7 +35,7 @@
 TEST_CASE("track_deserialise") {
     boost::filesystem::path test_dir{MELOSIC_TEST_DATA_DIR};
     SECTION("get_info") {
-        boost::filesystem::ifstream is{test_dir/"track_getinfo.json"};
+        boost::filesystem::ifstream is{test_dir / "track_getinfo.json"};
         std::string track_json;
         REQUIRE(std::getline(is, track_json, static_cast<char>(EOF)));
 

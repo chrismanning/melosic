@@ -80,58 +80,58 @@ struct LASTFM_EXPORT album {
 
     // api methods
 
-    static std::future<album> get_info(service&, boost::uuids::uuid mbid,
-                                       std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
-                                       std::optional<std::string_view> username = std::nullopt);
-    static std::future<album> get_info(service&, std::string_view name, std::string_view artist,
-                                       std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
-                                       std::optional<std::string_view> username = std::nullopt);
-    std::future<album> get_info(service&, std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
-                                std::optional<std::string_view> username = std::nullopt) const;
+    static pplx::task<album> get_info(service&, boost::uuids::uuid mbid,
+                                      std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                      std::optional<std::string_view> username = std::nullopt);
+    static pplx::task<album> get_info(service&, std::string_view name, std::string_view artist,
+                                      std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                      std::optional<std::string_view> username = std::nullopt);
+    pplx::task<album> get_info(service&, std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                               std::optional<std::string_view> username = std::nullopt) const;
 
-    static std::future<std::vector<affiliation>> get_buy_links(service&, boost::uuids::uuid mbid,
-                                                               std::string_view countrycode, bool autocorrect = false);
-    static std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view name, std::string_view artist,
-                                                               std::string_view countrycode, bool autocorrect = false);
-    std::future<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
-                                                        bool autocorrect = false) const;
+    static pplx::task<std::vector<affiliation>> get_buy_links(service&, boost::uuids::uuid mbid,
+                                                              std::string_view countrycode, bool autocorrect = false);
+    static pplx::task<std::vector<affiliation>> get_buy_links(service&, std::string_view name, std::string_view artist,
+                                                              std::string_view countrycode, bool autocorrect = false);
+    pplx::task<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
+                                                       bool autocorrect = false) const;
 
-    static std::future<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
-                                                      std::optional<int> limit = std::nullopt,
-                                                      std::optional<int> page = std::nullopt);
-    static std::future<std::vector<shout>> get_shouts(service&, std::string_view name, std::string_view artist,
-                                                      bool autocorrect = false, std::optional<int> limit = std::nullopt,
-                                                      std::optional<int> page = std::nullopt);
-    std::future<std::vector<shout>> get_shouts(service&, bool autocorrect = false,
-                                               std::optional<int> limit = std::nullopt,
-                                               std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                     std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt);
+    static pplx::task<std::vector<shout>> get_shouts(service&, std::string_view name, std::string_view artist,
+                                                     bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<shout>> get_shouts(service&, bool autocorrect = false,
+                                              std::optional<int> limit = std::nullopt,
+                                              std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false,
-                                                      std::optional<int> limit = std::nullopt,
-                                                      std::optional<int> page = std::nullopt);
-    static std::future<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
-                                                      bool autocorrect = false, std::optional<int> limit = std::nullopt,
-                                                      std::optional<int> page = std::nullopt);
-    std::future<std::vector<tag>> get_top_tags(service&, bool autocorrect = false,
-                                               std::optional<int> limit = std::nullopt,
-                                               std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+                                                     std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt);
+    static pplx::task<std::vector<tag>> get_top_tags(service&, std::string_view name, std::string_view artist,
+                                                     bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                     std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<tag>> get_top_tags(service&, bool autocorrect = false,
+                                              std::optional<int> limit = std::nullopt,
+                                              std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
-                                                  bool autocorrect = false, std::optional<int> limit = std::nullopt,
-                                                  std::optional<int> page = std::nullopt);
-    static std::future<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view artist,
-                                                  std::string_view username, bool autocorrect = false,
-                                                  std::optional<int> limit = std::nullopt,
-                                                  std::optional<int> page = std::nullopt);
-    std::future<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false,
-                                           std::optional<int> limit = std::nullopt,
-                                           std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
+                                                 bool autocorrect = false, std::optional<int> limit = std::nullopt,
+                                                 std::optional<int> page = std::nullopt);
+    static pplx::task<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view artist,
+                                                 std::string_view username, bool autocorrect = false,
+                                                 std::optional<int> limit = std::nullopt,
+                                                 std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<tag>> get_tags(service&, std::string_view username, bool autocorrect = false,
+                                          std::optional<int> limit = std::nullopt,
+                                          std::optional<int> page = std::nullopt) const;
 
-    static std::future<std::vector<album>> search(service&, std::string_view name,
-                                                  std::optional<int> limit = std::nullopt,
-                                                  std::optional<int> page = std::nullopt);
-    std::future<std::vector<album>> search(service&, std::optional<int> limit = std::nullopt,
-                                           std::optional<int> page = std::nullopt) const;
+    static pplx::task<std::vector<album>> search(service&, std::string_view name,
+                                                 std::optional<int> limit = std::nullopt,
+                                                 std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<album>> search(service&, std::optional<int> limit = std::nullopt,
+                                          std::optional<int> page = std::nullopt) const;
 
   private:
     std::string m_name;

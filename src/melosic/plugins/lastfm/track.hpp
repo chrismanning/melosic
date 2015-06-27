@@ -68,11 +68,11 @@ struct LASTFM_EXPORT track {
 
     // api methods
 
-    static std::future<track> get_info(service&, std::string_view name, std::string_view artist,
-                                       bool autocorrect = false,
-                                       std::optional<std::string_view> username = std::nullopt);
-    std::future<track> get_info(service&, bool autocorrect = false,
-                                std::optional<std::string_view> username = std::nullopt) const;
+    static pplx::task<track> get_info(service&, std::string_view name, std::string_view artist,
+                                      bool autocorrect = false,
+                                      std::optional<std::string_view> username = std::nullopt);
+    pplx::task<track> get_info(service&, bool autocorrect = false,
+                               std::optional<std::string_view> username = std::nullopt) const;
 
   private:
     std::string m_name;

@@ -18,6 +18,4 @@
 #include <lastfm/user.hpp>
 #include <lastfm/service.hpp>
 
-namespace lastfm {
-
-} // namespace lastfm
+namespace lastfm {} // namespace lastfm

@@ -60,6 +60,8 @@ struct api_exception : std::system_error {
     explicit api_exception(api_error);
 };
 
+namespace detail {
+
 template <typename ContainerT>
 [[noreturn]] inline void handle_error_response(const jbson::basic_element<ContainerT>& elem) {
     auto error = static_cast<api_error>(jbson::get<int>(elem));
@@ -75,6 +77,7 @@ inline void check_error(const jbson::basic_document<ContainerT, EContainerT>& do
     }
 }
 
+} // namespace detail
 } // namespace lastfm
 
 namespace std {

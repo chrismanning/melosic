@@ -45,7 +45,7 @@ struct LASTFM_EXPORT venue {
     const std::vector<image>& images() const;
     void images(std::vector<image> images);
 
-private:
+  private:
     std::string m_id;
     std::string m_name;
     network::uri m_url;

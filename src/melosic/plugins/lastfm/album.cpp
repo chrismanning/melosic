@@ -125,134 +125,136 @@ void album::mbid(boost::uuids::uuid mbid) {
     m_mbid = mbid;
 }
 
-std::future<album> album::get_info(service& serv, boost::uuids::uuid mbid, std::optional<std::string_view> lang,
-                                   bool autocorrect, std::optional<std::string_view> username) {
-    return serv.get("album.getinfo",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("lang", lang),
-                                std::make_pair("autocorrect", autocorrect), std::make_pair("username", username)),
-                    use_future, transform_select<album>("album"));
+pplx::task<album> album::get_info(service& serv, boost::uuids::uuid mbid, std::optional<std::string_view> lang,
+                                  bool autocorrect, std::optional<std::string_view> username) {
+    return serv.get("album.getinfo", detail::make_params(std::make_pair("mbid", mbid), std::make_pair("lang", lang),
+                                                         std::make_pair("autocorrect", autocorrect),
+                                                         std::make_pair("username", username)),
+                    transform_select<album>("album"));
 }
 
-std::future<album> album::get_info(service& serv, std::string_view name, std::string_view artist,
-                                   std::optional<std::string_view> lang, bool autocorrect,
-                                   std::optional<std::string_view> username) {
+pplx::task<album> album::get_info(service& serv, std::string_view name, std::string_view artist,
+                                  std::optional<std::string_view> lang, bool autocorrect,
+                                  std::optional<std::string_view> username) {
     return serv.get("album.getinfo",
-                    make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                std::make_pair("lang", lang), std::make_pair("autocorrect", autocorrect),
-                                std::make_pair("username", username)),
-                    use_future, transform_select<album>("album"));
+                    detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                        std::make_pair("lang", lang), std::make_pair("autocorrect", autocorrect),
+                                        std::make_pair("username", username)),
+                    transform_select<album>("album"));
 }
 
-std::future<album> album::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
-                                   std::optional<std::string_view> username) const {
+pplx::task<album> album::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
+                                  std::optional<std::string_view> username) const {
     if(!m_mbid.is_nil())
         return get_info(serv, m_mbid, lang, autocorrect, username);
     return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
-std::future<std::vector<affiliation>> album::get_buy_links(service& serv, boost::uuids::uuid mbid,
-                                                           std::string_view countrycode, bool autocorrect) {
+pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, boost::uuids::uuid mbid,
+                                                          std::string_view countrycode, bool autocorrect) {
     return serv.get("album.getbuylinks",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("countrycode", countrycode),
-                                std::make_pair("autocorrect", autocorrect)),
-                    use_future, transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
+                    detail::make_params(std::make_pair("mbid", mbid), std::make_pair("countrycode", countrycode),
+                                        std::make_pair("autocorrect", autocorrect)),
+                    transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
 }
 
-std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view name,
-                                                           std::string_view artist, std::string_view countrycode,
-                                                           bool autocorrect) {
+pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view name, std::string_view artist,
+                                                          std::string_view countrycode, bool autocorrect) {
     return serv.get("album.getbuylinks",
-                    make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                std::make_pair("countrycode", countrycode), std::make_pair("autocorrect", autocorrect)),
-                    use_future, transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
+                    detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                        std::make_pair("countrycode", countrycode),
+                                        std::make_pair("autocorrect", autocorrect)),
+                    transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
 }
 
-std::future<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view countrycode,
-                                                           bool autocorrect) const {
+pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view countrycode,
+                                                          bool autocorrect) const {
     if(!m_mbid.is_nil())
         return get_buy_links(serv, m_mbid, countrycode, autocorrect);
     return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
-                                                  std::optional<int> limit, std::optional<int> page) {
+pplx::task<std::vector<shout>> album::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                 std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.getshouts",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
-                                std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
+                    detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                        std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<shout>>("shouts.shout.*"));
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
-                                                  bool autocorrect, std::optional<int> limit, std::optional<int> page) {
-    return serv.get("album.getshouts", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                                   std::make_pair("autocorrect", autocorrect),
-                                                   std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<shout>>("shouts.shout.*"));
+pplx::task<std::vector<shout>> album::get_shouts(service& serv, std::string_view name, std::string_view artist,
+                                                 bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("album.getshouts",
+                    detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                        std::make_pair("autocorrect", autocorrect), std::make_pair("limit", limit),
+                                        std::make_pair("page", page)),
+                    transform_select<std::vector<shout>>("shouts.shout.*"));
 }
 
-std::future<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect, std::optional<int> limit,
-                                                  std::optional<int> page) const {
+pplx::task<std::vector<shout>> album::get_shouts(service& serv, bool autocorrect, std::optional<int> limit,
+                                                 std::optional<int> page) const {
     if(!m_mbid.is_nil())
         return get_shouts(serv, m_mbid, autocorrect, limit, page);
     return get_shouts(serv, m_name, m_artist.name(), autocorrect, limit, page);
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect,
-                                                  std::optional<int> limit, std::optional<int> page) {
+pplx::task<std::vector<tag>> album::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+                                                 std::optional<int> limit, std::optional<int> page) {
     return serv.get("album.gettoptags",
-                    make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
-                                std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+                    detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
+                                        std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<tag>>("toptags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
-                                                  bool autocorrect, std::optional<int> limit, std::optional<int> page) {
-    return serv.get("album.gettoptags", make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                                    std::make_pair("autocorrect", autocorrect),
-                                                    std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<tag>>("toptags.tag.*"));
+pplx::task<std::vector<tag>> album::get_top_tags(service& serv, std::string_view name, std::string_view artist,
+                                                 bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("album.gettoptags",
+                    detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                        std::make_pair("autocorrect", autocorrect), std::make_pair("limit", limit),
+                                        std::make_pair("page", page)),
+                    transform_select<std::vector<tag>>("toptags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect, std::optional<int> limit,
-                                                  std::optional<int> page) const {
+pplx::task<std::vector<tag>> album::get_top_tags(service& serv, bool autocorrect, std::optional<int> limit,
+                                                 std::optional<int> page) const {
     if(!m_mbid.is_nil())
         return get_top_tags(serv, m_mbid, autocorrect, limit, page);
     return get_top_tags(serv, m_name, m_artist.name(), autocorrect, limit, page);
 }
 
-std::future<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
-                                              bool autocorrect, std::optional<int> limit, std::optional<int> page) {
-    return serv.get("album.gettags", make_params(std::make_pair("mbid", mbid), std::make_pair("user", username),
-                                                 std::make_pair("autocorrect", autocorrect),
-                                                 std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
+pplx::task<std::vector<tag>> album::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
+                                             bool autocorrect, std::optional<int> limit, std::optional<int> page) {
+    return serv.get("album.gettags", detail::make_params(std::make_pair("mbid", mbid), std::make_pair("user", username),
+                                                         std::make_pair("autocorrect", autocorrect),
+                                                         std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<tag>>("tags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view name, std::string_view artist,
-                                              std::string_view username, bool autocorrect, std::optional<int> limit,
-                                              std::optional<int> page) {
+pplx::task<std::vector<tag>> album::get_tags(service& serv, std::string_view name, std::string_view artist,
+                                             std::string_view username, bool autocorrect, std::optional<int> limit,
+                                             std::optional<int> page) {
     return serv.get("album.gettags",
-                    make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                std::make_pair("user", username), std::make_pair("autocorrect", autocorrect),
-                                std::make_pair("limit", limit), std::make_pair("page", page)),
-                    use_future, transform_select<std::vector<tag>>("tags.tag.*"));
+                    detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
+                                        std::make_pair("user", username), std::make_pair("autocorrect", autocorrect),
+                                        std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<tag>>("tags.tag.*"));
 }
 
-std::future<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect,
-                                              std::optional<int> limit, std::optional<int> page) const {
+pplx::task<std::vector<tag>> album::get_tags(service& serv, std::string_view username, bool autocorrect,
+                                             std::optional<int> limit, std::optional<int> page) const {
     if(!m_mbid.is_nil())
         return get_tags(serv, m_mbid, username, autocorrect, limit, page);
     return get_tags(serv, m_name, m_artist.name(), username, autocorrect, limit, page);
 }
 
-std::future<std::vector<album>> album::search(service& serv, std::string_view name, std::optional<int> limit,
-                                              std::optional<int> page) {
-    return serv.get("album.search", make_params(std::make_tuple("album", name), std::make_tuple("limit", limit),
-                                                std::make_tuple("page", page)),
-                    use_future, transform_select<std::vector<album>>("results.albummatches.album.*"));
+pplx::task<std::vector<album>> album::search(service& serv, std::string_view name, std::optional<int> limit,
+                                             std::optional<int> page) {
+    return serv.get("album.search", detail::make_params(std::make_tuple("album", name), std::make_tuple("limit", limit),
+                                                        std::make_tuple("page", page)),
+                    transform_select<std::vector<album>>("results.albummatches.album.*"));
 }
 
-std::future<std::vector<album>> album::search(service& serv, std::optional<int> limit, std::optional<int> page) const {
+pplx::task<std::vector<album>> album::search(service& serv, std::optional<int> limit, std::optional<int> page) const {
     return search(serv, m_name, limit, page);
 }
 

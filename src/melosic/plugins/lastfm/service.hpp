@@ -21,15 +21,12 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <future>
 #include <experimental/string_view>
 
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/hana/ext/std.hpp>
 
-#include <asio/package.hpp>
-#include <asio/post.hpp>
-#include <asio/use_future.hpp>
+#include <pplx/pplxtasks.h>
 
 #include <jbson/document.hpp>
 
@@ -46,8 +43,6 @@ struct user;
 struct track;
 struct tag;
 struct artist;
-using asio::use_future_t;
-constexpr use_future_t<> use_future{};
 
 class LASTFM_EXPORT service {
   public:
@@ -60,58 +55,19 @@ class LASTFM_EXPORT service {
     std::string_view api_key() const;
     std::string_view shared_secret() const;
 
+    pplx::task<jbson::document> get(std::string_view method, params_t params);
+
     template <typename TransformerT, typename ReturnT = std::result_of_t<TransformerT(jbson::document)>>
-    std::future<ReturnT> get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform);
-
-    void get(std::string_view method, params_t params, util::mfunction<void(asio::error_code, std::string)> callback);
-
-    template <typename T, typename ContinueT> auto then(std::future<T> fut, ContinueT&& continuation);
+    pplx::task<ReturnT> get(std::string_view method, params_t params, TransformerT&& transform);
 
   private:
-    static jbson::document document_callback(asio::error_code, std::string);
-
     struct impl;
     std::unique_ptr<impl> pimpl;
 };
 
-template <typename T, typename ContinueT> auto service::then(std::future<T> fut, ContinueT&& continuation) {
-    return asio::post(
-        asio::package([ fut = std::move(fut), continuation = std::forward<ContinueT>(continuation) ]() mutable {
-            fut.wait();
-            return continuation(std::move(fut));
-        }));
-}
-
 template <typename TransformerT, typename ReturnT>
-std::future<ReturnT> service::get(std::string_view method, params_t params, use_future_t<>, TransformerT&& transform) {
-    using transformer_t = std::decay_t<TransformerT>;
-    using ret_t = ReturnT;
-
-    struct transformer_wrapper {
-        void operator()(asio::error_code ec, std::string body) const {
-            if(ec) {
-                m_promise->set_exception(std::make_exception_ptr(std::system_error(ec)));
-                return;
-            }
-
-            try {
-                auto doc = document_callback(ec, std::move(body));
-
-                m_promise->set_value(transform(doc));
-            } catch(...) {
-                m_promise->set_exception(std::current_exception());
-            }
-        }
-
-        transformer_t transform;
-        mutable std::shared_ptr<std::promise<ret_t>> m_promise{std::make_shared<std::promise<ret_t>>()};
-    } callback{std::forward<TransformerT>(transform)};
-
-    auto fut = callback.m_promise->get_future();
-
-    get(method, std::move(params), std::move(callback));
-
-    return fut;
+pplx::task<ReturnT> service::get(std::string_view method, params_t params, TransformerT&& transform) {
+    return get(method, std::move(params)).then([transform](jbson::document doc) { return transform(std::move(doc)); });
 }
 
 namespace detail {
@@ -155,9 +111,9 @@ struct make_params_ {
     }
 };
 
-} // namespace detail
+constexpr auto make_params = make_params_{};
 
-constexpr auto make_params = detail::make_params_{};
+} // namespace detail
 
 } // namespace lastfm
 
