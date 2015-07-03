@@ -67,7 +67,7 @@ class LASTFM_EXPORT service {
 
 template <typename TransformerT, typename ReturnT>
 pplx::task<ReturnT> service::get(std::string_view method, params_t params, TransformerT&& transform) {
-    return get(method, std::move(params)).then([transform](jbson::document doc) { return transform(std::move(doc)); });
+    return get(method, std::move(params)).then(transform);
 }
 
 namespace detail {

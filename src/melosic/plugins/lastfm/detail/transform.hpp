@@ -78,8 +78,8 @@ namespace detail {
 
 template <typename T> struct transform_select_ {
     auto operator()(std::string_view path) const {
-        return [path = path.to_string()](auto&& doc) {
-            if(auto elem = vector_to_optional(jbson::path_select(std::forward<decltype(doc)>(doc), path))) {
+        return [path = path.to_string()](jbson::document doc) {
+            if(auto elem = vector_to_optional(jbson::path_select(std::move(doc), path))) {
                 return jbson::get<T>(*elem);
             }
             throw std::runtime_error("invalid response");
@@ -89,8 +89,8 @@ template <typename T> struct transform_select_ {
 
 template <typename T> struct transform_select_<std::vector<T>> {
     auto operator()(std::string_view path) const {
-        return [path = path.to_string()](auto&& doc) {
-            auto elems = jbson::path_select(std::forward<decltype(doc)>(doc), path);
+        return [path = path.to_string()](jbson::document doc) {
+            auto elems = jbson::path_select(std::move(doc), path);
             return transform_copy(elems, deserialise<T>);
         };
     }

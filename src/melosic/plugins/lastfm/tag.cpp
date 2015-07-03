@@ -153,7 +153,7 @@ pplx::task<std::vector<artist>> tag::get_weekly_artist_chart(service& serv,
 }
 
 pplx::task<std::vector<std::tuple<date_t, date_t>>> tag::get_weekly_chart_list(service& serv, std::string_view name) {
-    auto transformer = [](auto&& doc) {
+    auto transformer = [](jbson::document doc) {
         auto from = jbson::path_select(doc, "weeklychartlist.chart.*.from");
         auto to = jbson::path_select(doc, "weeklychartlist.chart.*.to");
 
