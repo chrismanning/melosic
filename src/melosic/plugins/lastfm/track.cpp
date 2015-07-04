@@ -117,17 +117,27 @@ void track::wiki(struct wiki wiki) {
     m_wiki = std::move(wiki);
 }
 
-pplx::task<track> track::get_info(service& serv, std::string_view name, std::string_view artist, bool autocorrect,
+mbid_t track::mbid() const {
+    return m_mbid;
+}
+
+void track::mbid(mbid_t mbid) {
+    m_mbid = mbid;
+}
+
+pplx::task<track> track::get_info(service& serv, std::string_view name, std::string_view artist,
+                                  std::optional<std::string_view> lang, bool autocorrect,
                                   std::optional<std::string_view> username) {
     return serv.get("track.getinfo",
                     detail::make_params(std::make_pair("track", name), std::make_pair("artist", artist),
-                                        std::make_pair("autocorrect", autocorrect),
+                                        std::make_pair("lang", lang), std::make_pair("autocorrect", autocorrect),
                                         std::make_pair("username", username)),
                     transform_select<track>("track"));
 }
 
-pplx::task<track> track::get_info(service& serv, bool autocorrect, std::optional<std::string_view> username) const {
-    return get_info(serv, m_name, m_artist.name(), autocorrect, username);
+pplx::task<track> track::get_info(service& serv, std::optional<std::string_view> lang, bool autocorrect,
+                                  std::optional<std::string_view> username) const {
+    return get_info(serv, m_name, m_artist.name(), lang, autocorrect, username);
 }
 
 } // namespace lastfm

@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2012 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,28 +15,30 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#ifndef LASTFM_USER_HPP
-#define LASTFM_USER_HPP
+#ifndef LASTFM_MBID
+#define LASTFM_MBID
 
-#include <network/uri.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/string_generator.hpp>
 
 #include <jbson/element.hpp>
 
-#include <lastfm/lastfm.hpp>
-
 namespace lastfm {
-class service;
 
-struct LASTFM_EXPORT user {
-    explicit user() = default;
-};
-
-template <typename Container> void value_get(const jbson::basic_element<Container>& user_elem, user& var) {
-    //    auto doc = jbson::get<jbson::element_type::document_element>(user_elem);
-    //    for(auto&& elem : doc) {
-    //    }
-}
+using mbid_t = boost::uuids::uuid;
 
 } // namespace lastfm
 
-#endif // LASTFM_USER_HPP
+namespace boost::uuids {
+
+template <typename Container> void value_get(const jbson::basic_element<Container>& mbid_elem, uuid& var) {
+    static constexpr string_generator gen{};
+    auto str = jbson::get<jbson::element_type::string_element>(mbid_elem);
+    try {
+        var = gen(str.begin(), str.end());
+    } catch(...) {}
+}
+
+} // namespace boost::uuids
+
+#endif // LASTFM_MBID

@@ -95,15 +95,15 @@ void artist::images(std::vector<image> images) {
     m_images = std::move(images);
 }
 
-boost::uuids::uuid artist::mbid() const {
+mbid_t artist::mbid() const {
     return m_mbid;
 }
 
-void artist::mbid(boost::uuids::uuid mbid) {
+void artist::mbid(mbid_t mbid) {
     m_mbid = mbid;
 }
 
-pplx::task<artist> artist::get_info(service& serv, boost::uuids::uuid mbid, std::optional<std::string_view> lang,
+pplx::task<artist> artist::get_info(service& serv, mbid_t mbid, std::optional<std::string_view> lang,
                                     bool autocorrect, std::optional<std::string_view> username) {
     return serv.get("artist.getinfo", detail::make_params(std::make_pair("mbid", mbid), std::make_pair("lang", lang),
                                                           std::make_pair("autocorrect", autocorrect),
@@ -133,7 +133,7 @@ pplx::task<artist> artist::get_correction(service& serv) const {
     return get_correction(serv, m_name);
 }
 
-pplx::task<std::vector<event>> artist::get_events(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<event>> artist::get_events(service& serv, mbid_t mbid, bool autocorrect,
                                                   bool festivalsonly, std::optional<int> limit,
                                                   std::optional<int> page) {
     return serv.get("artist.getevents",
@@ -160,7 +160,7 @@ pplx::task<std::vector<event>> artist::get_events(service& serv, bool autocorrec
     return get_events(serv, m_name, autocorrect, festivalsonly, limit, page);
 }
 
-pplx::task<std::vector<event>> artist::get_past_events(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<event>> artist::get_past_events(service& serv, mbid_t mbid, bool autocorrect,
                                                        std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.getpastevents",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -183,7 +183,7 @@ pplx::task<std::vector<event>> artist::get_past_events(service& serv, bool autoc
     return get_past_events(serv, m_name, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<shout>> artist::get_shouts(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<shout>> artist::get_shouts(service& serv, mbid_t mbid, bool autocorrect,
                                                   std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.getshouts",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -206,7 +206,7 @@ pplx::task<std::vector<shout>> artist::get_shouts(service& serv, bool autocorrec
     return get_shouts(serv, m_name, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<artist>> artist::get_similar(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<artist>> artist::get_similar(service& serv, mbid_t mbid, bool autocorrect,
                                                     std::optional<int> limit) {
     return serv.get("artist.getsimilar",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -228,7 +228,7 @@ pplx::task<std::vector<artist>> artist::get_similar(service& serv, bool autocorr
     return get_similar(serv, m_name, autocorrect, limit);
 }
 
-pplx::task<std::vector<tag>> artist::get_tags(service& serv, boost::uuids::uuid mbid, std::string_view username,
+pplx::task<std::vector<tag>> artist::get_tags(service& serv, mbid_t mbid, std::string_view username,
                                               bool autocorrect, std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.gettags",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("username", username),
@@ -251,7 +251,7 @@ pplx::task<std::vector<tag>> artist::get_tags(service& serv, std::string_view us
     return get_tags(serv, m_name, username, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<album>> artist::get_top_albums(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<album>> artist::get_top_albums(service& serv, mbid_t mbid, bool autocorrect,
                                                       std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.gettopalbums",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -274,7 +274,7 @@ pplx::task<std::vector<album>> artist::get_top_albums(service& serv, bool autoco
     return get_top_albums(serv, m_name, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<user>> artist::get_top_fans(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<user>> artist::get_top_fans(service& serv, mbid_t mbid, bool autocorrect,
                                                    std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.gettopfans",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -297,7 +297,7 @@ pplx::task<std::vector<user>> artist::get_top_fans(service& serv, bool autocorre
     return get_top_fans(serv, m_name, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<tag>> artist::get_top_tags(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<tag>> artist::get_top_tags(service& serv, mbid_t mbid, bool autocorrect,
                                                   std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.gettoptags",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),
@@ -320,7 +320,7 @@ pplx::task<std::vector<tag>> artist::get_top_tags(service& serv, bool autocorrec
     return get_top_tags(serv, m_name, autocorrect, limit, page);
 }
 
-pplx::task<std::vector<track>> artist::get_top_tracks(service& serv, boost::uuids::uuid mbid, bool autocorrect,
+pplx::task<std::vector<track>> artist::get_top_tracks(service& serv, mbid_t mbid, bool autocorrect,
                                                       std::optional<int> limit, std::optional<int> page) {
     return serv.get("artist.gettoptracks",
                     detail::make_params(std::make_pair("mbid", mbid), std::make_pair("autocorrect", autocorrect),

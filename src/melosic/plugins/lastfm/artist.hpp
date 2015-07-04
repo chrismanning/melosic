@@ -26,6 +26,7 @@
 #include <lastfm/shout.hpp>
 #include <lastfm/event.hpp>
 #include <lastfm/tag.hpp>
+#include <lastfm/mbid.hpp>
 
 namespace lastfm {
 
@@ -64,12 +65,12 @@ struct LASTFM_EXPORT artist {
     const std::vector<image>& images() const;
     void images(std::vector<image>);
 
-    boost::uuids::uuid mbid() const;
-    void mbid(boost::uuids::uuid);
+    mbid_t mbid() const;
+    void mbid(mbid_t);
 
     // api methods
 
-    static pplx::task<artist> get_info(service&, boost::uuids::uuid mbid,
+    static pplx::task<artist> get_info(service&, mbid_t mbid,
                                        std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                        std::optional<std::string_view> username = std::nullopt);
     static pplx::task<artist> get_info(service&, std::string_view name,
@@ -81,7 +82,7 @@ struct LASTFM_EXPORT artist {
     static pplx::task<artist> get_correction(service&, std::string_view name);
     pplx::task<artist> get_correction(service&) const;
 
-    static pplx::task<std::vector<event>> get_events(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<event>> get_events(service&, mbid_t mbid, bool autocorrect = false,
                                                      bool festivalsonly = false,
                                                      std::optional<int> limit = std::nullopt,
                                                      std::optional<int> page = std::nullopt);
@@ -93,7 +94,7 @@ struct LASTFM_EXPORT artist {
                                               std::optional<int> limit = std::nullopt,
                                               std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<event>> get_past_events(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<event>> get_past_events(service&, mbid_t mbid, bool autocorrect = false,
                                                           std::optional<int> limit = std::nullopt,
                                                           std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<event>> get_past_events(service&, std::string_view name, bool autocorrect = false,
@@ -103,7 +104,7 @@ struct LASTFM_EXPORT artist {
                                                    std::optional<int> limit = std::nullopt,
                                                    std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<shout>> get_shouts(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<shout>> get_shouts(service&, mbid_t mbid, bool autocorrect = false,
                                                      std::optional<int> limit = std::nullopt,
                                                      std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<shout>> get_shouts(service&, std::string_view name, bool autocorrect = false,
@@ -113,14 +114,14 @@ struct LASTFM_EXPORT artist {
                                               std::optional<int> limit = std::nullopt,
                                               std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<artist>> get_similar(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<artist>> get_similar(service&, mbid_t mbid, bool autocorrect = false,
                                                        std::optional<int> limit = std::nullopt);
     static pplx::task<std::vector<artist>> get_similar(service&, std::string_view name, bool autocorrect = false,
                                                        std::optional<int> limit = std::nullopt);
     pplx::task<std::vector<artist>> get_similar(service&, bool autocorrect = false,
                                                 std::optional<int> limit = std::nullopt) const;
 
-    static pplx::task<std::vector<tag>> get_tags(service&, boost::uuids::uuid mbid, std::string_view username,
+    static pplx::task<std::vector<tag>> get_tags(service&, mbid_t mbid, std::string_view username,
                                                  bool autocorrect = false, std::optional<int> limit = std::nullopt,
                                                  std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<tag>> get_tags(service&, std::string_view name, std::string_view username,
@@ -130,7 +131,7 @@ struct LASTFM_EXPORT artist {
                                           std::optional<int> limit = std::nullopt,
                                           std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<album>> get_top_albums(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<album>> get_top_albums(service&, mbid_t mbid, bool autocorrect = false,
                                                          std::optional<int> limit = std::nullopt,
                                                          std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<album>> get_top_albums(service&, std::string_view name, bool autocorrect = false,
@@ -140,7 +141,7 @@ struct LASTFM_EXPORT artist {
                                                   std::optional<int> limit = std::nullopt,
                                                   std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<user>> get_top_fans(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<user>> get_top_fans(service&, mbid_t mbid, bool autocorrect = false,
                                                       std::optional<int> limit = std::nullopt,
                                                       std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<user>> get_top_fans(service&, std::string_view name, bool autocorrect = false,
@@ -150,7 +151,7 @@ struct LASTFM_EXPORT artist {
                                                std::optional<int> limit = std::nullopt,
                                                std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<tag>> get_top_tags(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<tag>> get_top_tags(service&, mbid_t mbid, bool autocorrect = false,
                                                      std::optional<int> limit = std::nullopt,
                                                      std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<tag>> get_top_tags(service&, std::string_view name, bool autocorrect = false,
@@ -160,7 +161,7 @@ struct LASTFM_EXPORT artist {
                                               std::optional<int> limit = std::nullopt,
                                               std::optional<int> page = std::nullopt) const;
 
-    static pplx::task<std::vector<track>> get_top_tracks(service&, boost::uuids::uuid mbid, bool autocorrect = false,
+    static pplx::task<std::vector<track>> get_top_tracks(service&, mbid_t mbid, bool autocorrect = false,
                                                          std::optional<int> limit = std::nullopt,
                                                          std::optional<int> page = std::nullopt);
     static pplx::task<std::vector<track>> get_top_tracks(service&, std::string_view name, bool autocorrect = false,
@@ -186,7 +187,7 @@ struct LASTFM_EXPORT artist {
     bool m_streamable = false;
     struct wiki m_wiki;
     std::vector<image> m_images;
-    boost::uuids::uuid m_mbid{{0}};
+    mbid_t m_mbid{{0}};
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& artist_elem, artist& var) {
@@ -229,6 +230,8 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             }
         } else if(elem.name() == "image") {
             var.images(jbson::get<std::vector<image>>(elem));
+        } else if(elem.name() == "mbid") {
+            var.mbid(jbson::get<mbid_t>(elem));
         }
     }
 }

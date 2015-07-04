@@ -20,6 +20,7 @@
 
 #include <lastfm/album.hpp>
 #include <lastfm/artist.hpp>
+#include <lastfm/mbid.hpp>
 #include <lastfm/detail/transform.hpp>
 
 namespace lastfm {
@@ -66,12 +67,18 @@ struct LASTFM_EXPORT track {
     const wiki& wiki() const;
     void wiki(struct wiki);
 
+    mbid_t mbid() const;
+    void mbid(mbid_t);
+
     // api methods
 
-    static pplx::task<track> get_info(service&, std::string_view name, std::string_view artist,
-                                      bool autocorrect = false,
+    static pplx::task<track> get_info(service&, mbid_t mbid,
+                                      std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                       std::optional<std::string_view> username = std::nullopt);
-    pplx::task<track> get_info(service&, bool autocorrect = false,
+    static pplx::task<track> get_info(service&, std::string_view name, std::string_view artist,
+                                      std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
+                                      std::optional<std::string_view> username = std::nullopt);
+    pplx::task<track> get_info(service&, std::optional<std::string_view> lang = std::nullopt, bool autocorrect = false,
                                std::optional<std::string_view> username = std::nullopt) const;
 
   private:
@@ -87,6 +94,7 @@ struct LASTFM_EXPORT track {
     int m_plays = 0;
     bool m_streamable = false;
     struct wiki m_wiki;
+    mbid_t m_mbid{{0}};
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& tag_elem, track& var) {
@@ -138,6 +146,8 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             }
         } else if(elem.name() == "wiki") {
             var.wiki(jbson::get<wiki>(elem));
+        } else if(elem.name() == "mbid") {
+            var.mbid(jbson::get<mbid_t>(elem));
         }
     }
 }
