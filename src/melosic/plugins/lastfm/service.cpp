@@ -32,6 +32,8 @@
 
 namespace lastfm {
 
+namespace hana = boost::hana;
+
 static constexpr auto base_url = U("http://ws.audioscrobbler.com/2.0/"_sv);
 
 struct service::impl {
