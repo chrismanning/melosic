@@ -151,27 +151,27 @@ pplx::task<album> album::get_info(service& serv, std::optional<std::string_view>
 }
 
 pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, mbid_t mbid,
-                                                          std::string_view countrycode, bool autocorrect) {
+                                                          std::string_view country, bool autocorrect) {
     return serv.get("album.getbuylinks",
-                    detail::make_params(std::make_pair("mbid", mbid), std::make_pair("countrycode", countrycode),
+                    detail::make_params(std::make_pair("mbid", mbid), std::make_pair("countrycode", country),
                                         std::make_pair("autocorrect", autocorrect)),
                     transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
 }
 
 pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view name, std::string_view artist,
-                                                          std::string_view countrycode, bool autocorrect) {
+                                                          std::string_view country, bool autocorrect) {
     return serv.get("album.getbuylinks",
                     detail::make_params(std::make_pair("album", name), std::make_pair("artist", artist),
-                                        std::make_pair("countrycode", countrycode),
+                                        std::make_pair("country", country),
                                         std::make_pair("autocorrect", autocorrect)),
                     transform_select<std::vector<affiliation>>("affiliations.*.affiliation.*"));
 }
 
-pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view countrycode,
+pplx::task<std::vector<affiliation>> album::get_buy_links(service& serv, std::string_view country,
                                                           bool autocorrect) const {
     if(!m_mbid.is_nil())
-        return get_buy_links(serv, m_mbid, countrycode, autocorrect);
-    return get_buy_links(serv, m_name, m_artist.name(), countrycode, autocorrect);
+        return get_buy_links(serv, m_mbid, country, autocorrect);
+    return get_buy_links(serv, m_name, m_artist.name(), country, autocorrect);
 }
 
 pplx::task<std::vector<shout>> album::get_shouts(service& serv, mbid_t mbid, bool autocorrect,

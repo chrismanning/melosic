@@ -91,10 +91,10 @@ struct LASTFM_EXPORT album {
                                std::optional<std::string_view> username = std::nullopt) const;
 
     static pplx::task<std::vector<affiliation>> get_buy_links(service&, mbid_t mbid,
-                                                              std::string_view countrycode, bool autocorrect = false);
+                                                              std::string_view country, bool autocorrect = false);
     static pplx::task<std::vector<affiliation>> get_buy_links(service&, std::string_view name, std::string_view artist,
-                                                              std::string_view countrycode, bool autocorrect = false);
-    pplx::task<std::vector<affiliation>> get_buy_links(service&, std::string_view countrycode,
+                                                              std::string_view country, bool autocorrect = false);
+    pplx::task<std::vector<affiliation>> get_buy_links(service&, std::string_view country,
                                                        bool autocorrect = false) const;
 
     static pplx::task<std::vector<shout>> get_shouts(service&, mbid_t mbid, bool autocorrect = false,
