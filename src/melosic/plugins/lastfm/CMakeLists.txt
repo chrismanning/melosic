@@ -16,6 +16,7 @@ SET(SRC ${SRC} affiliation.cpp)
 SET(SRC ${SRC} image.cpp)
 SET(SRC ${SRC} event.cpp)
 SET(SRC ${SRC} venue.cpp)
+SET(SRC ${SRC} location.cpp)
 
 FILE(GLOB_RECURSE LASTFM_COMMON_SRC_LIST *.hpp)
 

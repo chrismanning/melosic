@@ -16,6 +16,9 @@
 **************************************************************************/
 
 #include <lastfm/venue.hpp>
+#include <lastfm/service.hpp>
+#include <lastfm/event.hpp>
+#include <lastfm/artist.hpp>
 
 namespace lastfm {
 
@@ -57,6 +60,51 @@ const std::vector<image>& venue::images() const {
 
 void venue::images(std::vector<image> images) {
     m_images = std::move(images);
+}
+
+const location& venue::location() const {
+    return m_location;
+}
+
+void venue::location(struct location location) {
+    m_location = std::move(location);
+}
+
+pplx::task<std::vector<event>> venue::get_events(service& serv, std::string_view venue_id, bool festivals_only) {
+    return serv.get("venue.getevents", detail::make_params(std::make_pair("id", venue_id),
+                                                           std::make_pair("festivalsonly", festivals_only)),
+                    transform_select<std::vector<event>>("events.event.*"));
+}
+
+pplx::task<std::vector<event>> venue::get_events(service& serv, bool festivals_only) const {
+    return get_events(serv, m_id, festivals_only);
+}
+
+pplx::task<std::vector<event>> venue::get_past_events(service& serv, std::string_view venue_id, bool festivals_only,
+                                                      std::optional<int> limit, std::optional<int> page) {
+    return serv.get("venue.getevents",
+                    detail::make_params(std::make_pair("id", venue_id), std::make_pair("festivalsonly", festivals_only),
+                                        std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<event>>("events.event.*"));
+}
+
+pplx::task<std::vector<event>> venue::get_past_events(service& serv, bool festivals_only, std::optional<int> limit,
+                                                      std::optional<int> page) const {
+    return get_past_events(serv, m_id, festivals_only, limit, page);
+}
+
+pplx::task<std::vector<venue>> venue::search(service& serv, std::string_view venue_id,
+                                             std::optional<std::string_view> country, std::optional<int> limit,
+                                             std::optional<int> page) {
+    return serv.get("venue.search",
+                    detail::make_params(std::make_pair("id", venue_id), std::make_pair("country", country),
+                                        std::make_pair("limit", limit), std::make_pair("page", page)),
+                    transform_select<std::vector<venue>>("results.venuematches.track.*"));
+}
+
+pplx::task<std::vector<venue>> venue::search(service& serv, std::optional<std::string_view> country,
+                                             std::optional<int> limit, std::optional<int> page) const {
+    return search(serv, m_id, country, limit, page);
 }
 
 } // namespace lastfm

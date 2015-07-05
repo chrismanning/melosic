@@ -18,14 +18,15 @@
 #ifndef LASTFM_VENUE_HPP
 #define LASTFM_VENUE_HPP
 
-#include <jbson/element.hpp>
-
 #include <lastfm/lastfm.hpp>
 #include <lastfm/image.hpp>
+#include <lastfm/location.hpp>
 
 namespace lastfm {
 
+class service;
 struct image;
+struct event;
 
 struct LASTFM_EXPORT venue {
     explicit venue() = default;
@@ -45,12 +46,37 @@ struct LASTFM_EXPORT venue {
     const std::vector<image>& images() const;
     void images(std::vector<image> images);
 
+    const location& location() const;
+    void location(struct location location);
+
+    // api methods
+
+    static pplx::task<std::vector<event>> get_events(service&, std::string_view venue_id, bool festivals_only = false);
+    pplx::task<std::vector<event>> get_events(service&, bool festivals_only = false) const;
+
+    static pplx::task<std::vector<event>> get_past_events(service&, std::string_view venue_id,
+                                                          bool festivals_only = false,
+                                                          std::optional<int> limit = std::nullopt,
+                                                          std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<event>> get_past_events(service&, bool festivals_only = false,
+                                                   std::optional<int> limit = std::nullopt,
+                                                   std::optional<int> page = std::nullopt) const;
+
+    static pplx::task<std::vector<venue>> search(service&, std::string_view venue_id,
+                                                 std::optional<std::string_view> country = std::nullopt,
+                                                 std::optional<int> limit = std::nullopt,
+                                                 std::optional<int> page = std::nullopt);
+    pplx::task<std::vector<venue>> search(service&, std::optional<std::string_view> country = std::nullopt,
+                                          std::optional<int> limit = std::nullopt,
+                                          std::optional<int> page = std::nullopt) const;
+
   private:
     std::string m_id;
     std::string m_name;
     network::uri m_url;
     network::uri m_website;
     std::vector<image> m_images;
+    struct location m_location;
 };
 
 template <typename Container> void value_get(const jbson::basic_element<Container>& venue_elem, venue& var) {
@@ -68,6 +94,8 @@ template <typename Container> void value_get(const jbson::basic_element<Containe
             var.website(jbson::get<network::uri>(elem));
         } else if(elem.name() == "image") {
             var.images(jbson::get<std::vector<image>>(elem));
+        } else if(elem.name() == "location") {
+            var.location(jbson::get<location>(elem));
         }
     }
 }
