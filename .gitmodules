@@ -17,3 +17,6 @@
 [submodule "extern/hana"]
 	path = extern/hana
 	url = https://github.com/ldionne/hana.git
+[submodule "extern/lastfmpp"]
+	path = extern/lastfmpp
+	url = git@github.com:chrismanning/lastfmpp.git

@@ -27,10 +27,10 @@
 #include <melosic/melin/config.hpp>
 using namespace Melosic;
 
-#include <lastfm/lastfm.hpp>
-#include <lastfm/service.hpp>
-#include <lastfm/user.hpp>
-using namespace lastfm;
+#include <lastfmpp/lastfmpp.hpp>
+#include <lastfmpp/service.hpp>
+#include <lastfmpp/user.hpp>
+using namespace lastfmpp;
 
 static Logger::Logger logject(logging::keywords::channel = "lastfm");
 Config::Conf conf{"lastfm"};
