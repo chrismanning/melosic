@@ -4,10 +4,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 SET(SRC lastfm.cpp)
 
-FILE(GLOB_RECURSE LASTFM_COMMON_SRC_LIST *.hpp)
-
-add_custom_target(lastfm_heads ALL SOURCES ${LASTFM_COMMON_SRC_LIST})
-
 add_library(${LASTFM} SHARED ${SRC})
 
 add_dependencies(${LASTFM} lastfmpp_${PROJECT_NAME})

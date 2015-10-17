@@ -10,20 +10,16 @@ add_subdirectory(common)
 set(MELIN_SRC_LIST)
 add_subdirectory(melin)
 
-add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST})
+FILE(GLOB_RECURSE HEADER_SRC_LIST *.hpp)
+
+add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST} ${HEADER_SRC_LIST})
 set_target_properties(${PROJECT_NAME}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PROJECT_NAME}lib_EXPORTS)
 
 add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib rapidjson)
 
-add_subdirectory(gui)
-
-include_directories(SYSTEM ${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
-
-add_subdirectory(plugins)
-
 #create main executable
 add_executable(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} -L${Boost_LIBRARY_DIR} ${Boost_LIBRARIES} ${PROJECT_NAME}lib)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}lib)
 
 add_library(${PROJECT_NAME}_test_main OBJECT test_main.cpp)
 set_property(TARGET ${PROJECT_NAME}_test_main APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR})
@@ -39,6 +35,12 @@ SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} executors)
 SET(LINK_LIBS ${LINK_LIBS} PARENT_SCOPE)
 
 target_link_libraries(${PROJECT_NAME}lib ${LINK_LIBS})
+
+add_subdirectory(gui)
+
+include_directories(SYSTEM ${Qt5Qml_INCLUDES} ${Qt5Quick_INCLUDES} ${Qt5Widgets_INCLUDES})
+
+add_subdirectory(plugins)
 
 qt5_use_modules(${PROJECT_NAME} Widgets Qml)
 SET(LINK_LIBS ${LINK_LIBS} ${Qt5Widgets_LIBRARIES} ${Qt5Qml_LIBRARIES})
