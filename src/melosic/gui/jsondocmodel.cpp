@@ -108,7 +108,7 @@ static QVariantMap doc_to_map(const jbson::document& doc) {
     QVariantVisitor v{map};
     for(auto&& e : doc)
         e.visit(v);
-    return std::move(map);
+    return map;
 }
 
 QVariant JsonDocModel::data(const QModelIndex& index, int role) const {

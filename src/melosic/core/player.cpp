@@ -741,7 +741,7 @@ void Player::impl::changeDevice() {
         asioOutput->cancel();
         asioOutput->stop();
     }
-    asioOutput = std::move(outman->createASIOSink());
+    asioOutput = outman->createASIOSink();
 }
 
 void Player::impl::sinkChangeSlot() {

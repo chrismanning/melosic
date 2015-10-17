@@ -147,7 +147,7 @@ const std::string& Manager::currentSinkName() const {
 }
 
 std::unique_ptr<AudioIO::AudioOutputBase> Manager::createASIOSink() const {
-    return std::move(pimpl->createASIOSink());
+    return pimpl->createASIOSink();
 }
 
 Signals::Output::PlayerSinkChanged& Manager::getPlayerSinkChangedSignal() const {

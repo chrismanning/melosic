@@ -50,7 +50,7 @@ template <loop_options LoopMethod> struct basic_loop_executor {
   private:
     boost::sync_queue<work_type, std::deque<work_type>> m_work_queue;
     std::atomic_bool m_exit_loop{false};
-    std::atomic_flag m_in_loop{ATOMIC_FLAG_INIT};
+    std::atomic_flag m_in_loop = ATOMIC_FLAG_INIT;
     std::atomic_bool m_destruct{false};
 
     void try_loop() {

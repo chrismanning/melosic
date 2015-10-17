@@ -115,7 +115,7 @@ struct Manager::impl {
                 c.putNode(std::move(name_str), VarFromJson(member.value));
             }
         }
-        return std::move(c);
+        return c;
     }
 
     void loadConfig() {
@@ -146,7 +146,7 @@ struct Manager::impl {
         rootjson.ParseInsitu<0>(confstring.data());
 
         if(!rootjson.HasParseError()) {
-            Conf tmp_conf = std::move(ConfFromJson(rootjson, "root"s));
+            Conf tmp_conf = ConfFromJson(rootjson, "root"s);
 
             using std::swap;
             swap(m_conf, tmp_conf);
@@ -185,7 +185,7 @@ struct Manager::impl {
                     val.Reserve(vec.size(), poolAlloc);
                     for(auto& v : vec)
                         val.PushBack(JsonFromVar(v), poolAlloc);
-                    return std::move(val);
+                    return val;
                 }
             }
             assert(false);

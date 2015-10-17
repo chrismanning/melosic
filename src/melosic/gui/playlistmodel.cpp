@@ -186,7 +186,7 @@ static network::uri to_uri(QUrl url) {
     network::uri_builder build(uri);
     build.authority("");
     uri = build.uri();
-    return std::move(uri);
+    return uri;
 }
 
 bool PlaylistModel::insertTracks(int row, QVariant var) {

@@ -286,7 +286,7 @@ std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     auto ret = pimpl->open(track.uri());
     //    if(ret)
     //        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
-    return std::move(ret);
+    return ret;
 }
 
 } // namespace Decoder

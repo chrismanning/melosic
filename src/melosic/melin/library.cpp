@@ -653,12 +653,12 @@ std::vector<jbson::element> apply_path(const std::vector<jbson::document>& docs,
         for(auto&& doc : docs)
             for(auto&& e : doc)
                 vec.emplace_back(e);
-        return std::move(vec);
+        return vec;
     }
     for(auto&& doc : docs)
         for(auto&& e : jbson::path_select(doc, path))
             vec.emplace_back(e);
-    return std::move(vec);
+    return vec;
 }
 
 jbson::document_set apply_named_paths(const jbson::document& doc,

@@ -111,7 +111,7 @@ static jbson::document to_document(const QVariant& var) {
         doc = "{}"_json_doc;
     }
 
-    return std::move(doc);
+    return doc;
 }
 
 static QVariant to_qvariant(const jbson::document& doc) {

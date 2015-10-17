@@ -67,7 +67,7 @@ boost::filesystem::path uri_to_path(const network::uri& uri) {
         network::uri::decode(str_ref.begin(), str_ref.end(), std::back_inserter(str));
         p /= std::move(str);
     }
-    return std::move(p);
+    return p;
 }
 
 network::uri to_uri(const boost::filesystem::path& path) {

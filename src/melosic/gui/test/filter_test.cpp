@@ -44,7 +44,7 @@ static std::vector<jbson::element> to_array(
         return el;
     });
     assert(boost::distance(arr) == boost::distance(range));
-    return std::move(arr);
+    return arr;
 }
 
 template <typename RangeT>
@@ -61,7 +61,7 @@ to_array(RangeT&& range,
                          el.name(std::to_string(i++));
                          return el;
                      });
-    return std::move(arr);
+    return arr;
 }
 
 struct FilterTest : QObject {

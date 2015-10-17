@@ -36,10 +36,10 @@ inline fs::path readEnvDir(const char* name, const char* defaultValue) {
     ::wordexp(env ? env : defaultValue, &exp_result, 0);
     fs::path returnValue(exp_result.we_wordv[0]);
     ::wordfree(&exp_result);
-    return std::move(returnValue);
+    return returnValue;
 }
 
-inline std::list<fs::path> readEnvDirList(const char* name, const char* defaultValue) {
+inline std::vector<fs::path> readEnvDirList(const char* name, const char* defaultValue) {
     static constexpr char delim = ':';
 
     const char* const env = getenv(name);
@@ -50,10 +50,10 @@ inline std::list<fs::path> readEnvDirList(const char* name, const char* defaultV
     if(str.back() == delim)
         str += defaultValue;
 
-    std::list<fs::path> returnValue;
+    std::vector<fs::path> returnValue;
     boost::split(returnValue, str, [](char c) { return c == delim; });
 
-    return std::move(returnValue);
+    return returnValue;
 }
 }
 
