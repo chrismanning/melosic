@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8.11)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED 14)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 
 option(MELOSIC_ENABLE_TESTING "Enable testing" ON)
@@ -41,6 +42,7 @@ find_package(Boost COMPONENTS system thread locale filesystem log log_setup chro
 link_directories(${Boost_LIBRARY_DIR})
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
+find_package(OpenSSL REQUIRED)
 find_package(Asio 1.10.1 REQUIRED)
 
 include_directories(include)
@@ -81,9 +83,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -std=c++1y")
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O1")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O1")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 
@@ -92,7 +94,7 @@ SET(TAGLIB_MIN_VERSION "1.8")
 
 include_directories(src)
 include_directories(SYSTEM ${TAGLIB_INCLUDES})
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} z)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} z)
 SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp -lnetwork-uri)
 
 if(UNIX)
@@ -139,7 +141,7 @@ endif()
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
   add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
-  target_link_libraries(${test_name} ${LINK_LIBS} ${PROJECT_NAME}lib)
+  target_link_libraries(${test_name} ${PROJECT_NAME}lib ${LINK_LIBS})
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/test)
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
   set_property(TARGET ${test_name} APPEND PROPERTY COMPILE_DEFINITIONS
@@ -159,5 +161,3 @@ endfunction()
 add_subdirectory(src/melosic)
 
 add_subdirectory(test)
-
-add_dependencies(${PROJECT_NAME}_test_main catch_${PROJECT_NAME})

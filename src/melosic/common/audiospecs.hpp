@@ -23,6 +23,10 @@
 namespace Melosic {
 
 struct AudioSpecs final {
+    uint8_t channels = 0;
+    uint8_t bps = 0;
+    uint32_t sample_rate = 0;
+
     constexpr AudioSpecs() noexcept = default;
     constexpr AudioSpecs(uint8_t channels, uint8_t bps, uint32_t sample_rate) noexcept : channels(channels),
                                                                                          bps(bps),
@@ -37,11 +41,11 @@ struct AudioSpecs final {
     }
 
     constexpr size_t samples_to_bytes(size_t samples) const noexcept {
-        return samples * (bps / 8) * channels;
+        return samples * bps_in_bytes() * channels;
     }
 
     constexpr size_t bytes_to_samples(size_t bytes) const noexcept {
-        return bytes / (bps / 8) / channels;
+        return bytes / bps_in_bytes() / channels;
     }
 
     template <typename Duration> constexpr size_t time_to_samples(Duration time) const noexcept {
@@ -60,9 +64,10 @@ struct AudioSpecs final {
         return samples_to_time<Duration>(bytes_to_samples(bytes));
     }
 
-    uint8_t channels = 0;
-    uint8_t bps = 0;
-    uint32_t sample_rate = 0;
+    /// Round to next byte boundary to support eg. 12bit & 20bit padded audio
+    constexpr uint8_t bps_in_bytes() const noexcept {
+        return bps / 8 + (bps % 8 != 0);
+    }
 };
 
 template <typename CharT, typename TraitsT>

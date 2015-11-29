@@ -18,13 +18,14 @@
 #ifndef MELOSIC_PCM_SAMPLE
 #define MELOSIC_PCM_SAMPLE
 
+#include <array>
+
 #include <boost/integer.hpp>
 
 namespace Melosic {
 
 template <int bits> struct pcm_sample {
-    static_assert(bits % 8 == 0, "");
-    static_assert(bits > 0 && bits <= 32, "");
+    static_assert(bits > 0 && bits <= 32);
     using int_t = typename boost::int_t<bits>::least;
 
     constexpr pcm_sample(int_t sample) noexcept {
@@ -41,7 +42,7 @@ template <int bits> struct pcm_sample {
     constexpr pcm_sample& operator+=(int_t sample) noexcept {
         int_t base = *this;
         base += sample;
-        return * this = base;
+        return *this = base;
     }
 
     constexpr operator int_t() const noexcept {
@@ -66,7 +67,7 @@ template <int bits> struct pcm_sample {
         return 0xff << (byte * 8);
     }
 
-    std::array<char, bits / 8> arr;
+    std::array<char, (bits / 8) + (bits % 8 != 0)> arr{{0}};
 };
 
 } // namespace Melosic

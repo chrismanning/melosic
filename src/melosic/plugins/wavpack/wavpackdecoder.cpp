@@ -16,6 +16,7 @@
 **************************************************************************/
 
 #include <iostream>
+#include <experimental/dynarray>
 
 #include <boost/integer.hpp>
 #include <boost/iostreams/read.hpp>
@@ -102,8 +103,8 @@ WavpackDecoder::WavpackDecoder(std::unique_ptr<std::istream> input)
                                                   .get_length = get_length_impl,
                                                   .can_seek = can_seek_impl}) {
     assert(m_input != nullptr);
-    std::array<char, 255> error;
-    error.fill(0);
+    std::array<char, 255> error{{0}};
+
     m_wavpack.reset(WavpackOpenFileInputEx(&m_stream_reader, m_input.get(), nullptr, error.data(), 0, 0));
     if(!m_wavpack) {
         BOOST_THROW_EXCEPTION(DecoderInitException() << ErrorTag::Plugin::Info(::wavpackInfo)
@@ -138,11 +139,14 @@ size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     pcm_buf.audio_specs = as;
     const auto bytes_requested = asio::buffer_size(pcm_buf);
     const auto samples_requested = as.bytes_to_samples(bytes_requested);
-    int32_t buf[bytes_requested];
-    auto samples_returned = WavpackUnpackSamples(m_wavpack.get(), buf, samples_requested);
+
+    std::experimental::dynarray<int32_t> buf(samples_requested, 0);
+
+    // a wavpack "sample" is 1 sample per channel
+    const auto samples_returned = WavpackUnpackSamples(m_wavpack.get(), buf.data(), samples_requested / as.channels) * as.channels;
     const auto bytes_returned = as.samples_to_bytes(samples_returned);
 
-    if(bytes_returned != bytes_requested) {
+    if(samples_returned != samples_requested) {
         ec = asio::error::eof;
         if(WavpackGetNumErrors(m_wavpack.get()) > 0) {
             BOOST_THROW_EXCEPTION(DecoderException()
@@ -151,14 +155,17 @@ size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
         }
     }
 
+    assert(bytes_requested >= as.bps_in_bytes() * samples_returned);
     for(auto i = 0u; i < samples_returned; i++) {
         switch(as.bps) {
             case 8:
                 asio::buffer_cast<pcm_sample<8>*>(pcm_buf)[i] = buf[i] + 0x80;
                 break;
+            case 12:
             case 16:
                 asio::buffer_cast<pcm_sample<16>*>(pcm_buf)[i] = buf[i];
                 break;
+            case 20:
             case 24:
                 asio::buffer_cast<pcm_sample<24>*>(pcm_buf)[i] = buf[i];
                 break;
@@ -166,10 +173,12 @@ size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
                 asio::buffer_cast<pcm_sample<32>*>(pcm_buf)[i] = buf[i];
                 break;
             default:
-                break;
+                BOOST_THROW_EXCEPTION(DecoderException()
+                                      << ErrorTag::Plugin::Info(::wavpackInfo)
+                                      << ErrorTag::DecodeErrStr("Unsupported number of bits per sample"));
         }
     }
-    return bytes_returned;
+    return bytes_returned / as.channels;
 }
 
 bool WavpackDecoder::valid() const {
