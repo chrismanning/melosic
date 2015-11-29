@@ -39,7 +39,7 @@ extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterF
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
-    decman->addAudioFormat([](auto input) { return std::make_unique<WavpackDecoder>(std::move(input)); },
+    decman->addAudioFormat([](auto input) { return std::make_unique<wavpack::wavpack_decoder>(std::move(input)); },
                            std::string_view("audio/x-wavpack"));
 }
 

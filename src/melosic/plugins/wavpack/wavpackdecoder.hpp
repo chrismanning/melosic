@@ -30,10 +30,12 @@ using namespace Melosic;
 
 extern const Plugin::Info wavpackInfo;
 
-struct WAVPACK_MELIN_API WavpackDecoder : Decoder::PCMSource {
-    explicit WavpackDecoder(std::unique_ptr<std::istream> input);
+namespace wavpack {
 
-    virtual ~WavpackDecoder();
+struct WAVPACK_MELIN_API wavpack_decoder : Decoder::PCMSource {
+    explicit wavpack_decoder(std::unique_ptr<std::istream> input);
+
+    virtual ~wavpack_decoder();
 
     void seek(chrono::milliseconds dur);
     chrono::milliseconds tell() const;
@@ -55,5 +57,7 @@ struct WAVPACK_MELIN_API WavpackDecoder : Decoder::PCMSource {
     ::WavpackStreamReader m_stream_reader;
     std::unique_ptr<::WavpackContext, WavpackDestroyer> m_wavpack;
 };
+
+} // namespace wavpack
 
 #endif // WAVPACKDECODER_HPP

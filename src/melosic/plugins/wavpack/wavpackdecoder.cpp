@@ -34,6 +34,8 @@ using namespace Melosic;
 
 #include "wavpackdecoder.hpp"
 
+namespace wavpack {
+
 static Logger::Logger logject{logging::keywords::channel = "Wavpack"};
 
 int32_t read_bytes_impl(void* input, void* data, int32_t bcount) {
@@ -94,7 +96,7 @@ int can_seek_impl(void* input) {
     return true;
 }
 
-WavpackDecoder::WavpackDecoder(std::unique_ptr<std::istream> input)
+wavpack_decoder::wavpack_decoder(std::unique_ptr<std::istream> input)
     : m_input(std::move(input)), m_stream_reader({.read_bytes = read_bytes_impl,
                                                   .get_pos = get_pos_impl,
                                                   .set_pos_abs = set_pos_abs_impl,
@@ -116,26 +118,26 @@ WavpackDecoder::WavpackDecoder(std::unique_ptr<std::istream> input)
     as.channels = WavpackGetNumChannels(m_wavpack.get());
 }
 
-WavpackDecoder::~WavpackDecoder() {
+wavpack_decoder::~wavpack_decoder() {
 }
 
-void WavpackDecoder::seek(chrono::milliseconds dur) {
+void wavpack_decoder::seek(chrono::milliseconds dur) {
     WavpackSeekSample(m_wavpack.get(), as.time_to_samples(dur));
 }
 
-chrono::milliseconds WavpackDecoder::tell() const {
+chrono::milliseconds wavpack_decoder::tell() const {
     return as.samples_to_time<chrono::milliseconds>(WavpackGetSampleIndex(m_wavpack.get()));
 }
 
-chrono::milliseconds WavpackDecoder::duration() const {
+chrono::milliseconds wavpack_decoder::duration() const {
     return as.samples_to_time<chrono::milliseconds>(WavpackGetNumSamples(m_wavpack.get()));
 }
 
-AudioSpecs WavpackDecoder::getAudioSpecs() const {
+AudioSpecs wavpack_decoder::getAudioSpecs() const {
     return as;
 }
 
-size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
+size_t wavpack_decoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     pcm_buf.audio_specs = as;
     const auto bytes_requested = asio::buffer_size(pcm_buf);
     const auto samples_requested = as.bytes_to_samples(bytes_requested);
@@ -181,9 +183,11 @@ size_t WavpackDecoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
     return bytes_returned / as.channels;
 }
 
-bool WavpackDecoder::valid() const {
+bool wavpack_decoder::valid() const {
     return static_cast<bool>(m_input);
 }
 
-void WavpackDecoder::reset() {
+void wavpack_decoder::reset() {
 }
+
+} // namespace wavpack
