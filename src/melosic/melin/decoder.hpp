@@ -23,6 +23,8 @@
 #include <type_traits>
 #include <future>
 
+#include <openssl/md5.h>
+
 #include <boost/filesystem/path.hpp>
 #include <boost/mpl/lambda.hpp>
 namespace {
@@ -89,6 +91,18 @@ class Manager final {
   private:
     struct impl;
     std::shared_ptr<impl> pimpl;
+};
+
+MELOSIC_EXPORT std::array<unsigned char, MD5_DIGEST_LENGTH>
+get_pcm_md5(std::unique_ptr<Melosic::Decoder::PCMSource> source);
+
+struct provider {
+    virtual ~provider() {
+    }
+
+    virtual bool supports_mime(std::string_view mime_type) const = 0;
+    virtual std::unique_ptr<PCMSource> make_decoder(std::unique_ptr<std::istream> in) const = 0;
+    virtual bool verify(std::unique_ptr<std::istream> in) const = 0;
 };
 
 class PCMSource {

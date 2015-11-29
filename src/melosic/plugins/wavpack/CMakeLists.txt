@@ -10,7 +10,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(WAVPACK REQUIRED_VARS WAVPACK_LIBRARIES WAVPAC
 # show the FLAC_INCLUDE_DIR and FLAC_LIBRARIES variables only in the advanced view
 MARK_AS_ADVANCED(WAVPACK_INCLUDE_DIR WAVPACK_LIBRARIES)
 
-add_library(${WAVPACK} SHARED wavpack.cpp wavpackdecoder.cpp exports.hpp)
+add_library(${WAVPACK} SHARED wavpack.cpp wavpackdecoder.cpp wavpack_provider.cpp exports.hpp)
 
 target_link_libraries(${WAVPACK} ${WAVPACK_LIBRARIES} melosiclib)
 set_target_properties(${WAVPACK} PROPERTIES PREFIX "")

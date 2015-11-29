@@ -46,6 +46,7 @@ namespace fs = boost::filesystem;
 #include <melosic/core/filecache.hpp>
 #include <melosic/core/audiofile.hpp>
 #include <melosic/melin/input.hpp>
+#include <melosic/common/pcmbuffer.hpp>
 
 #include "decoder.hpp"
 
@@ -287,6 +288,29 @@ std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     //    if(ret)
     //        ret = std::make_unique<TrackSource>(std::move(ret), track.start(), track.end());
     return ret;
+}
+
+std::array<unsigned char, MD5_DIGEST_LENGTH> get_pcm_md5(std::unique_ptr<PCMSource> source) {
+    std::array<unsigned char, MD5_DIGEST_LENGTH> checksum{{0}};
+    MD5_CTX ctx;
+    if(!MD5_Init(&ctx)) {
+        assert(false);
+    }
+    std::error_code ec;
+    std::array<char, 1024> data{{0}};
+    while(!ec) {
+        Melosic::PCMBuffer buf{data.data(), data.size()};
+        auto n = source->decode(buf, ec);
+        assert(n <= data.size());
+        if(!MD5_Update(&ctx, data.data(), n)) {
+            assert(false);
+        }
+    }
+    if(!MD5_Final(checksum.data(), &ctx)) {
+        assert(false);
+    }
+
+    return checksum;
 }
 
 } // namespace Decoder
