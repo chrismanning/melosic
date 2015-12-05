@@ -80,4 +80,19 @@ set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/hana/include)
 FILE(GLOB_RECURSE hana_headers ${CMAKE_CURRENT_SOURCE_DIR}/hana/include/*.hpp)
 add_custom_target(hana_headers_lib ALL SOURCES ${hana_headers})
 
+#date
+ExternalProject_Add(
+    date_${PROJECT_NAME}
+    GIT_REPOSITORY https://github.com/HowardHinnant/date.git
+    GIT_TAG ""
+    TIMEOUT 10
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    LOG_DOWNLOAD ON
+   )
+ExternalProject_Get_Property(date_${PROJECT_NAME} source_dir)
+set(EXTERN_INCLUDES ${EXTERN_INCLUDES} ${source_dir})
+
 set(EXTERN_INCLUDES ${EXTERN_INCLUDES} PARENT_SCOPE)

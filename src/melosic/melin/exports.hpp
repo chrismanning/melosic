@@ -25,6 +25,8 @@
 #include <memory>
 #include <list>
 
+#include <date.h>
+
 #include <melosic/common/common.hpp>
 
 namespace Melosic {
@@ -82,11 +84,12 @@ typedef std::function<destroyPlugin_F> destroyPlugin_T;
 
 #define MELOSIC_PLUGIN_API_VERSION 1, 0, 0
 
+namespace Melosic {
+
 namespace {
-constexpr long timeWhenCompiled();
+constexpr std::chrono::system_clock::time_point timeWhenCompiled();
 }
 
-namespace Melosic {
 namespace Plugin {
 
 enum Type {
@@ -130,20 +133,21 @@ extern constexpr Version expectedAPIVersion() {
 
 struct Info {
     Info() = default;
-    constexpr Info(const char* name, uint32_t type, Version vers)
+    constexpr Info(std::experimental::string_view name, Type type, Version vers)
         : name(name), type(type), version(vers), APIVersion(MELOSIC_PLUGIN_API_VERSION), built(timeWhenCompiled()) {
     }
-    const char* name;
+    std::experimental::string_view name;
     uint32_t type;
     Version version;
     Version APIVersion;
-    time_t built;
+    std::chrono::system_clock::time_point built;
 };
 
 template <typename CharT, typename TraitsT>
 std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const Info& info) {
     char str[40];
-    std::strftime(str, sizeof str, "%x %X %Z", std::localtime(&info.built));
+    auto time = std::chrono::system_clock::to_time_t(info.built);
+    std::strftime(str, sizeof str, "%x %X %Z", std::localtime(&time));
     return out << info.name << " " << info.version << " compiled for Melosic API " << info.APIVersion << " on " << str;
 }
 
@@ -168,78 +172,77 @@ struct MELOSIC_EXPORT RegisterFuncsInserter {
     std::list<std::function<void()>>& l;
 };
 
-} // namespace Melosic
+inline namespace literals {
+
+constexpr std::string_view operator""_sv(const char* str, size_t len) {
+    return {str, len};
+}
+
+} // inline namespace literals
 
 namespace {
 
-constexpr bool startsWith(const char* a, const char* b) {
-    return b[0] == 0 ? true : a[0] == 0 ? false : a[0] == b[0] && startsWith(a + 1, b + 1);
+constexpr bool str_equals(std::experimental::string_view a, std::experimental::string_view b) {
+    return a.size() == b.size() && a.empty() ? true : a[0] == b[0] && str_equals(a.substr(1), b.substr(1));
 }
 
-constexpr uint8_t clock_(const char* h) {
-    return (h[0] - '0') * 10 + h[1] - '0';
+constexpr date::day parse_day(std::experimental::string_view d) {
+    return date::day{static_cast<unsigned>((d[0] == ' ' ? 0 : d[0] - '0') * 10 + d[1] - '0')};
 }
 
-constexpr uint8_t day_(const char* d) {
-    return (d[0] == ' ' ? 0 : d[0] - '0') * 10 + d[1] - '0';
+constexpr date::month parse_month(std::experimental::string_view m) {
+    auto prefix = m.substr(0, 3);
+
+    if(str_equals(prefix, "Jan"_sv))
+        return date::jan;
+    if(str_equals(prefix, "Feb"_sv))
+        return date::feb;
+    if(str_equals(prefix, "Mar"_sv))
+        return date::mar;
+    if(str_equals(prefix, "Apr"_sv))
+        return date::apr;
+    if(str_equals(prefix, "May"_sv))
+        return date::may;
+    if(str_equals(prefix, "Jun"_sv))
+        return date::jun;
+    if(str_equals(prefix, "Jul"_sv))
+        return date::jul;
+    if(str_equals(prefix, "Aug"_sv))
+        return date::aug;
+    if(str_equals(prefix, "Sep"_sv))
+        return date::sep;
+    if(str_equals(prefix, "Oct"_sv))
+        return date::jan;
+    if(str_equals(prefix, "Nov"_sv))
+        return date::nov;
+    if(str_equals(prefix, "Dec"_sv))
+        return date::dec;
+    return date::month(0);
 }
 
-constexpr uint8_t month_(const char* m) {
-    return startsWith(m, "Jan") ? 0 : startsWith(m, "Feb")
-                                          ? 1
-                                          : startsWith(m, "Mar")
-                                                ? 2
-                                                : startsWith(m, "Apr")
-                                                      ? 3
-                                                      : startsWith(m, "May")
-                                                            ? 4
-                                                            : startsWith(m, "Jun")
-                                                                  ? 5
-                                                                  : startsWith(m, "Jul")
-                                                                        ? 6
-                                                                        : startsWith(m, "Aug")
-                                                                              ? 7
-                                                                              : startsWith(m, "Sep")
-                                                                                    ? 8
-                                                                                    : startsWith(m, "Oct")
-                                                                                          ? 9
-                                                                                          : startsWith(m, "Nov")
-                                                                                                ? 10
-                                                                                                : startsWith(m, "Dec")
-                                                                                                      ? 11
-                                                                                                      : 20;
+constexpr date::year parse_year(std::experimental::string_view y) {
+    return date::year{(y[0] - '0') * 1000 + (y[1] - '0') * 100 + (y[2] - '0') * 10 + y[3] - '0'};
 }
 
-constexpr uint16_t year_(const char* y) {
-    return (y[0] - '0') * 1000 + (y[1] - '0') * 100 + (y[2] - '0') * 10 + y[3] - '0';
+template <typename DurationT>
+constexpr DurationT parse_time_value(std::experimental::string_view time) {
+    return DurationT{(time[0] - '0') * 10 + time[1] - '0'};
 }
 
-constexpr bool isLeapYear(uint16_t y) {
-    return (y % 4) == 0 && ((y % 100) != 0 || (y % 400) == 0);
-}
+constexpr std::chrono::system_clock::time_point timeWhenCompiled() {
+    auto date_str = std::experimental::string_view{__DATE__, sizeof(__DATE__)};
+    auto time_str = std::experimental::string_view{__TIME__, sizeof(__TIME__)};
+    date::year_month_day ymd = {parse_year(date_str.substr(7)), parse_month(date_str), parse_day(date_str.substr(4))};
 
-static constexpr uint8_t ndays[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    auto time_point = std::chrono::time_point_cast<std::chrono::seconds>(static_cast<date::day_point>(ymd));
 
-constexpr uint16_t cyears(uint16_t y, uint16_t i) {
-    return i >= y ? 0 : (isLeapYear(i) ? 366 : 365) + cyears(y, i + 1);
-}
-
-constexpr uint8_t cmonths(uint8_t m, uint8_t i) {
-    return i >= m ? 0 : ndays[i] + cmonths(m, i + 1);
-}
-
-constexpr long totime_t(uint8_t secs, uint8_t mins, uint8_t hrs, uint8_t day, uint8_t mon, uint16_t yr) {
-    return (((cyears(yr, 1970) + cmonths(mon, 0) + (mon > 1 && isLeapYear(yr) ? 1 : 0) + day - 1) * 24 + hrs) * 60 +
-            mins) *
-               60 +
-           secs;
-}
-
-constexpr long timeWhenCompiled() {
-    return ::totime_t(clock_(__TIME__ + 6), clock_(__TIME__ + 3), clock_(__TIME__), ::day_(__DATE__ + 4),
-                      ::month_(__DATE__), ::year_(__DATE__ + 7));
+    return time_point + parse_time_value<std::chrono::hours>(time_str)
+            + parse_time_value<std::chrono::minutes>(time_str.substr(3))
+            + parse_time_value<std::chrono::seconds>(time_str.substr(6));
 }
 
 } // namespace {}
+
+} // namespace Melosic
 
 #endif // MELOSIC_EXPORTS_HPP
