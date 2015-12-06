@@ -33,7 +33,7 @@ class io_service;
 
 namespace Melosic {
 namespace Output {
-struct DeviceName;
+struct device_descriptor;
 }
 namespace Config {
 class Manager;
@@ -46,7 +46,7 @@ class Kernel;
 }
 
 namespace Output {
-typedef std::function<std::unique_ptr<AudioIO::AudioOutputBase>(asio::io_service&, DeviceName)> ASIOFactory;
+typedef std::function<std::unique_ptr<AudioIO::AudioOutputBase>(asio::io_service&, device_descriptor)> ASIOFactory;
 
 class Manager final {
     explicit Manager(const std::shared_ptr<Config::Manager>&, asio::io_service&);
@@ -60,9 +60,9 @@ class Manager final {
     Manager& operator=(const Manager&) = delete;
     Manager& operator=(Manager&&) = delete;
 
-    MELOSIC_EXPORT void addOutputDevice(ASIOFactory fact, const Output::DeviceName& avail);
+    MELOSIC_EXPORT void addOutputDevice(ASIOFactory fact, const Output::device_descriptor& avail);
     template <typename DeviceList> void addOutputDevices(ASIOFactory fact, DeviceList avail) {
-        for(const DeviceName& device : avail) {
+        for(const device_descriptor& device : avail) {
             addOutputDevice(fact, device);
         }
     }
@@ -86,31 +86,44 @@ enum class DeviceState {
     Initial,
 };
 
-struct DeviceName {
-    DeviceName(std::string name) : DeviceName(name, "") {
+struct device_descriptor {
+    device_descriptor(std::string name) : name(name) {
     }
-    DeviceName(std::string name, std::string desc) : name(name), desc(desc) {
+
+    device_descriptor(std::string name, std::string desc) : name(name), desc(desc) {
     }
+
     const std::string& getName() const {
         return name;
     }
+
     const std::string& getDesc() const {
         return desc;
     }
-    bool operator<(const DeviceName& b) const {
+
+    bool operator<(const device_descriptor& b) const {
         return name < b.name;
     }
+
     template <typename CharT, typename TraitsT>
-    friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&, const DeviceName&);
+    friend std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>&,
+                                                          const device_descriptor&);
 
   private:
     const std::string name, desc;
 };
 
 template <typename CharT, typename TraitsT>
-std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const DeviceName& b) {
+std::basic_ostream<CharT, TraitsT>& operator<<(std::basic_ostream<CharT, TraitsT>& out, const device_descriptor& b) {
     return out << b.name + (b.desc.size() ? (": " + b.desc) : "");
 }
+
+struct provider {
+    virtual ~provider() {
+    }
+
+    virtual std::vector<std::string> available_devices() const = 0;
+};
 
 } // namespace Output
 } // namespace Melosic

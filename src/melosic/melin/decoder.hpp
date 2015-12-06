@@ -56,6 +56,7 @@ struct PCMBuffer;
 namespace Decoder {
 class PCMSource;
 typedef std::function<std::unique_ptr<PCMSource>(std::unique_ptr<std::istream>)> Factory;
+struct provider;
 
 class Manager final {
     explicit Manager(const std::shared_ptr<Input::Manager>&, const std::shared_ptr<Plugin::Manager>&);
@@ -69,19 +70,7 @@ class Manager final {
     Manager(Manager&&) = delete;
     Manager& operator=(Manager&&) = delete;
 
-    MELOSIC_EXPORT void addAudioFormat(Factory fact, std::string_view mime_type);
-
-    template <typename StringT, template <class...> class List, typename... ListArgs>
-    void addAudioFormat(Factory fact, List<StringT, ListArgs...> mime_types) {
-        for(auto&& mime_type : mime_types)
-            addAudioFormat(fact, std::move(mime_type));
-    }
-
-    template <typename... Strings, class = typename std::enable_if<(sizeof...(Strings) > 1)>::type>
-    void addAudioFormat(Factory fact, Strings&&... mime_types) {
-        for(auto&& mime_type : {std::forward<Strings>(mime_types)...})
-            addAudioFormat(fact, mime_type);
-    }
+    void add_provider(std::shared_ptr<provider>);
 
     MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const network::uri&) const;
     MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const boost::filesystem::path&) const;

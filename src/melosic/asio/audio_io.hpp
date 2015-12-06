@@ -39,10 +39,10 @@ struct MELOSIC_EXPORT AudioOutputBase {
             BOOST_THROW_EXCEPTION(std::system_error(ec));
     }
 
-    void assign(Output::DeviceName dev_name, std::error_code& ec) {
+    void assign(Output::device_descriptor dev_name, std::error_code& ec) {
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }
-    void assign(Output::DeviceName dev_name) {
+    void assign(Output::device_descriptor dev_name) {
         std::error_code ec;
         assign(std::move(dev_name), ec);
         if(ec)
@@ -168,7 +168,7 @@ template <typename ServiceImpl> struct BasicAudioOutput<AudioOutputService<Servi
         m_service.construct(get_implementation());
     }
 
-    BasicAudioOutput(asio::io_service& service, Output::DeviceName dev_name) : BasicAudioOutput(service) {
+    BasicAudioOutput(asio::io_service& service, Output::device_descriptor dev_name) : BasicAudioOutput(service) {
         std::error_code ec;
         get_service().assign(get_implementation(), std::move(dev_name), ec);
     }

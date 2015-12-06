@@ -18,8 +18,6 @@
 #ifndef FLACDECODER_HPP
 #define FLACDECODER_HPP
 
-#include <FLAC++/decoder.h>
-
 #include <memory>
 #include <istream>
 #include <deque>

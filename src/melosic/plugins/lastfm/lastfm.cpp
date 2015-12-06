@@ -30,16 +30,15 @@ using namespace Melosic;
 #include <lastfmpp/lastfmpp.hpp>
 #include <lastfmpp/service.hpp>
 #include <lastfmpp/user.hpp>
-using namespace lastfmpp;
 
 static Logger::Logger logject(logging::keywords::channel = "lastfm");
 Config::Conf conf{"lastfm"};
 
-static constexpr Plugin::Info lastFmInfo("lastfm", Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
-                                         Plugin::Version(1, 0, 0));
+static const Plugin::Info lastFmInfo("lastfm", Plugin::Type::utility | Plugin::Type::service | Plugin::Type::gui,
+                                     Plugin::Version(1, 0, 0));
 
-static const std::shared_ptr<service> lastserv =
-    std::make_shared<service>("47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67");
+static const std::shared_ptr<lastfmpp::service> lastserv =
+    std::make_shared<lastfmpp::service>("47ee6adfdb3c68daeea2786add5e242d", "64a3811653376876431daad679ce5b67");
 
 static Config::Manager* confman = nullptr;
 static std::string sk;
@@ -66,9 +65,8 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 
 static Signals::ScopedConnection varConnection;
 
-extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
-    *info = ::lastFmInfo;
-    funs << registerConfig;
+extern "C" BOOST_SYMBOL_EXPORT const Plugin::Info* plugin_info() {
+    return &::lastFmInfo;
 }
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {

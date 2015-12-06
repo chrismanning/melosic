@@ -81,7 +81,7 @@ class Manager::impl {
         }
     }
 
-    void addOutputDevice(ASIOFactory fact, const DeviceName& device) {
+    void addOutputDevice(ASIOFactory fact, const device_descriptor& device) {
         lock_guard l(mu);
         auto it = asioOutputFactories.find(device);
         if(it == asioOutputFactories.end()) {
@@ -123,7 +123,7 @@ class Manager::impl {
     mutex mu;
     asio::io_service& io_service;
     std::string sinkName;
-    std::map<DeviceName, ASIOFactory> asioOutputFactories;
+    std::map<device_descriptor, ASIOFactory> asioOutputFactories;
     Config::Conf conf{"Output"};
     PlayerSinkChanged playerSinkChanged;
     Logger::Logger logject{logging::keywords::channel = "Output::Manager"};
@@ -138,7 +138,7 @@ Manager::Manager(const std::shared_ptr<Config::Manager>& confman, asio::io_servi
 Manager::~Manager() {
 }
 
-void Manager::addOutputDevice(ASIOFactory fact, const DeviceName& avail) {
+void Manager::addOutputDevice(ASIOFactory fact, const device_descriptor& avail) {
     pimpl->addOutputDevice(fact, avail);
 }
 

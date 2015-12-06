@@ -33,6 +33,7 @@ namespace fs = boost::filesystem;
 #include <boost/filesystem/fstream.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/exception/diagnostic_information.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 
 #include <asio/error.hpp>
 
@@ -47,6 +48,7 @@ namespace fs = boost::filesystem;
 #include <melosic/core/audiofile.hpp>
 #include <melosic/melin/input.hpp>
 #include <melosic/common/pcmbuffer.hpp>
+#include <melosic/common/typeid.hpp>
 
 #include "decoder.hpp"
 
@@ -66,6 +68,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     mutex mu;
     std::unordered_map<std::string, Factory> inputFactories;
     Core::FileCache m_file_cache;
+    std::vector<std::shared_ptr<provider>> providers;
 
     std::unique_ptr<PCMSource> open(const network::uri&);
 };
@@ -77,22 +80,11 @@ Manager::Manager(const std::shared_ptr<Input::Manager>& inman, const std::shared
 Manager::~Manager() {
 }
 
-void Manager::addAudioFormat(Factory fact, std::string_view mime_type) {
+void Manager::add_provider(std::shared_ptr<provider> provider) {
     unique_lock l(pimpl->mu);
-
-    auto mime = mime_type.to_string();
-    boost::to_lower(mime);
-
-    LOG(logject) << "Adding support for MIME type " << mime_type;
-    auto bef = pimpl->inputFactories.size();
-
-    auto pos = pimpl->inputFactories.find(mime);
-    if(pos == pimpl->inputFactories.end()) {
-        pimpl->inputFactories.emplace(std::move(mime), fact);
-        assert(++bef == pimpl->inputFactories.size());
-    } else {
-        WARN_LOG(logject) << mime_type << ": already registered to a decoder factory";
-    }
+    auto& ref = *provider.get();
+    TRACE_LOG(logject) << "Adding provider " << typeid(ref);
+    pimpl->providers.emplace_back(std::move(provider));
 }
 
 std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
@@ -185,7 +177,7 @@ struct libmagic_handle final {
     magic_t m_handle;
 };
 
-static std::string detect_mime_type(std::istream& stream) {
+static std::optional<std::string> detect_mime_type(std::istream& stream) {
     thread_local libmagic_handle cookie(MAGIC_SYMLINK | MAGIC_MIME_TYPE | MAGIC_ERROR);
 
     std::array<char, 80> buf;
@@ -199,7 +191,7 @@ static std::string detect_mime_type(std::istream& stream) {
     }
 
     TRACE_LOG(logject) << "Could not detect MIME for stream";
-    return {};
+    return std::nullopt;
 }
 
 struct TrackSource : PCMSource {
@@ -264,23 +256,24 @@ struct TrackSource : PCMSource {
 
 std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
     unique_lock l(mu);
-    auto is = inman->open(uri);
-    if(!is)
-        return nullptr;
+    DEBUG_LOG(logject) << "Attempting to open a stream for " << uri;
 
-    std::string mime_type = detect_mime_type(*is);
-    if(mime_type.empty())
-        return nullptr;
+    if(auto is = inman->open(uri)) {
+        if(auto mime_type = detect_mime_type(*is)) {
+            TRACE_LOG(logject) << "Attempting to decode stream with MIME " << *mime_type;
+            auto predicate = [&](const auto& provider) { return provider->supports_mime(*mime_type); };
+            try {
+                for(const auto& provider : providers | boost::adaptors::filtered(predicate)) {
+                    return provider->make_decoder(std::move(is));
+                }
+            } catch(...) {
+                ERROR_LOG(logject) << "Error creating decoder: " << boost::current_exception_diagnostic_information();
+            }
+            ERROR_LOG(logject) << "No decoders could open stream with MIME " << *mime_type << " at " << uri;
+        }
+    }
 
-    TRACE_LOG(logject) << "Attempting to decode stream with MIME " << mime_type;
-    auto fact = inputFactories.find(mime_type);
-
-    std::unique_ptr<PCMSource> ret;
-    if(fact != inputFactories.end())
-        ret = fact->second(std::move(is));
-    else
-        ERROR_LOG(logject) << "No decoders could open stream with MIME " << mime_type;
-    return ret;
+    return nullptr;
 }
 
 std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
@@ -290,23 +283,31 @@ std::unique_ptr<PCMSource> Manager::open(const Core::Track& track) const {
     return ret;
 }
 
-std::array<unsigned char, MD5_DIGEST_LENGTH> get_pcm_md5(std::unique_ptr<PCMSource> source) {
-    std::array<unsigned char, MD5_DIGEST_LENGTH> checksum{{0}};
-    MD5_CTX ctx;
-    if(!MD5_Init(&ctx)) {
-        assert(false);
-    }
+template <typename Fun>
+static auto decode_all(const std::unique_ptr<PCMSource>& source, Fun&& fun) {
     std::error_code ec;
     std::array<char, 1024> data{{0}};
     while(!ec) {
         Melosic::PCMBuffer buf{data.data(), data.size()};
         auto n = source->decode(buf, ec);
         assert(n <= data.size());
-        if(!MD5_Update(&ctx, data.data(), n)) {
+        fun(data.begin(), std::next(data.begin(), n));
+    }
+    return ec;
+}
+
+std::array<unsigned char, MD5_DIGEST_LENGTH> get_pcm_md5(std::unique_ptr<PCMSource> source) {
+    std::array<unsigned char, MD5_DIGEST_LENGTH> checksum{{0}};
+    MD5_CTX ctx;
+    if(!MD5_Init(&ctx)) {
+        assert(false);
+    }
+    std::error_code ec = decode_all(source, [&](auto first, auto last) {
+        if(!MD5_Update(&ctx, first, std::distance(first, last))) {
             assert(false);
         }
-    }
-    if(!MD5_Final(checksum.data(), &ctx)) {
+    });
+    if(ec != asio::error::eof || !MD5_Final(checksum.data(), &ctx)) {
         assert(false);
     }
 

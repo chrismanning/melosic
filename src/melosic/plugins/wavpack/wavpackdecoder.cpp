@@ -30,6 +30,7 @@ namespace io = boost::iostreams;
 #include <melosic/common/pcmbuffer.hpp>
 #include <melosic/common/error.hpp>
 #include <melosic/common/pcm_sample.hpp>
+#include <melosic/melin/exports.hpp>
 using namespace Melosic;
 
 #include "wavpackdecoder.hpp"
@@ -109,7 +110,7 @@ wavpack_decoder::wavpack_decoder(std::unique_ptr<std::istream> input)
 
     m_wavpack.reset(WavpackOpenFileInputEx(&m_stream_reader, m_input.get(), nullptr, error.data(), 0, 0));
     if(!m_wavpack) {
-        BOOST_THROW_EXCEPTION(DecoderInitException() << ErrorTag::Plugin::Info(::wavpackInfo)
+        BOOST_THROW_EXCEPTION(DecoderInitException() << ErrorTag::Plugin::Info(::wavpack_info)
                                                      << ErrorTag::DecodeErrStr(error.data()));
     }
 
@@ -152,7 +153,7 @@ size_t wavpack_decoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
         ec = asio::error::eof;
         if(WavpackGetNumErrors(m_wavpack.get()) > 0) {
             BOOST_THROW_EXCEPTION(DecoderException()
-                                  << ErrorTag::Plugin::Info(::wavpackInfo)
+                                  << ErrorTag::Plugin::Info(::wavpack_info)
                                   << ErrorTag::DecodeErrStr(WavpackGetErrorMessage(m_wavpack.get())));
         }
     }
@@ -176,7 +177,7 @@ size_t wavpack_decoder::decode(PCMBuffer& pcm_buf, std::error_code& ec) {
                 break;
             default:
                 BOOST_THROW_EXCEPTION(DecoderException()
-                                      << ErrorTag::Plugin::Info(::wavpackInfo)
+                                      << ErrorTag::Plugin::Info(::wavpack_info)
                                       << ErrorTag::DecodeErrStr("Unsupported number of bits per sample"));
         }
     }

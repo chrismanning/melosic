@@ -1,5 +1,5 @@
 /**************************************************************************
-**  Copyright (C) 2013 Christian Manning
+**  Copyright (C) 2015 Christian Manning
 **
 **  This program is free software: you can redistribute it and/or modify
 **  it under the terms of the GNU General Public License as published by
@@ -15,10 +15,26 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <melosic/melin/kernel.hpp>
+#ifndef FLAC_PROVIDER_HPP
+#define FLAC_PROVIDER_HPP
 
-#include "exports.hpp"
+#include <istream>
+#include <memory>
 
-namespace Melosic {
+#include <melosic/melin/decoder.hpp>
 
-}
+#include "./exports.hpp"
+
+namespace flac {
+
+struct FLAC_MELIN_API provider : public Melosic::Decoder::provider {
+    provider() noexcept = default;
+
+    virtual bool supports_mime(std::string_view mime_type) const override;
+    virtual std::unique_ptr<Melosic::Decoder::PCMSource> make_decoder(std::unique_ptr<std::istream> in) const override;
+    virtual bool verify(std::unique_ptr<std::istream> in) const override;
+};
+
+} // namespace flac
+
+#endif // FLAC_PROVIDER_HPP

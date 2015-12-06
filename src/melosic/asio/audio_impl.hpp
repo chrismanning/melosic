@@ -39,7 +39,7 @@ struct MELOSIC_EXPORT AudioOutputServiceBase {
 
     virtual void destroy() = 0;
     virtual void cancel(std::error_code&) = 0;
-    virtual void assign(Output::DeviceName dev_name, std::error_code& ec) = 0;
+    virtual void assign(Output::device_descriptor dev_name, std::error_code& ec) = 0;
 
     virtual AudioSpecs prepare(const AudioSpecs, std::error_code&) = 0;
     virtual void play(std::error_code&) = 0;

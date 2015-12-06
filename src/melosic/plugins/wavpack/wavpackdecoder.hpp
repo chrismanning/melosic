@@ -21,14 +21,14 @@
 #include <vector>
 
 #include <melosic/melin/decoder.hpp>
-#include <melosic/melin/plugin.hpp>
+#include <melosic/melin/exports.hpp>
 using namespace Melosic;
 
 #include "./exports.hpp"
 
 #include <wavpack/wavpack.h>
 
-extern const Plugin::Info wavpackInfo;
+extern const Plugin::Info wavpack_info;
 
 namespace wavpack {
 

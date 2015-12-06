@@ -27,6 +27,8 @@ namespace io = boost::iostreams;
 #include <melosic/common/audiospecs.hpp>
 #include <melosic/common/pcmbuffer.hpp>
 
+#include <FLAC++/decoder.h>
+
 #include "flacdecoder.hpp"
 
 static Logger::Logger logject{logging::keywords::channel = "FLAC"};

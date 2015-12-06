@@ -48,7 +48,7 @@ template <typename AudioServiceImpl> struct MELOSIC_EXPORT AudioOutputService : 
         impl->cancel(ec);
     }
 
-    void assign(implementation_type& impl, Output::DeviceName dev_name, std::error_code& ec) {
+    void assign(implementation_type& impl, Output::device_descriptor dev_name, std::error_code& ec) {
         impl->assign(std::move(dev_name), ec);
     }
 
