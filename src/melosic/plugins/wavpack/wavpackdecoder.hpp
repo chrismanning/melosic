@@ -28,9 +28,9 @@ using namespace Melosic;
 
 #include <wavpack/wavpack.h>
 
-extern const Plugin::Info wavpack_info;
-
 namespace wavpack {
+
+extern Plugin::Info wavpack_info;
 
 struct WAVPACK_MELIN_API wavpack_decoder : Decoder::PCMSource {
     explicit wavpack_decoder(std::unique_ptr<std::istream> input);

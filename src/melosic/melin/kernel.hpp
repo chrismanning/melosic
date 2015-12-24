@@ -66,14 +66,14 @@ class MELOSIC_EXPORT Kernel final {
 
     ~Kernel();
 
-    std::shared_ptr<Config::Manager> getConfigManager();
-    std::shared_ptr<Plugin::Manager> getPluginManager();
-    std::shared_ptr<Input::Manager> getInputManager();
-    std::shared_ptr<Decoder::Manager> getDecoderManager();
-    std::shared_ptr<Output::Manager> getOutputManager();
-    std::shared_ptr<Encoder::Manager> getEncoderManager();
-    std::shared_ptr<Melosic::Playlist::Manager> getPlaylistManager();
-    std::shared_ptr<Library::Manager> getLibraryManager();
+    std::shared_ptr<Config::Manager> getConfigManager() const;
+    std::shared_ptr<Plugin::Manager> getPluginManager() const;
+    std::shared_ptr<Input::Manager> getInputManager() const;
+    std::shared_ptr<Decoder::Manager> getDecoderManager() const;
+    std::shared_ptr<Output::Manager> getOutputManager() const;
+    std::shared_ptr<Encoder::Manager> getEncoderManager() const;
+    std::shared_ptr<Melosic::Playlist::Manager> getPlaylistManager() const;
+    std::shared_ptr<Library::Manager> getLibraryManager() const;
 
     asio::io_service& getIOService();
 

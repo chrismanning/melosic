@@ -103,35 +103,35 @@ Kernel::~Kernel() {
     }
 }
 
-std::shared_ptr<Config::Manager> Kernel::getConfigManager() {
+std::shared_ptr<Config::Manager> Kernel::getConfigManager() const {
     return pimpl->confman;
 }
 
-std::shared_ptr<Input::Manager> Kernel::getInputManager() {
+std::shared_ptr<Input::Manager> Kernel::getInputManager() const {
     return pimpl->inman;
 }
 
-std::shared_ptr<Decoder::Manager> Kernel::getDecoderManager() {
+std::shared_ptr<Decoder::Manager> Kernel::getDecoderManager() const {
     return pimpl->decman;
 }
 
-std::shared_ptr<Output::Manager> Kernel::getOutputManager() {
+std::shared_ptr<Output::Manager> Kernel::getOutputManager() const {
     return pimpl->outman;
 }
 
-std::shared_ptr<Encoder::Manager> Kernel::getEncoderManager() {
+std::shared_ptr<Encoder::Manager> Kernel::getEncoderManager() const {
     return pimpl->encman;
 }
 
-std::shared_ptr<Plugin::Manager> Kernel::getPluginManager() {
+std::shared_ptr<Plugin::Manager> Kernel::getPluginManager() const {
     return pimpl->plugman;
 }
 
-std::shared_ptr<Melosic::Playlist::Manager> Kernel::getPlaylistManager() {
+std::shared_ptr<Melosic::Playlist::Manager> Kernel::getPlaylistManager() const {
     return pimpl->playlistman;
 }
 
-std::shared_ptr<Library::Manager> Kernel::getLibraryManager() {
+std::shared_ptr<Library::Manager> Kernel::getLibraryManager() const {
     return pimpl->libman;
 }
 

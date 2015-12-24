@@ -33,7 +33,9 @@
 
 using namespace Melosic;
 
-extern const Plugin::Info flacInfo;
+namespace flac {
+
+extern Plugin::Info flacInfo;
 
 class FLAC_MELIN_API FlacDecoder : public Decoder::PCMSource {
   public:
@@ -55,5 +57,7 @@ class FLAC_MELIN_API FlacDecoder : public Decoder::PCMSource {
     struct FlacDecoderImpl;
     std::unique_ptr<FlacDecoderImpl> m_decoder;
 };
+
+} // namespace flac
 
 #endif // FLACDECODER_HPP

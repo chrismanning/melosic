@@ -40,7 +40,7 @@ using namespace Melosic;
 
 Logger::Logger logject(logging::keywords::channel = "ALSA");
 
-static constexpr Plugin::Info alsaInfo("ALSA", Plugin::Type::outputDevice, Plugin::Version(1, 0, 0));
+Plugin::Info alsaInfo("ALSA", Plugin::Type::outputDevice, Plugin::Version(1, 0, 0));
 
 #define ALSA_THROW_IF(Exc, ret)                                                                                        \
     if(ret != 0) {                                                                                                     \
@@ -72,7 +72,7 @@ struct MELOSIC_EXPORT AlsaOutputServiceImpl : AudioIO::AudioOutputServiceBase {
         : AudioIO::AudioOutputServiceBase(service), m_asio_fd(service) {
     }
 
-    void assign(Output::DeviceName dev_name, std::error_code& ec) override {
+    void assign(Output::device_descriptor dev_name, std::error_code& ec) override {
         if(m_pdh != nullptr) {
             ec = {asio::error::already_open, asio::error::get_misc_category()};
             return;
@@ -420,7 +420,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
 
     ALSA_THROW_IF(DeviceOpenException, snd_device_name_hint(-1, "pcm", &hints));
 
-    std::list<Output::DeviceName> names;
+    std::list<Output::device_descriptor> names;
 
     n = hints;
     TRACE_LOG(logject) << "Enumerating output devices";
@@ -442,7 +442,7 @@ extern "C" MELOSIC_EXPORT void registerOutput(Output::Manager* outman) {
     }
     snd_device_name_free_hint(hints);
 
-    outman->addOutputDevices([](asio::io_service& io_service, Output::DeviceName name) {
+    outman->addOutputDevices([](asio::io_service& io_service, Output::device_descriptor name) {
         return std::make_unique<AlsaAsioOutput>(io_service, name);
     }, names);
 }
@@ -490,10 +490,10 @@ extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     loadedSlot(*base);
 }
 
-extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
-    *info = ::alsaInfo;
-    funs << registerOutput << registerConfig;
-}
+//extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
+//    *info = ::alsaInfo;
+//    funs << registerOutput << registerConfig;
+//}
 
 extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
 }

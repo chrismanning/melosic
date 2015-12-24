@@ -31,11 +31,13 @@ namespace io = boost::iostreams;
 
 #include "flacdecoder.hpp"
 
+namespace flac {
+
 static Logger::Logger logject{logging::keywords::channel = "FLAC"};
 
 #define FLAC_THROW_IF(Exc, cond, flacptr)                                                                              \
     if(!(cond)) {                                                                                                      \
-        BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Plugin::Info(::flacInfo)                                              \
+        BOOST_THROW_EXCEPTION(Exc() << ErrorTag::Plugin::Info(flacInfo)                                              \
                                     << ErrorTag::DecodeErrStr(flacptr->get_state().as_cstring()));                     \
     }
 
@@ -142,7 +144,7 @@ FLAC__StreamDecoderWriteStatus FlacDecoder::FlacDecoderImpl::write_callback(cons
                 }
             break;
         default:
-            BOOST_THROW_EXCEPTION(AudioDataUnsupported() << ErrorTag::Plugin::Info(::flacInfo)
+            BOOST_THROW_EXCEPTION(AudioDataUnsupported() << ErrorTag::Plugin::Info(flacInfo)
                                                          << ErrorTag::BPS(frame->header.bits_per_sample));
             break;
     }
@@ -151,7 +153,7 @@ FLAC__StreamDecoderWriteStatus FlacDecoder::FlacDecoderImpl::write_callback(cons
 }
 
 void FlacDecoder::FlacDecoderImpl::error_callback(FLAC__StreamDecoderErrorStatus status) {
-    BOOST_THROW_EXCEPTION(DecoderException() << ErrorTag::Plugin::Info(::flacInfo)
+    BOOST_THROW_EXCEPTION(DecoderException() << ErrorTag::Plugin::Info(flacInfo)
                                              << ErrorTag::DecodeErrStr(FLAC__StreamDecoderErrorStatusString[status]));
 }
 
@@ -249,3 +251,5 @@ AudioSpecs FlacDecoder::getAudioSpecs() const {
 bool FlacDecoder::valid() const {
     return !(m_decoder->end() && buf.empty());
 }
+
+} // namespace flac

@@ -15,38 +15,9 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <boost/config.hpp>
-
-#if defined(BOOST_WINDOWS)
-
-#include <windows.h>
-#define DLHandle HMODULE
-#define DLOpen(a) LoadLibrary(a)
-#define DLClose FreeLibrary
-#define DLGetSym GetProcAddress
-inline const char* DLError() {
-    char* str;
-    auto err = GetLastError();
-    FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-                  err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&str, 0, NULL);
-    return str;
-}
-
-#else // non-windows platforms
-
-#include <dlfcn.h>
-#define DLHandle void *
-#define DLOpen(a) ::dlopen(a, RTLD_NOW)
-#define DLClose ::dlclose
-#define DLGetSym ::dlsym
-#define DLError ::dlerror
-
-#endif
-
 #include <map>
 #include <memory>
 #include <string>
-#include <list>
 #include <functional>
 #include <regex>
 #include <mutex>
@@ -60,6 +31,7 @@ namespace fs = boost::filesystem;
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/scope_exit.hpp>
+#include <boost/dll.hpp>
 
 #include <melosic/melin/kernel.hpp>
 #include <melosic/melin/logging.hpp>
@@ -67,6 +39,8 @@ namespace fs = boost::filesystem;
 #include <melosic/melin/config.hpp>
 #include <melosic/common/configvar.hpp>
 #include <melosic/common/signal.hpp>
+#include <melosic/common/bit_flag_iterator.hpp>
+#include <melosic/melin/decoder.hpp>
 
 #include "plugin.hpp"
 
@@ -75,78 +49,53 @@ namespace Plugin {
 
 struct PluginsLoaded : Signals::Signal<Signals::Plugin::PluginsLoaded> {};
 
-class Plugin {
+struct Plugin : std::enable_shared_from_this<Plugin> {
   public:
-    Plugin(const boost::filesystem::path& filename, Core::Kernel& kernel)
-        : pluginPath(absolute(filename)), kernel(kernel) {
-        handle = DLOpen(pluginPath.string().c_str());
+    Plugin(const boost::filesystem::path& filename) : handle(filename) {
 
-        if(handle == nullptr) {
-            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(pluginPath)
-                                                    << ErrorTag::Plugin::Msg(DLError()));
-        }
+//        if(!handle.is_loaded()) {
+//            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(handle.location())
+//                                                    << ErrorTag::Plugin::Msg(DLError()));
+//        }
 
-        getFunction<registerPlugin_F>("registerPlugin")(&info, RegisterFuncsInserter(kernel, regFuns));
+        this->info = *handle.get_alias<Info*()>("plugin_info")();
         if(info.APIVersion != expectedAPIVersion()) {
-            BOOST_THROW_EXCEPTION(PluginVersionMismatchException() << ErrorTag::FilePath(pluginPath)
+            BOOST_THROW_EXCEPTION(PluginVersionMismatchException() << ErrorTag::FilePath(handle.location())
                                                                    << ErrorTag::Plugin::Info(info));
         }
-        destroyPlugin_ = getFunction<destroyPlugin_F>("destroyPlugin");
     }
 
     Plugin(const Plugin&) = delete;
     Plugin& operator=(const Plugin&) = delete;
 
-    Plugin(Plugin&& b)
-        : pluginPath(b.pluginPath), destroyPlugin_(b.destroyPlugin_), regFuns(b.regFuns), handle(b.handle),
-          kernel(b.kernel), info(b.info) {
-        b.handle = nullptr;
-    }
-
-    ~Plugin() {
-        if(handle) {
-            regFuns.clear();
-            if(destroyPlugin_) {
-                destroyPlugin_();
-            }
-            DLClose(handle);
-        }
-    }
+    Plugin(Plugin&&) noexcept = default;
 
     const Info& getInfo() const {
         return info;
     }
 
-    void init() {
-        for(auto& fun : regFuns) {
-            fun();
+    void init(const Core::Kernel& kernel) {
+        for(auto flag : make_flag_range(info.type)) {
+            switch(flag) {
+                case Type::decoder: {
+                    std::shared_ptr<Decoder::Manager> decman = kernel.getDecoderManager();
+                    decman->add_provider(std::shared_ptr<Decoder::provider>(
+                        shared_from_this(), handle.get_alias<Decoder::provider*()>("decoder_provider")()));
+                    break;
+                }
+                case Type::encoder:
+                case Type::outputDevice:
+                case Type::inputDevice:
+                case Type::utility:
+                case Type::service:
+                case Type::gui:
+                    break;
+            };
         }
     }
 
   private:
-    template <typename T> std::function<T> getFunction(const std::string& symbolName) {
-#ifdef _POSIX_VERSION
-        DLError(); // clear err
-#endif
-        auto sym = DLGetSym(handle, symbolName.c_str());
-        auto err = DLError();
-#if defined(_POSIX_VERSION)
-        if(err != nullptr) {
-#elif defined(_WIN32)
-        if(sym == nullptr) {
-#endif
-            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() << ErrorTag::FilePath(pluginPath)
-                                                                  << ErrorTag::Plugin::Symbol(symbolName)
-                                                                  << ErrorTag::Plugin::Msg(err));
-        }
-        return reinterpret_cast<T*>(sym);
-    }
-
-    boost::filesystem::path pluginPath;
-    destroyPlugin_T destroyPlugin_;
-    std::list<std::function<void()>> regFuns;
-    DLHandle handle;
-    Core::Kernel& kernel;
+    boost::dll::shared_library handle;
     Info info;
 };
 
@@ -200,7 +149,7 @@ struct Manager::impl {
         }
     }
 
-    void loadPlugin(fs::path filepath, Core::Kernel& kernel, strict_lock&) {
+    void loadPlugin(fs::path filepath, strict_lock&) {
         if(!filepath.is_absolute()) {
             TRACE_LOG(logject) << "plugin path relative";
             for(const fs::path& searchpath : searchPaths) {
@@ -219,13 +168,14 @@ struct Manager::impl {
             BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() << ErrorTag::FilePath(filename)
                                                                   << ErrorTag::Plugin::Msg("plugin already loaded"));
 
-        auto info = loadedPlugins.emplace(filename, Plugin(filepath, kernel)).first->second.getInfo();
-        LOG(logject) << "Plugin loaded: " << info;
+        auto loaded = std::make_shared<Plugin>(filepath);
+        LOG(logject) << "Plugin loaded: " << loaded->getInfo();
+        loadedPlugins.emplace(filename, std::move(loaded));
     }
 
-    void loadPlugin(fs::path filepath, Core::Kernel& kernel) {
+    void loadPlugin(fs::path filepath) {
         strict_lock l(mu);
-        loadPlugin(std::move(filepath), kernel, l);
+        loadPlugin(std::move(filepath), l);
     }
 
     void loadPlugins(Core::Kernel& kernel) {
@@ -248,36 +198,36 @@ struct Manager::impl {
                         continue;
                     }
                     if(fs::is_regular_file(file) && file.extension() == ".melin")
-                        loadPlugin(file, kernel, l);
+                        loadPlugin(file, l);
                 } catch(...) {
                     ERROR_LOG(logject) << "Plugin " << file << " not loaded";
                     ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
                 }
             }
         }
-        initialise();
+        initialise(kernel);
     }
 
     std::vector<Info> getPlugins() {
         strict_lock l(mu);
         std::vector<Info> vec;
-        boost::transform(loadedPlugins | map_values, std::back_inserter(vec), [](Plugin& p) { return p.getInfo(); });
+        boost::transform(loadedPlugins | map_values, std::back_inserter(vec), [](auto& p) { return p->getInfo(); });
         return vec;
     }
 
-    void initialise() {
-        for(Plugin& plugin : loadedPlugins | map_values) {
-            TRACE_LOG(logject) << "Initialising plugin " << plugin.getInfo().name;
-            plugin.init();
+    void initialise(Core::Kernel& kernel) {
+        for(auto& plugin : loadedPlugins | map_values) {
+            TRACE_LOG(logject) << "Initialising plugin " << plugin->getInfo().name;
+            plugin->init(kernel);
         }
     }
 
     std::shared_ptr<Config::Manager> confman;
     Config::Conf conf{"Plugins"};
-    std::map<std::string, Plugin> loadedPlugins;
+    std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
     Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
-    std::list<fs::path> searchPaths;
-    std::list<std::string> blackList;
+    std::vector<fs::path> searchPaths;
+    std::vector<std::string> blackList;
     friend class Manager;
     friend struct RegisterFuncsInserter;
     PluginsLoaded pluginsLoaded;

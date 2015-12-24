@@ -307,9 +307,7 @@ std::array<unsigned char, MD5_DIGEST_LENGTH> get_pcm_md5(std::unique_ptr<PCMSour
             assert(false);
         }
     });
-    if(ec != asio::error::eof || !MD5_Final(checksum.data(), &ctx)) {
-        assert(false);
-    }
+    MD5_Final(checksum.data(), &ctx);
 
     return checksum;
 }

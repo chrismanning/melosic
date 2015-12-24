@@ -15,27 +15,27 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <FLAC++/decoder.h>
-
-#include <boost/config.hpp>
+#include <boost/dll/alias.hpp>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/decoder.hpp>
 using namespace Melosic;
 
-#include "./flacdecoder.hpp"
+#include "flacdecoder.hpp"
+#include "flac_provider.hpp"
 
-constexpr Plugin::Info flacInfo{"FLAC", Plugin::Type::decode, {1, 0, 0}};
+namespace flac {
 
-extern "C" BOOST_SYMBOL_EXPORT void registerPlugin(Plugin::Info* info, RegisterFuncsInserter funs) {
-    *info = ::flacInfo;
-    funs << registerDecoder;
+Plugin::Info flacInfo{"FLAC", Plugin::Type::decoder, {1, 0, 0}};
+
+Plugin::Info* plugin_info() {
+    return &flacInfo;
 }
+BOOST_DLL_AUTO_ALIAS(plugin_info)
 
-extern "C" BOOST_SYMBOL_EXPORT void registerDecoder(Decoder::Manager* decman) {
-    decman->addAudioFormat([](auto input) { return std::make_unique<FlacDecoder>(std::move(input)); },
-                           std::string_view("audio/flac"), std::string_view("audio/x-flac"));
+Decoder::provider* decoder_provider() {
+    return new provider;
 }
+BOOST_DLL_AUTO_ALIAS(decoder_provider)
 
-extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
-}
+} // namespace flac

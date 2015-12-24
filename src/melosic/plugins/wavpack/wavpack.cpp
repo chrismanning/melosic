@@ -15,28 +15,30 @@
 **  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 **************************************************************************/
 
-#include <memory>
-
-#include <wavpack/wavpack.h>
-
-#include <boost/config.hpp>
+#include <boost/dll.hpp>
 
 #include <melosic/melin/exports.hpp>
 #include <melosic/melin/decoder.hpp>
 
 #include "./exports.hpp"
-#include "./wavpackdecoder.hpp"
+#include "wavpackdecoder.hpp"
 #include "wavpack_provider.hpp"
+
+namespace wavpack {
 
 constexpr Plugin::Version current_version{1, 0, 0};
 constexpr Plugin::Type type = Plugin::Type::decoder;
 
-const Plugin::Info wavpack_info{"Wavpack", type, current_version};
+Plugin::Info wavpack_info{"Wavpack", type, current_version};
 
-extern "C" BOOST_SYMBOL_EXPORT wavpack::provider* decoder_provider() {
-    return new wavpack::provider;
+Decoder::provider* decoder_provider() {
+    return new provider;
 }
+BOOST_DLL_AUTO_ALIAS(decoder_provider)
 
-extern "C" BOOST_SYMBOL_EXPORT const Plugin::Info* plugin_info() {
-    return &::wavpack_info;
+Plugin::Info* plugin_info() {
+    return &wavpack_info;
 }
+BOOST_DLL_AUTO_ALIAS(plugin_info)
+
+} // namespace wavpack
