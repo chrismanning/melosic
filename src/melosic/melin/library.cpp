@@ -23,6 +23,7 @@ namespace fs = boost::filesystem;
 #include <boost/variant/get.hpp>
 #include <boost/container/flat_map.hpp>
 #include <boost/functional/hash/hash.hpp>
+#include <boost/thread/thread_only.hpp>
 
 #include <asio/post.hpp>
 
@@ -44,8 +45,6 @@ using namespace jbson::literal;
 #include <melosic/melin/decoder.hpp>
 #include <melosic/melin/input.hpp>
 #include "library.hpp"
-
-#include <melosic/executors/default_executor.hpp>
 
 namespace std {
 

@@ -1,8 +1,6 @@
 FIND_PACKAGE(Qt5Widgets REQUIRED)
 FIND_PACKAGE(Qt5Qml REQUIRED)
 
-add_subdirectory(executors)
-
 add_subdirectory(asio)
 set(CORE_SRC_LIST)
 add_subdirectory(core)
@@ -31,7 +29,7 @@ set_property(TARGET ${PROJECT_NAME}_test_main_no_link APPEND PROPERTY COMPILE_DE
 add_dependencies(${PROJECT_NAME}_test_main catch_${PROJECT_NAME})
 
 qt5_use_modules(${PROJECT_NAME} Widgets Qml)
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} executors)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES})
 SET(LINK_LIBS ${LINK_LIBS} PARENT_SCOPE)
 
 target_link_libraries(${PROJECT_NAME}lib ${LINK_LIBS})

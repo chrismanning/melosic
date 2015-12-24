@@ -51,8 +51,6 @@ namespace io = boost::iostreams;
 #include <melosic/common/optional.hpp>
 #include <melosic/melin/decoder.hpp>
 
-#include <melosic/executors/default_executor.hpp>
-
 #include "player.hpp"
 
 namespace Melosic {
