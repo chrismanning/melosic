@@ -39,7 +39,7 @@ TEST_CASE("PathToUrlTest1") {
     web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20spaces" == uri.to_string());
+    CHECK("file:/some/file%20path/with%20spaces" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest2") {
@@ -48,7 +48,7 @@ TEST_CASE("PathToUrlTest2") {
     web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%28parens%29%20abc.ext" == uri.to_string());
+    CHECK("file:/some/file%20path/with%20(parens)%20abc.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest3") {
@@ -57,7 +57,7 @@ TEST_CASE("PathToUrlTest3") {
     web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%5Bbrackets%5D%20abc.ext" == uri.to_string());
+    CHECK("file:/some/file%20path/with%20%5Bbrackets%5D%20abc.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest4") {
@@ -66,7 +66,7 @@ TEST_CASE("PathToUrlTest4") {
     web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%C3%BCtf8.ext" == uri.to_string());
+    CHECK("file:/some/file%20path/with%20%C3%BCtf8.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest5") {
@@ -75,7 +75,7 @@ TEST_CASE("PathToUrlTest5") {
     web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%09%20tab.ext" == uri.to_string());
+    CHECK("file:/some/file%20path/with%20%09%20tab.ext" == uri.to_string());
 }
 
 TEST_CASE("UrlToPathTest1") {
