@@ -176,16 +176,10 @@ struct Refresher {
     mutable int stride;
 };
 
-static network::uri to_uri(QUrl url) {
-    std::error_code ec;
+static web::uri to_uri(QUrl url) {
     auto str = QUrl::toPercentEncoding(url.toString(), ":/", "()");
-    auto uri = network::make_uri(std::begin(str), std::end(str), ec);
-    assert(ec ? uri.empty() : !uri.empty());
 
-    network::uri_builder build(uri);
-    build.authority("");
-    uri = build.uri();
-    return uri;
+    return web::uri{str.constData()};
 }
 
 bool PlaylistModel::insertTracks(int row, QVariant var) {

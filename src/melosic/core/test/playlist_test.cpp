@@ -31,7 +31,7 @@ using namespace Melosic;
 TEST_CASE("Playlist Test 1") {
     Core::Playlist playlist{"Playlist 1"};
     auto track = Core::Track{Input::to_uri("/tmp/some track.flac")};
-    CHECK("file:///tmp/some%20track.flac" == track.uri().string());
+    CHECK("file:///tmp/some%20track.flac" == track.uri().to_string());
 
     auto end = playlist.end();
     REQUIRE(end == playlist.begin());
@@ -44,7 +44,7 @@ TEST_CASE("Playlist Test 1") {
     REQUIRE(playlist.end() == end);
 
     auto track2 = Core::Track{Input::to_uri("/tmp/some other track.flac")};
-    CHECK("file:///tmp/some%20other%20track.flac" == track2.uri().string());
+    CHECK("file:///tmp/some%20other%20track.flac" == track2.uri().to_string());
 
     i = playlist.insert(0, track2);
     REQUIRE(playlist.end() == end);

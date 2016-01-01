@@ -38,7 +38,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
-find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time regex REQUIRED)
+find_package(Boost COMPONENTS system thread locale filesystem log log_setup chrono date_time regex random REQUIRED)
 link_directories(${Boost_LIBRARY_DIR})
 include_directories(SYSTEM ${Boost_INCLUDE_DIR})
 
@@ -92,10 +92,15 @@ ADD_DEFINITIONS(-DQT_NO_KEYWORDS)
 find_package(Taglib REQUIRED)
 SET(TAGLIB_MIN_VERSION "1.8")
 
+find_package(CPPREST REQUIRED)
+
 include_directories(src)
-include_directories(SYSTEM ${TAGLIB_INCLUDES})
-SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} z)
-SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp -lnetwork-uri)
+include_directories(SYSTEM
+    ${TAGLIB_INCLUDES}
+    ${CPPREST_INCLUDE_DIR}
+)
+SET(LINK_LIBS ${LINK_LIBS} ${TAGLIB_LIBRARIES} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CPPREST_LIBRARIES} z)
+SET(LINK_LIBS ${LINK_LIBS} -ltcejdb -lejpp)
 
 if(UNIX)
  SET(LINK_LIBS ${LINK_LIBS} dl magic)
@@ -140,7 +145,7 @@ endif()
 
 function(cxx_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main>)
-  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
+  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp)
   target_link_libraries(${test_name} ${PROJECT_NAME}lib ${LINK_LIBS})
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/test)
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})
@@ -150,7 +155,7 @@ endfunction()
 
 function(cxx_header_test test_name)
   add_executable(${test_name} ${test_name}.cpp $<TARGET_OBJECTS:${PROJECT_NAME}_test_main_no_link>)
-  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp cpp-netlib)
+  add_dependencies(${test_name} catch_${PROJECT_NAME} jbson ejpp)
   target_link_libraries(${test_name} ${LINK_LIBS})
   set_property(TARGET ${test_name} APPEND PROPERTY INCLUDE_DIRECTORIES ${CATCH_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/test)
   add_test(${test_name} ${EXECUTABLE_OUTPUT_PATH}/${test_name})

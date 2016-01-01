@@ -37,16 +37,15 @@ Manager::Manager()
 {
 }
 
-std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
+std::unique_ptr<std::istream> Manager::open(const web::uri& uri) const {
     try {
-        if(!uri.scheme())
-            return nullptr;
-        if(uri.scheme()->to_string() == "file") {
+        if(uri.scheme() == "file") {
             return std::make_unique<fs::ifstream>(uri_to_path(uri));
-        } else if(uri.scheme()->to_string() == "http") {
+        } else if(uri.scheme() == "http") {
         }
     } catch(...) {
-        ERROR_LOG(logject) << "Could not open uri " << uri << ": " << boost::current_exception_diagnostic_information();
+        ERROR_LOG(logject) << "Could not open uri " << uri.to_string() << ": "
+                           << boost::current_exception_diagnostic_information();
         return nullptr;
     }
 
@@ -56,27 +55,17 @@ std::unique_ptr<std::istream> Manager::open(const network::uri& uri) const {
 Manager::~Manager() {
 }
 
-boost::filesystem::path uri_to_path(const network::uri& uri) {
-    boost::filesystem::path p /*{"/"}*/;
-    if(uri.host())
-        p /= uri.host()->to_string();
-    if(uri.path()) {
-        auto str_ref = *uri.path();
-        str_ref = {str_ref.data() - 1, str_ref.size()};
-        auto str = std::string{};
-        network::uri::decode(str_ref.begin(), str_ref.end(), std::back_inserter(str));
-        p /= std::move(str);
-    }
-    return p;
+boost::filesystem::path uri_to_path(const web::uri& uri) {
+    return boost::filesystem::path{} / web::uri::decode(uri.host()) / web::uri::decode(uri.path());
 }
 
-network::uri to_uri(const boost::filesystem::path& path) {
-    network::uri_builder uri{};
-    uri.scheme("file");
-    uri.authority("");
-    uri.path(path);
+web::uri to_uri(const boost::filesystem::path& path) {
+    web::uri_builder uri_builder{};
+    uri_builder.set_scheme("file");
+    uri_builder.set_fragment("");
+    uri_builder.set_path(path.string(), true);
 
-    return network::uri{uri};
+    return uri_builder.to_uri();
 }
 
 } // namespace Input

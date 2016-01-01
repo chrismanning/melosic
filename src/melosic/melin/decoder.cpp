@@ -70,7 +70,7 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     Core::FileCache m_file_cache;
     std::vector<std::shared_ptr<provider>> providers;
 
-    std::unique_ptr<PCMSource> open(const network::uri&);
+    std::unique_ptr<PCMSource> open(const web::uri&);
 };
 
 Manager::Manager(const std::shared_ptr<Input::Manager>& inman, const std::shared_ptr<Plugin::Manager>& plugman)
@@ -87,12 +87,12 @@ void Manager::add_provider(std::shared_ptr<provider> provider) {
     pimpl->providers.emplace_back(std::move(provider));
 }
 
-std::vector<Core::Track> Manager::tracks(const network::uri& uri) const {
+std::vector<Core::Track> Manager::tracks(const web::uri& uri) const {
     try {
-        if(uri.scheme() && uri.scheme()->to_string() == "file")
+        if(uri.scheme() == "file")
             return tracks(Input::uri_to_path(uri));
-    } catch(network::percent_decoding_error e) {
-        ERROR_LOG(logject) << "Error decoding uri (" << uri << "): " << e.what();
+    } catch(web::uri_exception e) {
+        ERROR_LOG(logject) << "Error decoding uri (" << uri.to_string() << "): " << e.what();
         DEBUG_LOG(logject) << boost::diagnostic_information(e);
     }
 
@@ -143,7 +143,7 @@ std::vector<Core::Track> Manager::tracks(const fs::path& path) const {
                 t.audioSpecs(pcm_src->getAudioSpecs());
             }
         } catch(...) {
-            ERROR_LOG(logject) << "Could not open track at uri " << t.uri();
+            ERROR_LOG(logject) << "Could not open track at uri " << t.uri().to_string();
             ERROR_LOG(logject) << boost::current_exception_diagnostic_information();
         }
 
@@ -254,9 +254,9 @@ struct TrackSource : PCMSource {
     chrono::milliseconds m_end;
 };
 
-std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
+std::unique_ptr<PCMSource> Manager::impl::open(const web::uri& uri) {
     unique_lock l(mu);
-    DEBUG_LOG(logject) << "Attempting to open a stream for " << uri;
+    DEBUG_LOG(logject) << "Attempting to open a stream for " << uri.to_string();
 
     if(auto is = inman->open(uri)) {
         if(auto mime_type = detect_mime_type(*is)) {
@@ -269,7 +269,7 @@ std::unique_ptr<PCMSource> Manager::impl::open(const network::uri& uri) {
             } catch(...) {
                 ERROR_LOG(logject) << "Error creating decoder: " << boost::current_exception_diagnostic_information();
             }
-            ERROR_LOG(logject) << "No decoders could open stream with MIME " << *mime_type << " at " << uri;
+            ERROR_LOG(logject) << "No decoders could open stream with MIME " << *mime_type << " at " << uri.to_string();
         }
     }
 

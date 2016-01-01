@@ -31,7 +31,7 @@ namespace {
 namespace mpl = boost::mpl;
 }
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <melosic/common/traits.hpp>
 #include <melosic/common/audiospecs.hpp>
@@ -72,7 +72,7 @@ class Manager final {
 
     void add_provider(std::shared_ptr<provider>);
 
-    MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const network::uri&) const;
+    MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const web::uri&) const;
     MELOSIC_EXPORT std::vector<Melosic::Core::Track> tracks(const boost::filesystem::path&) const;
 
     std::unique_ptr<PCMSource> open(const Core::Track&) const;

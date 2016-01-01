@@ -13,7 +13,7 @@ FILE(GLOB_RECURSE HEADER_SRC_LIST *.hpp)
 add_library(${PROJECT_NAME}lib SHARED ${CORE_SRC_LIST} ${MELIN_SRC_LIST} ${HEADER_SRC_LIST})
 set_target_properties(${PROJECT_NAME}lib PROPERTIES COMPILE_DEFINITIONS MELOSIC_EXPORTS=${PROJECT_NAME}lib_EXPORTS)
 
-add_dependencies(${PROJECT_NAME}lib jbson ejpp cpp-netlib rapidjson)
+add_dependencies(${PROJECT_NAME}lib jbson ejpp rapidjson)
 
 #create main executable
 add_executable(${PROJECT_NAME} main.cpp)

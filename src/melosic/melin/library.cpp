@@ -106,12 +106,12 @@ struct Manager::impl : std::enable_shared_from_this<impl> {
     void scan(const fs::path& dir);
 
     void add(const fs::path& file);
-    void add(const network::uri& uri);
+    void add(const web::uri& uri);
     void remove(const fs::path& file);
-    void remove(const network::uri& uri);
+    void remove(const web::uri& uri);
     void remove_prefix(const fs::path& dir);
     void update(const fs::path& file);
-    void update(const network::uri& uri);
+    void update(const web::uri& uri);
     std::vector<jbson::document> query(const jbson::document& qdoc);
 
     std::shared_ptr<Decoder::Manager> decman;
@@ -158,9 +158,9 @@ Manager::impl::impl(const std::shared_ptr<Config::Manager>& confman, const std::
 
     confman->getLoadedSignal().connect(&impl::loadedSlot, this);
 
-    added.connect([this](network::uri uri) { LOG(logject) << "Media added to library: " << uri; });
-    removed.connect([this](network::uri uri) { LOG(logject) << "Media removed from library: " << uri; });
-    updated.connect([this](network::uri uri) { LOG(logject) << "Media updated in library: " << uri; });
+    added.connect([this](web::uri uri) { LOG(logject) << "Media added to library: " << uri.to_string(); });
+    removed.connect([this](web::uri uri) { LOG(logject) << "Media removed from library: " << uri.to_string(); });
+    updated.connect([this](web::uri uri) { LOG(logject) << "Media updated in library: " << uri.to_string(); });
 
     scanStarted.connect([this]() { m_scanning.store(true); });
     scanEnded.connect([this]() {
@@ -215,7 +215,7 @@ void Manager::impl::loadedSlot(boost::synchronized_value<Config::Conf>& base) {
         auto builder = jbson::builder("location", jbson::builder("$exists", true));
         for(auto&& dir : boost::make_iterator_range(dirs->begin(), dirs->end())) {
             TRACE_LOG(logject) << "Removing tracks not under prefix: " << dir;
-            builder("location", jbson::builder("$not", jbson::builder("$begin", Input::to_uri(dir).string())));
+            builder("location", jbson::builder("$not", jbson::builder("$begin", Input::to_uri(dir).to_string())));
         }
         builder("$dropall", true);
         auto qdoc = jbson::document(std::move(builder));
@@ -330,7 +330,7 @@ void Manager::impl::scan(const fs::path& dir) {
 
     // query for finding all known files under this dir
     const auto qdoc =
-        jbson::document(jbson::builder("location", jbson::builder("$begin", Input::to_uri(dir).string())));
+        jbson::document(jbson::builder("location", jbson::builder("$begin", Input::to_uri(dir).to_string())));
 
     try { // find and remove files that no longer exist
         TRACE_LOG(logject) << "Removing non-existent files";
@@ -357,14 +357,13 @@ void Manager::impl::scan(const fs::path& dir) {
                 continue;
             }
 
-            network::uri uri;
-            uri = network::make_uri(get<std::string>(*location), ec);
+            auto uri = web::uri(get<std::string>(*location));
             if(ec) {
                 ERROR_LOG(logject) << "Could not make uri: " << ec.message();
                 continue;
             }
 
-            if(uri.scheme() && uri.scheme()->to_string() != "file")
+            if(uri.scheme() != "file")
                 continue;
 
             boost::system::error_code bec;
@@ -407,7 +406,8 @@ void Manager::impl::scan(const fs::path& dir) {
 
         for(auto&& set : under_dir) {
             boost::this_thread::interruption_point();
-            assert(set.size() == 3);
+            TRACE_LOG(logject) << "set.size(): " << set.size();
+//            assert(set.size() == 3);
             lib_container::value_type value;
 
             auto it = set.find("location");
@@ -416,8 +416,7 @@ void Manager::impl::scan(const fs::path& dir) {
                 continue;
             }
 
-            network::uri uri;
-            uri = network::make_uri(get<std::string>(*it), ec);
+            auto uri = web::uri(get<std::string>(*it));
             if(ec) {
                 ERROR_LOG(logject) << "Track has invalid location uri: " << ec.message();
             }
@@ -508,11 +507,11 @@ void Manager::impl::add(const boost::filesystem::path& file) {
     add(Input::to_uri(file));
 }
 
-void Manager::impl::add(const network::uri& uri) {
+void Manager::impl::add(const web::uri& uri) {
     boost::this_thread::interruption_point();
     auto tracks = decman->tracks(uri);
     if(tracks.empty()) {
-        ERROR_LOG(logject) << "Could not get tracks from media at " << uri;
+        ERROR_LOG(logject) << "Could not get tracks from media at " << uri.to_string();
         return;
     }
     for(const auto& track : tracks) {
@@ -527,7 +526,7 @@ void Manager::impl::add(const network::uri& uri) {
         (void)oid;
         //        assert(oid);
     }
-    TRACE_LOG(logject) << uri << " contains " << tracks.size() << " tracks";
+    TRACE_LOG(logject) << uri.to_string() << " contains " << tracks.size() << " tracks";
     added(uri);
 }
 
@@ -538,12 +537,12 @@ void Manager::impl::remove(const boost::filesystem::path& file) {
     remove(Input::to_uri(file));
 }
 
-void Manager::impl::remove(const network::uri& uri) {
+void Manager::impl::remove(const web::uri& uri) {
     boost::this_thread::interruption_point();
     auto coll = m_db.get_collection("tracks");
     assert(coll);
 
-    auto qdoc = jbson::document(jbson::builder("location", uri.string())("$dropall", true));
+    auto qdoc = jbson::document(jbson::builder("location", uri.to_string())("$dropall", true));
     auto qry = m_db.create_query(qdoc.data());
 
     auto n = coll.execute_query<ejdb::query_search_mode::count_only>(qry);
@@ -557,7 +556,7 @@ void Manager::impl::remove_prefix(const boost::filesystem::path& dir) {
     auto coll = m_db.get_collection("tracks");
     assert(coll);
 
-    auto qdoc = jbson::document(jbson::builder("location", jbson::builder("$begin", uri.string()))("$dropall", true));
+    auto qdoc = jbson::document(jbson::builder("location", jbson::builder("$begin", uri.to_string()))("$dropall", true));
     auto qry = m_db.create_query(qdoc.data());
 
     auto n = coll.execute_query<ejdb::query_search_mode::count_only>(qry);
@@ -572,7 +571,7 @@ void Manager::impl::update(const boost::filesystem::path& file) {
     remove(Input::to_uri(file));
 }
 
-void Manager::impl::update(const network::uri& uri) {
+void Manager::impl::update(const web::uri& uri) {
     boost::this_thread::interruption_point();
     ERROR_LOG(logject) << "update library entry not implemented";
 }

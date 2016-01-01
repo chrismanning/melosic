@@ -21,7 +21,7 @@
 #include <memory>
 #include <istream>
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <melosic/common/common.hpp>
 
@@ -38,16 +38,16 @@ class MELOSIC_EXPORT Manager {
     Manager(const Manager&&) = delete;
     Manager& operator=(const Manager&) = delete;
 
-    MELOSIC_EXPORT std::unique_ptr<std::istream> open(const network::uri& uri) const;
+    MELOSIC_EXPORT std::unique_ptr<std::istream> open(const web::uri& uri) const;
 
   private:
     class impl;
     std::unique_ptr<impl> pimpl;
 };
 
-MELOSIC_EXPORT boost::filesystem::path uri_to_path(const network::uri& uri);
+MELOSIC_EXPORT boost::filesystem::path uri_to_path(const web::uri& uri);
 
-MELOSIC_EXPORT network::uri to_uri(const boost::filesystem::path& path);
+MELOSIC_EXPORT web::uri to_uri(const boost::filesystem::path& path);
 
 } // namespace Input
 } // namespace Melosic

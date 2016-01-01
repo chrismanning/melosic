@@ -25,7 +25,7 @@
 #include <boost/locale/collator.hpp>
 #include <boost/thread/synchronized_value.hpp>
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <jbson/document_fwd.hpp>
 
@@ -65,7 +65,7 @@ class MELOSIC_EXPORT Track final {
     void start(chrono::milliseconds start);
     void end(chrono::milliseconds end);
 
-    explicit Track(const network::uri& location, chrono::milliseconds end = 0ms, chrono::milliseconds start = 0ms);
+    explicit Track(const web::uri& location, chrono::milliseconds end = 0ms, chrono::milliseconds start = 0ms);
 
   public:
     explicit Track(const jbson::document&);
@@ -79,7 +79,7 @@ class MELOSIC_EXPORT Track final {
     chrono::milliseconds duration() const;
     Melosic::AudioSpecs audioSpecs() const;
 
-    const network::uri& uri() const;
+    const web::uri& uri() const;
     optional<std::string> tag(const std::string& key) const;
     optional<std::string> format_string(const std::string&) const;
 

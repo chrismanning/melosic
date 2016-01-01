@@ -31,7 +31,7 @@
 #include <jbson/element_fwd.hpp>
 #include <jbson/document_fwd.hpp>
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <melosic/common/signal_fwd.hpp>
 #include <melosic/common/common.hpp>
@@ -59,9 +59,9 @@ namespace Library {
 using ScanStarted = SignalCore<void()>;
 using ScanEnded = SignalCore<void()>;
 
-using Added = SignalCore<void(network::uri)>;
-using Removed = SignalCore<void(network::uri)>;
-using Updated = SignalCore<void(network::uri)>;
+using Added = SignalCore<void(web::uri)>;
+using Removed = SignalCore<void(web::uri)>;
+using Updated = SignalCore<void(web::uri)>;
 }
 }
 

@@ -92,7 +92,7 @@ class Track::impl {
     //        return static_cast<bool>(taglibfile);
     //    }
 
-    const network::uri& uri() {
+    const web::uri& uri() {
         return m_uri;
     }
 
@@ -100,7 +100,7 @@ class Track::impl {
 
   private:
     friend class Track;
-    network::uri m_uri;
+    web::uri m_uri;
     chrono::milliseconds start{0}, end{0};
     boost::synchronized_value<TagMap> m_tags;
     AudioSpecs as;
@@ -108,7 +108,7 @@ class Track::impl {
     mutex mu;
 };
 
-Track::Track(const network::uri& location, chrono::milliseconds end, chrono::milliseconds start)
+Track::Track(const web::uri& location, chrono::milliseconds end, chrono::milliseconds start)
     : pimpl(std::make_shared<impl>()) {
     pimpl->m_uri = location;
     pimpl->end = end;
@@ -126,7 +126,7 @@ Track::Track(const jbson::document& track_doc) : pimpl(std::make_shared<impl>())
     for(auto&& element : track_doc) {
         if(element.name() == "location") {
             try {
-                pimpl->m_uri = network::uri(element.value<std::string>());
+                pimpl->m_uri = web::uri(element.value<std::string>());
             } catch(...) {
                 std::throw_with_nested(std::runtime_error("'location' should be a string"));
             }
@@ -179,7 +179,7 @@ Track::Track(const jbson::document& track_doc) : pimpl(std::make_shared<impl>())
         }
     }
 
-    if(pimpl->m_uri.empty())
+    if(pimpl->m_uri.is_empty())
         BOOST_THROW_EXCEPTION(std::runtime_error("track must have a location"));
 }
 
@@ -235,7 +235,7 @@ optional<std::string> Track::tag(const std::string& key) const {
     return pimpl->getTag(key);
 }
 
-const network::uri& Track::uri() const {
+const web::uri& Track::uri() const {
     shared_lock l(pimpl->mu);
     return pimpl->m_uri;
 }
@@ -289,7 +289,7 @@ jbson::document Track::bson() const {
 
     shared_lock l(pimpl->mu);
 
-    auto ob = jbson::builder("type", "track")("location", element_type::string_element, uri().string())(
+    auto ob = jbson::builder("type", "track")("location", element_type::string_element, uri().to_string())(
         "channels", element_type::int32_element, pimpl->as.channels)("sample rate", element_type::int64_element,
                                                                      pimpl->as.sample_rate)(
         "start", element_type::int64_element, pimpl->start.count())("end", element_type::int64_element,
@@ -309,7 +309,7 @@ jbson::document Track::bson() const {
 
 bool operator<(const Track& a, const Track& b) {
 #ifdef _GNU_SOURCE
-    auto a_str = a.uri().string(), b_str = b.uri().string();
+    auto a_str = a.uri().to_string(), b_str = b.uri().to_string();
     auto cmp = ::strverscmp(a_str.c_str(), b_str.c_str());
 #else
     auto cmp = a.uri().compare(b.uri());

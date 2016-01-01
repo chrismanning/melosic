@@ -32,7 +32,7 @@ namespace chrono = std::chrono;
 #include <QQmlProperty>
 #include <QSequentialIterable>
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <melosic/melin/logging.hpp>
 #include <melosic/common/error.hpp>

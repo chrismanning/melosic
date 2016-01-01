@@ -23,7 +23,7 @@ namespace fs = boost::filesystem;
 #include <chrono>
 using namespace std::literals;
 
-#include <network/uri.hpp>
+#include <cpprest/uri.h>
 
 #include <melosic/melin/input.hpp>
 using namespace Melosic::Input;
@@ -36,51 +36,51 @@ TEST_CASE("InputTest") {
 TEST_CASE("PathToUrlTest1") {
     fs::path p;
     REQUIRE_NOTHROW(p = "/some/file path/with spaces");
-    network::uri uri;
+    web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20spaces" == uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20spaces" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest2") {
     fs::path p;
     REQUIRE_NOTHROW(p = "/some/file path/with (parens) abc.ext");
-    network::uri uri;
+    web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%28parens%29%20abc.ext" == uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20%28parens%29%20abc.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest3") {
     fs::path p;
     REQUIRE_NOTHROW(p = "/some/file path/with [brackets] abc.ext");
-    network::uri uri;
+    web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%5Bbrackets%5D%20abc.ext" == uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20%5Bbrackets%5D%20abc.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest4") {
     fs::path p;
     REQUIRE_NOTHROW(p = "/some/file path/with ütf8.ext");
-    network::uri uri;
+    web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%C3%BCtf8.ext" == uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20%C3%BCtf8.ext" == uri.to_string());
 }
 
 TEST_CASE("PathToUrlTest5") {
     fs::path p;
     REQUIRE_NOTHROW(p = "/some/file path/with \t tab.ext");
-    network::uri uri;
+    web::uri uri;
     REQUIRE_NOTHROW(uri = ::to_uri(p));
 
-    CHECK("file:///some/file%20path/with%20%09%20tab.ext" == uri.to_string<char>());
+    CHECK("file:///some/file%20path/with%20%09%20tab.ext" == uri.to_string());
 }
 
 TEST_CASE("UrlToPathTest1") {
-    network::uri uri;
-    REQUIRE_NOTHROW(uri = network::uri("file:///some/file%20path/with%20spaces"));
+    web::uri uri;
+    REQUIRE_NOTHROW(uri = web::uri("file:///some/file%20path/with%20spaces"));
     fs::path p;
     REQUIRE_NOTHROW(p = uri_to_path(uri));
 
@@ -88,8 +88,8 @@ TEST_CASE("UrlToPathTest1") {
 }
 
 TEST_CASE("UrlToPathTest2") {
-    network::uri uri;
-    REQUIRE_NOTHROW(uri = network::uri("file:///some/file%20path/with%20%28parens%29%20abc.ext"));
+    web::uri uri;
+    REQUIRE_NOTHROW(uri = web::uri("file:///some/file%20path/with%20%28parens%29%20abc.ext"));
     fs::path p;
     REQUIRE_NOTHROW(p = uri_to_path(uri));
 
