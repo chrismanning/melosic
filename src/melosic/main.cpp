@@ -47,8 +47,6 @@ int main(int argc, char* argv[]) {
     Logger::Logger logject(logging::keywords::channel = "Main");
 
     try {
-        QApplication app(argc, argv);
-
         Core::Kernel kernel;
 
         Core::Player player(kernel);
@@ -56,6 +54,8 @@ int main(int argc, char* argv[]) {
         kernel.getConfigManager()->loadConfig();
 
         kernel.getPluginManager()->loadPlugins(kernel);
+
+        QApplication app(argc, argv);
 
         //        QQmlDebuggingEnabler enabler;
 

@@ -65,9 +65,10 @@ void refreshConfig(const std::string& key, const Config::VarType& value) {
 
 static Signals::ScopedConnection varConnection;
 
-extern "C" BOOST_SYMBOL_EXPORT const Plugin::Info* plugin_info() {
-    return &::lastFmInfo;
+Plugin::Info plugin_info() {
+    return lastFmInfo;
 }
+BOOST_DLL_AUTO_ALIAS(plugin_info)
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::confman = confman;
@@ -78,6 +79,3 @@ extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
 }
 
 //    refreshConfig("session key", std::string("5249ca2b30f7f227910fd4b5bdfe8785"));
-
-extern "C" BOOST_SYMBOL_EXPORT void destroyPlugin() {
-}

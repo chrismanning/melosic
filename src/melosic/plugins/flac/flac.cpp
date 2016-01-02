@@ -28,8 +28,8 @@ namespace flac {
 
 Plugin::Info flacInfo{"FLAC", Plugin::Type::decoder, {1, 0, 0}};
 
-Plugin::Info* plugin_info() {
-    return &flacInfo;
+Plugin::Info plugin_info() {
+    return flacInfo;
 }
 BOOST_DLL_AUTO_ALIAS(plugin_info)
 

@@ -23,7 +23,8 @@
 #include <cstdint>
 #include <ostream>
 #include <memory>
-#include <list>
+
+#include <boost/dll.hpp>
 
 #include <date.h>
 

@@ -36,8 +36,8 @@ Decoder::provider* decoder_provider() {
 }
 BOOST_DLL_AUTO_ALIAS(decoder_provider)
 
-Plugin::Info* plugin_info() {
-    return &wavpack_info;
+Plugin::Info plugin_info() {
+    return wavpack_info;
 }
 BOOST_DLL_AUTO_ALIAS(plugin_info)
 

@@ -49,16 +49,14 @@ namespace Plugin {
 
 struct PluginsLoaded : Signals::Signal<Signals::Plugin::PluginsLoaded> {};
 
+Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
+
 struct Plugin : std::enable_shared_from_this<Plugin> {
   public:
     Plugin(const boost::filesystem::path& filename) : handle(filename) {
+        auto plugin_info_fun = handle.get_alias<Info()>("plugin_info");
+        info = plugin_info_fun();
 
-//        if(!handle.is_loaded()) {
-//            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(handle.location())
-//                                                    << ErrorTag::Plugin::Msg(DLError()));
-//        }
-
-        this->info = *handle.get_alias<Info*()>("plugin_info")();
         if(info.APIVersion != expectedAPIVersion()) {
             BOOST_THROW_EXCEPTION(PluginVersionMismatchException() << ErrorTag::FilePath(handle.location())
                                                                    << ErrorTag::Plugin::Info(info));
@@ -149,33 +147,36 @@ struct Manager::impl {
         }
     }
 
-    void loadPlugin(fs::path filepath, strict_lock&) {
-        if(!filepath.is_absolute()) {
-            TRACE_LOG(logject) << "plugin path relative";
-            for(const fs::path& searchpath : searchPaths) {
-                TRACE_LOG(logject) << "Plugin search path: " << searchpath;
-                auto p(fs::absolute(filepath, searchpath));
-                if(fs::exists(p)) {
-                    filepath = p;
-                    break;
-                }
-            }
+    void loadPlugin(fs::path filepath, strict_lock& l) {
+        filepath = search_absolute_path(filepath, l);
+        if(!fs::exists(filepath) || !fs::is_regular_file(filepath)) {
+            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(filepath)
+                                                    << ErrorTag::Plugin::Msg("no such file"));
         }
 
         auto filename = filepath.filename().string();
 
         if(loadedPlugins.find(filename) != loadedPlugins.end())
-            BOOST_THROW_EXCEPTION(PluginSymbolNotFoundException() << ErrorTag::FilePath(filename)
-                                                                  << ErrorTag::Plugin::Msg("plugin already loaded"));
+            BOOST_THROW_EXCEPTION(PluginException() << ErrorTag::FilePath(filename)
+                                                    << ErrorTag::Plugin::Msg("plugin already loaded"));
 
         auto loaded = std::make_shared<Plugin>(filepath);
         LOG(logject) << "Plugin loaded: " << loaded->getInfo();
         loadedPlugins.emplace(filename, std::move(loaded));
     }
 
-    void loadPlugin(fs::path filepath) {
-        strict_lock l(mu);
-        loadPlugin(std::move(filepath), l);
+    fs::path search_absolute_path(fs::path filepath, strict_lock&) {
+        if(!filepath.is_absolute()) {
+            TRACE_LOG(logject) << "plugin path relative";
+            for(const fs::path& searchpath : searchPaths) {
+                TRACE_LOG(logject) << "Plugin search path: " << searchpath;
+                auto p = fs::absolute(filepath, searchpath);
+                if(fs::exists(p)) {
+                    return p;
+                }
+            }
+        }
+        return filepath;
     }
 
     void loadPlugins(Core::Kernel& kernel) {
@@ -194,7 +195,7 @@ struct Manager::impl {
             for(const fs::path& file : boost::make_iterator_range(fs::recursive_directory_iterator(dir), {})) {
                 try {
                     if(std::regex_match(file.string(), filter)) {
-                        WARN_LOG(logject) << file << " matches blacklist";
+                        WARN_LOG(logject) << file << " is blacklisted";
                         continue;
                     }
                     if(fs::is_regular_file(file) && file.extension() == ".melin")
@@ -225,7 +226,6 @@ struct Manager::impl {
     std::shared_ptr<Config::Manager> confman;
     Config::Conf conf{"Plugins"};
     std::map<std::string, std::shared_ptr<Plugin>> loadedPlugins;
-    Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
     std::vector<fs::path> searchPaths;
     std::vector<std::string> blackList;
     friend class Manager;
