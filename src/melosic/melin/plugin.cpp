@@ -54,7 +54,7 @@ Logger::Logger logject{logging::keywords::channel = "Plugin::Manager"};
 struct Plugin : std::enable_shared_from_this<Plugin> {
   public:
     Plugin(const boost::filesystem::path& filename) : handle(filename) {
-        auto plugin_info_fun = handle.get_alias<Info()>("plugin_info");
+        auto plugin_info_fun = get_typed_alias<Info()>("plugin_info");
         info = plugin_info_fun();
 
         if(info.APIVersion != expectedAPIVersion()) {
@@ -78,7 +78,7 @@ struct Plugin : std::enable_shared_from_this<Plugin> {
                 case Type::decoder: {
                     std::shared_ptr<Decoder::Manager> decman = kernel.getDecoderManager();
                     decman->add_provider(std::shared_ptr<Decoder::provider>(
-                        shared_from_this(), handle.get_alias<Decoder::provider*()>("decoder_provider")()));
+                        shared_from_this(), get_typed_alias<Decoder::provider*()>("decoder_provider")()));
                     break;
                 }
                 case Type::encoder:
@@ -93,6 +93,20 @@ struct Plugin : std::enable_shared_from_this<Plugin> {
     }
 
   private:
+    template <typename T>
+    inline T& get_typed_alias(const std::string& alias_name) const {
+        auto expected_type = typeid(std::add_pointer_t<T>).name();
+        auto actual_type = handle.get<const char*>("type_" + alias_name);
+        if(::strcmp(expected_type, actual_type) == 0) {
+            return handle.get_alias<T>(alias_name);
+        }
+        std::stringstream msg;
+        msg << "Symbol type mismatch: expected ["
+            << expected_type << "]; actual ["
+            << actual_type << "]";
+        BOOST_THROW_EXCEPTION(std::runtime_error(msg.str()));
+    }
+
     boost::dll::shared_library handle;
     Info info;
 };

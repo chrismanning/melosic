@@ -31,11 +31,11 @@ Plugin::Info flacInfo{"FLAC", Plugin::Type::decoder, {1, 0, 0}};
 Plugin::Info plugin_info() {
     return flacInfo;
 }
-BOOST_DLL_AUTO_ALIAS(plugin_info)
+MELOSIC_DLL_TYPED_ALIAS(plugin_info)
 
 Decoder::provider* decoder_provider() {
     return new provider;
 }
-BOOST_DLL_AUTO_ALIAS(decoder_provider)
+MELOSIC_DLL_TYPED_ALIAS(decoder_provider)
 
 } // namespace flac

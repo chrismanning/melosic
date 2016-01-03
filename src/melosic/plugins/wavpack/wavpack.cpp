@@ -31,14 +31,14 @@ constexpr Plugin::Type type = Plugin::Type::decoder;
 
 Plugin::Info wavpack_info{"Wavpack", type, current_version};
 
-Decoder::provider* decoder_provider() {
-    return new provider;
-}
-BOOST_DLL_AUTO_ALIAS(decoder_provider)
-
 Plugin::Info plugin_info() {
     return wavpack_info;
 }
-BOOST_DLL_AUTO_ALIAS(plugin_info)
+MELOSIC_DLL_TYPED_ALIAS(plugin_info)
+
+Decoder::provider* decoder_provider() {
+    return new provider;
+}
+MELOSIC_DLL_TYPED_ALIAS(decoder_provider)
 
 } // namespace wavpack

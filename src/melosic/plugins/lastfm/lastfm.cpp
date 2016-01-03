@@ -68,7 +68,7 @@ static Signals::ScopedConnection varConnection;
 Plugin::Info plugin_info() {
     return lastFmInfo;
 }
-BOOST_DLL_AUTO_ALIAS(plugin_info)
+MELOSIC_DLL_TYPED_ALIAS(plugin_info)
 
 extern "C" BOOST_SYMBOL_EXPORT void registerConfig(Config::Manager* confman) {
     ::confman = confman;

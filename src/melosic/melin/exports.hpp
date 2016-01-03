@@ -85,14 +85,21 @@ inline std::chrono::system_clock::time_point timeWhenCompiled();
 
 namespace Plugin {
 
+#define MELOSIC_DLL_TYPED_ALIAS(FunctionOrVar)                                                                         \
+    namespace _autoaliases {                                                                                           \
+    extern "C" BOOST_SYMBOL_EXPORT const char* type_##FunctionOrVar = typeid(&FunctionOrVar).name();                   \
+    } /* namespace _autoaliases */                                                                                     \
+    BOOST_DLL_AUTO_ALIAS(FunctionOrVar)                                                                                \
+/**/
+
 enum class Type {
-    decoder         = 0b0000001,
-    encoder         = 0b0000010,
-    outputDevice    = 0b0000100,
-    inputDevice     = 0b0001000,
-    utility         = 0b0010000,
-    service         = 0b0100000,
-    gui             = 0b1000000
+    decoder = 0b0000001,
+    encoder = 0b0000010,
+    outputDevice = 0b0000100,
+    inputDevice = 0b0001000,
+    utility = 0b0010000,
+    service = 0b0100000,
+    gui = 0b1000000
 };
 
 constexpr Type operator|(Type a, Type b) noexcept {
