@@ -122,7 +122,11 @@ struct provider {
     virtual ~provider() {
     }
 
-    virtual std::vector<std::string> available_devices() const = 0;
+    virtual std::vector<device_descriptor> available_devices() const = 0;
+    virtual std::string device_prefix() const = 0;
+
+    virtual std::unique_ptr<AudioIO::AudioOutputBase> make_output(asio::io_service&,
+                                                                  const device_descriptor&) const = 0;
 };
 
 } // namespace Output

@@ -1,7 +1,7 @@
 set(ALSA alsa)
 find_package(ALSA REQUIRED)
 
-add_library(${ALSA} MODULE alsa.cpp)
+add_library(${ALSA} MODULE alsa.cpp alsa_provider.cpp alsa_output_service_impl.cpp)
 
 target_link_libraries(${ALSA} ${ALSA_LIBRARIES} melosiclib)
 set_target_properties(${ALSA} PROPERTIES PREFIX "")
